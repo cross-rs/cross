@@ -30,8 +30,12 @@ script:
   - cargo install --path .
   - ./build-docker-image.sh $TARGET
   - git clone --depth 1 https://github.com/rust-lang/cargo
-  - ( cd cargo &&
-      cross build --target $TARGET )
+  # NOTE(if) japaric/cross#4
+  - if [ $TARGET != mips-unknown-linux-gnu ] && [ $TARGET != mips64-unknown-linux-gnuabi64 ]; then
+      ( cd cargo &&
+        cross build --target $TARGET );
+    fi
+  # NOTE(if) japaric/cross#3
   - if [ $TARGET != s390x-unknown-linux-gnu ]; then
       git clone --depth 1 --recursive https://github.com/rust-lang-nursery/compiler-builtins;
       ( cd compiler-builtins &&
