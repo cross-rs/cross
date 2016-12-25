@@ -72,7 +72,7 @@ fn run() -> Result<ExitStatus> {
     let args = cli::parse();
 
     match args.subcommand.as_ref().map(|s| &**s) {
-        Some("build") | Some("rustc") | Some("test") => {
+        Some("build") | Some("run") | Some("rustc") | Some("test") => {
             let host = rustc::host();
             let supported = host == "x86_64-unknown-linux-gnu";
             let target = args.target.unwrap_or(host);
