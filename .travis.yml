@@ -24,7 +24,7 @@ install:
   - source ~/.cargo/env
   - docker run --privileged --rm -it ubuntu:16.04 sh -c
     "apt-get update && apt-get install --no-install-recommends -y binfmt-support qemu-user-static"
-  - test -e cache/$TARGET.tar && docker load -i cache/$TARGET.tar
+  - if [ -f cache/$TARGET.tar ]; then docker load -i cache/$TARGET.tar; fi
 
 script:
   - cargo install --path .
