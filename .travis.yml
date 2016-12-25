@@ -32,10 +32,12 @@ script:
   - git clone --depth 1 https://github.com/rust-lang/cargo
   - ( cd cargo &&
       cross build --target $TARGET )
-  - git clone --depth 1 --recursive https://github.com/rust-lang-nursery/compiler-builtins
-  - ( cd compiler-builtins &&
-      cargo generate-lockfile &&
-      cross test --no-default-features --target $TARGET )
+  - if [ $TARGET != s390x-unknown-linux-gnu ]; then
+      git clone --depth 1 --recursive https://github.com/rust-lang-nursery/compiler-builtins;
+      ( cd compiler-builtins &&
+        cargo generate-lockfile &&
+        cross test --no-default-features --target $TARGET );
+    fi
 
 before_cache:
   - mkdir -p cache
