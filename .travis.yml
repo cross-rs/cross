@@ -30,9 +30,12 @@ script:
   - docker pull japaric/$TARGET
   - ./build-docker-image.sh $TARGET
   - git clone --depth 1 https://github.com/rust-lang/cargo
-  - ( cd cargo && cross build --target $TARGET )
+  - ( cd cargo &&
+      cross build --target $TARGET )
   - git clone --depth 1 https://github.com/rust-lang-nursery/compiler-builtins
-  - ( cd compiler-builtins && cargo generate-lockfile && cross test --target $TARGET )
+  - ( cd compiler-builtins &&
+      cargo generate-lockfile &&
+      cross test --no-default-features --target $TARGET )
 
 branches:
   only:
