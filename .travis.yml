@@ -24,6 +24,7 @@ install:
   - source ~/.cargo/env
   - docker run --privileged --rm -it ubuntu:16.04 sh -c
     "apt-get update && apt-get install --no-install-recommends -y binfmt-support qemu-user-static"
+  - test -e cache/$TARGET.tar && docker load -i cache/$TARGET.tar
 
 script:
   - cargo install --path .
@@ -37,9 +38,17 @@ script:
       cargo generate-lockfile &&
       cross test --no-default-features --target $TARGET )
 
+before_cache:
+  - mkdir -p cache
+  - docker save japaric/$TARGET $(docker history -q japaric/$TARGET | grep -v \<missing\>) > cache/$TARGET.tar
+
 branches:
   only:
     - master
+
+cache:
+  directories:
+    - cache
 
 notifications:
   email:
