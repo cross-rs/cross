@@ -22,6 +22,8 @@ env: TARGET=x86_64-unknown-linux-gnu
 install:
   - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $TRAVIS_RUST_VERSION
   - source ~/.cargo/env
+  - docker run --privileged --rm -it ubuntu:16.04 sh -c
+    "apt-get update && apt-get install --no-install-recommends -y binfmt-support qemu-user-static"
 
 script:
   - cargo install --path .
@@ -30,7 +32,7 @@ script:
   - git clone --depth 1 https://github.com/rust-lang/cargo
   - ( cd cargo && cross build --target $TARGET )
   - git clone --depth 1 https://github.com/rust-lang-nursery/compiler-builtins
-  - ( cd compiler-builtins && cross test --target $TARGET )
+  - ( cd compiler-builtins && cargo generate-lockfile && cross test --target $TARGET )
 
 branches:
   only:
