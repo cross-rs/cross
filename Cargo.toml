@@ -1,0 +1,9 @@
+[package]
+authors = ["Jorge Aparicio <japaricious@gmail.com>"]
+name = "cross"
+version = "0.1.0"
+
+[dependencies]
+error-chain = "0.7.1"
+libc = "0.2.18"
+rustc_version = "0.1.7"
