@@ -1,7 +1,7 @@
 set -ex
 
 main() {
-    if [ $TRAVIS_BRANCH != master ] || [ ! -z $TRAVIS_TAG ]; then
+    if [ $TRAVIS_BRANCH != master ] && [ -z $TRAVIS_TAG ]; then
         return
     fi
 
