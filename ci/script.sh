@@ -1,6 +1,8 @@
 set -ex
 
 main() {
+    local td=
+
     ./build-docker-image.sh $TARGET
 
     if [ $TRAVIS_BRANCH = master ] || [ ! -z $TRAVIS_TAG ]; then
@@ -16,7 +18,7 @@ main() {
             powerpc64-unknown-linux-gnu)
         ;;
         *)
-            local td=$(mktemp -d)
+            td=$(mktemp -d)
 
             git clone --depth 1 https://github.com/rust-lang/cargo $td
 
@@ -30,7 +32,7 @@ main() {
 
     # NOTE(if) japaric/cross#3
     if [ $TARGET != s390x-unknown-linux-gnu ]; then
-        local td=$(mktemp -d)
+        td=$(mktemp -d)
 
         git clone \
             --depth 1 \
@@ -46,6 +48,18 @@ main() {
         popd
 
         rm -rf $td
+
+        td=$(mktemp -d)
+
+        cargo init --bin --name hello $td
+
+        pushd $td
+        cargo generate-lockfile
+        cross run --target $TARGET
+        popd
+
+        rm -rf $td
+
     fi
 }
 
