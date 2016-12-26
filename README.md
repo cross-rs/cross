@@ -102,7 +102,8 @@ worst, "hang" (never terminate).
 | `x86_64-unknown-linux-gnu`           | 2.15  | 4.6.2 | N/A   | 1.0.2j  |   ✓    |
 
 (\*) For some reason behind my comprehension, the build script of the `curl-sys`
-crate hangs when `cross build`ing that crate for these two targets.
+crate hangs when `cross build`ing that crate for these three targets
+(see [issue #4](https://github.com/japaric/cross/issues/4)).
 
 ## Caveats / gotchas
 
