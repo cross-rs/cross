@@ -7,6 +7,21 @@ use extensions::CommandExt;
 use id;
 use rustc;
 
+/// Register QEMU interpreters
+pub fn register() -> Result<()> {
+    Command::new("docker")
+        .arg("run")
+        .arg("--privileged")
+        .arg("--rm")
+        .arg("-it")
+        .arg("ubuntu:16.04")
+        .args(&["sh",
+                "-c",
+                "apt-get update && apt-get install --no-install-recommends \
+                 -y binfmt-support qemu-user-static"])
+        .run()
+}
+
 pub fn run(target: &str,
            args: &[String],
            cargo_root: &Path)

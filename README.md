@@ -8,8 +8,14 @@
 
 ## Dependencies
 
+- A Linux kernel with [binfmt_misc] support is required for cross testing.
+
+[binfmt_misc]: https://www.kernel.org/doc/Documentation/binfmt_misc.txt
+
 - Rust and Cargo. Stable, beta and nightly channels are supported.
+
 - [Docker](https://www.docker.com/)
+
 - [rustup](https://rustup.rs/)
 
 ## Installation
@@ -21,22 +27,13 @@ $ cargo install --git https://github.com/japaric/cross
 ## Usage
 
 `cross` has the exact same CLI as [Cargo](https://github.com/rust-lang/cargo)
-but as it relies on Docker and QEMU so you'll have to run some setup commands before you can (fully) use it.
+but as it relies on Docker and QEMU so you'll have to run some setup commands
+before you can (fully) use it.
 
 ```
 # (ONCE PER BOOT)
 # Start the Docker daemon, if it's not already running
 $ sudo systemctl start docker
-
-# (ONCE PER BOOT)
-# If "cross testing", you must register the QEMU "interpreters" first
-# You don't need to have QEMU installed on your system
-# But! Your Linux kernel needs to have "binfmt_misc" support enabled
-$ zgrep BINFMT_MISC /proc/config.gz  # may need to run `modprobe configs` first
-CONFIG_BINFMT_MISC=y
-
-$ docker run --privileged --rm -it ubuntu:16.04 sh -c \
-    "apt-get update && apt-get install --no-install-recommends -y binfmt-support qemu-user-static"
 
 # (ONCE PER CARGO PROJECT)
 # `cross` can't generate .lock files itself (see caveats section)

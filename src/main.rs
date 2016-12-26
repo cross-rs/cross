@@ -8,7 +8,9 @@ mod cli;
 mod docker;
 mod errors;
 mod extensions;
+mod file;
 mod id;
+mod qemu;
 mod rustc;
 mod rustup;
 
@@ -86,6 +88,22 @@ fn run() -> Result<ExitStatus> {
                 Some(ref root) if supported && TARGETS.contains(&&*target) => {
                     if !rustup::installed_targets()?.contains(&target) {
                         rustup::install(&target)?;
+                    }
+
+                    match args.subcommand.as_ref().map(|s| &**s) {
+                        Some("run") | Some("test") => {
+                            match &*target {
+                                // no emulation
+                                "i686-unknown-linux-gnu" |
+                                "x86_64-unknown-linux-gnu" => {}
+                                _ => {
+                                    if !qemu::is_registered()? {
+                                        docker::register()?
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
                     }
 
                     docker::run(&target, &args.all, &root)
