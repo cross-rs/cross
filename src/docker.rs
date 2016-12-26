@@ -23,6 +23,13 @@ pub fn run(target: &str,
     let mut cmd = Command::new("cargo");
     cmd.args(args);
 
+    let version = env!("CARGO_PKG_VERSION");
+    let tag = if version.ends_with("-dev") {
+        "latest"
+    } else {
+        version
+    };
+
     Command::new("docker")
         .arg("run")
         .arg("--rm")
@@ -34,7 +41,7 @@ pub fn run(target: &str,
         .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot()?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
-        .args(&["-it", &format!("japaric/{}", target)])
+        .args(&["-it", &format!("japaric/{}:{}", target, tag)])
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_exit_status()
 }

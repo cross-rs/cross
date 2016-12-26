@@ -3,11 +3,11 @@ set -ex
 main() {
     ./build-docker-image.sh $TARGET
 
-    cargo install --path .
-
     if [ $TRAVIS_BRANCH = master ]; then
         return
     fi
+
+    cargo install --path .
 
     # NOTE(case) japaric/cross#4
     case $TARGET in
