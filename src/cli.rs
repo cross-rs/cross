@@ -18,7 +18,7 @@ pub fn parse() -> Args {
     {
         let mut args = all.iter();
         while let Some(arg) = args.next() {
-            if !arg.starts_with("-") && sc.is_none() {
+            if !arg.starts_with('-') && sc.is_none() {
                 sc = Some(Subcommand::from(&**arg))
             }
 
@@ -26,10 +26,9 @@ pub fn parse() -> Args {
                 target = args.next().map(|s| Target::from(&**s))
             } else if arg.starts_with("--target=") {
                 target = arg.splitn(2, '=')
-                    .skip(1)
-                    .next()
+                    .nth(1)
                     .map(|s| Target::from(&*s))
-            } else if !arg.starts_with("-") && sc.is_none() {
+            } else if !arg.starts_with('-') && sc.is_none() {
                 sc = Some(Subcommand::from(&**arg));
             }
         }
