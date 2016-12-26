@@ -71,6 +71,11 @@ fn main() {
 fn run() -> Result<ExitStatus> {
     let args = cli::parse();
 
+    if args.all.iter().any(|a| a == "--version" || a == "-V") {
+        println!(concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
+                 include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")));
+    }
+
     match args.subcommand.as_ref().map(|s| &**s) {
         Some("build") | Some("run") | Some("rustc") | Some("test") => {
             let host = rustc::host();

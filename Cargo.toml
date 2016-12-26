@@ -1,5 +1,6 @@
 [package]
 authors = ["Jorge Aparicio <japaricious@gmail.com>"]
+build = "build.rs"
 name = "cross"
 version = "0.1.0-dev"
 
