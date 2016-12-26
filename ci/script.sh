@@ -11,8 +11,8 @@ main() {
 
     # NOTE(case) japaric/cross#4
     case $TARGET in
-        mips-unknown-linux-gnu |
-            mips64-unknown-linux-gnuabi64 |
+        mips-unknown-linux-gnu | \
+            mips64-unknown-linux-gnuabi64 | \
             powerpc64-unknown-linux-gnu)
         ;;
         *)
