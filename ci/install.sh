@@ -4,7 +4,7 @@ main() {
     curl https://sh.rustup.rs -sSf | \
         sh -s -- -y --default-toolchain $TRAVIS_RUST_VERSION
 
-    if [ $TRAVIS_BRANCH != master ]; then
+    if [ $TRAVIS_BRANCH != master ] && [ -z $TRAVIS_TAG ]; then
         docker run \
                --privileged \
                --rm \

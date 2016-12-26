@@ -3,7 +3,7 @@ set -ex
 main() {
     ./build-docker-image.sh $TARGET
 
-    if [ $TRAVIS_BRANCH = master ]; then
+    if [ $TRAVIS_BRANCH = master ] || [ ! -z $TRAVIS_TAG ]; then
         return
     fi
 
