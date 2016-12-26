@@ -1,5 +1,8 @@
 FROM ubuntu:16.04
 
+COPY override.sh /
+RUN bash /override.sh curl-sys 0.3.6
+
 COPY qemu.sh /
 RUN bash /qemu.sh 2.7.1 ppc64
 

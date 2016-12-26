@@ -11,24 +11,15 @@ main() {
 
     cargo install --path .
 
-    # NOTE(case) japaric/cross#4
-    case $TARGET in
-        mips-unknown-linux-gnu | \
-            mips64-unknown-linux-gnuabi64 | \
-            powerpc64-unknown-linux-gnu)
-        ;;
-        *)
-            td=$(mktemp -d)
+    td=$(mktemp -d)
 
-            git clone --depth 1 https://github.com/rust-lang/cargo $td
+    git clone --depth 1 https://github.com/rust-lang/cargo $td
 
-            pushd $td
-            cross build --target $TARGET
-            popd
+    pushd $td
+    cross build --target $TARGET
+    popd
 
-            rm -rf $td
-            ;;
-    esac
+    rm -rf $td
 
     # NOTE(s390x) japaric/cross#3
     # NOTE(x86_64-musl) can't test compiler-builtins because that crate needs
