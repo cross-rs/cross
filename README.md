@@ -1,12 +1,15 @@
+[![crates.io](https://img.shields.io/crates/v/cross.svg)](https://crates.io/crates/cross)
+[![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
+
 # `cross`
 
 > "Zero setup" cross compilation and "cross testing" of Rust crates
 
 <p align="center">
 <img
-  alt="`cross test`ing a crate"
+  alt="`cross test`ing a crate for the aarch64-unknown-linux-gnu target"
   src="assets/cross-test.png"
-  title="`cross test`ing a crate"
+  title="`cross test`ing a crate for the aarch64-unknown-linux-gnu target"
 >
 <br>
 <em>`cross test`ing a crate for the aarch64-unknown-linux-gnu target</em>

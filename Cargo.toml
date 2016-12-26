@@ -1,8 +1,13 @@
 [package]
 authors = ["Jorge Aparicio <japaricious@gmail.com>"]
 build = "build.rs"
+description = "Zero setup cross compilation and cross testing"
+documentation = "https://github.com/japaric/cross#cross"
+keywords = ["cross", "compilation", "testing", "tool"]
+license = "MIT OR Apache-2.0"
 name = "cross"
-version = "0.1.0-dev"
+repository = "https://github.com/japaric/cross"
+version = "0.1.0"
 
 [dependencies]
 error-chain = "0.7.1"
