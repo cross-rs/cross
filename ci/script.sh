@@ -67,9 +67,6 @@ main() {
             rm -rf $td
         ;;
     esac
-
-
-    fi
 }
 
 main
