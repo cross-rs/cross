@@ -7,7 +7,7 @@
 <p align="center">
 <img
   alt="`cross test`ing a crate"
-  src="assets/cross-test.???"
+  src="assets/cross-test.png"
   title="`cross test`ing a crate"
 >
 <br>
