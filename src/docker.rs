@@ -1,4 +1,5 @@
 use std::{env, fs};
+use std::borrow::Cow;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
 
@@ -40,9 +41,9 @@ pub fn run(target: &str,
 
     let version = env!("CARGO_PKG_VERSION");
     let tag = if version.ends_with("-dev") {
-        "latest"
+        Cow::from("latest")
     } else {
-        version
+        Cow::from(format!("v{}", version))
     };
 
     Command::new("docker")

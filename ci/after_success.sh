@@ -11,12 +11,7 @@ main() {
            -u "$DOCKER_USER"
     set -x
 
-    if [ -z $TRAVIS_TAG ]; then
-        docker push japaric/$TARGET
-    else
-        local tag=${TRAVIS_TAG#v}
-        docker push japaric/$TARGET:$tag
-    fi
+    docker push japaric/$TARGET:${TRAVIS_TAG:-latest}
 }
 
 main

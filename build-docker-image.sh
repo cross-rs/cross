@@ -1,14 +1,10 @@
 set -ex
 
 run() {
-    local tag=
-    if [ -z $TRAVIS_TAG ]; then
-        tag=latest
-    else
-        tag=${TRAVIS_TAG#v}
-    fi
-
-    docker build -t japaric/$1:$tag -f docker/${1}/Dockerfile docker
+    docker build \
+           -t japaric/$1:${TRAVIS_TAG:-latest} \
+           -f docker/${1}/Dockerfile \
+           docker
 }
 
 if [ -z $1 ]; then
