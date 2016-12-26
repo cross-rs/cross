@@ -21,10 +21,11 @@ matrix:
 env: TARGET=x86_64-unknown-linux-gnu
 
 install:
-  - source ci/install.sh
+  - sh ci/install.sh
+  - source ~/.cargo/env
 
 script:
-  - sh ci/script.sh
+  - bash ci/script.sh
 
 before_cache:
   - sh ci/before_cache.sh
