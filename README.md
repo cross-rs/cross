@@ -79,7 +79,7 @@ one of your unit tests spawns several threads then it's more likely to fail.
 | `mips64el-unknown-linux-gnuabi64`    | 2.23  | 5.3.1 | 2.8.0 | 1.0.2j  |   ✓    |
 | `mipsel-unknown-linux-gnu`           | 2.23  | 5.3.1 | 2.8.0 | 1.0.2j  |   ✓    |
 | `powerpc-unknown-linux-gnu`          | 2.19  | 4.8.2 | 2.7.1 | 1.0.2j  |   ✓    |
-| `powerpc64-unknown-linux-gnu`        | 2.19  | 4.8.2 | 2.7.1 | 1.0.2j  |   ✓    |
+| `powerpc64-unknown-linux-gnu` (\*)   | 2.19  | 4.8.2 | 2.7.1 | 1.0.2j  |   ✓    |
 | `powerpc64le-unknown-linux-gnu`      | 2.19  | 4.8.2 | 2.7.1 | 1.0.2j  |   ✓    |
 | `s390x-unknown-linux-gnu`            | 2.23  | 5.3.1 | 2.8.0 | 1.0.2j  |        |
 | `x86_64-unknown-linux-gnu`           | 2.15  | 4.6.2 | N/A   | 1.0.2j  |   ✓    |

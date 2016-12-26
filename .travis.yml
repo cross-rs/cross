@@ -1,0 +1,66 @@
+dist: trusty
+language: rust
+rust: nightly
+services: docker
+sudo: required
+
+matrix:
+  include:
+    - env: TARGET=aarch64-unknown-linux-gnu
+    - env: TARGET=armv7-unknown-linux-gnueabihf
+    - env: TARGET=i686-unknown-linux-gnu
+    - env: TARGET=mips-unknown-linux-gnu
+    - env: TARGET=mips64-unknown-linux-gnuabi64
+    - env: TARGET=mips64el-unknown-linux-gnuabi64
+    - env: TARGET=mipsel-unknown-linux-gnu
+    - env: TARGET=powerpc-unknown-linux-gnu
+    - env: TARGET=powerpc64-unknown-linux-gnu
+    - env: TARGET=powerpc64le-unknown-linux-gnu
+    - env: TARGET=s390x-unknown-linux-gnu
+env: TARGET=x86_64-unknown-linux-gnu
+
+install:
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $TRAVIS_RUST_VERSION
+  - source ~/.cargo/env
+  - docker run --privileged --rm -it ubuntu:16.04 sh -c
+    "apt-get update && apt-get install --no-install-recommends -y binfmt-support qemu-user-static"
+  - if [ -f cache/$TARGET.tar ]; then docker load -i cache/$TARGET.tar; fi
+
+script:
+  - cargo install --path .
+  - ./build-docker-image.sh $TARGET
+  - git clone --depth 1 https://github.com/rust-lang/cargo
+  # NOTE(case) japaric/cross#4
+  - case $TARGET in
+      mips-unknown-linux-gnu |
+      mips64-unknown-linux-gnuabi64 |
+      powerpc64-unknown-linux-gnu)
+        ;;
+      *)
+        ( cd cargo &&
+          cross build --target $TARGET );
+        ;;
+    esac
+  # NOTE(if) japaric/cross#3
+  - if [ $TARGET != s390x-unknown-linux-gnu ]; then
+      git clone --depth 1 --recursive https://github.com/rust-lang-nursery/compiler-builtins;
+      ( cd compiler-builtins &&
+        cargo generate-lockfile &&
+        cross test --no-default-features --target $TARGET );
+    fi
+
+before_cache:
+  - mkdir -p cache
+  - docker save japaric/$TARGET $(docker history -q japaric/$TARGET | grep -v \<missing\>) > cache/$TARGET.tar
+
+branches:
+  only:
+    - master
+
+cache:
+  directories:
+    - cache
+
+notifications:
+  email:
+    on_success: never
