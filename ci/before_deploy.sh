@@ -2,16 +2,17 @@ set -ex
 
 main() {
     local src=$(pwd) \
+          target=x86_64-unknown-linux-musl \
           td=$(mktemp -d)
 
-    rustup toolchain install stable
+    rustup target add $target
 
-    cargo +stable rustc --release -- -C lto
+    cargo rustc --target $target --release -- -C lto
 
-    cp target/$TARGET/release/cross $td/
+    cp target/$target/release/cross $td/
 
     cd $td
-    tar czf $src/cross-$TRAVIS_TAG-$TARGET.tar.gz *
+    tar czf $src/cross-$TRAVIS_TAG-$target.tar.gz *
     cd $src
 
     rm -rf $td

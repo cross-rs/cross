@@ -15,7 +15,6 @@ main() {
         docker push japaric/$TARGET
     else
         local tag=${TRAVIS_TAG#v}
-        docker tag japaric/$TARGET japaric/$TARGET:$tag
         docker push japaric/$TARGET:$tag
     fi
 }

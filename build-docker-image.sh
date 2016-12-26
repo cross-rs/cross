@@ -1,9 +1,14 @@
 set -ex
 
 run() {
-    cd docker
-    docker build -t japaric/$1 -f ${1}/Dockerfile .
-    cd ..
+    local tag=
+    if [ -z $TRAVIS_TAG ]; then
+        tag=latest
+    else
+        tag=${TRAVIS_TAG#v}
+    fi
+
+    docker build -t japaric/$1:$tag -f docker/${1}/Dockerfile docker
 }
 
 if [ -z $1 ]; then

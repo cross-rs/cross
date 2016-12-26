@@ -4,8 +4,8 @@ main() {
     mkdir -p cache
 
     docker save \
-           japaric/$TARGET \
-           $(docker history -q japaric/$TARGET | grep -v \<missing\>) \
+           japaric/$TARGET:latest \
+           $(docker history -q japaric/$TARGET:latest | grep -v \<missing\>) \
            > cache/$TARGET.tar
 }
 
