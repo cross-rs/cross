@@ -1,8 +1,6 @@
 # `cross`
 
-> "Zero setup (\*)" cross compilation and "cross testing" of Rust crates
-
-**Disclaimer**: Only works on a x86_64 Linux host (e.g. Travis CI is supported)
+> "Zero setup" cross compilation and "cross testing" of Rust crates
 
 <p align="center">
 <img
@@ -13,6 +11,8 @@
 <br>
 <em>`cross test`ing a crate for the aarch64-unknown-linux-gnu target</em>
 </p>
+
+**Disclaimer**: Only works on a x86_64 Linux host (e.g. Travis CI is supported)
 
 ## Features
 
