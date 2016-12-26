@@ -20,19 +20,108 @@ use std::{env, io, process};
 
 use errors::*;
 
-// Supported targets
-const TARGETS: [&'static str; 12] = ["aarch64-unknown-linux-gnu",
-                                     "armv7-unknown-linux-gnueabihf",
-                                     "i686-unknown-linux-gnu",
-                                     "mips-unknown-linux-gnu",
-                                     "mips64-unknown-linux-gnuabi64",
-                                     "mips64el-unknown-linux-gnuabi64",
-                                     "mipsel-unknown-linux-gnu",
-                                     "powerpc-unknown-linux-gnu",
-                                     "powerpc64-unknown-linux-gnu",
-                                     "powerpc64le-unknown-linux-gnu",
-                                     "s390x-unknown-linux-gnu",
-                                     "x86_64-unknown-linux-gnu"];
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, PartialEq)]
+pub enum Host {
+    X86_64UnknownLinuxGnu,
+    Other,
+}
+
+impl<'a> From<&'a str> for Host {
+    fn from(s: &str) -> Host {
+        match s {
+            "x86_64-unknown-linux-gnu" => Host::X86_64UnknownLinuxGnu,
+            _ => Host::Other,
+        }
+    }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, PartialEq)]
+pub enum Target {
+    Aarch64UnknownLinuxGnu,
+    Armv7UnknownLinuxGnueabihf,
+    I686UnknownLinuxGnu,
+    Mips64UnknownLinuxGnuabi64,
+    Mips64elUnknownLinuxGnuabi64,
+    MipsUnknownLinuxGnu,
+    MipselUnknownLinuxGnu,
+    Other,
+    Powerpc64UnknownLinuxGnu,
+    Powerpc64leUnknownLinuxGnu,
+    PowerpcUnknownLinuxGnu,
+    S390xUnknownLinuxGnu,
+    X86_64UnknownLinuxGnu,
+}
+
+impl Target {
+    fn needs_docker(&self) -> bool {
+        match *self {
+            Target::Other => false,
+            _ => true,
+        }
+    }
+
+    fn needs_qemu(&self) -> bool {
+        match *self {
+            Target::I686UnknownLinuxGnu |
+            Target::Other |
+            Target::X86_64UnknownLinuxGnu => false,
+            _ => true,
+        }
+    }
+
+    fn triple(&self) -> &'static str {
+        use Target::*;
+
+        match *self {
+            Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
+            Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
+            I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
+            Mips64UnknownLinuxGnuabi64 => "mips64-unknown-linux-gnuabi64",
+            Mips64elUnknownLinuxGnuabi64 => "mips64el-unknown-linux-gnuabi64",
+            MipsUnknownLinuxGnu => "mips-unknown-linux-gnu",
+            MipselUnknownLinuxGnu => "mipsel-unknown-linux-gnu",
+            Other => unreachable!(),
+            Powerpc64UnknownLinuxGnu => "powerpc64-unknown-linux-gnu",
+            Powerpc64leUnknownLinuxGnu => "powerpc64le-unknown-linux-gnu",
+            PowerpcUnknownLinuxGnu => "powerpc-unknown-linux-gnu",
+            S390xUnknownLinuxGnu => "s390x-unknown-linux-gnu",
+            X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
+        }
+    }
+}
+
+impl<'a> From<&'a str> for Target {
+    fn from(s: &str) -> Target {
+        use Target::*;
+
+        match s {
+            "aarch64-unknown-linux-gnu" => Aarch64UnknownLinuxGnu,
+            "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
+            "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
+            "mips-unknown-linux-gnu" => MipsUnknownLinuxGnu,
+            "mips64-unknown-linux-gnuabi64" => Mips64UnknownLinuxGnuabi64,
+            "mips64el-unknown-linux-gnuabi64" => Mips64elUnknownLinuxGnuabi64,
+            "mipsel-unknown-linux-gnu" => MipselUnknownLinuxGnu,
+            "powerpc-unknown-linux-gnu" => PowerpcUnknownLinuxGnu,
+            "powerpc64-unknown-linux-gnu" => Powerpc64UnknownLinuxGnu,
+            "powerpc64le-unknown-linux-gnu" => Powerpc64leUnknownLinuxGnu,
+            "s390x-unknown-linux-gnu" => S390xUnknownLinuxGnu,
+            "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
+            _ => Other,
+        }
+    }
+}
+
+impl From<Host> for Target {
+    fn from(h: Host) -> Target {
+        match h {
+            Host::X86_64UnknownLinuxGnu => Target::X86_64UnknownLinuxGnu,
+            _ => Target::Other,
+        }
+    }
+}
 
 fn main() {
     fn show_backtrace() -> bool {
@@ -78,39 +167,28 @@ fn run() -> Result<ExitStatus> {
                  include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")));
     }
 
-    match args.subcommand.as_ref().map(|s| &**s) {
-        Some("build") | Some("run") | Some("rustc") | Some("test") => {
-            let host = rustc::host();
-            let supported = host == "x86_64-unknown-linux-gnu";
-            let target = args.target.unwrap_or(host);
+    let host = rustc::host();
 
-            match cargo::root()? {
-                Some(ref root) if supported && TARGETS.contains(&&*target) => {
-                    if !rustup::installed_targets()?.contains(&target) {
-                        rustup::install(&target)?;
-                    }
+    if host == Host::X86_64UnknownLinuxGnu {
+        let target = args.target.unwrap_or(Target::X86_64UnknownLinuxGnu);
 
-                    match args.subcommand.as_ref().map(|s| &**s) {
-                        Some("run") | Some("test") => {
-                            match &*target {
-                                // no emulation
-                                "i686-unknown-linux-gnu" |
-                                "x86_64-unknown-linux-gnu" => {}
-                                _ => {
-                                    if !qemu::is_registered()? {
-                                        docker::register()?
-                                    }
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-
-                    docker::run(&target, &args.all, &root)
+        if target.needs_docker() &&
+           args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
+            if let Some(root) = cargo::root()? {
+                if !rustup::installed_targets()?.contains(&target) {
+                    rustup::install(target)?;
                 }
-                _ => cargo::run(&args.all),
+
+                if args.subcommand.map(|sc| sc.needs_qemu()).unwrap_or(false) &&
+                   target.needs_qemu() &&
+                   !qemu::is_registered()? {
+                    docker::register()?
+                }
+
+                return docker::run(target, &args.all, &root);
             }
         }
-        _ => cargo::run(&args.all),
     }
+
+    cargo::run(&args.all)
 }

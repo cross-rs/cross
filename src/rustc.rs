@@ -3,11 +3,12 @@ use std::process::Command;
 
 use rustc_version;
 
+use Host;
 use errors::*;
 use extensions::CommandExt;
 
-pub fn host() -> String {
-    rustc_version::version_meta().host
+pub fn host() -> Host {
+    Host::from(&*rustc_version::version_meta().host)
 }
 
 pub fn sysroot() -> Result<PathBuf> {

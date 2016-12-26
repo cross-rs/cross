@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
 
+use Target;
 use errors::*;
 use extensions::CommandExt;
 use id;
@@ -23,10 +24,11 @@ pub fn register() -> Result<()> {
         .run()
 }
 
-pub fn run(target: &str,
+pub fn run(target: Target,
            args: &[String],
            cargo_root: &Path)
            -> Result<ExitStatus> {
+    let target = target.triple();
     let cargo_dir = env::home_dir()
         .ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?
         .join(".cargo");
