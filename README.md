@@ -1,22 +1,41 @@
 # `cross`
 
-> "Zero setup (\*)" cross compilation and "cross" testing
+> "Zero setup (\*)" cross compilation and "cross testing" of Rust crates
 
-(\*) As close to zero as possible
+**Disclaimer**: Only works on a x86_64 Linux host (e.g. Travis CI is supported)
 
-**Disclaimer**: Only works on a x86_64 Linux host
+<p align="center">
+<img
+  alt="`cross test`ing a crate"
+  src="assets/cross-test.???"
+  title="`cross test`ing a crate"
+>
+<br>
+<em>`cross test`ing a crate for the aarch64-unknown-linux-gnu target</em>
+</p>
+
+## Features
+
+- `cross` will provide all the ingredients needed for cross compilation without
+  touching your system installation.
+
+- `cross` provides an environment, cross toolchain and cross compiled libraries
+  (e.g. OpenSSL), that produces the most portable binaries.
+
+- "cross testing", `cross` can test crates for architectures other than i686 and
+  x86_64.
+
+- The stable, beta and nightly channels are supported.
 
 ## Dependencies
+
+- [rustup](https://rustup.rs/)
+
+- [Docker](https://www.docker.com/)
 
 - A Linux kernel with [binfmt_misc] support is required for cross testing.
 
 [binfmt_misc]: https://www.kernel.org/doc/Documentation/binfmt_misc.txt
-
-- Rust and Cargo. Stable, beta and nightly channels are supported.
-
-- [Docker](https://www.docker.com/)
-
-- [rustup](https://rustup.rs/)
 
 ## Installation
 
@@ -27,8 +46,8 @@ $ cargo install --git https://github.com/japaric/cross
 ## Usage
 
 `cross` has the exact same CLI as [Cargo](https://github.com/rust-lang/cargo)
-but as it relies on Docker and QEMU so you'll have to run some setup commands
-before you can (fully) use it.
+but as it relies on Docker you'll have to start the daemon before you can use
+it.
 
 ```
 # (ONCE PER BOOT)
@@ -37,7 +56,7 @@ $ sudo systemctl start docker
 
 # (ONCE PER CARGO PROJECT)
 # `cross` can't generate .lock files itself (see caveats section)
-# We have to use Cargo to generate the lock file, if necessary
+# if compiling a library, we'll have to use Cargo to generate the lock file
 $ cargo generate-lockfile
 
 # MAGIC! This Just Works
@@ -64,7 +83,8 @@ test suite.
 
 Also, testing is very slow. `cross` will actually run units tests *sequentially*
 because QEMU gets upset when you spawn several threads. This also means that, if
-one of your unit tests spawns several threads then it's more likely to fail.
+one of your unit tests spawns several threads then it's more likely to fail or,
+worst, "hang" (never terminate).
 
 | Target                               | glibc | GCC   | QEMU  | OpenSSL | `test` |
 |--------------------------------------|-------|-------|-------|---------|:------:|
