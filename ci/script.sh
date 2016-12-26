@@ -19,7 +19,10 @@ main() {
             local td=$(mktemp -d)
 
             git clone --depth 1 https://github.com/rust-lang/cargo $td
-            cross build --manifest-path $td/Cargo.toml --target $TARGET
+
+            pushd $td
+            cross build --target $TARGET
+            popd
 
             rm -rf $td
             ;;
@@ -35,13 +38,12 @@ main() {
             https://github.com/rust-lang-nursery/compiler-builtins \
             $td
 
-        cargo generate-lockfile \
-                --manifest-path $td/Cargo.toml
-
+        pushd $td
+        cargo generate-lockfile
         cross test \
-                --manifest-path $td/Cargo.toml \
-                --no-default-features \
-                --target $TARGET
+              --no-default-features \
+              --target $TARGET
+        popd
 
         rm -rf $td
     fi
