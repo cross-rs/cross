@@ -52,6 +52,7 @@ pub enum Target {
     PowerpcUnknownLinuxGnu,
     S390xUnknownLinuxGnu,
     X86_64UnknownLinuxGnu,
+    X86_64UnknownLinuxMusl,
 }
 
 impl Target {
@@ -66,7 +67,8 @@ impl Target {
         match *self {
             Target::I686UnknownLinuxGnu |
             Target::Other |
-            Target::X86_64UnknownLinuxGnu => false,
+            Target::X86_64UnknownLinuxGnu |
+            Target::X86_64UnknownLinuxMusl => false,
             _ => true,
         }
     }
@@ -88,6 +90,7 @@ impl Target {
             PowerpcUnknownLinuxGnu => "powerpc-unknown-linux-gnu",
             S390xUnknownLinuxGnu => "s390x-unknown-linux-gnu",
             X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
+            X86_64UnknownLinuxMusl => "x86_64-unknown-linux-musl",
         }
     }
 }
@@ -109,6 +112,7 @@ impl<'a> From<&'a str> for Target {
             "powerpc64le-unknown-linux-gnu" => Powerpc64leUnknownLinuxGnu,
             "s390x-unknown-linux-gnu" => S390xUnknownLinuxGnu,
             "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
+            "x86_64-unknown-linux-musl" => X86_64UnknownLinuxMusl,
             _ => Other,
         }
     }

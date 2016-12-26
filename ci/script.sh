@@ -30,35 +30,44 @@ main() {
             ;;
     esac
 
-    # NOTE(if) japaric/cross#3
-    if [ $TARGET != s390x-unknown-linux-gnu ]; then
-        td=$(mktemp -d)
+    # NOTE(s390x) japaric/cross#3
+    # NOTE(x86_64-musl) can't test compiler-builtins because that crate needs
+    # cdylibs and this musl target doesn't support cdylibs
+    case $TARGET in
+        s390x-unknown-linux-gnu | \
+            x86_64-unknown-linux-musl)
+        ;;
+        *)
+            td=$(mktemp -d)
 
-        git clone \
-            --depth 1 \
-            --recursive \
-            https://github.com/rust-lang-nursery/compiler-builtins \
-            $td
+            git clone \
+                --depth 1 \
+                --recursive \
+                https://github.com/rust-lang-nursery/compiler-builtins \
+                $td
 
-        pushd $td
-        cargo generate-lockfile
-        cross test \
-              --no-default-features \
-              --target $TARGET
-        popd
+            pushd $td
+            cargo generate-lockfile
+            cross test \
+                  --no-default-features \
+                  --target $TARGET
+            popd
 
-        rm -rf $td
+            rm -rf $td
 
-        td=$(mktemp -d)
+            td=$(mktemp -d)
 
-        cargo init --bin --name hello $td
+            cargo init --bin --name hello $td
 
-        pushd $td
-        cargo generate-lockfile
-        cross run --target $TARGET
-        popd
+            pushd $td
+            cargo generate-lockfile
+            cross run --target $TARGET
+            popd
 
-        rm -rf $td
+            rm -rf $td
+        ;;
+    esac
+
 
     fi
 }

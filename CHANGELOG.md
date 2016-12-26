@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Support for `x86_64-unknown-linux-musl`
+
 ## v0.1.0 - 2016-12-26
 
 - Initial release. Supports 12 targets.

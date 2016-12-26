@@ -103,6 +103,7 @@ worst, "hang" (never terminate).
 | `powerpc64le-unknown-linux-gnu`      | 2.19  | 4.8.2 | 2.7.1 | 1.0.2j  |   ✓    |
 | `s390x-unknown-linux-gnu`            | 2.23  | 5.3.1 | 2.8.0 | 1.0.2j  |        |
 | `x86_64-unknown-linux-gnu`           | 2.15  | 4.6.2 | N/A   | 1.0.2j  |   ✓    |
+| `x86_64-unknown-linux-musl`          | N/A   | 5.3.1 | N/A   | 1.0.2j  |   ✓    |
 
 (\*) For some reason behind my comprehension, the build script of the `curl-sys`
 crate hangs when `cross build`ing that crate for these three targets
