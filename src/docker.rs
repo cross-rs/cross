@@ -10,7 +10,7 @@ use id;
 use rustc;
 
 /// Register QEMU interpreters
-pub fn register() -> Result<()> {
+pub fn register(verbose: bool) -> Result<()> {
     Command::new("docker")
         .arg("run")
         .arg("--privileged")
@@ -21,12 +21,13 @@ pub fn register() -> Result<()> {
                 "-c",
                 "apt-get update && apt-get install --no-install-recommends \
                  -y binfmt-support qemu-user-static"])
-        .run()
+        .run(verbose)
 }
 
 pub fn run(target: Target,
            args: &[String],
-           cargo_root: &Path)
+           cargo_root: &Path,
+           verbose: bool)
            -> Result<ExitStatus> {
     let target = target.triple();
     let cargo_dir = env::home_dir()
@@ -56,10 +57,11 @@ pub fn run(target: Target,
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", cargo_root.display())])
-        .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot()?.display())])
+        .args(&["-v",
+                &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
         .args(&["-it", &format!("japaric/{}:{}", target, tag)])
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
-        .run_and_get_exit_status()
+        .run_and_get_exit_status(verbose)
 }

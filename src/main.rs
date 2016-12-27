@@ -171,6 +171,9 @@ fn run() -> Result<ExitStatus> {
                  include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")));
     }
 
+    let verbose =
+        args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
+
     let host = rustc::host();
 
     if host == Host::X86_64UnknownLinuxGnu {
@@ -179,20 +182,20 @@ fn run() -> Result<ExitStatus> {
         if target.needs_docker() &&
            args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
             if let Some(root) = cargo::root()? {
-                if !rustup::installed_targets()?.contains(&target) {
-                    rustup::install(target)?;
+                if !rustup::installed_targets(verbose)?.contains(&target) {
+                    rustup::install(target, verbose)?;
                 }
 
                 if args.subcommand.map(|sc| sc.needs_qemu()).unwrap_or(false) &&
                    target.needs_qemu() &&
                    !qemu::is_registered()? {
-                    docker::register()?
+                    docker::register(verbose)?
                 }
 
-                return docker::run(target, &args.all, &root);
+                return docker::run(target, &args.all, &root, verbose);
             }
         }
     }
 
-    cargo::run(&args.all)
+    cargo::run(&args.all, verbose)
 }

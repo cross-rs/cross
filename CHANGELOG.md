@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Support for `x86_64-unknown-linux-musl`
+- Print shell commands when the verbose flag is used.
 
 ## v0.1.0 - 2016-12-26
 

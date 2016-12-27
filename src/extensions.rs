@@ -3,15 +3,15 @@ use std::process::{Command, ExitStatus};
 use errors::*;
 
 pub trait CommandExt {
-    fn run(&mut self) -> Result<()>;
-    fn run_and_get_exit_status(&mut self) -> Result<ExitStatus>;
-    fn run_and_get_stdout(&mut self) -> Result<String>;
+    fn run(&mut self, verbose: bool) -> Result<()>;
+    fn run_and_get_exit_status(&mut self, verbose: bool) -> Result<ExitStatus>;
+    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String>;
 }
 
 impl CommandExt for Command {
     /// Runs the command to completion
-    fn run(&mut self) -> Result<()> {
-        let status = self.run_and_get_exit_status()?;
+    fn run(&mut self, verbose: bool) -> Result<()> {
+        let status = self.run_and_get_exit_status(verbose)?;
 
         if status.success() {
             Ok(())
@@ -23,13 +23,21 @@ impl CommandExt for Command {
     }
 
     /// Runs the command to completion
-    fn run_and_get_exit_status(&mut self) -> Result<ExitStatus> {
+    fn run_and_get_exit_status(&mut self, verbose: bool) -> Result<ExitStatus> {
+        if verbose {
+            println!("+ {:?}", self);
+        }
+
         self.status()
             .chain_err(|| format!("couldn't execute `{:?}`", self))
     }
 
     /// Runs the command to completion and returns its stdout
-    fn run_and_get_stdout(&mut self) -> Result<String> {
+    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String> {
+        if verbose {
+            println!("+ {:?}", self);
+        }
+
         let out = self.output()
             .chain_err(|| format!("couldn't execute `{:?}`", self))?;
 
@@ -43,6 +51,5 @@ impl CommandExt for Command {
                         self,
                         out.status.code()))?
         }
-
     }
 }

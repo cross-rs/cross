@@ -4,18 +4,18 @@ use Target;
 use errors::*;
 use extensions::CommandExt;
 
-pub fn install(target: Target) -> Result<()> {
+pub fn install(target: Target, verbose: bool) -> Result<()> {
     let target = target.triple();
 
     Command::new("rustup")
         .args(&["target", "install", target])
-        .run()
+        .run(verbose)
         .chain_err(|| format!("couldn't install `std` for {}", target))
 }
 
-pub fn installed_targets() -> Result<Vec<Target>> {
+pub fn installed_targets(verbose: bool) -> Result<Vec<Target>> {
     let out = Command::new("rustup").args(&["target", "list"])
-        .run_and_get_stdout()?;
+        .run_and_get_stdout(verbose)?;
 
     Ok(out.lines()
         .filter_map(|line| if line.contains("installed") ||
