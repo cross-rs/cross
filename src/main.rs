@@ -23,13 +23,34 @@ use errors::*;
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, PartialEq)]
 pub enum Host {
-    X86_64UnknownLinuxGnu,
     Other,
+
+    // OSX
+    X86_64AppleDarwin,
+
+    // Linux
+    X86_64UnknownLinuxGnu,
+}
+
+impl Host {
+    /// Checks if this `(host, target)` pair is supported by `cross`
+    ///
+    /// `target == None` means `target == host`
+    fn is_supported(&self, target: Option<Target>) -> bool {
+        if *self == Host::X86_64AppleDarwin {
+            target == Some(Target::I686AppleDarwin)
+        } else if *self == Host::X86_64UnknownLinuxGnu {
+            target.map(|t| t.is_linux()).unwrap_or(true)
+        } else {
+            false
+        }
+    }
 }
 
 impl<'a> From<&'a str> for Host {
     fn from(s: &str) -> Host {
         match s {
+            "x86_64-apple-darwin" => Host::X86_64AppleDarwin,
             "x86_64-unknown-linux-gnu" => Host::X86_64UnknownLinuxGnu,
             _ => Host::Other,
         }
@@ -39,6 +60,13 @@ impl<'a> From<&'a str> for Host {
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, PartialEq)]
 pub enum Target {
+    Other,
+
+    // OSX
+    I686AppleDarwin,
+    X86_64AppleDarwin,
+
+    // Linux
     Aarch64UnknownLinuxGnu,
     Armv7UnknownLinuxGnueabihf,
     I686UnknownLinuxGnu,
@@ -46,7 +74,6 @@ pub enum Target {
     Mips64elUnknownLinuxGnuabi64,
     MipsUnknownLinuxGnu,
     MipselUnknownLinuxGnu,
-    Other,
     Powerpc64UnknownLinuxGnu,
     Powerpc64leUnknownLinuxGnu,
     PowerpcUnknownLinuxGnu,
@@ -56,17 +83,23 @@ pub enum Target {
 }
 
 impl Target {
-    fn needs_docker(&self) -> bool {
+    fn is_linux(&self) -> bool {
         match *self {
-            Target::Other => false,
+            Target::I686AppleDarwin |
+            Target::Other |
+            Target::X86_64AppleDarwin => false,
             _ => true,
         }
     }
 
+    fn needs_docker(&self) -> bool {
+        self.is_linux()
+    }
+
     fn needs_qemu(&self) -> bool {
+        self.is_linux() &&
         match *self {
             Target::I686UnknownLinuxGnu |
-            Target::Other |
             Target::X86_64UnknownLinuxGnu |
             Target::X86_64UnknownLinuxMusl => false,
             _ => true,
@@ -79,6 +112,7 @@ impl Target {
         match *self {
             Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
+            I686AppleDarwin => "i686-apple-darwin",
             I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
             Mips64UnknownLinuxGnuabi64 => "mips64-unknown-linux-gnuabi64",
             Mips64elUnknownLinuxGnuabi64 => "mips64el-unknown-linux-gnuabi64",
@@ -89,6 +123,7 @@ impl Target {
             Powerpc64leUnknownLinuxGnu => "powerpc64le-unknown-linux-gnu",
             PowerpcUnknownLinuxGnu => "powerpc-unknown-linux-gnu",
             S390xUnknownLinuxGnu => "s390x-unknown-linux-gnu",
+            X86_64AppleDarwin => "x86_64-apple-darwin",
             X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
             X86_64UnknownLinuxMusl => "x86_64-unknown-linux-musl",
         }
@@ -102,6 +137,7 @@ impl<'a> From<&'a str> for Target {
         match s {
             "aarch64-unknown-linux-gnu" => Aarch64UnknownLinuxGnu,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
+            "i686-apple-darwin" => I686AppleDarwin,
             "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
             "mips-unknown-linux-gnu" => MipsUnknownLinuxGnu,
             "mips64-unknown-linux-gnuabi64" => Mips64UnknownLinuxGnuabi64,
@@ -111,6 +147,7 @@ impl<'a> From<&'a str> for Target {
             "powerpc64-unknown-linux-gnu" => Powerpc64UnknownLinuxGnu,
             "powerpc64le-unknown-linux-gnu" => Powerpc64leUnknownLinuxGnu,
             "s390x-unknown-linux-gnu" => S390xUnknownLinuxGnu,
+            "x86_64-apple-darwin" => X86_64AppleDarwin,
             "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
             "x86_64-unknown-linux-musl" => X86_64UnknownLinuxMusl,
             _ => Other,
@@ -119,10 +156,11 @@ impl<'a> From<&'a str> for Target {
 }
 
 impl From<Host> for Target {
-    fn from(h: Host) -> Target {
-        match h {
+    fn from(host: Host) -> Target {
+        match host {
             Host::X86_64UnknownLinuxGnu => Target::X86_64UnknownLinuxGnu,
-            _ => Target::Other,
+            Host::X86_64AppleDarwin => Target::X86_64AppleDarwin,
+            Host::Other => unreachable!(),
         }
     }
 }
@@ -174,18 +212,18 @@ fn run() -> Result<ExitStatus> {
     let verbose =
         args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
-    let host = rustc::host();
+    if let Some(root) = cargo::root()? {
+        let host = rustc::host();
 
-    if host == Host::X86_64UnknownLinuxGnu {
-        let target = args.target.unwrap_or(Target::X86_64UnknownLinuxGnu);
+        if host.is_supported(args.target) {
+            let target = args.target.unwrap_or(Target::from(host));
 
-        if target.needs_docker() &&
-           args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
-            if let Some(root) = cargo::root()? {
-                if !rustup::installed_targets(verbose)?.contains(&target) {
-                    rustup::install(target, verbose)?;
-                }
+            if !rustup::installed_targets(verbose)?.contains(&target) {
+                rustup::install(target, verbose)?;
+            }
 
+            if target.needs_docker() &&
+               args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
                 if args.subcommand.map(|sc| sc.needs_qemu()).unwrap_or(false) &&
                    target.needs_qemu() &&
                    !qemu::is_registered()? {

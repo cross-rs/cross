@@ -3,7 +3,9 @@ set -ex
 main() {
     local td=
 
-    ./build-docker-image.sh $TARGET
+    if [ $TRAVIS_OS_NAME = linux ]; then
+        ./build-docker-image.sh $TARGET
+    fi
 
     if [ $TRAVIS_BRANCH = master ] || [ ! -z $TRAVIS_TAG ]; then
         return

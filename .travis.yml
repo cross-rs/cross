@@ -18,6 +18,10 @@ matrix:
     - env: TARGET=powerpc64le-unknown-linux-gnu
     - env: TARGET=s390x-unknown-linux-gnu
     - env: TARGET=x86_64-unknown-linux-musl
+    - env: TARGET=i686-apple-darwin
+      os: osx
+    - env: TARGET=x86_64-apple-darwin
+      os: osx
 env: TARGET=x86_64-unknown-linux-gnu
 
 install:
@@ -53,10 +57,12 @@ deploy:
     tags: true
 
 before_install:
-  - zcat $HOME/docker/$TARGET.tar.gz | docker load || true
+  - [ $TRAVIS_OS_NAME = osx ] ||
+    zcat $HOME/docker/$TARGET.tar.gz | docker load || true
 
 before_cache:
-  - docker history -q japaric/$TARGET:latest |
+  - [ $TRAVIS_OS_NAME = osx ] ||
+    docker history -q japaric/$TARGET:latest |
     grep -v \<missing\> |
     xargs docker save |
     gzip > $HOME/docker/$TARGET.tar.gz

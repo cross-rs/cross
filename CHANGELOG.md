@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Support for `x86_64-unknown-linux-musl`
 - Print shell commands when the verbose flag is used.
+- Support crossing from x86_64 osx to i686 osx
 
 ## v0.1.0 - 2016-12-26
 
