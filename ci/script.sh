@@ -13,15 +13,17 @@ main() {
 
     cargo install --path .
 
-    td=$(mktemp -d)
+    if [ $TARGET != i686-apple-darwin ]; then
+        td=$(mktemp -d)
 
-    git clone --depth 1 https://github.com/rust-lang/cargo $td
+        git clone --depth 1 https://github.com/rust-lang/cargo $td
 
-    pushd $td
-    cross build --target $TARGET
-    popd
+        pushd $td
+        cross build --target $TARGET
+        popd
 
-    rm -rf $td
+        rm -rf $td
+    fi
 
     # NOTE(s390x) japaric/cross#3
     # NOTE(x86_64-musl) can't test compiler-builtins because that crate needs
