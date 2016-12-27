@@ -57,11 +57,11 @@ deploy:
     tags: true
 
 before_install:
-  - [ $TRAVIS_OS_NAME = osx ] ||
+  - test $TRAVIS_OS_NAME = osx ||
     zcat $HOME/docker/$TARGET.tar.gz | docker load || true
 
 before_cache:
-  - [ $TRAVIS_OS_NAME = osx ] ||
+  - test $TRAVIS_OS_NAME = osx ||
     docker history -q japaric/$TARGET:latest |
     grep -v \<missing\> |
     xargs docker save |
