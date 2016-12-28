@@ -65,5 +65,5 @@ pub fn root() -> Result<Option<PathBuf>> {
 
 /// Pass-through mode
 pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus> {
-    Command::new("cargo").args(args).run_and_get_exit_status(verbose)
+    Command::new("cargo").args(args).run_and_get_status(verbose)
 }

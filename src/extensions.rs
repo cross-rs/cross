@@ -4,14 +4,14 @@ use errors::*;
 
 pub trait CommandExt {
     fn run(&mut self, verbose: bool) -> Result<()>;
-    fn run_and_get_exit_status(&mut self, verbose: bool) -> Result<ExitStatus>;
+    fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus>;
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String>;
 }
 
 impl CommandExt for Command {
     /// Runs the command to completion
     fn run(&mut self, verbose: bool) -> Result<()> {
-        let status = self.run_and_get_exit_status(verbose)?;
+        let status = self.run_and_get_status(verbose)?;
 
         if status.success() {
             Ok(())
@@ -23,7 +23,7 @@ impl CommandExt for Command {
     }
 
     /// Runs the command to completion
-    fn run_and_get_exit_status(&mut self, verbose: bool) -> Result<ExitStatus> {
+    fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus> {
         if verbose {
             println!("+ {:?}", self);
         }

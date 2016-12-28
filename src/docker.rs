@@ -63,5 +63,5 @@ pub fn run(target: Target,
         .args(&["-w", "/project"])
         .args(&["-it", &format!("japaric/{}:{}", target, tag)])
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
-        .run_and_get_exit_status(verbose)
+        .run_and_get_status(verbose)
 }
