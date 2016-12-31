@@ -17,6 +17,10 @@ matrix:
     - env: TARGET=powerpc64-unknown-linux-gnu
     - env: TARGET=powerpc64le-unknown-linux-gnu
     - env: TARGET=s390x-unknown-linux-gnu
+    - env: TARGET=thumbv6m-none-eabi
+    - env: TARGET=thumbv7em-none-eabi
+    - env: TARGET=thumbv7em-none-eabihf
+    - env: TARGET=thumbv7m-none-eabi
     - env: TARGET=x86_64-unknown-linux-musl
     - env: TARGET=i686-apple-darwin
       os: osx
