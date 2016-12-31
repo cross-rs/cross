@@ -1,6 +1,6 @@
 use std::{env, fs};
 use std::borrow::Cow;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 
 use Target;
@@ -30,14 +30,21 @@ pub fn run(target: Target,
            verbose: bool)
            -> Result<ExitStatus> {
     let target = target.triple();
-    let cargo_dir = env::home_dir()
-        .ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?
-        .join(".cargo");
+    let home_dir = env::home_dir()
+        .ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?;
+    let cargo_dir = env::var_os("CARGO_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_dir.join(".cargo"));
+    let xargo_dir = env::var_os("XARGO_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_dir.join(".xargo"));
     let target_dir = cargo_root.join("target");
 
-    // create the target directory if it doesn't exist, otherwise `docker` will
-    // create it but it will be owned by `root`
+    // create the directories we are going to mount before we mount them,
+    // otherwise `docker` will create them but they will be owned by `root`
     fs::create_dir(&target_dir).ok();
+    fs::create_dir(&cargo_dir).ok();
+    fs::create_dir(&xargo_dir).ok();
 
     let mut cmd = Command::new("cargo");
     cmd.args(args);
@@ -55,6 +62,9 @@ pub fn run(target: Target,
         .args(&["--user", &format!("{}:{}", id::user(), id::group())])
         .args(&["-e", "CARGO_HOME=/cargo"])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
+        .args(&["-e", &format!("USER={}", id::username())])
+        .args(&["-e", "XARGO_HOME=/xargo"])
+        .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", cargo_root.display())])
         .args(&["-v",
