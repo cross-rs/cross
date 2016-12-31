@@ -17,10 +17,10 @@ main() {
         thumbv*-none-eabi*)
             td=$(mktemp -d)
 
-            git clone --depth 1 https://github.com/japaric/cortex-m $td
+            git clone --depth 1 https://github.com/rust-lang-nursery/compiler-builtins $td
 
             pushd $td
-            cross build --target $TARGET
+            cross build --features c --target $TARGET
             popd
 
             rm -rf $td
