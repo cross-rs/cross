@@ -19,6 +19,7 @@ main() {
 
             git clone \
                 --depth 1 \
+                --recursive \
                 https://github.com/rust-lang-nursery/compiler-builtins $td
 
             pushd $td
