@@ -17,7 +17,10 @@ main() {
         thumbv*-none-eabi*)
             td=$(mktemp -d)
 
-            git clone --depth 1 https://github.com/rust-lang-nursery/compiler-builtins $td
+            git clone \
+                --branch rustup \
+                --depth 1 \
+                https://github.com/rust-lang-nursery/compiler-builtins $td
 
             pushd $td
             cross build --features c --target $TARGET
