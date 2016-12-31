@@ -22,6 +22,7 @@ main() {
                 https://github.com/rust-lang-nursery/compiler-builtins $td
 
             pushd $td
+            cargo generate-lockfile
             cross build --features c --target $TARGET
             popd
 
