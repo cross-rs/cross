@@ -5,8 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.2] - 2016-12-31
+
 ### Added
 
+- Support for `i686-unknown-linux-musl`
 - Support for `cross build`ing crates for the `thumbv*-none-eabi*` targets.
 
 ## [v0.1.1] - 2016-12-28
@@ -21,5 +24,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.2...HEAD
+[v0.1.2]: https://github.com/japaric/cross/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/japaric/cross/compare/v0.1.0...v0.1.1
