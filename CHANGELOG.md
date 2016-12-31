@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Support for `cross build`ing crates for the `thumbv*-none-eabi*` targets.
+
 ## [v0.1.1] - 2016-12-28
 
 ### Added

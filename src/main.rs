@@ -40,7 +40,7 @@ impl Host {
         if *self == Host::X86_64AppleDarwin {
             target == Some(Target::I686AppleDarwin)
         } else if *self == Host::X86_64UnknownLinuxGnu {
-            target.map(|t| t.is_linux()).unwrap_or(true)
+            target.map(|t| t.needs_docker()).unwrap_or(true)
         } else {
             false
         }
@@ -80,20 +80,50 @@ pub enum Target {
     S390xUnknownLinuxGnu,
     X86_64UnknownLinuxGnu,
     X86_64UnknownLinuxMusl,
+
+    // Bare metal
+    Thumbv6mNoneEabi,
+    Thumbv7emNoneEabi,
+    Thumbv7emNoneEabihf,
+    Thumbv7mNoneEabi,
 }
 
 impl Target {
+    fn has_std(&self) -> bool {
+        !self.is_bare_metal()
+    }
+
+    fn is_bare_metal(&self) -> bool {
+        match *self {
+            Target::Thumbv6mNoneEabi |
+            Target::Thumbv7emNoneEabi |
+            Target::Thumbv7emNoneEabihf |
+            Target::Thumbv7mNoneEabi => true,
+            _ => false,
+        }
+    }
+
     fn is_linux(&self) -> bool {
         match *self {
-            Target::I686AppleDarwin |
-            Target::Other |
-            Target::X86_64AppleDarwin => false,
-            _ => true,
+            Target::Aarch64UnknownLinuxGnu |
+            Target::Armv7UnknownLinuxGnueabihf |
+            Target::I686UnknownLinuxGnu |
+            Target::Mips64UnknownLinuxGnuabi64 |
+            Target::Mips64elUnknownLinuxGnuabi64 |
+            Target::MipsUnknownLinuxGnu |
+            Target::MipselUnknownLinuxGnu |
+            Target::Powerpc64UnknownLinuxGnu |
+            Target::Powerpc64leUnknownLinuxGnu |
+            Target::PowerpcUnknownLinuxGnu |
+            Target::S390xUnknownLinuxGnu |
+            Target::X86_64UnknownLinuxGnu |
+            Target::X86_64UnknownLinuxMusl => true,
+            _ => false,
         }
     }
 
     fn needs_docker(&self) -> bool {
-        self.is_linux()
+        self.is_linux() || self.is_bare_metal()
     }
 
     fn needs_qemu(&self) -> bool {
@@ -123,10 +153,18 @@ impl Target {
             Powerpc64leUnknownLinuxGnu => "powerpc64le-unknown-linux-gnu",
             PowerpcUnknownLinuxGnu => "powerpc-unknown-linux-gnu",
             S390xUnknownLinuxGnu => "s390x-unknown-linux-gnu",
+            Thumbv6mNoneEabi => "thumbv6m-none-eabi",
+            Thumbv7emNoneEabi => "thumbv7em-none-eabi",
+            Thumbv7emNoneEabihf => "thumbv7em-none-eabihf",
+            Thumbv7mNoneEabi => "thumbv7m-none-eabi",
             X86_64AppleDarwin => "x86_64-apple-darwin",
             X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
             X86_64UnknownLinuxMusl => "x86_64-unknown-linux-musl",
         }
+    }
+
+    fn uses_xargo(&self) -> bool {
+        self.is_bare_metal()
     }
 }
 
@@ -147,6 +185,10 @@ impl<'a> From<&'a str> for Target {
             "powerpc64-unknown-linux-gnu" => Powerpc64UnknownLinuxGnu,
             "powerpc64le-unknown-linux-gnu" => Powerpc64leUnknownLinuxGnu,
             "s390x-unknown-linux-gnu" => S390xUnknownLinuxGnu,
+            "thumbv6m-none-eabi" => Thumbv6mNoneEabi,
+            "thumbv7em-none-eabi" => Thumbv7emNoneEabi,
+            "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,
+            "thumbv7m-none-eabi" => Thumbv7mNoneEabi,
             "x86_64-apple-darwin" => X86_64AppleDarwin,
             "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
             "x86_64-unknown-linux-musl" => X86_64UnknownLinuxMusl,
@@ -218,7 +260,8 @@ fn run() -> Result<ExitStatus> {
         if host.is_supported(args.target) {
             let target = args.target.unwrap_or(Target::from(host));
 
-            if !rustup::installed_targets(verbose)?.contains(&target) {
+            if target.has_std() &&
+               !rustup::installed_targets(verbose)?.contains(&target) {
                 rustup::install(target, verbose)?;
             }
 

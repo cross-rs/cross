@@ -13,6 +13,22 @@ main() {
 
     cargo install --path .
 
+    case $TARGET in
+        thumbv*-none-eabi*)
+            td=$(mktemp -d)
+
+            git clone --depth 1 https://github.com/japaric/cortex-m $td
+
+            pushd $td
+            cross build --target $TARGET
+            popd
+
+            rm -rf $td
+
+            return
+        ;;
+    esac
+
     if [ $TARGET != i686-apple-darwin ]; then
         td=$(mktemp -d)
 

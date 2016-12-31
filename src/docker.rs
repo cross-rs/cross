@@ -29,7 +29,6 @@ pub fn run(target: Target,
            cargo_root: &Path,
            verbose: bool)
            -> Result<ExitStatus> {
-    let target = target.triple();
     let home_dir = env::home_dir()
         .ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?;
     let cargo_dir = env::var_os("CARGO_HOME")
@@ -46,7 +45,11 @@ pub fn run(target: Target,
     fs::create_dir(&cargo_dir).ok();
     fs::create_dir(&xargo_dir).ok();
 
-    let mut cmd = Command::new("cargo");
+    let mut cmd = if target.uses_xargo() {
+        Command::new("xargo")
+    } else {
+        Command::new("cargo")
+    };
     cmd.args(args);
 
     let version = env!("CARGO_PKG_VERSION");
@@ -71,7 +74,7 @@ pub fn run(target: Target,
                 &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
-        .args(&["-it", &format!("japaric/{}:{}", target, tag)])
+        .args(&["-it", &format!("japaric/{}:{}", target.triple(), tag)])
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
