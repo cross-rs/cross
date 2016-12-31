@@ -70,6 +70,7 @@ pub enum Target {
     Aarch64UnknownLinuxGnu,
     Armv7UnknownLinuxGnueabihf,
     I686UnknownLinuxGnu,
+    I686UnknownLinuxMusl,
     Mips64UnknownLinuxGnuabi64,
     Mips64elUnknownLinuxGnuabi64,
     MipsUnknownLinuxGnu,
@@ -130,6 +131,7 @@ impl Target {
         self.is_linux() &&
         match *self {
             Target::I686UnknownLinuxGnu |
+            Target::I686UnknownLinuxMusl |
             Target::X86_64UnknownLinuxGnu |
             Target::X86_64UnknownLinuxMusl => false,
             _ => true,
@@ -144,6 +146,7 @@ impl Target {
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
             I686AppleDarwin => "i686-apple-darwin",
             I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
+            I686UnknownLinuxMusl => "i686-unknown-linux-musl",
             Mips64UnknownLinuxGnuabi64 => "mips64-unknown-linux-gnuabi64",
             Mips64elUnknownLinuxGnuabi64 => "mips64el-unknown-linux-gnuabi64",
             MipsUnknownLinuxGnu => "mips-unknown-linux-gnu",
@@ -177,6 +180,7 @@ impl<'a> From<&'a str> for Target {
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
             "i686-apple-darwin" => I686AppleDarwin,
             "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
+            "i686-unknown-linux-musl" => I686UnknownLinuxMusl,
             "mips-unknown-linux-gnu" => MipsUnknownLinuxGnu,
             "mips64-unknown-linux-gnuabi64" => Mips64UnknownLinuxGnuabi64,
             "mips64el-unknown-linux-gnuabi64" => Mips64elUnknownLinuxGnuabi64,

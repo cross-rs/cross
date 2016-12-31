@@ -32,7 +32,7 @@ main() {
         ;;
     esac
 
-    if [ $TARGET != i686-apple-darwin ]; then
+    if [ $TARGET != i686-apple-darwin && $TARGET != i686-unknown-linux-musl ]; then
         td=$(mktemp -d)
 
         git clone --depth 1 https://github.com/rust-lang/cargo $td
@@ -48,7 +48,8 @@ main() {
     # NOTE(x86_64-musl) can't test compiler-builtins because that crate needs
     # cdylibs and this musl target doesn't support cdylibs
     case $TARGET in
-        s390x-unknown-linux-gnu | \
+        i686-unknown-linux-musl | \
+            s390x-unknown-linux-gnu | \
             x86_64-unknown-linux-musl)
         ;;
         *)
