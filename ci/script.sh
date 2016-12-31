@@ -18,7 +18,6 @@ main() {
             td=$(mktemp -d)
 
             git clone \
-                --branch rustup \
                 --depth 1 \
                 https://github.com/rust-lang-nursery/compiler-builtins $td
 
