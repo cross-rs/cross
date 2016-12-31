@@ -18,11 +18,12 @@ main() {
             td=$(mktemp -d)
 
             git clone \
-                --branch rustup \
                 --depth 1 \
+                --recursive \
                 https://github.com/rust-lang-nursery/compiler-builtins $td
 
             pushd $td
+            cargo generate-lockfile
             cross build --features c --target $TARGET
             popd
 

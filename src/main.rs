@@ -138,6 +138,10 @@ impl Target {
         }
     }
 
+    fn needs_rust_src(&self) -> bool {
+        self.is_bare_metal()
+    }
+
     fn triple(&self) -> &'static str {
         use Target::*;
 
@@ -211,7 +215,7 @@ impl From<Host> for Target {
     }
 }
 
-fn main() {
+pub fn main() {
     fn show_backtrace() -> bool {
         env::var("RUST_BACKTRACE").as_ref().map(|s| &s[..]) == Ok("1")
     }
@@ -267,6 +271,11 @@ fn run() -> Result<ExitStatus> {
             if target.has_std() &&
                !rustup::installed_targets(verbose)?.contains(&target) {
                 rustup::install(target, verbose)?;
+            }
+
+            if target.needs_rust_src() &&
+               !rustup::rust_src_is_installed(verbose)? {
+                rustup::install_rust_src(verbose)?;
             }
 
             if target.needs_docker() &&
