@@ -33,7 +33,7 @@ main() {
         ;;
     esac
 
-    if [ $TARGET = i686-apple-darwin || $TARGET = i686-unknown-linux-musl ]; then
+    if [ $TARGET = i686-apple-darwin ] || [ $TARGET = i686-unknown-linux-musl ]; then
         td=$(mktemp -d)
 
         git clone --depth 1 https://github.com/rust-lang/xargo $td
