@@ -36,7 +36,7 @@ main() {
     if [ $TARGET = i686-apple-darwin ] || [ $TARGET = i686-unknown-linux-musl ]; then
         td=$(mktemp -d)
 
-        git clone --depth 1 https://github.com/rust-lang/xargo $td
+        git clone --depth 1 https://github.com/japaric/xargo $td
 
         pushd $td
         cross build --target $TARGET
