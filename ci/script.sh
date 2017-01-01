@@ -33,7 +33,17 @@ main() {
         ;;
     esac
 
-    if [ $TARGET != i686-apple-darwin && $TARGET != i686-unknown-linux-musl ]; then
+    if [ $TARGET = i686-apple-darwin || $TARGET = i686-unknown-linux-musl ]; then
+        td=$(mktemp -d)
+
+        git clone --depth 1 https://github.com/rust-lang/xargo $td
+
+        pushd $td
+        cross build --target $TARGET
+        popd
+
+        rm -rf $td
+    else
         td=$(mktemp -d)
 
         git clone --depth 1 https://github.com/rust-lang/cargo $td
@@ -46,8 +56,8 @@ main() {
     fi
 
     # NOTE(s390x) japaric/cross#3
-    # NOTE(x86_64-musl) can't test compiler-builtins because that crate needs
-    # cdylibs and this musl target doesn't support cdylibs
+    # NOTE(*-musl) can't test compiler-builtins because that crate needs
+    # cdylibs and musl targets don't support cdylibs
     case $TARGET in
         i686-unknown-linux-musl | \
             s390x-unknown-linux-gnu | \

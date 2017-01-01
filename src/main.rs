@@ -109,6 +109,7 @@ impl Target {
             Target::Aarch64UnknownLinuxGnu |
             Target::Armv7UnknownLinuxGnueabihf |
             Target::I686UnknownLinuxGnu |
+            Target::I686UnknownLinuxMusl |
             Target::Mips64UnknownLinuxGnuabi64 |
             Target::Mips64elUnknownLinuxGnuabi64 |
             Target::MipsUnknownLinuxGnu |
