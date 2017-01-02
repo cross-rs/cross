@@ -5,6 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Support for the `arm-unknown-linux-gnueabi` target
+
+## [v0.1.3] - 2017-01-01
+
 ### Changed
 
 - Fix the `i686-unknown-linux-musl` target

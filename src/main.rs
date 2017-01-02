@@ -68,6 +68,7 @@ pub enum Target {
 
     // Linux
     Aarch64UnknownLinuxGnu,
+    ArmUnknownLinuxGnueabi,
     Armv7UnknownLinuxGnueabihf,
     I686UnknownLinuxGnu,
     I686UnknownLinuxMusl,
@@ -107,6 +108,7 @@ impl Target {
     fn is_linux(&self) -> bool {
         match *self {
             Target::Aarch64UnknownLinuxGnu |
+            Target::ArmUnknownLinuxGnueabi |
             Target::Armv7UnknownLinuxGnueabihf |
             Target::I686UnknownLinuxGnu |
             Target::I686UnknownLinuxMusl |
@@ -148,6 +150,7 @@ impl Target {
 
         match *self {
             Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
+            ArmUnknownLinuxGnueabi => "arm-unknown-linux-gnueabi",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
             I686AppleDarwin => "i686-apple-darwin",
             I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
@@ -182,6 +185,7 @@ impl<'a> From<&'a str> for Target {
 
         match s {
             "aarch64-unknown-linux-gnu" => Aarch64UnknownLinuxGnu,
+            "arm-unknown-linux-gnueabi" => ArmUnknownLinuxGnueabi,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
             "i686-apple-darwin" => I686AppleDarwin,
             "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,

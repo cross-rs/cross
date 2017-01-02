@@ -92,6 +92,7 @@ worst, "hang" (never terminate).
 | Target                               |  libc  | GCC   | QEMU  | OpenSSL | `test` |
 |--------------------------------------|--------|-------|-------|---------|:------:|
 | `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2 | 2.8.0 | 1.0.2j  |   ✓    |
+| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2 | 2.8.0 | 1.0.2j  |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2 | 2.8.0 | 1.0.2j  |   ✓    |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2 | N/A   | 1.0.2j  |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1 | N/A   | N/A     |   ✓    |
