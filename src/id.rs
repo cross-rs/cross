@@ -12,6 +12,8 @@ pub fn user() -> u32 {
 
 pub fn username() -> String {
     unsafe {
-        CStr::from_ptr(libc::getlogin()).to_string_lossy().into_owned()
+        CStr::from_ptr((*libc::getpwuid(user())).pw_name)
+            .to_string_lossy()
+            .into_owned()
     }
 }
