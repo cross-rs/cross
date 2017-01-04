@@ -59,6 +59,16 @@ pub fn run(target: Target,
         Cow::from(format!("v{}", version))
     };
 
+    let cargo_lock = cargo_root.join("Cargo.lock");
+    if !cargo_lock.exists() {
+        let cargo_toml = cargo_root.join("Cargo.toml");
+        Command::new("cargo").args(&["generate-lockfile",
+                    "--manifest-path",
+                    &cargo_toml.display().to_string()])
+            .run(verbose)
+            .chain_err(|| "couldn't generate Cargo.lock")?;
+    }
+
     Command::new("docker")
         .arg("run")
         .arg("--rm")

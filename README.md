@@ -57,11 +57,6 @@ it.
 # Start the Docker daemon, if it's not already running
 $ sudo systemctl start docker
 
-# (ONCE PER CARGO PROJECT)
-# `cross` can't generate .lock files itself (see caveats section)
-# if compiling a library, we'll have to use Cargo to generate the lock file
-$ cargo generate-lockfile
-
 # MAGIC! This Just Works
 $ cross build --target aarch64-unknown-linux-gnu
 
@@ -116,8 +111,6 @@ worst, "hang" (never terminate).
 - `cross` will mount the Cargo project as READ ONLY. Thus, if any crate attempts
   to modify its "source", the build will fail. Well behaved crates should only
   ever write to `$OUT_DIR` and never modify `$CARGO_MANIFEST_DIR` though.
-  - This is the reason why `cross` can't generate .lock files and you have to
-    manually call `cargo generate-lockfile`.
 
 - Versions `0.7.*` and older of the `openssl` crate are NOT supported. `cross`
   supports `openssl` via the `OPENSSL_DIR` "feature", which seems to have been

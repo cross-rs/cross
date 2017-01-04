@@ -9,6 +9,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Support for the `arm-unknown-linux-gnueabi` target
 
+### Changed
+
+- It's no longer necessary to call `cargo generate-lockfile` before using
+  `cross` as `cross` will now take care of creating a lockfile when necessary.
+
 ## [v0.1.3] - 2017-01-01
 
 ### Changed

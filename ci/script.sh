@@ -23,7 +23,6 @@ main() {
                 https://github.com/rust-lang-nursery/compiler-builtins $td
 
             pushd $td
-            cargo generate-lockfile
             cross build --features c --target $TARGET
             popd
 
@@ -73,7 +72,6 @@ main() {
                 $td
 
             pushd $td
-            cargo generate-lockfile
             cross test \
                   --no-default-features \
                   --target $TARGET
@@ -86,7 +84,6 @@ main() {
             cargo init --bin --name hello $td
 
             pushd $td
-            cargo generate-lockfile
             cross run --target $TARGET
             popd
 
