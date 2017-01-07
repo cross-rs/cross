@@ -1,8 +1,7 @@
 set -ex
 
 main() {
-    local td=$(mktemp -d) \
-          version=2.8.11
+    local version=$1
 
     local dependencies=(
         curl
@@ -12,6 +11,8 @@ main() {
 
     apt-get update
     apt-get install --no-install-recommends -y ${dependencies[@]}
+
+    local td=$(mktemp -d)
 
     pushd $td
 
