@@ -16,6 +16,7 @@ RUN bash /openssl.sh 1.0.2j linux-mips32 mips-linux-gnu-
 RUN apt-get install -y --no-install-recommends \
     ca-certificates \
     cmake \
+    g++-mips-linux-gnu \
     gcc \
     libc6-dev \
     make \
@@ -23,6 +24,7 @@ RUN apt-get install -y --no-install-recommends \
 
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
     CC_mips_unknown_linux_gnu=mips-linux-gnu-gcc \
+    CXX_mips_unknown_linux_gnu=mips-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
     QEMU_LD_PREFIX=/usr/mips-linux-gnu \
     RUST_TEST_THREADS=1

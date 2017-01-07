@@ -84,30 +84,30 @@ because QEMU gets upset when you spawn several threads. This also means that, if
 one of your unit tests spawns several threads then it's more likely to fail or,
 worst, "hang" (never terminate).
 
-| Target                               |  libc  | GCC   | QEMU  | OpenSSL | `test` |
-|--------------------------------------|--------|-------|-------|---------|:------:|
-| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2 | 2.8.0 | 1.0.2j  |   ✓    |
-| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2 | 2.8.0 | 1.0.2j  |   ✓    |
-| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2 | 2.8.0 | 1.0.2j  |   ✓    |
-| `i686-unknown-freebsd`               |  10.2  | 5.3.0 | N/A   | 1.0.2j  |        |
-| `i686-unknown-linux-gnu`             | 2.15   | 4.6.2 | N/A   | 1.0.2j  |   ✓    |
-| `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1 | N/A   | N/A     |   ✓    |
-| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1 | 2.8.0 | 1.0.2j  |   ✓    |
-| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1 | 2.8.0 | 1.0.2j  |   ✓    |
-| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1 | 2.8.0 | 1.0.2j  |   ✓    |
-| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1 | 2.8.0 | 1.0.2j  |   ✓    |
-| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2 | 2.7.1 | 1.0.2j  |   ✓    |
-| `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2 | 2.7.1 | 1.0.2j  |   ✓    |
-| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2 | 2.7.1 | 1.0.2j  |   ✓    |
-| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1 | 2.8.0 | 1.0.2j  |        |
-| `thumbv6m-none-eabi`                 | N/A    | 5.3.1 | N/A   | N/A     |        |
-| `thumbv7em-none-eabi`                | N/A    | 5.3.1 | N/A   | N/A     |        |
-| `thumbv7em-none-eabihf`              | N/A    | 5.3.1 | N/A   | N/A     |        |
-| `thumbv7m-none-eabi`                 | N/A    | 5.3.1 | N/A   | N/A     |        |
-| `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2 | N/A   | 1.0.2j  |   ✓    |
-| `x86_64-unknown-freebsd`             | 10.2   | 5.3.0 | N/A   | 1.0.2j  |        |
-| `x86_64-unknown-netbsd`              | 7.0    | 5.3.0 | N/A   | 1.0.2j  |        |
-| `x86_64-unknown-linux-musl`          | 1.1.15 | 5.3.1 | N/A   | 1.0.2j  |   ✓    |
+| Target                               |  libc  | GCC   | OpenSSL | C++ | QEMU  | `test` |
+|--------------------------------------|--------|-------|---------|:---:|-------|:------:|
+| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `i686-unknown-freebsd`               | 10.2   | 5.3.0 | 1.0.2j  | ✓   | N/A   |        |
+| `i686-unknown-linux-gnu`             | 2.15   | 4.6.2 | 1.0.2j  | ✓   | N/A   |   ✓    |
+| `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1 | N/A     |     | N/A   |   ✓    |
+| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.7.1 |   ✓    |
+| `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.7.1 |   ✓    |
+| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.7.1 |   ✓    |
+| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |        |
+| `thumbv6m-none-eabi`                 | N/A    | 5.3.1 | N/A     |     | N/A   |        |
+| `thumbv7em-none-eabi`                | N/A    | 5.3.1 | N/A     |     | N/A   |        |
+| `thumbv7em-none-eabihf`              | N/A    | 5.3.1 | N/A     |     | N/A   |        |
+| `thumbv7m-none-eabi`                 | N/A    | 5.3.1 | N/A     |     | N/A   |        |
+| `x86_64-unknown-freebsd`             | 10.2   | 5.3.0 | 1.0.2j  | ✓   | N/A   |        |
+| `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2 | 1.0.2j  | ✓   | N/A   |   ✓    |
+| `x86_64-unknown-linux-musl`          | 1.1.15 | 5.3.1 | 1.0.2j  |     | N/A   |   ✓    |
+| `x86_64-unknown-netbsd`              | 7.0    | 5.3.0 | 1.0.2j  | ✓   | N/A   |        |
 
 <!-- | `x86_64-unknown-dragonfly`           | 4.6.0  | 5.3.0 | N/A   | 1.0.2j  |        | -->
 

@@ -97,6 +97,24 @@ main() {
             rm -rf $td
         ;;
     esac
+
+    # Test C++ support
+    case $TARGET in
+        *-unknown-linux-musl | \
+        thumb*-none-eabi*)
+        ;;
+        *)
+            td=$(mktemp -d)
+
+            git clone --depth 1 https://github.com/japaric/hellopp $td
+
+            pushd $td
+            cross run --target $TARGET
+            popd
+
+            rm -rf $td
+            ;;
+    esac
 }
 
 main

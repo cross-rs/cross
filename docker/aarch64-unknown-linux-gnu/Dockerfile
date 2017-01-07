@@ -13,6 +13,7 @@ RUN bash /openssl.sh 1.0.2j linux-aarch64 aarch64-linux-gnu-
 RUN apt-get install -y --no-install-recommends \
     ca-certificates \
     cmake \
+    g++-aarch64-linux-gnu \
     gcc \
     libc6-dev \
     make \
@@ -20,6 +21,7 @@ RUN apt-get install -y --no-install-recommends \
 
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
     CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc \
+    CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
     QEMU_LD_PREFIX=/usr/aarch64-linux-gnu \
     RUST_TEST_THREADS=1

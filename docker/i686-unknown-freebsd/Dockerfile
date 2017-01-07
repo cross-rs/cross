@@ -16,4 +16,5 @@ RUN apt-get install -y --no-install-recommends \
 
 ENV CARGO_TARGET_I686_UNKNOWN_FREEBSD_LINKER=i686-unknown-freebsd10-gcc \
     CC_i686_unknown_freebsd=i686-unknown-freebsd10-gcc \
+    CXX_i686_unknown_freebsd=i686-unknown-freebsd10-g++ \
     OPENSSL_DIR=/openssl
