@@ -2,9 +2,11 @@
 extern crate error_chain;
 extern crate libc;
 extern crate rustc_version;
+extern crate toml;
 
 mod cargo;
 mod cli;
+mod config;
 mod docker;
 mod errors;
 mod extensions;
@@ -315,8 +317,9 @@ fn run() -> Result<ExitStatus> {
                    !qemu::is_registered()? {
                     docker::register(verbose)?
                 }
+                let docker_image: String = config::get_image(&target, &root)?;
 
-                return docker::run(target, &args.all, &root, verbose);
+                return docker::run(target, docker_image, &args.all, &root, verbose);
             }
         }
     }

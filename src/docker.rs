@@ -1,5 +1,4 @@
 use std::{env, fs};
-use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 
@@ -25,6 +24,7 @@ pub fn register(verbose: bool) -> Result<()> {
 }
 
 pub fn run(target: Target,
+           docker_image: String,
            args: &[String],
            cargo_root: &Path,
            verbose: bool)
@@ -52,13 +52,6 @@ pub fn run(target: Target,
     };
     cmd.args(args);
 
-    let version = env!("CARGO_PKG_VERSION");
-    let tag = if version.ends_with("-dev") {
-        Cow::from("latest")
-    } else {
-        Cow::from(format!("v{}", version))
-    };
-
     let cargo_lock = cargo_root.join("Cargo.lock");
     if !cargo_lock.exists() {
         let cargo_toml = cargo_root.join("Cargo.toml");
@@ -84,7 +77,7 @@ pub fn run(target: Target,
                 &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
-        .args(&["-it", &format!("japaric/{}:{}", target.triple(), tag)])
+        .args(&["-it", &docker_image])
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
