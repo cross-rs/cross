@@ -7,7 +7,7 @@ keywords = ["cross", "compilation", "testing", "tool"]
 license = "MIT OR Apache-2.0"
 name = "cross"
 repository = "https://github.com/japaric/cross"
-version = "0.1.4-dev"
+version = "0.1.4"
 
 [dependencies]
 error-chain = "0.7.1"
