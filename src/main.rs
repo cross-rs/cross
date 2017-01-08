@@ -83,6 +83,12 @@ pub enum Target {
     X86_64UnknownLinuxGnu,
     X86_64UnknownLinuxMusl,
 
+    // *BSD
+    I686UnknownFreebsd,
+    X86_64UnknownDragonfly,
+    X86_64UnknownFreebsd,
+    X86_64UnknownNetbsd,
+
     // Bare metal
     Thumbv6mNoneEabi,
     Thumbv7emNoneEabi,
@@ -101,6 +107,17 @@ impl Target {
             Target::Thumbv7emNoneEabi |
             Target::Thumbv7emNoneEabihf |
             Target::Thumbv7mNoneEabi => true,
+            _ => false,
+        }
+    }
+
+    fn is_bsd(&self) -> bool {
+        match *self {
+            // NOTE No `std` component for dragonfly as of 2017-01-17
+            // Target::X86_64UnknownDragonfly |
+            Target::I686UnknownFreebsd |
+            Target::X86_64UnknownFreebsd |
+            Target::X86_64UnknownNetbsd => true,
             _ => false,
         }
     }
@@ -127,7 +144,7 @@ impl Target {
     }
 
     fn needs_docker(&self) -> bool {
-        self.is_linux() || self.is_bare_metal()
+        self.is_linux() || self.is_bare_metal() || self.is_bsd()
     }
 
     fn needs_qemu(&self) -> bool {
@@ -153,6 +170,7 @@ impl Target {
             ArmUnknownLinuxGnueabi => "arm-unknown-linux-gnueabi",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
             I686AppleDarwin => "i686-apple-darwin",
+            I686UnknownFreebsd => "i686-unknown-freebsd",
             I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
             I686UnknownLinuxMusl => "i686-unknown-linux-musl",
             Mips64UnknownLinuxGnuabi64 => "mips64-unknown-linux-gnuabi64",
@@ -169,8 +187,11 @@ impl Target {
             Thumbv7emNoneEabihf => "thumbv7em-none-eabihf",
             Thumbv7mNoneEabi => "thumbv7m-none-eabi",
             X86_64AppleDarwin => "x86_64-apple-darwin",
+            X86_64UnknownDragonfly => "x86_64-unknown-dragonfly",
+            X86_64UnknownFreebsd => "x86_64-unknown-freebsd",
             X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
             X86_64UnknownLinuxMusl => "x86_64-unknown-linux-musl",
+            X86_64UnknownNetbsd => "x86_64-unknown-netbsd",
         }
     }
 
@@ -188,6 +209,7 @@ impl<'a> From<&'a str> for Target {
             "arm-unknown-linux-gnueabi" => ArmUnknownLinuxGnueabi,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
             "i686-apple-darwin" => I686AppleDarwin,
+            "i686-unknown-freebsd" => I686UnknownFreebsd,
             "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
             "i686-unknown-linux-musl" => I686UnknownLinuxMusl,
             "mips-unknown-linux-gnu" => MipsUnknownLinuxGnu,
@@ -203,8 +225,11 @@ impl<'a> From<&'a str> for Target {
             "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,
             "thumbv7m-none-eabi" => Thumbv7mNoneEabi,
             "x86_64-apple-darwin" => X86_64AppleDarwin,
+            "x86_64-unknown-dragonfly" => X86_64UnknownDragonfly,
+            "x86_64-unknown-freebsd" => X86_64UnknownFreebsd,
             "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
             "x86_64-unknown-linux-musl" => X86_64UnknownLinuxMusl,
+            "x86_64-unknown-netbsd" => X86_64UnknownNetbsd,
             _ => Other,
         }
     }

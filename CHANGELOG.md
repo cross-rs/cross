@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Support for the `arm-unknown-linux-gnueabi` target
+- `cross build` support for:
+  - `i686-unknown-freebsd`
+  - `x86_64-unknown-freebsd`
+  - `x86_64-unknown-netbsd`
 
 ### Changed
 
