@@ -19,14 +19,6 @@ impl Toml {
             .map(|val| val.as_str())
             .unwrap_or(None)
     }
-
-    /// Returns the `target.{}.tag` part of `Cross.toml`
-    pub fn tag(&self, target: &Target) -> Option<&str> {
-        self.table
-            .lookup(&format!("target.{}.tag", target.triple()))
-            .map(|val| val.as_str())
-            .unwrap_or(None)
-    }
 }
 
 pub fn get_image(target: &Target, root: &PathBuf) -> Result<String> {
@@ -35,13 +27,10 @@ pub fn get_image(target: &Target, root: &PathBuf) -> Result<String> {
         return Ok(image.into());
     }
     let version = env!("CARGO_PKG_VERSION");
-    let tag_inter = toml.as_ref().and_then(|toml| toml.tag(target));
-    let tag = if version.ends_with("-dev") && tag_inter.is_none() {
+    let tag = if version.ends_with("-dev") {
         Cow::from("latest")
-    } else if tag_inter.is_none() {
-        Cow::from(format!("v{}", version))
     } else {
-        Cow::from(tag_inter.unwrap())
+        Cow::from(format!("v{}", version))
     };
     Ok(format!("japaric/{}:{}", target.triple(), tag))
 }
