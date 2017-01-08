@@ -13,6 +13,7 @@ main() {
 
     cargo install --path .
 
+    # Test `cross build` for targets that don't have `std` support
     case $TARGET in
         thumbv*-none-eabi*)
             td=$(mktemp -d)
@@ -32,6 +33,7 @@ main() {
         ;;
     esac
 
+    # Test `cross build` for the other targets
     if [ $TARGET = i686-apple-darwin ] || [ $TARGET = i686-unknown-linux-musl ]; then
         td=$(mktemp -d)
 
@@ -54,13 +56,18 @@ main() {
         rm -rf $td
     fi
 
+    # Test `cross test`
     # NOTE(s390x) japaric/cross#3
     # NOTE(*-musl) can't test compiler-builtins because that crate needs
     # cdylibs and musl targets don't support cdylibs
+    # NOTE(*-*bsd) no `cross test` support for BSD targets
     case $TARGET in
-        i686-unknown-linux-musl | \
+        i686-unknown-freebsd | \
+            i686-unknown-linux-musl | \
             s390x-unknown-linux-gnu | \
-            x86_64-unknown-linux-musl)
+            x86_64-unknown-freebsd | \
+            x86_64-unknown-linux-musl | \
+            x86_64-unknown-netbsd)
         ;;
         *)
             td=$(mktemp -d)
