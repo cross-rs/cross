@@ -13,7 +13,7 @@ main() {
 
     cargo install --path .
 
-    # Test `cross build` for targets that don't have `std` support
+    # Test `cross build` / `cross run` for targets that don't have `std` support
     case $TARGET in
         thumbv*-none-eabi*)
             td=$(mktemp -d)
@@ -25,6 +25,19 @@ main() {
 
             pushd $td
             cross build --features c --target $TARGET
+            popd
+
+            rm -rf $td
+
+            td=$(mktemp -d)
+
+            git clone \
+                --depth 1 \
+                --recursive \
+                https://github.com/japaric/cortest $td
+
+            pushd $td
+            cross run --target $TARGET --example hello
             popd
 
             rm -rf $td
@@ -56,7 +69,7 @@ main() {
         rm -rf $td
     fi
 
-    # Test `cross test`
+    # Test `cross test` / `cross run`
     # NOTE(s390x) japaric/cross#3
     # NOTE(*-musl) can't test compiler-builtins because that crate needs
     # cdylibs and musl targets don't support cdylibs

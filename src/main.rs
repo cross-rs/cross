@@ -150,7 +150,8 @@ impl Target {
     }
 
     fn needs_qemu(&self) -> bool {
-        self.is_linux() &&
+        self.is_linux() ||
+        self.is_bare_metal() &&
         match *self {
             Target::I686UnknownLinuxGnu |
             Target::I686UnknownLinuxMusl |
@@ -319,7 +320,11 @@ fn run() -> Result<ExitStatus> {
                 }
                 let docker_image: String = config::get_image(&target, &root)?;
 
-                return docker::run(target, docker_image, &args.all, &root, verbose);
+                return docker::run(target,
+                                   docker_image,
+                                   &args.all,
+                                   &root,
+                                   verbose);
             }
         }
     }

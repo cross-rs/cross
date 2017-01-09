@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `cross run` support for the thumb targets.
+
 ## [v0.1.4] - 2017-01-07
 
 ### Added
