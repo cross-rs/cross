@@ -218,6 +218,7 @@ impl<'a> From<&'a str> for Target {
             "powerpc-unknown-linux-gnu" => PowerpcUnknownLinuxGnu,
             "powerpc64-unknown-linux-gnu" => Powerpc64UnknownLinuxGnu,
             "powerpc64le-unknown-linux-gnu" => Powerpc64leUnknownLinuxGnu,
+            "s390x-unknown-linux-gnu" => S390xUnknownLinuxGnu,
             "sparc64-unknown-linux-gnu" => Sparc64UnknownLinuxGnu,
             "thumbv6m-none-eabi" => Thumbv6mNoneEabi,
             "thumbv7em-none-eabi" => Thumbv7emNoneEabi,
