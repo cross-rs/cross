@@ -287,7 +287,8 @@ pub fn main() {
 fn run() -> Result<ExitStatus> {
     let args = cli::parse();
 
-    if args.all.iter().any(|a| a == "--version" || a == "-V") {
+    if args.all.iter().any(|a| a == "--version" || a == "-V") &&
+       args.subcommand.is_none() {
         println!(concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
                  include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")));
     }
