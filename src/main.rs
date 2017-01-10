@@ -84,6 +84,7 @@ pub enum Target {
     Powerpc64leUnknownLinuxGnu,
     PowerpcUnknownLinuxGnu,
     S390xUnknownLinuxGnu,
+    Sparc64UnknownLinuxGnu,
     X86_64UnknownLinuxGnu,
     X86_64UnknownLinuxMusl,
 
@@ -137,6 +138,7 @@ impl Target {
             Target::Powerpc64leUnknownLinuxGnu |
             Target::PowerpcUnknownLinuxGnu |
             Target::S390xUnknownLinuxGnu |
+            Target::Sparc64UnknownLinuxGnu |
             Target::X86_64UnknownLinuxGnu |
             Target::X86_64UnknownLinuxMusl => true,
             _ => false,
@@ -179,6 +181,7 @@ impl Target {
             Powerpc64leUnknownLinuxGnu => "powerpc64le-unknown-linux-gnu",
             PowerpcUnknownLinuxGnu => "powerpc-unknown-linux-gnu",
             S390xUnknownLinuxGnu => "s390x-unknown-linux-gnu",
+            Sparc64UnknownLinuxGnu => "sparc64-unknown-linux-gnu",
             Thumbv6mNoneEabi => "thumbv6m-none-eabi",
             Thumbv7emNoneEabi => "thumbv7em-none-eabi",
             Thumbv7emNoneEabihf => "thumbv7em-none-eabihf",
@@ -216,7 +219,7 @@ impl<'a> From<&'a str> for Target {
             "powerpc-unknown-linux-gnu" => PowerpcUnknownLinuxGnu,
             "powerpc64-unknown-linux-gnu" => Powerpc64UnknownLinuxGnu,
             "powerpc64le-unknown-linux-gnu" => Powerpc64leUnknownLinuxGnu,
-            "s390x-unknown-linux-gnu" => S390xUnknownLinuxGnu,
+            "sparc64-unknown-linux-gnu" => Sparc64UnknownLinuxGnu,
             "thumbv6m-none-eabi" => Thumbv6mNoneEabi,
             "thumbv7em-none-eabi" => Thumbv7emNoneEabi,
             "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,

@@ -8,6 +8,7 @@ main() {
     local dependencies=(
         ca-certificates
         curl
+        m4
         make
         perl
     )

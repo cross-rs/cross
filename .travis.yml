@@ -20,6 +20,7 @@ matrix:
     - env: TARGET=powerpc64-unknown-linux-gnu
     - env: TARGET=powerpc64le-unknown-linux-gnu
     - env: TARGET=s390x-unknown-linux-gnu
+    - env: TARGET=sparc64-unknown-linux-gnu
     - env: TARGET=x86_64-unknown-linux-musl DEPLOY=1
 
     # OSX

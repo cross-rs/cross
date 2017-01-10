@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - A `target.$TARGET.image` option to override the Docker image used for
   `$TARGET`.
 
+- A `sparc64-unknown-linux-gnu` environment.
+
 ## [v0.1.4] - 2017-01-07
 
 ### Added
