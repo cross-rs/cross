@@ -1,18 +1,21 @@
 FROM ubuntu:16.04
 
-COPY freebsd.sh /
-RUN bash /freebsd.sh i686
-
-COPY openssl.sh /
-RUN bash /openssl.sh 1.0.2j BSD-x86-elf i686-unknown-freebsd10-
-
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     ca-certificates \
     cmake \
+    curl \
     gcc \
     libc6-dev \
     make \
-    pkg-config
+    pkg-config && \
+    curl -LSfs http://japaric.github.io/trust/install.sh | \
+    sh -s -- --git japaric/xargo --tag v0.3.3 --target x86_64-unknown-linux-gnu --to /usr/bin && \
+    apt-get purge --auto-remove -y curl
+
+COPY freebsd.sh openssl.sh /
+RUN bash /freebsd.sh i686 && \
+    bash /openssl.sh 1.0.2j BSD-x86-elf i686-unknown-freebsd10-
 
 ENV CARGO_TARGET_I686_UNKNOWN_FREEBSD_LINKER=i686-unknown-freebsd10-gcc \
     CC_i686_unknown_freebsd=i686-unknown-freebsd10-gcc \

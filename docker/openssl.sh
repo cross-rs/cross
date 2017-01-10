@@ -14,7 +14,13 @@ main() {
 
     # NOTE cross toolchain must be already installed
     apt-get update
-    apt-get install --no-install-recommends -y ${dependencies[@]}
+    local purge_list=()
+    for dep in ${dependencies[@]}; do
+        dpkg -L $dep || (
+            apt-get install --no-install-recommends -y $dep &&
+                purge_list+=( $dep )
+        )
+    done
 
     td=$(mktemp -d)
 
@@ -30,7 +36,8 @@ main() {
     nice make -j1
     make install
 
-    apt-get purge --auto-remove -y ${dependencies[@]}
+    # clean up
+    apt-get purge --auto-remove -y ${purge_list[@]}
 
     popd
 

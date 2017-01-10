@@ -2,15 +2,20 @@ FROM ubuntu:16.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    gcc-multilib
-
-COPY musl.sh /
-RUN bash /musl.sh 1.1.15 i386 -m32
-
-RUN apt-get install -y --no-install-recommends \
     ca-certificates \
     cmake \
+    curl \
+    gcc \
+    libc6-dev \
     make \
-    pkg-config
+    pkg-config && \
+    curl -LSfs http://japaric.github.io/trust/install.sh | \
+    sh -s -- --git japaric/xargo --tag v0.3.3 --target x86_64-unknown-linux-gnu --to /usr/bin && \
+    apt-get purge --auto-remove -y curl
+
+COPY musl.sh /
+RUN apt-get install -y --no-install-recommends \
+    gcc-multilib && \
+    bash /musl.sh 1.1.15 i386 -m32
 
 ENV CC_i686_unknown_linux_musl=musl-gcc

@@ -19,7 +19,13 @@ main() {
     )
 
     apt-get update
-    apt-get install --no-install-recommends -y ${dependencies[@]}
+    local purge_list=()
+    for dep in ${dependencies[@]}; do
+        dpkg -L $dep || (
+            apt-get install --no-install-recommends -y $dep &&
+                purge_list+=( $dep )
+        )
+    done
 
     local td=$(mktemp -d)
 
@@ -130,10 +136,10 @@ EOF
     # clean up
     popd
 
-    apt-get purge --auto-remove -y ${dependencies[@]}
+    apt-get purge --auto-remove -y ${purge_list[@]}
 
     rm -rf $td
-    # rm $0
+    rm $0
 }
 
 main "${@}"

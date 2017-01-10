@@ -7,8 +7,13 @@ main() {
     )
 
     apt-get update
-
-    apt-get install --no-install-recommends -y ${dependencies[@]}
+    local purge_list=()
+    for dep in ${dependencies[@]}; do
+        dpkg -L $dep || (
+            apt-get install --no-install-recommends -y $dep &&
+                purge_list+=( $dep )
+        )
+    done
 
     mkdir -p /overrides /.cargo
     echo "paths = [" > /.cargo/config
@@ -28,7 +33,8 @@ main() {
 
     echo "]" >> /.cargo/config
 
-    apt-get purge --auto-remove -y ${dependencies[@]}
+    # clean up
+    apt-get purge --auto-remove -y ${purge_list[@]}
 
     rm $0
 }
