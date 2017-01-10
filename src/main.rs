@@ -101,10 +101,6 @@ pub enum Target {
 }
 
 impl Target {
-    fn has_std(&self) -> bool {
-        !self.is_bare_metal()
-    }
-
     fn is_bare_metal(&self) -> bool {
         match *self {
             Target::Thumbv6mNoneEabi |
@@ -307,8 +303,8 @@ fn run() -> Result<ExitStatus> {
                 }
                 .unwrap_or_else(|| target.needs_xargo());
 
-            if !uses_xargo && target.has_std() &&
-               !rustup::installed_targets(verbose)?.contains(&target) {
+            if !uses_xargo &&
+               rustup::available_targets(verbose)?.contains(&target) {
                 rustup::install(target, verbose)?;
             }
 

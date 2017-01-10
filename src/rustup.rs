@@ -20,16 +20,19 @@ pub fn install_rust_src(verbose: bool) -> Result<()> {
         .chain_err(|| format!("couldn't install the `rust-src` component"))
 }
 
-pub fn installed_targets(verbose: bool) -> Result<Vec<Target>> {
+pub fn available_targets(verbose: bool) -> Result<Vec<Target>> {
     let out = Command::new("rustup").args(&["target", "list"])
         .run_and_get_stdout(verbose)?;
 
     Ok(out.lines()
         .filter_map(|line| if line.contains("installed") ||
                               line.contains("default") {
-            line.splitn(2, ' ').next().map(Target::from)
-        } else {
             None
+        } else {
+            match Target::from(line) {
+                Target::Other => None,
+                t => Some(t),
+            }
         })
         .collect())
 }
