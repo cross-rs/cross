@@ -46,6 +46,10 @@ main() {
                 https://github.com/rust-lang-nursery/compiler-builtins $td
 
             pushd $td
+            cat > Cross.toml <<EOF
+[build]
+xargo = true
+EOF
             cross build --features c --lib --target $TARGET
             popd
 
