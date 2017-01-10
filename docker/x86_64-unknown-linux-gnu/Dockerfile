@@ -19,7 +19,8 @@ RUN apt-get purge --auto-remove -y cmake && \
 
 COPY openssl.sh /
 RUN apt-get install -y --no-install-recommends \
-    g++ && \
+    g++ \
+    zlib1g-dev && \
     bash /openssl.sh 1.0.2j linux-x86_64
 
 ENV OPENSSL_DIR=/openssl
