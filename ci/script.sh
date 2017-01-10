@@ -100,16 +100,21 @@ main() {
 
     # Test C++ support
     case $TARGET in
-        *-unknown-linux-musl | \
-        thumb*-none-eabi*)
-        ;;
+        *-unknown-*bsd | \
+            *-unknown-linux-musl | \
+            thumb*-none-eabi*)
+            ;;
         *)
             td=$(mktemp -d)
 
             git clone --depth 1 https://github.com/japaric/hellopp $td
 
             pushd $td
-            cross run --target $TARGET
+            if [ $TARGET = s390x-unknown-linux-gnu ]; then
+                cross build --target $TARGET
+            else
+                cross run --target $TARGET
+            fi
             popd
 
             rm -rf $td

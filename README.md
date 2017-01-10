@@ -89,7 +89,7 @@ worst, "hang" (never terminate).
 | `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
-| `i686-unknown-freebsd`               | 10.2   | 5.3.0 | 1.0.2j  | ✓   | N/A   |        |
+| `i686-unknown-freebsd`               | 10.2   | 5.3.0 | 1.0.2j  |     | N/A   |        |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2 | 1.0.2j  | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1 | N/A     |     | N/A   |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
@@ -104,10 +104,10 @@ worst, "hang" (never terminate).
 | `thumbv7em-none-eabi`                | N/A    | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7em-none-eabihf`              | N/A    | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7m-none-eabi`                 | N/A    | 5.3.1 | N/A     |     | N/A   |        |
-| `x86_64-unknown-freebsd`             | 10.2   | 5.3.0 | 1.0.2j  | ✓   | N/A   |        |
+| `x86_64-unknown-freebsd`             | 10.2   | 5.3.0 | 1.0.2j  |     | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2 | 1.0.2j  | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.15 | 5.3.1 | 1.0.2j  |     | N/A   |   ✓    |
-| `x86_64-unknown-netbsd`              | 7.0    | 5.3.0 | 1.0.2j  | ✓   | N/A   |        |
+| `x86_64-unknown-netbsd`              | 7.0    | 5.3.0 | 1.0.2j  |     | N/A   |        |
 
 <!-- | `x86_64-unknown-dragonfly`           | 4.6.0  | 5.3.0 | N/A   | 1.0.2j  |        | -->
 
