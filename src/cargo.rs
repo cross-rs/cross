@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
@@ -42,8 +42,18 @@ impl<'a> From<&'a str> for Subcommand {
     }
 }
 
+pub struct Root {
+    path: PathBuf,
+}
+
+impl Root {
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
 /// Cargo project root
-pub fn root() -> Result<Option<PathBuf>> {
+pub fn root() -> Result<Option<Root>> {
     let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
 
     let mut dir = &*cd;
@@ -51,7 +61,7 @@ pub fn root() -> Result<Option<PathBuf>> {
         let toml = dir.join("Cargo.toml");
 
         if fs::metadata(&toml).is_ok() {
-            return Ok(Some(dir.to_owned()));
+            return Ok(Some(Root { path: dir.to_owned() }));
         }
 
         match dir.parent() {

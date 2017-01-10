@@ -6,7 +6,6 @@ extern crate toml;
 
 mod cargo;
 mod cli;
-mod config;
 mod docker;
 mod errors;
 mod extensions;
@@ -20,6 +19,9 @@ use std::io::Write;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
+use toml::{Parser, Value};
+
+use cargo::Root;
 use errors::*;
 
 #[allow(non_camel_case_types)]
@@ -161,10 +163,6 @@ impl Target {
         }
     }
 
-    fn needs_rust_src(&self) -> bool {
-        self.is_bare_metal()
-    }
-
     fn triple(&self) -> &'static str {
         use Target::*;
 
@@ -198,7 +196,7 @@ impl Target {
         }
     }
 
-    fn uses_xargo(&self) -> bool {
+    fn needs_xargo(&self) -> bool {
         self.is_bare_metal()
     }
 }
@@ -301,14 +299,20 @@ fn run() -> Result<ExitStatus> {
 
         if host.is_supported(args.target) {
             let target = args.target.unwrap_or(Target::from(host));
+            let toml = toml(&root)?;
+            let uses_xargo = if let Some(toml) = toml.as_ref() {
+                    toml.xargo(&target)?
+                } else {
+                    None
+                }
+                .unwrap_or_else(|| target.needs_xargo());
 
-            if target.has_std() &&
+            if !uses_xargo && target.has_std() &&
                !rustup::installed_targets(verbose)?.contains(&target) {
                 rustup::install(target, verbose)?;
             }
 
-            if target.needs_rust_src() &&
-               !rustup::rust_src_is_installed(verbose)? {
+            if uses_xargo && !rustup::rust_src_is_installed(verbose)? {
                 rustup::install_rust_src(verbose)?;
             }
 
@@ -319,16 +323,74 @@ fn run() -> Result<ExitStatus> {
                    !qemu::is_registered()? {
                     docker::register(verbose)?
                 }
-                let docker_image: String = config::get_image(&target, &root)?;
 
-                return docker::run(target,
-                                   docker_image,
+                return docker::run(&target,
                                    &args.all,
                                    &root,
+                                   toml.as_ref(),
+                                   uses_xargo,
                                    verbose);
             }
         }
     }
 
     cargo::run(&args.all, verbose)
+}
+
+/// Parsed `Cross.toml`
+pub struct Toml {
+    table: Value,
+}
+
+impl Toml {
+    /// Returns the `target.{}.image` part of `Cross.toml`
+    pub fn image(&self, target: &Target) -> Result<Option<&str>> {
+        let triple = target.triple();
+
+        if let Some(value) = self.table
+            .lookup(&format!("target.{}.image", triple)) {
+            Ok(Some(value.as_str()
+                .ok_or_else(|| {
+                    format!("target.{}.image must be a string", triple)
+                })?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Returns the `build.image` or the `target.{}.xargo` part of `Cross.toml`
+    pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
+        let triple = target.triple();
+
+        if let Some(value) = self.table.lookup("build.xargo") {
+            return Ok(Some(value.as_bool()
+                .ok_or_else(|| "build.xargo must be a boolean")?));
+        }
+
+        if let Some(value) = self.table
+            .lookup(&format!("target.{}.xargo", triple)) {
+            Ok(Some(value.as_bool()
+                .ok_or_else(|| {
+                    format!("target.{}.xargo must be a boolean", triple)
+                })?))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+/// Parses the `Cross.toml` at the root of the Cargo project (if any)
+fn toml(root: &Root) -> Result<Option<Toml>> {
+    let path = root.path().join("Cross.toml");
+
+    if path.exists() {
+        Ok(Some(Toml {
+            table: Value::Table(Parser::new(&file::read(&path)?).parse()
+                .ok_or_else(|| {
+                    format!("couldn't parse {} as TOML", path.display())
+                })?),
+        }))
+    } else {
+        Ok(None)
+    }
 }

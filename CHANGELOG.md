@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - `cross run` support for the thumb targets.
+- A `build.xargo` / `target.$TARGET.xargo` option to Cross.toml to use Xargo
+  instead of Cargo.
 
 ## [v0.1.4] - 2017-01-07
 
