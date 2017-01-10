@@ -105,12 +105,11 @@ worst, "hang" (never terminate).
 | `thumbv7em-none-eabi`                | N/A    | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7em-none-eabihf`              | N/A    | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7m-none-eabi`                 | N/A    | 5.3.1 | N/A     |     | N/A   |        |
+| `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0 | 1.0.2j  |     | N/A   |   ✓    |
 | `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0 | 1.0.2j  |     | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2 | 1.0.2j  | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.15 | 5.3.1 | 1.0.2j  |     | N/A   |   ✓    |
 | `x86_64-unknown-netbsd`[1]           | 7.0    | 5.3.0 | 1.0.2j  |     | N/A   |        |
-
-<!-- | `x86_64-unknown-dragonfly`           | 4.6.0  | 5.3.0 | N/A   | 1.0.2j  |        | -->
 
 [1] For *BSD targets, the libc column indicates the OS release version from
 where libc was extracted.

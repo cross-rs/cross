@@ -35,8 +35,9 @@ main() {
 
     # `cross build` test for targets where `std` is not available
     case $TARGET in
-        thumbv*-none-eabi* | \
-            sparc64-*)
+        sparc64-* | \
+            thumbv*-none-eabi* | \
+            x86_64-unknown-dragonfly)
             td=$(mktemp -d)
 
             git clone \
@@ -45,7 +46,7 @@ main() {
                 https://github.com/rust-lang-nursery/compiler-builtins $td
 
             pushd $td
-            cross build --features c --target $TARGET
+            cross build --features c --lib --target $TARGET
             popd
 
             rm -rf $td

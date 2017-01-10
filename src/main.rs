@@ -114,9 +114,8 @@ impl Target {
 
     fn is_bsd(&self) -> bool {
         match *self {
-            // NOTE No `std` component for dragonfly as of 2017-01-17
-            // Target::X86_64UnknownDragonfly |
             Target::I686UnknownFreebsd |
+            Target::X86_64UnknownDragonfly |
             Target::X86_64UnknownFreebsd |
             Target::X86_64UnknownNetbsd => true,
             _ => false,

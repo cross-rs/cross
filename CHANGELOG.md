@@ -17,6 +17,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - A `sparc64-unknown-linux-gnu` environment.
 
+- A `x86_64-unknown-dragonfly` environment .
+
 ## [v0.1.4] - 2017-01-07
 
 ### Added
