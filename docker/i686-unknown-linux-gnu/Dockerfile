@@ -11,6 +11,7 @@ RUN bash /openssl.sh 1.0.2j linux-elf "" -m32
 
 RUN apt-get install -y --no-install-recommends \
     ca-certificates \
+    g++-multilib \
     make \
     pkg-config
 

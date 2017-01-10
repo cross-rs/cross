@@ -13,6 +13,7 @@ RUN bash /openssl.sh 1.0.2j linux-ppc64le powerpc64le-linux-gnu-
 RUN apt-get install -y --no-install-recommends \
     ca-certificates \
     cmake \
+    g++-powerpc64le-linux-gnu \
     gcc \
     libc6-dev \
     make \
@@ -20,6 +21,7 @@ RUN apt-get install -y --no-install-recommends \
 
 ENV CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_LINKER=powerpc64le-linux-gnu-gcc \
     CC_powerpc64le_unknown_linux_gnu=powerpc64le-linux-gnu-gcc \
+    CXX_powerpc64le_unknown_linux_gnu=powerpc64le-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
     QEMU_LD_PREFIX=/usr/powerpc64le-linux-gnu \
     RUST_TEST_THREADS=1

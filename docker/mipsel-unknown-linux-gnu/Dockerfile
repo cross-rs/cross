@@ -13,6 +13,7 @@ RUN bash /openssl.sh 1.0.2j linux-mips32 mipsel-linux-gnu-
 RUN apt-get install -y --no-install-recommends \
     ca-certificates \
     cmake \
+    g++-mipsel-linux-gnu \
     gcc \
     libc6-dev \
     make \
@@ -20,6 +21,7 @@ RUN apt-get install -y --no-install-recommends \
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc \
     CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc \
+    CXX_mipsel_unknown_linux_gnu=mipsel-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
     QEMU_LD_PREFIX=/usr/mipsel-linux-gnu \
     RUST_TEST_THREADS=1
