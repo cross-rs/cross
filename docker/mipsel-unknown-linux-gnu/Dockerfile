@@ -23,6 +23,6 @@ RUN apt-get install -y --no-install-recommends \
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc \
     CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc \
     CXX_mipsel_unknown_linux_gnu=mipsel-linux-gnu-g++ \
-    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/mipsel-linux-gnu \
     RUST_TEST_THREADS=1

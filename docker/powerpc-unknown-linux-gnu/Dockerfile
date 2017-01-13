@@ -23,6 +23,6 @@ RUN apt-get install -y --no-install-recommends \
 ENV CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
     CC_powerpc_unknown_linux_gnu=powerpc-linux-gnu-gcc \
     CXX_powerpc_unknown_linux_gnu=powerpc-linux-gnu-g++ \
-    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/powerpc-linux-gnu \
     RUST_TEST_THREADS=1
