@@ -147,6 +147,19 @@ EOF
             rm -rf $td
             ;;
     esac
+
+    # Test openssl compatibility
+    if [ ! -z "$OPENSSL_INCLUDE_PATH" -a ! -z "$OPENSSL_LIB_PATH" ]; then
+            td=$(mktemp -d)
+
+            pushd $td
+            cargo clone openssl-sys --vers 0.5.5
+            cd openssl-sys
+            cross build --target $TARGET
+            popd
+
+            rm -rf $td
+    fi
 }
 
 main
