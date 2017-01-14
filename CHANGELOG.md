@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.6] - 2017-01-14
+
 ### Fixed
 
 - Stable releases were picking the wrong image (wrong tag: 0.1.5 instead of
@@ -83,7 +85,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.6...HEAD
+[v0.1.6]: https://github.com/japaric/cross/compare/v0.1.5...v0.1.6
 [v0.1.5]: https://github.com/japaric/cross/compare/v0.1.4...v0.1.5
 [v0.1.4]: https://github.com/japaric/cross/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/japaric/cross/compare/v0.1.2...v0.1.3
