@@ -23,6 +23,8 @@ RUN apt-get install -y --no-install-recommends \
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
     CC_arm_unknown_linux_gnueabi=arm-linux-gnueabi-gcc \
     CXX_arm_unknown_linux_gnueabi=arm-linux-gnueabi-g++ \
-    OPENSSL_INCLUDE_DIR=/openssl/include OPENSSL_LIB_DIR=/openssl/lib \
+    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/arm-linux-gnueabi \
     RUST_TEST_THREADS=1

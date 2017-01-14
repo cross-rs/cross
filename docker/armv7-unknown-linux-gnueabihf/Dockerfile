@@ -27,6 +27,8 @@ RUN apt-get install -y --no-install-recommends \
 ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc \
     CXX_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++ \
-    OPENSSL_INCLUDE_DIR=/openssl/include OPENSSL_LIB_DIR=/openssl/lib \
+    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf \
     RUST_TEST_THREADS=1

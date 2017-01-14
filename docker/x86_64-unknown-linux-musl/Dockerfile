@@ -20,4 +20,6 @@ RUN bash /musl.sh 1.1.15 && \
     bash /openssl.sh 1.0.2j linux-x86_64 musl- -static
 
 ENV CC_x86_64_unknown_linux_musl=musl-gcc \
-    OPENSSL_INCLUDE_DIR=/openssl/include OPENSSL_LIB_DIR=/openssl/lib
+    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib

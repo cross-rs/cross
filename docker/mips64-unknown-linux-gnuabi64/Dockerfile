@@ -23,6 +23,8 @@ RUN apt-get install -y --no-install-recommends \
 ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_GNUABI64_LINKER=mips64-linux-gnuabi64-gcc \
     CC_mips64_unknown_linux_gnuabi64=mips64-linux-gnuabi64-gcc \
     CXX_mips64_unknown_linux_gnuabi64=mips64-linux-gnuabi64-g++ \
-    OPENSSL_INCLUDE_DIR=/openssl/include OPENSSL_LIB_DIR=/openssl/lib \
+    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/mips64-linux-gnuabi64 \
     RUST_TEST_THREADS=1

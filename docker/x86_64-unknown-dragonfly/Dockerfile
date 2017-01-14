@@ -19,4 +19,6 @@ RUN bash /dragonfly.sh && \
 
 ENV CARGO_TARGET_X86_64_UNKNOWN_DRAGONFLY_LINKER=x86_64-unknown-dragonfly-gcc \
     CC_x86_64_unknown_dragonfly=x86_64-unknown-dragonfly-gcc \
-    OPENSSL_INCLUDE_DIR=/openssl/include OPENSSL_LIB_DIR=/openssl/lib
+    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib
