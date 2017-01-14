@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- QEMU interpreters were being register when not required, e.g. for the
+  `x86_64-unknown-linux-gnu` target.
+
 ## [v0.1.6] - 2017-01-14
 
 ### Fixed

@@ -149,8 +149,7 @@ impl Target {
     }
 
     fn needs_qemu(&self) -> bool {
-        self.is_linux() ||
-        self.is_bare_metal() &&
+        (self.is_linux() || self.is_bare_metal()) &&
         match *self {
             Target::I686UnknownLinuxGnu |
             Target::I686UnknownLinuxMusl |
