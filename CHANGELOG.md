@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.5] - 2017-01-14
+
 ### Added
 
 - `cross run` support for the thumb targets.
@@ -17,7 +19,15 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - A `sparc64-unknown-linux-gnu` environment.
 
-- A `x86_64-unknown-dragonfly` environment .
+- A `x86_64-unknown-dragonfly` environment.
+
+### Changed
+
+- Building older versions (<0.7.0) of the `openssl` crate is now supported.
+
+- Before Docker is invoked, `cross` will *always* (re)generate the lockfile to
+  avoid errors later on due to read/write permissions. This removes the need to
+  call `cargo generate-lockfile` before `cross` in *all* cases.
 
 ## [v0.1.4] - 2017-01-07
 
@@ -68,7 +78,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.5...HEAD
+[v0.1.5]: https://github.com/japaric/cross/compare/v0.1.4...v0.1.5
 [v0.1.4]: https://github.com/japaric/cross/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/japaric/cross/compare/v0.1.2...v0.1.3
 [v0.1.2]: https://github.com/japaric/cross/compare/v0.1.1...v0.1.2
