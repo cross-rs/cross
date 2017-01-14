@@ -55,15 +55,14 @@ pub fn run(target: &Target,
     };
     cmd.args(args);
 
-    let cargo_lock = root.join("Cargo.lock");
-    if !cargo_lock.exists() {
-        let cargo_toml = root.join("Cargo.toml");
-        Command::new("cargo").args(&["generate-lockfile",
-                    "--manifest-path",
-                    &cargo_toml.display().to_string()])
-            .run(verbose)
-            .chain_err(|| "couldn't generate Cargo.lock")?;
-    }
+    // We create/regenerate the lockfile on the host system because the Docker
+    // container doesn't have write access to the root of the Cargo project
+    let cargo_toml = root.join("Cargo.toml");
+    Command::new("cargo").args(&["generate-lockfile",
+                "--manifest-path",
+                &cargo_toml.display().to_string()])
+        .run(verbose)
+        .chain_err(|| "couldn't generate Cargo.lock")?;
 
     Command::new("docker")
         .arg("run")
