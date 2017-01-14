@@ -194,11 +194,6 @@ where libc was extracted.
   to modify its "source", the build will fail. Well behaved crates should only
   ever write to `$OUT_DIR` and never modify `$CARGO_MANIFEST_DIR` though.
 
-- Versions `0.7.*` and older of the `openssl` crate are NOT supported. `cross`
-  supports `openssl` via the `OPENSSL_DIR` "feature", which seems to have been
-  introduced in `0.8.*`. There's no work around, other than bumping the
-  `openssl` dependency of the crates you are using.
-
 ## License
 
 Licensed under either of

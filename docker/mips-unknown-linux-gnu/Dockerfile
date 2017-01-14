@@ -26,6 +26,6 @@ RUN apt-get install -y --no-install-recommends \
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
     CC_mips_unknown_linux_gnu=mips-linux-gnu-gcc \
     CXX_mips_unknown_linux_gnu=mips-linux-gnu-g++ \
-    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/mips-linux-gnu \
     RUST_TEST_THREADS=1
