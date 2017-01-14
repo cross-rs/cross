@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
@@ -93,9 +94,9 @@ fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
         .unwrap_or_else(|| {
             let version = env!("CARGO_PKG_VERSION");
             let tag = if version.ends_with("-dev") {
-                "latest"
+                Cow::from("latest")
             } else {
-                version
+                Cow::from(format!("v{}", version))
             };
             format!("japaric/{}:{}", target.triple(), tag)
         }))

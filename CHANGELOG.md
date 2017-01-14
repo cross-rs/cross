@@ -5,7 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-## [v0.1.5] - 2017-01-14
+### Fixed
+
+- Stable releases were picking the wrong image (wrong tag: 0.1.5 instead of
+  v0.1.5)
+
+## [v0.1.5] - 2017-01-14 [YANKED]
 
 ### Added
 
