@@ -67,6 +67,76 @@ $ cross test --target mips64-unknown-linux-gnuabi64
 $ cross rustc --target powerpc-unknown-linux-gnu --release -- -C lto
 ```
 
+## Configuration
+
+You can place a `Cross.toml` file in the root of your Cargo project to tweak
+`cross`'s behavior:
+
+### Custom Docker images
+
+The default Docker image that `cross` uses provides a C environment that tries
+to cover the most common cross compilation cases. However, it can't cover every
+single use case out there. When the default image is not enough, you can use the
+`target.$TARGET.image` field in `Cross.toml` to use custom Docker image for a
+specific target:
+
+``` toml
+[target.aarch64-unknown-linux-gnu]
+image = "my/image:tag"
+```
+
+In the example above, `cross` will use a image named `my/image:tag` instead of
+the default one. Normal Docker behavior applies, so:
+
+- Docker will first look for a local image named `my/image:tag`
+
+- If it doesn't find a local image, then it will look in Docker Hub.
+
+- If only `image:tag` is specified, then Docker won't look in Docker Hub.
+
+- If only `tag` is omitted, then Docker will use the `latest` tag.
+
+It's recommended to base your custom image on the default Docker image that
+cross uses: `japaric/$TARGET:$VERSION` (where `$VERSION` is cross's version).
+This way you won't have to figure out how to install a cross C toolchain in your
+custom image. Example below:
+
+``` Dockerfile
+FROM japaric/aarch64-unknown-linux-gnu:v0.1.4
+
+RUN dpkg --add-architecture arm64 && \
+    apt-get update && \
+    apt-get install libfoo:arm64
+```
+
+```
+$ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
+```
+
+### Use Xargo instead of Cargo
+
+By default, `cross` uses `cargo` to build your Cargo project *unless* you are
+building for one of the `thumbv*-none-eabi*` targets; in that case, it uses
+`xargo`. However, you can use the `build.xargo` or `target.$TARGET.xargo` field
+in `Cross.toml` to force the use of `xargo`:
+
+``` toml
+# all the targets will use `xargo`
+[build]
+xargo = true
+```
+
+Or,
+
+``` toml
+# only this target will use `xargo`
+[target.aarch64-unknown-linux-gnu]
+xargo = true
+```
+
+Note that `xargo = false` has no effect as you can't use `cargo` with targets
+that only support `xargo`.
+
 ## Supported targets
 
 A target is considered as "supported" if `cross` can cross compile a
