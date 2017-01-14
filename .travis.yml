@@ -46,6 +46,9 @@ install:
   - curl https://sh.rustup.rs -sSf |
     sh -s -- -y --default-toolchain $TRAVIS_RUST_VERSION
   - source ~/.cargo/env
+  - test $TRAVIS_OS_NAME = osx ||
+      which cargo clone ||
+      cargo install cargo-clone --vers 0.1.0
 
 script:
   - bash ci/script.sh

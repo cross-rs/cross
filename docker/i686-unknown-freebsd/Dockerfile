@@ -19,4 +19,6 @@ RUN bash /freebsd.sh i686 && \
 
 ENV CARGO_TARGET_I686_UNKNOWN_FREEBSD_LINKER=i686-unknown-freebsd10-gcc \
     CC_i686_unknown_freebsd=i686-unknown-freebsd10-gcc \
-    OPENSSL_DIR=/openssl
+    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib

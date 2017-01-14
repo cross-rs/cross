@@ -23,4 +23,6 @@ RUN apt-get install -y --no-install-recommends \
     zlib1g-dev && \
     bash /openssl.sh 1.0.2j linux-x86_64
 
-ENV OPENSSL_DIR=/openssl
+ENV OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib

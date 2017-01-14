@@ -22,4 +22,6 @@ RUN apt-get install -y --no-install-recommends \
     g++-multilib && \
     bash /openssl.sh 1.0.2j linux-elf "" -m32
 
-ENV OPENSSL_DIR=/openssl
+ENV OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib

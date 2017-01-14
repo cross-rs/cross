@@ -19,4 +19,6 @@ RUN bash /netbsd.sh && \
 
 ENV CARGO_TARGET_X86_64_UNKNOWN_NETBSD_LINKER=x86_64-unknown-netbsd-gcc \
     CC_x86_64_unknown_netbsd=x86_64-unknown-netbsd-gcc \
-    OPENSSL_DIR=/openssl
+    OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib

@@ -24,5 +24,7 @@ ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
     CC_s390x_unknown_linux_gnu=s390x-linux-gnu-gcc \
     CXX_s390x_unknown_linux_gnu=s390x-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
+    OPENSSL_INCLUDE_DIR=/openssl/include \
+    OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/s390x-linux-gnu \
     RUST_TEST_THREADS=1
