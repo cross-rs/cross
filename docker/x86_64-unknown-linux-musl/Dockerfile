@@ -10,7 +10,7 @@ RUN apt-get update && \
     make \
     pkg-config && \
     curl -LSfs http://japaric.github.io/trust/install.sh | \
-    sh -s -- --git japaric/xargo --tag v0.3.3 --target x86_64-unknown-linux-gnu --to /usr/bin && \
+    sh -s -- --git japaric/xargo --tag v0.3.4 --target x86_64-unknown-linux-gnu --to /usr/bin && \
     apt-get purge --auto-remove -y curl
 
 COPY musl.sh openssl.sh /
