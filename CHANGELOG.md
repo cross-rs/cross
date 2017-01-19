@@ -5,6 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.7] - 2017-01-19
+
+### Changed
+
+- Moved to a newer Xargo: v0.3.4
+
 ### Fixed
 
 - QEMU interpreters were being register when not required, e.g. for the
@@ -90,7 +96,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.7...HEAD
+[v0.1.7]: https://github.com/japaric/cross/compare/v0.1.6...v0.1.7
 [v0.1.6]: https://github.com/japaric/cross/compare/v0.1.5...v0.1.6
 [v0.1.5]: https://github.com/japaric/cross/compare/v0.1.4...v0.1.5
 [v0.1.4]: https://github.com/japaric/cross/compare/v0.1.3...v0.1.4
