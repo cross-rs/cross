@@ -5,6 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Support for custom targets. Cross will now also try to use a docker image for
+  them. As with the built-in targets, one can override the image using
+  `[target.{}.image]` in Cross.toml.
+
 ## [v0.1.7] - 2017-01-19
 
 ### Changed

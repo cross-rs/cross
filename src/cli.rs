@@ -2,6 +2,7 @@ use std::env;
 
 use Target;
 use cargo::Subcommand;
+use rustc::TargetList;
 
 pub struct Args {
     pub all: Vec<String>,
@@ -9,7 +10,7 @@ pub struct Args {
     pub target: Option<Target>,
 }
 
-pub fn parse() -> Args {
+pub fn parse(target_list: &TargetList) -> Args {
     let all: Vec<_> = env::args().skip(1).collect();
 
     let mut target = None;
@@ -23,11 +24,11 @@ pub fn parse() -> Args {
             }
 
             if arg == "--target" {
-                target = args.next().map(|s| Target::from(&**s))
+                target = args.next().map(|s| Target::from(&**s, target_list))
             } else if arg.starts_with("--target=") {
                 target = arg.splitn(2, '=')
                     .nth(1)
-                    .map(|s| Target::from(&*s))
+                    .map(|s| Target::from(&*s, target_list))
             } else if !arg.starts_with('-') && sc.is_none() {
                 sc = Some(Subcommand::from(&**arg));
             }

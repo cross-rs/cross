@@ -23,6 +23,7 @@ use toml::{Parser, Value};
 
 use cargo::Root;
 use errors::*;
+use rustc::TargetList;
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, PartialEq)]
@@ -40,13 +41,21 @@ impl Host {
     /// Checks if this `(host, target)` pair is supported by `cross`
     ///
     /// `target == None` means `target == host`
-    fn is_supported(&self, target: Option<Target>) -> bool {
+    fn is_supported(&self, target: Option<&Target>) -> bool {
         if *self == Host::X86_64AppleDarwin {
-            target == Some(Target::I686AppleDarwin)
+            target.map(|t| *t == Target::I686AppleDarwin).unwrap_or(false)
         } else if *self == Host::X86_64UnknownLinuxGnu {
             target.map(|t| t.needs_docker()).unwrap_or(true)
         } else {
             false
+        }
+    }
+
+    fn triple(&self) -> &'static str {
+        match *self {
+            Host::X86_64AppleDarwin => "x86_64-apple-darwin",
+            Host::X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
+            Host::Other => unimplemented!(),
         }
     }
 }
@@ -62,8 +71,11 @@ impl<'a> From<&'a str> for Host {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Target {
+    Custom { triple: String },
+
+    // Other built-in
     Other,
 
     // OSX
@@ -112,6 +124,13 @@ impl Target {
         }
     }
 
+    fn is_builtin(&self) -> bool {
+        match *self {
+            Target::Custom { .. } => false,
+            _ => true,
+        }
+    }
+
     fn is_bsd(&self) -> bool {
         match *self {
             Target::I686UnknownFreebsd |
@@ -145,7 +164,8 @@ impl Target {
     }
 
     fn needs_docker(&self) -> bool {
-        self.is_linux() || self.is_bare_metal() || self.is_bsd()
+        self.is_linux() || self.is_bare_metal() || self.is_bsd() ||
+        !self.is_builtin()
     }
 
     fn needs_qemu(&self) -> bool {
@@ -155,14 +175,22 @@ impl Target {
             Target::I686UnknownLinuxMusl |
             Target::X86_64UnknownLinuxGnu |
             Target::X86_64UnknownLinuxMusl => false,
+            Target::Custom { ref triple } => {
+                !triple.starts_with("x86_64") && !triple.starts_with("x86") &&
+                !triple.starts_with("i586") &&
+                !triple.starts_with("i686")
+            }
             _ => true,
         }
     }
 
-    fn triple(&self) -> &'static str {
+    fn triple(&self) -> &str {
         use Target::*;
 
         match *self {
+            Custom { ref triple } => triple,
+            Other => unreachable!(),
+
             Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
             ArmUnknownLinuxGnueabi => "arm-unknown-linux-gnueabi",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
@@ -174,7 +202,6 @@ impl Target {
             Mips64elUnknownLinuxGnuabi64 => "mips64el-unknown-linux-gnuabi64",
             MipsUnknownLinuxGnu => "mips-unknown-linux-gnu",
             MipselUnknownLinuxGnu => "mipsel-unknown-linux-gnu",
-            Other => unreachable!(),
             Powerpc64UnknownLinuxGnu => "powerpc64-unknown-linux-gnu",
             Powerpc64leUnknownLinuxGnu => "powerpc64le-unknown-linux-gnu",
             PowerpcUnknownLinuxGnu => "powerpc-unknown-linux-gnu",
@@ -194,15 +221,15 @@ impl Target {
     }
 
     fn needs_xargo(&self) -> bool {
-        self.is_bare_metal()
+        self.is_bare_metal() || !self.is_builtin()
     }
 }
 
-impl<'a> From<&'a str> for Target {
-    fn from(s: &str) -> Target {
+impl Target {
+    fn from(triple: &str, target_list: &TargetList) -> Target {
         use Target::*;
 
-        match s {
+        match triple {
             "aarch64-unknown-linux-gnu" => Aarch64UnknownLinuxGnu,
             "arm-unknown-linux-gnueabi" => ArmUnknownLinuxGnueabi,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
@@ -229,7 +256,8 @@ impl<'a> From<&'a str> for Target {
             "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
             "x86_64-unknown-linux-musl" => X86_64UnknownLinuxMusl,
             "x86_64-unknown-netbsd" => X86_64UnknownNetbsd,
-            _ => Other,
+            _ if target_list.contains(triple) => Other,
+            _ => Custom { triple: triple.to_owned() },
         }
     }
 }
@@ -281,7 +309,8 @@ pub fn main() {
 }
 
 fn run() -> Result<ExitStatus> {
-    let args = cli::parse();
+    let target_list = rustc::target_list(false)?;
+    let args = cli::parse(&target_list);
 
     if args.all.iter().any(|a| a == "--version" || a == "-V") &&
        args.subcommand.is_none() {
@@ -295,8 +324,9 @@ fn run() -> Result<ExitStatus> {
     if let Some(root) = cargo::root()? {
         let host = rustc::host();
 
-        if host.is_supported(args.target) {
-            let target = args.target.unwrap_or(Target::from(host));
+        if host.is_supported(args.target.as_ref()) {
+            let target = args.target
+                .unwrap_or(Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
             let uses_xargo = if let Some(toml) = toml.as_ref() {
                     toml.xargo(&target)?
@@ -307,7 +337,7 @@ fn run() -> Result<ExitStatus> {
 
             if !uses_xargo &&
                rustup::available_targets(verbose)?.contains(&target) {
-                rustup::install(target, verbose)?;
+                rustup::install(&target, verbose)?;
             }
 
             if uses_xargo && !rustup::rust_src_is_installed(verbose)? {
