@@ -169,19 +169,20 @@ impl Target {
     }
 
     fn needs_qemu(&self) -> bool {
-        (self.is_linux() || self.is_bare_metal()) &&
-        match *self {
+        let not_native = match *self {
+            Target::Custom { ref triple } => {
+                return !triple.starts_with("x86_64") &&
+                       !triple.starts_with("i586") &&
+                       !triple.starts_with("i686")
+            }
             Target::I686UnknownLinuxGnu |
             Target::I686UnknownLinuxMusl |
             Target::X86_64UnknownLinuxGnu |
             Target::X86_64UnknownLinuxMusl => false,
-            Target::Custom { ref triple } => {
-                !triple.starts_with("x86_64") && !triple.starts_with("x86") &&
-                !triple.starts_with("i586") &&
-                !triple.starts_with("i686")
-            }
             _ => true,
-        }
+        };
+
+        not_native && (self.is_linux() || self.is_bare_metal())
     }
 
     fn triple(&self) -> &str {
