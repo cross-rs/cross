@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   them. As with the built-in targets, one can override the image using
   `[target.{}.image]` in Cross.toml.
 
+### Changed
+
+- Moved to a newer Xargo: v0.3.5
+
 ## [v0.1.7] - 2017-01-19
 
 ### Changed
