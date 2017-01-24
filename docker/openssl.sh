@@ -34,7 +34,7 @@ main() {
       $os \
       -fPIC \
       ${@:4}
-    nice make -j1
+    nice make -j$(nproc)
     make install
 
     # clean up
