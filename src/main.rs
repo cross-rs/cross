@@ -85,7 +85,9 @@ pub enum Target {
     // Linux
     Aarch64UnknownLinuxGnu,
     ArmUnknownLinuxGnueabi,
+    ArmUnknownLinuxMusleabi,
     Armv7UnknownLinuxGnueabihf,
+    Armv7UnknownLinuxMusleabihf,
     I686UnknownLinuxGnu,
     I686UnknownLinuxMusl,
     Mips64UnknownLinuxGnuabi64,
@@ -145,7 +147,9 @@ impl Target {
         match *self {
             Target::Aarch64UnknownLinuxGnu |
             Target::ArmUnknownLinuxGnueabi |
+            Target::ArmUnknownLinuxMusleabi |
             Target::Armv7UnknownLinuxGnueabihf |
+            Target::Armv7UnknownLinuxMusleabihf |
             Target::I686UnknownLinuxGnu |
             Target::I686UnknownLinuxMusl |
             Target::Mips64UnknownLinuxGnuabi64 |
@@ -194,7 +198,9 @@ impl Target {
 
             Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
             ArmUnknownLinuxGnueabi => "arm-unknown-linux-gnueabi",
+            ArmUnknownLinuxMusleabi => "arm-unknown-linux-musleabi",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
+            Armv7UnknownLinuxMusleabihf => "armv7-unknown-linux-musleabihf",
             I686AppleDarwin => "i686-apple-darwin",
             I686UnknownFreebsd => "i686-unknown-freebsd",
             I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
@@ -233,7 +239,9 @@ impl Target {
         match triple {
             "aarch64-unknown-linux-gnu" => Aarch64UnknownLinuxGnu,
             "arm-unknown-linux-gnueabi" => ArmUnknownLinuxGnueabi,
+            "arm-unknown-linux-musleabi" => ArmUnknownLinuxMusleabi,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
+            "armv7-unknown-linux-musleabihf" => Armv7UnknownLinuxMusleabihf,
             "i686-apple-darwin" => I686AppleDarwin,
             "i686-unknown-freebsd" => I686UnknownFreebsd,
             "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
