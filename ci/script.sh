@@ -119,7 +119,7 @@ EOF
             cargo init --bin --name hello $td
 
             pushd $td
-            cross run --target $TARGET
+            QEMU_STRACE=1 cross run --target $TARGET
             popd
 
             rm -rf $td
