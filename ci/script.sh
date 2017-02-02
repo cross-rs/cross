@@ -132,7 +132,7 @@ EOF
         td=$(mktemp -d)
 
         pushd $td
-        cargo clone openssl-sys --vers 0.5.5
+        cargo clone openssl-sys --vers $OPENSSL
         cd openssl-sys
         cross build --target $TARGET
         popd
