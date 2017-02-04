@@ -33,8 +33,7 @@ pub fn run(target: &Target,
            verbose: bool)
            -> Result<ExitStatus> {
     let root = root.path();
-    let home_dir = env::home_dir()
-        .ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?;
+    let home_dir = env::home_dir().ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?;
     let cargo_dir = env::var_os("CARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".cargo"));
@@ -65,19 +64,26 @@ pub fn run(target: &Target,
         .run(verbose)
         .chain_err(|| "couldn't generate Cargo.lock")?;
 
-    Command::new("docker")
+    let mut docker = Command::new("docker");
+
+    docker
         .arg("run")
         .arg("--rm")
         .args(&["--user", &format!("{}:{}", id::user(), id::group())])
         .args(&["-e", "CARGO_HOME=/cargo"])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
-        .args(&["-e", &format!("USER={}", id::username())])
+        .args(&["-e", &format!("USER={}", id::username())]);
+
+    if let Some(strace) = env::var("QEMU_STRACE").ok() {
+        docker.args(&["-e", &format!("QEMU_STRACE={}", strace)]);
+    }
+
+    docker
         .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", root.display())])
-        .args(&["-v",
-                &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
+        .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
         .args(&["-it", &image(toml, target)?])
