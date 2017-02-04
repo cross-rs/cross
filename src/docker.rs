@@ -59,7 +59,7 @@ pub fn run(target: &Target,
     // We create/regenerate the lockfile on the host system because the Docker
     // container doesn't have write access to the root of the Cargo project
     let cargo_toml = root.join("Cargo.toml");
-    Command::new("cargo").args(&["generate-lockfile",
+    Command::new("cargo").args(&["fetch",
                 "--manifest-path",
                 &cargo_toml.display().to_string()])
         .run(verbose)
