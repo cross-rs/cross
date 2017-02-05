@@ -117,10 +117,10 @@ EOF
         git clone --depth 1 https://github.com/japaric/hellopp $td
 
         pushd $td
-        if [ $TARGET = s390x-unknown-linux-gnu ]; then
-            cross build --target $TARGET
-        else
+        if [ $RUN ]; then
             cross run --target $TARGET
+        else
+            cross build --target $TARGET
         fi
         popd
 

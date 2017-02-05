@@ -108,6 +108,9 @@ pub enum Target {
     X86_64UnknownFreebsd,
     X86_64UnknownNetbsd,
 
+    // Windows
+    X86_64PcWindowsGnu,
+
     // Bare metal
     Thumbv6mNoneEabi,
     Thumbv7emNoneEabi,
@@ -167,9 +170,16 @@ impl Target {
         }
     }
 
+    fn is_windows(&self) -> bool {
+        match *self {
+            Target::X86_64PcWindowsGnu => true,
+            _ => false,
+        }
+    }
+
     fn needs_docker(&self) -> bool {
         self.is_linux() || self.is_bare_metal() || self.is_bsd() ||
-        !self.is_builtin()
+        !self.is_builtin() || self.is_windows()
     }
 
     fn needs_qemu(&self) -> bool {
@@ -219,6 +229,7 @@ impl Target {
             Thumbv7emNoneEabihf => "thumbv7em-none-eabihf",
             Thumbv7mNoneEabi => "thumbv7m-none-eabi",
             X86_64AppleDarwin => "x86_64-apple-darwin",
+            X86_64PcWindowsGnu => "x86_64-pc-windows-gnu",
             X86_64UnknownDragonfly => "x86_64-unknown-dragonfly",
             X86_64UnknownFreebsd => "x86_64-unknown-freebsd",
             X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
@@ -260,6 +271,7 @@ impl Target {
             "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,
             "thumbv7m-none-eabi" => Thumbv7mNoneEabi,
             "x86_64-apple-darwin" => X86_64AppleDarwin,
+            "x86_64-pc-windows-gnu" => X86_64PcWindowsGnu,
             "x86_64-unknown-dragonfly" => X86_64UnknownDragonfly,
             "x86_64-unknown-freebsd" => X86_64UnknownFreebsd,
             "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,

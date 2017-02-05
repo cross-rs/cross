@@ -177,6 +177,7 @@ worst, "hang" (never terminate).
 | `thumbv7em-none-eabi` [3]            | 2.2.0  | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7em-none-eabihf` [3]          | 2.2.0  | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7m-none-eabi` [3]             | 2.2.0  | 5.3.1 | N/A     |     | N/A   |        |
+| `x86_64-pc-windows-gnu`[1]           | N/A    | 5.3.1 |         | ✓   | N/A   |        |
 | `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0 | 1.0.2j  |     | N/A   |   ✓    |
 | `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0 | 1.0.2j  |     | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2 | 1.0.2j  | ✓   | N/A   |   ✓    |
