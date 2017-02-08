@@ -5,6 +5,21 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.9] - 2017-02-08
+
+### Added
+
+- Support for ARM MUSL targets.
+
+### Changed
+
+- The automatic lockfile update that happens every time `cross` is invoked
+  should no longer hit the network when there's no git dependency to add/update.
+
+- The QEMU_STRACE variable is passed to the underlying Docker container. Paired
+  with `cross run`, this lets you get a trace of system call from the execution
+  of "foreign" (non x86_64) binaries.
+
 ## [v0.1.8] - 2017-01-21
 
 ### Added
@@ -108,7 +123,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.9...HEAD
+[v0.1.9]: https://github.com/japaric/cross/compare/v0.1.8...v0.1.9
 [v0.1.8]: https://github.com/japaric/cross/compare/v0.1.7...v0.1.8
 [v0.1.7]: https://github.com/japaric/cross/compare/v0.1.6...v0.1.7
 [v0.1.6]: https://github.com/japaric/cross/compare/v0.1.5...v0.1.6

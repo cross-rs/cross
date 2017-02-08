@@ -188,9 +188,28 @@ where libc was extracted.
 
 [2] No `std` component available as of 2017-01-10
 
-{3] libc = newlib
+[3] libc = newlib
 
-> **NOTE**
+## Debugging
+
+### QEMU_STRACE (v0.1.9+)
+
+You can set the QEMU_STRACE variable when you use `cross run` to get a backtrace
+of system calls from "foreign" (non x86_64) binaries.
+
+```
+$ cargo new --bin hello && cd $_
+
+$ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
+9 brk(NULL) = 0x0000004000023000
+9 uname(0x4000823128) = 0
+(..)
+9 write(1,0xa06320,14)Hello, world!
+ = 14
+9 sigaltstack(0x4000823588,(nil)) = 0
+9 munmap(0x0000004000b16000,16384) = 0
+9 exit_group(0)
+```
 
 ## Caveats / gotchas
 
