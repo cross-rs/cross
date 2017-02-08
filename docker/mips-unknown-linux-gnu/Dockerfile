@@ -10,7 +10,7 @@ RUN apt-get update && \
     pkg-config
 
 COPY override.sh /
-RUN bash /override.sh curl-sys 0.3.7
+RUN bash /override.sh curl-sys 0.3.8
 
 COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
