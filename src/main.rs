@@ -116,6 +116,10 @@ pub enum Target {
     Thumbv7emNoneEabi,
     Thumbv7emNoneEabihf,
     Thumbv7mNoneEabi,
+
+    // Emscripten
+    AsmjsUnknownEmscripten,
+    Wasm32UnknownEmscripten,
 }
 
 impl Target {
@@ -177,9 +181,17 @@ impl Target {
         }
     }
 
+    fn is_emscripten(&self) -> bool {
+        match *self {
+            Target::AsmjsUnknownEmscripten |
+            Target::Wasm32UnknownEmscripten => true,
+            _ => false,
+        }
+    }
+
     fn needs_docker(&self) -> bool {
         self.is_linux() || self.is_bare_metal() || self.is_bsd() ||
-        !self.is_builtin() || self.is_windows()
+        !self.is_builtin() || self.is_windows() || self.is_emscripten()
     }
 
     fn needs_qemu(&self) -> bool {
@@ -211,6 +223,7 @@ impl Target {
             ArmUnknownLinuxMusleabi => "arm-unknown-linux-musleabi",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
             Armv7UnknownLinuxMusleabihf => "armv7-unknown-linux-musleabihf",
+            AsmjsUnknownEmscripten => "asmjs-unknown-emscripten",
             I686AppleDarwin => "i686-apple-darwin",
             I686UnknownFreebsd => "i686-unknown-freebsd",
             I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
@@ -228,6 +241,7 @@ impl Target {
             Thumbv7emNoneEabi => "thumbv7em-none-eabi",
             Thumbv7emNoneEabihf => "thumbv7em-none-eabihf",
             Thumbv7mNoneEabi => "thumbv7m-none-eabi",
+            Wasm32UnknownEmscripten => "wasm32-unknown-emscripten",
             X86_64AppleDarwin => "x86_64-apple-darwin",
             X86_64PcWindowsGnu => "x86_64-pc-windows-gnu",
             X86_64UnknownDragonfly => "x86_64-unknown-dragonfly",
@@ -253,6 +267,7 @@ impl Target {
             "arm-unknown-linux-musleabi" => ArmUnknownLinuxMusleabi,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
             "armv7-unknown-linux-musleabihf" => Armv7UnknownLinuxMusleabihf,
+            "asmjs-unknown-emscripten" => AsmjsUnknownEmscripten,
             "i686-apple-darwin" => I686AppleDarwin,
             "i686-unknown-freebsd" => I686UnknownFreebsd,
             "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
@@ -270,6 +285,7 @@ impl Target {
             "thumbv7em-none-eabi" => Thumbv7emNoneEabi,
             "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,
             "thumbv7m-none-eabi" => Thumbv7mNoneEabi,
+            "wasm32-unknown-emscripten" => Wasm32UnknownEmscripten,
             "x86_64-apple-darwin" => X86_64AppleDarwin,
             "x86_64-pc-windows-gnu" => X86_64PcWindowsGnu,
             "x86_64-unknown-dragonfly" => X86_64UnknownDragonfly,

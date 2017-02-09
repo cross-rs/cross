@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Support for emscripten targets.
+
 ## [v0.1.9] - 2017-02-08
 
 ### Added
