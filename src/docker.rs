@@ -33,7 +33,8 @@ pub fn run(target: &Target,
            verbose: bool)
            -> Result<ExitStatus> {
     let root = root.path();
-    let home_dir = env::home_dir().ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?;
+    let home_dir = env::home_dir()
+        .ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?;
     let cargo_dir = env::var_os("CARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".cargo"));
@@ -48,12 +49,12 @@ pub fn run(target: &Target,
     fs::create_dir(&cargo_dir).ok();
     fs::create_dir(&xargo_dir).ok();
 
-    let mut cmd = if uses_xargo {
+    let mut cargo = if uses_xargo {
         Command::new("xargo")
     } else {
         Command::new("cargo")
     };
-    cmd.args(args);
+    cargo.args(args);
 
     // We create/regenerate the lockfile on the host system because the Docker
     // container doesn't have write access to the root of the Cargo project
@@ -66,29 +67,61 @@ pub fn run(target: &Target,
 
     let mut docker = Command::new("docker");
 
+    docker.arg("run");
+
+    let must_run_emcc_first = if target.is_emscripten() {
+        let temp_dir = env::temp_dir();
+        let cache_dir = temp_dir.join(format!("cross-{}", target.triple()));
+
+        if !cache_dir.exists() {
+            fs::create_dir(&cache_dir).chain_err(|| {
+                    format!("couldn't create a directory in {}",
+                            temp_dir.display())
+                })?;
+        }
+
+        docker.args(&["-v", &format!("{}:{}", cache_dir.display(), "/tmp")]);
+
+        !cache_dir.join(".emscripten").exists()
+    } else {
+        false
+    };
+
     docker
-        .arg("run")
         .arg("--rm")
         .args(&["--user", &format!("{}:{}", id::user(), id::group())])
         .args(&["-e", "CARGO_HOME=/cargo"])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
+        .args(&["-e", "HOME=/tmp"])
         .args(&["-e", &format!("USER={}", id::username())]);
 
     if let Some(strace) = env::var("QEMU_STRACE").ok() {
         docker.args(&["-e", &format!("QEMU_STRACE={}", strace)]);
     }
 
-    docker
-        .args(&["-e", "XARGO_HOME=/xargo"])
+    docker.args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", root.display())])
-        .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
+        .args(&["-v",
+                &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
-        .args(&["-it", &image(toml, target)?])
-        .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
-        .run_and_get_status(verbose)
+        .args(&["-it", &image(toml, target)?]);
+
+    if must_run_emcc_first {
+        docker.args(&["sh",
+                      "-c",
+                      &format!("emcc 2>/dev/null; \
+                                PATH=$PATH:/rust/bin {:?}",
+                               cargo)]);
+    } else {
+        docker.args(&["sh",
+                      "-c",
+                      &format!("PATH=$PATH:/rust/bin {:?}", cargo)]);
+    }
+
+    docker.run_and_get_status(verbose)
 }
 
 fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {

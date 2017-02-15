@@ -15,7 +15,7 @@ main() {
 
     export QEMU_STRACE=1
 
-    # `cross run` test for thumb targets
+    # `cross run` test for thumb and emscripten targets
     case $TARGET in
         thumb*-none-eabi*)
             td=$(mktemp -d)
@@ -30,7 +30,20 @@ main() {
             popd
 
             rm -rf $td
-        ;;
+            ;;
+        *-emscripten)
+            td=$(mktemp -d)
+
+            cargo init --bin --name hello $td
+
+            pushd $td
+            cross build --target $TARGET
+            popd
+
+            rm -rf $td
+
+            return
+            ;;
     esac
 
     # `cross build` test for targets where `std` is not available
