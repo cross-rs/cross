@@ -78,6 +78,26 @@ pub fn run(target: &Target,
         docker.args(&["-e", &format!("QEMU_STRACE={}", strace)]);
     }
 
+    if let Some(toml) = toml {
+        if toml.env_whitelist_all()?.unwrap_or(false) {
+            for (var, _) in env::vars() {
+                // Only specifying the environment variable name in the "-e"
+                // flag forwards the value from the parent shell
+                docker.args(&["-e", &var]);
+            }
+        } else {
+            for var in toml.env_whitelist()? {
+                if var.contains("=") {
+                    return Err("environment variable names must not contain the '=' character".into())
+                }
+
+                // Only specifying the environment variable name in the "-e"
+                // flag forwards the value from the parent shell
+                docker.args(&["-e", var]);
+            }
+        }
+    }
+
     docker
         .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
