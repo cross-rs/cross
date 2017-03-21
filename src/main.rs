@@ -82,6 +82,12 @@ pub enum Target {
     I686AppleDarwin,
     X86_64AppleDarwin,
 
+    // Android
+    ArmLinuxAndroideabi,
+    Armv7LinuxAndroideabi,
+    Aarch64LinuxAndroid,
+    I686LinuxAndroid,
+
     // Linux
     Aarch64UnknownLinuxGnu,
     ArmUnknownLinuxGnueabi,
@@ -146,6 +152,16 @@ impl Target {
         }
     }
 
+    fn is_android(&self) -> bool {
+        match *self {
+            Target::ArmLinuxAndroideabi |
+            Target::Armv7LinuxAndroideabi |
+            Target::Aarch64LinuxAndroid |
+            Target::I686LinuxAndroid => true,
+            _ => false,
+        }
+    }
+
     fn is_linux(&self) -> bool {
         match *self {
             Target::Aarch64UnknownLinuxGnu |
@@ -178,7 +194,7 @@ impl Target {
     }
 
     fn needs_docker(&self) -> bool {
-        self.is_linux() || self.is_bare_metal() || self.is_bsd() ||
+        self.is_linux() || self.is_android() || self.is_bare_metal() || self.is_bsd() ||
         !self.is_builtin() || self.is_windows()
     }
 
@@ -206,12 +222,16 @@ impl Target {
             Custom { ref triple } => triple,
             Other => unreachable!(),
 
+            Aarch64LinuxAndroid => "aarch64-linux-android",
             Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
+            ArmLinuxAndroideabi => "arm-linux-androideabi",
             ArmUnknownLinuxGnueabi => "arm-unknown-linux-gnueabi",
             ArmUnknownLinuxMusleabi => "arm-unknown-linux-musleabi",
+            Armv7LinuxAndroideabi => "armv7-linux-androideabi",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
             Armv7UnknownLinuxMusleabihf => "armv7-unknown-linux-musleabihf",
             I686AppleDarwin => "i686-apple-darwin",
+            I686LinuxAndroid => "i686-linux-android",
             I686UnknownFreebsd => "i686-unknown-freebsd",
             I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
             I686UnknownLinuxMusl => "i686-unknown-linux-musl",
@@ -248,12 +268,16 @@ impl Target {
         use Target::*;
 
         match triple {
+            "aarch64-linux-android" => Aarch64LinuxAndroid,
             "aarch64-unknown-linux-gnu" => Aarch64UnknownLinuxGnu,
+            "arm-linux-androideabi" => ArmLinuxAndroideabi,
             "arm-unknown-linux-gnueabi" => ArmUnknownLinuxGnueabi,
             "arm-unknown-linux-musleabi" => ArmUnknownLinuxMusleabi,
+            "armv7-linux-androideabi" => Armv7LinuxAndroideabi,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
             "armv7-unknown-linux-musleabihf" => Armv7UnknownLinuxMusleabihf,
             "i686-apple-darwin" => I686AppleDarwin,
+            "i686-linux-android" => I686LinuxAndroid,
             "i686-unknown-freebsd" => I686UnknownFreebsd,
             "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
             "i686-unknown-linux-musl" => I686UnknownLinuxMusl,
