@@ -118,6 +118,7 @@ EOF
         git clone --depth 1 https://github.com/japaric/hellopp $td
 
         pushd $td
+        cargo update -p gcc
         if [ $RUN ]; then
             cross run --target $TARGET
         else
