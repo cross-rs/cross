@@ -16,7 +16,7 @@ RUN apt-get purge --auto-remove -y cmake && \
 COPY openssl.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-multilib && \
-    bash /openssl.sh 1.0.2j linux-elf "" -m32
+    bash /openssl.sh linux-elf "" -m32
 
 RUN apt-get install -y --no-install-recommends \
     curl && \

@@ -11,7 +11,7 @@ RUN apt-get update && \
 
 COPY freebsd.sh openssl.sh /
 RUN bash /freebsd.sh i686 && \
-    bash /openssl.sh 1.0.2j BSD-x86-elf i686-unknown-freebsd10-
+    bash /openssl.sh BSD-x86-elf i686-unknown-freebsd10-
 
 RUN apt-get install -y --no-install-recommends \
     curl && \

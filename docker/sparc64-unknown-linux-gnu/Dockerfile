@@ -13,7 +13,7 @@ COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-sparc64-linux-gnu \
     libc6-dev-sparc64-cross && \
-    bash /openssl.sh 1.0.2j linux64-sparcv9 sparc64-linux-gnu- && \
+    bash /openssl.sh linux64-sparcv9 sparc64-linux-gnu- && \
     bash /qemu.sh 2.8.0 sparc64
 
 RUN apt-get install -y --no-install-recommends \

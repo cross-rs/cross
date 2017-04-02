@@ -17,7 +17,7 @@ COPY openssl.sh /
 RUN apt-get install -y --no-install-recommends \
     g++ \
     zlib1g-dev && \
-    bash /openssl.sh 1.0.2j linux-x86_64
+    bash /openssl.sh linux-x86_64
 
 RUN apt-get install -y --no-install-recommends \
     curl && \

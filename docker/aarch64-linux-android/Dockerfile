@@ -14,7 +14,7 @@ RUN bash /android-ndk.sh arm64 21
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY openssl.sh /
-RUN bash /openssl.sh 1.0.2j linux-generic64 aarch64-linux-android- -mandroid -fomit-frame-pointer
+RUN bash /openssl.sh linux-generic64 aarch64-linux-android- -mandroid -fomit-frame-pointer
 
 RUN apt-get install -y --no-install-recommends \
     curl && \

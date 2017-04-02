@@ -13,7 +13,7 @@ COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-s390x-linux-gnu \
     libc6-dev-s390x-cross && \
-    bash /openssl.sh 1.0.2j linux64-s390x s390x-linux-gnu- && \
+    bash /openssl.sh linux64-s390x s390x-linux-gnu- && \
     bash /qemu.sh 2.8.0 s390x
 
 RUN apt-get install -y --no-install-recommends \

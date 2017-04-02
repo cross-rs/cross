@@ -1,9 +1,9 @@
 set -ex
 
 main() {
-    local os=$2 \
-          triple=$3 \
-          version=$1
+    local version=1.0.2k
+    local os=$1 \
+          triple=$2
 
     local dependencies=(
         ca-certificates

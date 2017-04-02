@@ -13,7 +13,7 @@ COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-powerpc-linux-gnu \
     libc6-dev-powerpc-cross && \
-    bash /openssl.sh 1.0.2j linux-ppc powerpc-linux-gnu- && \
+    bash /openssl.sh linux-ppc powerpc-linux-gnu- && \
     bash /qemu.sh 2.7.1 ppc
 
 RUN apt-get install -y --no-install-recommends \

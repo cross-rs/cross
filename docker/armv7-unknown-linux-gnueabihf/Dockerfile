@@ -17,7 +17,7 @@ COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-arm-linux-gnueabihf \
     libc6-dev-armhf-cross && \
-    bash /openssl.sh 1.0.2j linux-armv4 arm-linux-gnueabihf- && \
+    bash /openssl.sh linux-armv4 arm-linux-gnueabihf- && \
     bash /qemu.sh 2.8.0 arm
 
 RUN apt-get install -y --no-install-recommends \

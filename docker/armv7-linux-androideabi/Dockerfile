@@ -14,7 +14,7 @@ RUN bash /android-ndk.sh arm 21
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY openssl.sh /
-RUN bash /openssl.sh 1.0.2j android-armv7 arm-linux-androideabi-
+RUN bash /openssl.sh android-armv7 arm-linux-androideabi-
 
 RUN apt-get install -y --no-install-recommends \
     curl && \

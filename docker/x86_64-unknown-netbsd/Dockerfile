@@ -11,7 +11,7 @@ RUN apt-get update && \
 
 COPY netbsd.sh openssl.sh /
 RUN bash /netbsd.sh && \
-    bash /openssl.sh 1.0.2j BSD-x86_64 x86_64-unknown-netbsd-
+    bash /openssl.sh BSD-x86_64 x86_64-unknown-netbsd-
 
 RUN apt-get install -y --no-install-recommends \
     curl && \

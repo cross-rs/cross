@@ -13,7 +13,7 @@ COPY musl.sh openssl.sh /
 COPY musl-gcc.x86_64-unknown-linux-musl /usr/local/bin/musl-gcc
 COPY musl-gcc.specs.x86_64-unknown-linux-musl /usr/local/lib/musl-gcc.specs
 RUN bash /musl.sh 1.1.15 && \
-    bash /openssl.sh 1.0.2j linux-x86_64 musl- -static
+    bash /openssl.sh linux-x86_64 musl- -static
 
 RUN apt-get install -y --no-install-recommends \
     curl && \

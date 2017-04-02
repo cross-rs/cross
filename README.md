@@ -156,37 +156,37 @@ worst, "hang" (never terminate).
 
 | Target                               |  libc  | GCC   | OpenSSL | C++ | QEMU  | `test` |
 |--------------------------------------|--------|-------|---------|:---:|-------|:------:|
-| `aarch64-linux-android`              | N/A    | 4.9   | 1.0.2j  | ✓   | N/A   |        |
-| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
-| `arm-linux-androideabi`              | N/A    | 4.9   | 1.0.2j  | ✓   | N/A   |        |
-| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `aarch64-linux-android`              | N/A    | 4.9   | 1.0.2k  | ✓   | N/A   |        |
+| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2 | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
+| `arm-linux-androideabi`              | N/A    | 4.9   | 1.0.2k  | ✓   | N/A   |        |
+| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2 | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `arm-unknown-linux-musleabi`         | 1.1.15 | 5.3.1 | N/A     |     | 2.8.0 |   ✓    |
-| `armv7-linux-androideabi`            | N/A    | 4.9   | 1.0.2j  | ✓   | N/A   |        |
-| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `armv7-linux-androideabi`            | N/A    | 4.9   | 1.0.2k  | ✓   | N/A   |        |
+| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2 | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.15 | 5.3.1 | N/A     |     | 2.8.0 |   ✓    |
-| `i686-linux-android`                 | N/A    | 4.9   | 1.0.2j  | ✓   | N/A   |        |
-| `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0 | 1.0.2j  |     | N/A   |        |
-| `i686-unknown-linux-gnu`             | 2.15   | 4.6.2 | 1.0.2j  | ✓   | N/A   |   ✓    |
+| `i686-linux-android`                 | N/A    | 4.9   | 1.0.2k  | ✓   | N/A   |        |
+| `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0 | 1.0.2k  |     | N/A   |        |
+| `i686-unknown-linux-gnu`             | 2.15   | 4.6.2 | 1.0.2k  | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1 | N/A     |     | N/A   |   ✓    |
-| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
-| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
-| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
-| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
-| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.7.1 |   ✓    |
-| `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.7.1 |   ✓    |
-| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2 | 1.0.2j  | ✓   | 2.7.1 |   ✓    |
-| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |        |
-| `sparc64-unknown-linux-gnu` [2]      | 2.23   | 5.3.1 | 1.0.2j  | ✓   | 2.8.0 |   ✓    |
+| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1 | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
+| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1 | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
+| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1 | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
+| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1 | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
+| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2 | 1.0.2k  | ✓   | 2.7.1 |   ✓    |
+| `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2 | 1.0.2k  | ✓   | 2.7.1 |   ✓    |
+| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2 | 1.0.2k  | ✓   | 2.7.1 |   ✓    |
+| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1 | 1.0.2k  | ✓   | 2.8.0 |        |
+| `sparc64-unknown-linux-gnu` [2]      | 2.23   | 5.3.1 | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `thumbv6m-none-eabi` [3]             | 2.2.0  | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7em-none-eabi` [3]            | 2.2.0  | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7em-none-eabihf` [3]          | 2.2.0  | 5.3.1 | N/A     |     | N/A   |        |
 | `thumbv7m-none-eabi` [3]             | 2.2.0  | 5.3.1 | N/A     |     | N/A   |        |
 | `x86_64-pc-windows-gnu`[1]           | N/A    | 5.3.1 |         | ✓   | N/A   |        |
-| `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0 | 1.0.2j  |     | N/A   |   ✓    |
-| `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0 | 1.0.2j  |     | N/A   |        |
-| `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2 | 1.0.2j  | ✓   | N/A   |   ✓    |
-| `x86_64-unknown-linux-musl`          | 1.1.15 | 5.3.1 | 1.0.2j  |     | N/A   |   ✓    |
-| `x86_64-unknown-netbsd`[1]           | 7.0    | 5.3.0 | 1.0.2j  |     | N/A   |        |
+| `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0 | 1.0.2k  |     | N/A   |   ✓    |
+| `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0 | 1.0.2k  |     | N/A   |        |
+| `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2 | 1.0.2k  | ✓   | N/A   |   ✓    |
+| `x86_64-unknown-linux-musl`          | 1.1.15 | 5.3.1 | 1.0.2k  |     | N/A   |   ✓    |
+| `x86_64-unknown-netbsd`[1]           | 7.0    | 5.3.0 | 1.0.2k  |     | N/A   |        |
 
 [1] For *BSD targets, the libc column indicates the OS release version from
 where libc was extracted.
@@ -225,7 +225,7 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 - `cross` will mount the Cargo project as READ ONLY. Thus, if any crate attempts
   to modify its "source", the build will fail. Well behaved crates should only
   ever write to `$OUT_DIR` and never modify `$CARGO_MANIFEST_DIR` though.
-  
+
 ## License
 
 Licensed under either of

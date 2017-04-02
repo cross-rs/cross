@@ -13,7 +13,7 @@ COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-mips64el-linux-gnuabi64 \
     libc6-dev-mips64el-cross && \
-    bash /openssl.sh 1.0.2j linux64-mips64 mips64el-linux-gnuabi64- && \
+    bash /openssl.sh linux64-mips64 mips64el-linux-gnuabi64- && \
     bash /qemu.sh 2.8.0 mips64el
 
 RUN apt-get install -y --no-install-recommends \

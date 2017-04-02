@@ -11,7 +11,7 @@ RUN apt-get update && \
 
 COPY dragonfly.sh openssl.sh /
 RUN bash /dragonfly.sh && \
-    bash /openssl.sh 1.0.2j BSD-x86_64 x86_64-unknown-dragonfly-
+    bash /openssl.sh BSD-x86_64 x86_64-unknown-dragonfly-
 
 RUN apt-get install -y --no-install-recommends \
     curl && \
