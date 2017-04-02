@@ -11,7 +11,7 @@ main() {
         return
     fi
 
-    cargo install --path .
+    cargo install --force --path .
 
     export QEMU_STRACE=1
 
@@ -62,6 +62,7 @@ EOF
         git clone --depth 1 https://github.com/rust-lang/cargo $td
 
         pushd $td
+        cargo update -p libc
         cross build --target $TARGET
         popd
 
@@ -117,6 +118,7 @@ EOF
         git clone --depth 1 https://github.com/japaric/hellopp $td
 
         pushd $td
+        cargo update -p gcc
         if [ $RUN ]; then
             cross run --target $TARGET
         else
