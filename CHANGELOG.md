@@ -5,6 +5,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.10] - 2017-04-02
+
+### Added
+
+- Cross compilation support for `x86_64-pc-windows-gnu`
+
+- Cross compilation support for Android targets
+
+### Changed
+
+- Bumped OpenSSL version to 1.0.2k
+
 ## [v0.1.9] - 2017-02-08
 
 ### Added
