@@ -33,7 +33,7 @@ main() {
       no-dso \
       $os \
       -fPIC \
-      ${@:4}
+      ${@:3}
     nice make -j$(nproc)
     make install
 
