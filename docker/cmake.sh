@@ -12,10 +12,10 @@ main() {
     apt-get update
     local purge_list=()
     for dep in ${dependencies[@]}; do
-        dpkg -L $dep || (
-            apt-get install --no-install-recommends -y $dep &&
-                purge_list+=( $dep )
-        )
+        if ! dpkg -L $dep; then
+            apt-get install --no-install-recommends -y $dep
+            purge_list+=( $dep )
+        fi
     done
 
     local td=$(mktemp -d)
