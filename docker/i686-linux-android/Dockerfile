@@ -9,18 +9,15 @@ RUN apt-get update && \
     make \
     pkg-config
 
+COPY xargo.sh /
+RUN bash /xargo.sh
+
 COPY android-ndk.sh /
 RUN bash /android-ndk.sh x86 21
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY openssl.sh /
 RUN bash /openssl.sh android-x86 i686-linux-android-
-
-RUN apt-get install -y --no-install-recommends \
-    curl && \
-    curl -LSfs http://japaric.github.io/trust/install.sh | \
-    sh -s -- --git japaric/xargo --tag v0.3.5 --target x86_64-unknown-linux-gnu --to /usr/bin && \
-    apt-get purge --auto-remove -y curl
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT

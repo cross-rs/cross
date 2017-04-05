@@ -9,6 +9,9 @@ RUN apt-get update && \
     make \
     pkg-config
 
+COPY xargo.sh /
+RUN bash /xargo.sh
+
 COPY cmake.sh /
 RUN apt-get purge --auto-remove -y cmake && \
     bash /cmake.sh 2.8.11
@@ -18,12 +21,6 @@ RUN apt-get install -y --no-install-recommends \
     g++ \
     zlib1g-dev && \
     bash /openssl.sh linux-x86_64
-
-RUN apt-get install -y --no-install-recommends \
-    curl && \
-    curl -LSfs http://japaric.github.io/trust/install.sh | \
-    sh -s -- --git japaric/xargo --tag v0.3.5 --target x86_64-unknown-linux-gnu --to /usr/bin && \
-    apt-get purge --auto-remove -y curl
 
 ENV OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \

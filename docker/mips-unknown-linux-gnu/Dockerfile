@@ -9,18 +9,15 @@ RUN apt-get update && \
     make \
     pkg-config
 
+COPY xargo.sh /
+RUN bash /xargo.sh
+
 COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-mips-linux-gnu \
     libc6-dev-mips-cross && \
     bash /openssl.sh linux-mips32 mips-linux-gnu- && \
     bash /qemu.sh 2.8.0 mips
-
-RUN apt-get install -y --no-install-recommends \
-    curl && \
-    curl -LSfs http://japaric.github.io/trust/install.sh | \
-    sh -s -- --git japaric/xargo --tag v0.3.5 --target x86_64-unknown-linux-gnu --to /usr/bin && \
-    apt-get purge --auto-remove -y curl
 
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
     CC_mips_unknown_linux_gnu=mips-linux-gnu-gcc \

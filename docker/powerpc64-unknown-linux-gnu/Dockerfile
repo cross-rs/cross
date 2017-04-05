@@ -9,18 +9,15 @@ RUN apt-get update && \
     make \
     pkg-config
 
+COPY xargo.sh /
+RUN bash /xargo.sh
+
 COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-powerpc64-linux-gnu \
     libc6-dev-ppc64-cross && \
     bash /openssl.sh linux-ppc64 powerpc64-linux-gnu- && \
     bash /qemu.sh 2.7.1 ppc64
-
-RUN apt-get install -y --no-install-recommends \
-    curl && \
-    curl -LSfs http://japaric.github.io/trust/install.sh | \
-    sh -s -- --git japaric/xargo --tag v0.3.5 --target x86_64-unknown-linux-gnu --to /usr/bin && \
-    apt-get purge --auto-remove -y curl
 
 ENV CARGO_TARGET_POWERPC64_UNKNOWN_LINUX_GNU_LINKER=powerpc64-linux-gnu-gcc \
     CC_powerpc64_unknown_linux_gnu=powerpc64-linux-gnu-gcc \
