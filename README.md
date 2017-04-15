@@ -38,7 +38,7 @@
 
 - A Linux kernel with [binfmt_misc] support is required for cross testing.
 
-[binfmt_misc]: https://www.kernel.org/doc/Documentation/binfmt_misc.txt
+[binfmt_misc]: https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
 
 ## Installation
 
