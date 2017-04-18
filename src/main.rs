@@ -497,17 +497,6 @@ impl Toml {
             Ok(Vec::new())
         }
     }
-
-    /// Returns the `build.env.whitelist_all` part of `Cross.toml`
-    pub fn env_whitelist_all(&self) -> Result<Option<bool>> {
-        if let Some(value) = self.table.lookup("build.env.whitelist_all") {
-            value.as_bool()
-                .ok_or_else(|| "build.env.whitelist_all must be a boolean".into())
-                .map(Some)
-        } else {
-            Ok(None)
-        }
-    }
 }
 
 /// Parses the `Cross.toml` at the root of the Cargo project (if any)
