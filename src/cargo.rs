@@ -22,7 +22,7 @@ impl Subcommand {
         }
     }
 
-    pub fn needs_qemu(&self) -> bool {
+    pub fn needs_interpreter(&self) -> bool {
         match *self {
             Subcommand::Run | Subcommand::Test => true,
             _ => false,

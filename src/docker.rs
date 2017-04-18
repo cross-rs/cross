@@ -48,17 +48,21 @@ pub fn docker_command(subcommand: &str) -> Command {
     docker
 }
 
-/// Register QEMU interpreters
-pub fn register(verbose: bool) -> Result<()> {
+/// Register binfmt interpreters
+pub fn register(target: &Target, verbose: bool) -> Result<()> {
+    let cmd = if target.is_windows() {
+        // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
+        "echo ':DOSWin:M::MZ::/usr/bin/run-detectors' > /proc/sys/fs/binfmt_misc/register"
+    } else {
+        "apt-get update && apt-get install --no-install-recommends -y \
+            binfmt-support qemu-user-static"
+    };
     docker_command("run")
         .arg("--privileged")
         .arg("--rm")
         .arg("-it")
         .arg("ubuntu:16.04")
-        .args(&["sh",
-                "-c",
-                "apt-get update && apt-get install --no-install-recommends \
-                 -y binfmt-support qemu-user-static"])
+        .args(&["sh", "-c", cmd])
         .run(verbose)
 }
 

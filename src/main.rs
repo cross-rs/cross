@@ -14,7 +14,7 @@ mod errors;
 mod extensions;
 mod file;
 mod id;
-mod qemu;
+mod interpreter;
 mod rustc;
 mod rustup;
 
@@ -201,7 +201,7 @@ impl Target {
         !self.is_builtin() || self.is_windows()
     }
 
-    fn needs_qemu(&self) -> bool {
+    fn needs_interpreter(&self) -> bool {
         let not_native = match *self {
             Target::Custom { ref triple } => {
                 return !triple.starts_with("x86_64") &&
@@ -215,7 +215,7 @@ impl Target {
             _ => true,
         };
 
-        not_native && (self.is_linux() || self.is_bare_metal())
+        not_native && (self.is_linux() || self.is_windows() || self.is_bare_metal())
     }
 
     fn triple(&self) -> &str {
@@ -394,10 +394,10 @@ fn run() -> Result<ExitStatus> {
 
             if target.needs_docker() &&
                args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
-                if args.subcommand.map(|sc| sc.needs_qemu()).unwrap_or(false) &&
-                   target.needs_qemu() &&
-                   !qemu::is_registered()? {
-                    docker::register(verbose)?
+                if args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false) &&
+                   target.needs_interpreter() &&
+                   !interpreter::is_registered(&target)? {
+                    docker::register(&target, verbose)?
                 }
 
                 return docker::run(&target,

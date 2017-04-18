@@ -3,11 +3,11 @@ set -ex
 main() {
     local td=
 
-    if [ $TRAVIS_OS_NAME = linux ]; then
+    if [ "$TRAVIS_OS_NAME" = linux ]; then
         ./build-docker-image.sh $TARGET
     fi
 
-    if [ $TRAVIS_BRANCH = master ] || [ ! -z $TRAVIS_TAG ]; then
+    if [ "$TRAVIS_BRANCH" = master ] || [ ! -z "$TRAVIS_TAG" ]; then
         return
     fi
 
@@ -34,7 +34,7 @@ main() {
     esac
 
     # `cross build` test for targets where `std` is not available
-    if [ -z $STD ]; then
+    if [ -z "$STD" ]; then
         td=$(mktemp -d)
 
         git clone \
