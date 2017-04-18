@@ -44,7 +44,8 @@ matrix:
     - env: TARGET=x86_64-unknown-netbsd                 DYLIB=1 STD=1 OPENSSL=0.7.17
 
     # Windows
-    - env: TARGET=x86_64-pc-windows-gnu           CPP=1 DYLIB=1 STD=1
+    - env: TARGET=x86_64-pc-windows-gnu           CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1
+    - env: TARGET=i686-pc-windows-gnu             CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1
 
     # Bare metal
     - env: TARGET=thumbv6m-none-eabi                                                 RUN=1
