@@ -119,6 +119,7 @@ pub enum Target {
 
     // Windows
     X86_64PcWindowsGnu,
+    I686PcWindowsGnu,
 
     // Bare metal
     Thumbv6mNoneEabi,
@@ -191,6 +192,7 @@ impl Target {
 
     fn is_windows(&self) -> bool {
         match *self {
+            Target::I686PcWindowsGnu => true,
             Target::X86_64PcWindowsGnu => true,
             _ => false,
         }
@@ -235,6 +237,7 @@ impl Target {
             Armv7UnknownLinuxMusleabihf => "armv7-unknown-linux-musleabihf",
             I686AppleDarwin => "i686-apple-darwin",
             I686LinuxAndroid => "i686-linux-android",
+            I686PcWindowsGnu => "i686-pc-windows-gnu",
             I686UnknownFreebsd => "i686-unknown-freebsd",
             I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
             I686UnknownLinuxMusl => "i686-unknown-linux-musl",
@@ -281,6 +284,7 @@ impl Target {
             "armv7-unknown-linux-musleabihf" => Armv7UnknownLinuxMusleabihf,
             "i686-apple-darwin" => I686AppleDarwin,
             "i686-linux-android" => I686LinuxAndroid,
+            "i686-pc-windows-gnu" => I686PcWindowsGnu,
             "i686-unknown-freebsd" => I686UnknownFreebsd,
             "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
             "i686-unknown-linux-musl" => I686UnknownLinuxMusl,
