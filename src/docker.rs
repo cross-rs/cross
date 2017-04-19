@@ -52,7 +52,8 @@ pub fn docker_command(subcommand: &str) -> Command {
 pub fn register(target: &Target, verbose: bool) -> Result<()> {
     let cmd = if target.is_windows() {
         // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
-        "echo ':DOSWin:M::MZ::/usr/bin/run-detectors' > /proc/sys/fs/binfmt_misc/register"
+        "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
+            echo ':DOSWin:M::MZ::/usr/bin/run-detectors' > /proc/sys/fs/binfmt_misc/register"
     } else {
         "apt-get update && apt-get install --no-install-recommends -y \
             binfmt-support qemu-user-static"
