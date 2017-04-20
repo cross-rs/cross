@@ -113,6 +113,33 @@ RUN dpkg --add-architecture arm64 && \
 $ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
 ```
 
+### Passing environment variables into the build environemnt
+
+By default, `cross` does not pass any environment variables into the build
+environment from the calling shell. Sometimes this is really useful, for
+example to pass in environment variables set by your CI system.
+
+To whitelist some variables, you can specify them in your `Cross.toml`
+like so
+
+```toml
+[build.env]
+whitelist = [
+    "TRAVIS",
+    "RUST_LOG",
+]
+```
+
+To whitelist some variables for one target but not others, you can use
+this syntax instead
+
+```toml
+[target.aarch64-unknown-linux-gnu.env]
+whitelist = [
+    "RUST_DEBUG",
+]
+```
+
 ### Use Xargo instead of Cargo
 
 By default, `cross` uses `cargo` to build your Cargo project *unless* you are
