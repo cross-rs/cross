@@ -120,7 +120,7 @@ pub fn run(target: &Target,
     }
 
     if let Some(toml) = toml {
-        for var in toml.env_whitelist()? {
+        for var in toml.env_whitelist(target)? {
             if var.contains("=") {
                 bail!("environment variable names must not contain the '=' character");
             }

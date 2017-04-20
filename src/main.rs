@@ -478,8 +478,18 @@ impl Toml {
         }
     }
 
+    /// Returns the environment variable whitelist for `target`, including variables sepcified
+    /// under `build` and under `target`.
+    pub fn env_whitelist(&self, target: &Target) -> Result<Vec<&str>> {
+        let mut bwl = self.build_env_whitelist()?;
+        let mut twl = self.target_env_whitelist(target)?;
+        bwl.extend(twl.drain(..));
+
+        Ok(bwl)
+    }
+
     /// Returns the `build.env.whitelist` part of `Cross.toml`
-    pub fn env_whitelist(&self) -> Result<Vec<&str>> {
+    fn build_env_whitelist(&self) -> Result<Vec<&str>> {
         if let Some(value) = self.table.lookup("build.env.whitelist") {
             if let Some(arr) = value.as_slice() {
                 arr.iter()
@@ -495,6 +505,23 @@ impl Toml {
             }
         } else {
             Ok(Vec::new())
+        }
+    }
+
+    /// Returns the `target.<triple>.env.whitelist` part of `Cross.toml` for `target`.
+    fn target_env_whitelist(&self, target: &Target) -> Result<Vec<&str>> {
+        let triple = target.triple();
+
+        let key = format!("target.{}.env.whitelist", triple);
+
+        match self.table.lookup(&key) {
+            Some(&Value::Array(ref vec)) => {
+                if vec.iter().any(|val| val.as_str().is_none()) {
+                    bail!("every {} element must be a string", key);
+                }
+                Ok(vec.iter().map(|val| val.as_str().unwrap()).collect())
+            },
+            _ => Ok(Vec::new()),
         }
     }
 }
