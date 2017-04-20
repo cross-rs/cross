@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
+use semver::{Version, VersionReq};
+
 use {Target, Toml};
 use cargo::Root;
 use errors::*;
@@ -10,10 +12,45 @@ use extensions::CommandExt;
 use id;
 use rustc;
 
+lazy_static! {
+    /// Retrieve the Docker Daemon version.
+    ///
+    /// # Panics
+    /// Panics if the version cannot be retrieved or parsed
+    static ref DOCKER_VERSION: Version = {
+        let version_string = Command::new("docker")
+                                .arg("version")
+                                .arg("--format={{.Server.APIVersion}}")
+                                .run_and_get_stdout(false)
+                                .expect("Unable to obtain Docker version");
+        // API versions don't have "patch" version
+        Version::parse(&format!("{}.0", version_string.trim()))
+            .expect("Cannot parse Docker engine version")
+    };
+
+    /// Version requirements for user namespace.
+    ///
+    /// # Panics
+    /// Panics if the parsing fails
+    static ref USERNS_REQUIREMENT: VersionReq = {
+        VersionReq::parse(">= 1.24")
+            .expect("Unable to parse version requirements")
+    };
+}
+
+/// Add the `userns` flag, if needed
+pub fn docker_command(subcommand: &str) -> Command {
+    let mut docker = Command::new("docker");
+    docker.arg(subcommand);
+    if USERNS_REQUIREMENT.matches(&DOCKER_VERSION) {
+        docker.args(&["--userns", "host"]);
+    }
+    docker
+}
+
 /// Register QEMU interpreters
 pub fn register(verbose: bool) -> Result<()> {
-    Command::new("docker")
-        .arg("run")
+    docker_command("run")
         .arg("--privileged")
         .arg("--rm")
         .arg("-it")
@@ -64,10 +101,9 @@ pub fn run(target: &Target,
         .run(verbose)
         .chain_err(|| "couldn't generate Cargo.lock")?;
 
-    let mut docker = Command::new("docker");
+    let mut docker = docker_command("run");
 
     docker
-        .arg("run")
         .arg("--rm")
         .args(&["--user", &format!("{}:{}", id::user(), id::group())])
         .args(&["-e", "CARGO_HOME=/cargo"])
