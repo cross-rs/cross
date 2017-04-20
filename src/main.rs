@@ -490,21 +490,14 @@ impl Toml {
 
     /// Returns the `build.env.whitelist` part of `Cross.toml`
     fn build_env_whitelist(&self) -> Result<Vec<&str>> {
-        if let Some(value) = self.table.lookup("build.env.whitelist") {
-            if let Some(arr) = value.as_slice() {
-                arr.iter()
-                    .map(|v| {
-                        v.as_str()
-                            .ok_or_else(|| {
-                                "every build.env.whitelist element must be a string".into()
-                            })
-                    })
-                    .collect()
-            } else {
-                Err("build.env.whitelist must be an array".into())
-            }
-        } else {
-            Ok(Vec::new())
+        match self.table.lookup("build.env.whitelist") {
+            Some(&Value::Array(ref vec)) => {
+                if vec.iter().any(|val| val.as_str().is_none()) {
+                    bail!("every build.env.whitelist element must be a string");
+                }
+                Ok(vec.iter().map(|val| val.as_str().unwrap()).collect())
+            },
+            _ => Ok(Vec::new()),
         }
     }
 
