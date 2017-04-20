@@ -81,7 +81,7 @@ main() {
 EOF
 
     # Build the modified mingw packages
-    dpkg-buildpackage -b
+    MAKEFLAGS=--silent dpkg-buildpackage -b
 
     # Replace installed mingw packages with the new ones
     dpkg -i ../g*-mingw-w64-i686*.deb ../gcc-mingw-w64-base*.deb
