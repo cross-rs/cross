@@ -87,6 +87,7 @@ pub enum Target {
     Armv7LinuxAndroideabi,
     Aarch64LinuxAndroid,
     I686LinuxAndroid,
+    X86_64LinuxAndroid,
 
     // Linux
     Aarch64UnknownLinuxGnu,
@@ -157,7 +158,8 @@ impl Target {
             Target::ArmLinuxAndroideabi |
             Target::Armv7LinuxAndroideabi |
             Target::Aarch64LinuxAndroid |
-            Target::I686LinuxAndroid => true,
+            Target::I686LinuxAndroid |
+            Target::X86_64LinuxAndroid => true,
             _ => false,
         }
     }
@@ -250,6 +252,7 @@ impl Target {
             Thumbv7mNoneEabi => "thumbv7m-none-eabi",
             X86_64AppleDarwin => "x86_64-apple-darwin",
             X86_64PcWindowsGnu => "x86_64-pc-windows-gnu",
+            X86_64LinuxAndroid => "x86_64-linux-android",
             X86_64UnknownDragonfly => "x86_64-unknown-dragonfly",
             X86_64UnknownFreebsd => "x86_64-unknown-freebsd",
             X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
@@ -295,6 +298,7 @@ impl Target {
             "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,
             "thumbv7m-none-eabi" => Thumbv7mNoneEabi,
             "x86_64-apple-darwin" => X86_64AppleDarwin,
+            "x86_64-linux-android" => X86_64LinuxAndroid,
             "x86_64-pc-windows-gnu" => X86_64PcWindowsGnu,
             "x86_64-unknown-dragonfly" => X86_64UnknownDragonfly,
             "x86_64-unknown-freebsd" => X86_64UnknownFreebsd,
