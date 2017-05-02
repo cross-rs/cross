@@ -116,26 +116,29 @@ $ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
 ### Passing environment variables into the build environemnt
 
 By default, `cross` does not pass any environment variables into the build
-environment from the calling shell. Sometimes this is really useful, for
-example to pass in environment variables set by your CI system.
+environment from the calling shell. This is chosen as a safe default as most use
+cases will not want the calling environment leaking into the inner execution
+environment.
 
-To whitelist some variables, you can specify them in your `Cross.toml`
-like so
+In the instances that you do want to pass through environment variables, this
+can be done via `build.env.passthrough` in your `Cross.toml`:
+
 
 ```toml
 [build.env]
-whitelist = [
-    "TRAVIS",
+passthrough = [
+    "RUST_BACKTRACE",
     "RUST_LOG",
+    "TRAVIS",
 ]
 ```
 
-To whitelist some variables for one target but not others, you can use
-this syntax instead
+To pass variables through for one target but not others, you can use
+this syntax instead:
 
 ```toml
 [target.aarch64-unknown-linux-gnu.env]
-whitelist = [
+passthrough = [
     "RUST_DEBUG",
 ]
 ```
