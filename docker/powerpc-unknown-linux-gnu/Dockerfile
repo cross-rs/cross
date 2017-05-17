@@ -17,7 +17,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-powerpc-linux-gnu \
     libc6-dev-powerpc-cross && \
     bash /openssl.sh linux-ppc powerpc-linux-gnu- && \
-    bash /qemu.sh 2.7.1 ppc
+    bash /qemu.sh ppc
 
 ENV CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
     CC_powerpc_unknown_linux_gnu=powerpc-linux-gnu-gcc \

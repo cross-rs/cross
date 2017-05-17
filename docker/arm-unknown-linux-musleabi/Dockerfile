@@ -13,7 +13,7 @@ COPY xargo.sh /
 RUN bash /xargo.sh
 
 COPY qemu.sh /
-RUN bash /qemu.sh 2.8.0 arm
+RUN bash /qemu.sh arm
 
 RUN apt-get install -y --no-install-recommends \
     gcc-arm-linux-gnueabi

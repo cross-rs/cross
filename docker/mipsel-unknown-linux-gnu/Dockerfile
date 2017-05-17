@@ -17,7 +17,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-mipsel-linux-gnu \
     libc6-dev-mipsel-cross && \
     bash /openssl.sh linux-mips32 mipsel-linux-gnu- && \
-    bash /qemu.sh 2.8.0 mipsel
+    bash /qemu.sh mipsel
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc \
     CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc \

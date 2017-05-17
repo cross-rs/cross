@@ -1,9 +1,10 @@
 set -ex
 
 main() {
-    local arch=$2 \
-          td=$(mktemp -d) \
-          version=$1
+    local version=2.9.0
+
+    local arch=$1 \
+          td=$(mktemp -d)
 
     local dependencies=(
         autoconf

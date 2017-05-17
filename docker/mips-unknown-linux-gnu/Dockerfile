@@ -17,7 +17,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-mips-linux-gnu \
     libc6-dev-mips-cross && \
     bash /openssl.sh linux-mips32 mips-linux-gnu- && \
-    bash /qemu.sh 2.8.0 mips
+    bash /qemu.sh mips
 
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
     CC_mips_unknown_linux_gnu=mips-linux-gnu-gcc \

@@ -16,6 +16,6 @@ COPY qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     gcc-arm-none-eabi \
     libnewlib-arm-none-eabi && \
-    bash /qemu.sh 2.8.0 arm
+    bash /qemu.sh arm
 
 ENV QEMU_CPU=cortex-m3

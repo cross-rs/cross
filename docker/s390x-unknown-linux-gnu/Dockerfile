@@ -17,7 +17,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-s390x-linux-gnu \
     libc6-dev-s390x-cross && \
     bash /openssl.sh linux64-s390x s390x-linux-gnu- && \
-    bash /qemu.sh 2.8.0 s390x
+    bash /qemu.sh s390x
 
 ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
     CC_s390x_unknown_linux_gnu=s390x-linux-gnu-gcc \

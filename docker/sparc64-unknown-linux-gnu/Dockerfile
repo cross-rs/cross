@@ -17,7 +17,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-sparc64-linux-gnu \
     libc6-dev-sparc64-cross && \
     bash /openssl.sh linux64-sparcv9 sparc64-linux-gnu- && \
-    bash /qemu.sh 2.8.0 sparc64
+    bash /qemu.sh sparc64
 
 ENV CARGO_TARGET_SPARC64_UNKNOWN_LINUX_GNU_LINKER=sparc64-linux-gnu-gcc \
     CC_sparc64_unknown_linux_gnu=sparc64-linux-gnu-gcc \

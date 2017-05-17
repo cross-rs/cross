@@ -21,7 +21,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-arm-linux-gnueabihf \
     libc6-dev-armhf-cross && \
     bash /openssl.sh linux-armv4 arm-linux-gnueabihf- && \
-    bash /qemu.sh 2.8.0 arm
+    bash /qemu.sh arm
 
 ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc \

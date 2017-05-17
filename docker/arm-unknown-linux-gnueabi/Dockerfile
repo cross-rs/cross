@@ -17,7 +17,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-arm-linux-gnueabi \
     libc6-dev-armel-cross && \
     bash /openssl.sh linux-armv4 arm-linux-gnueabi- && \
-    bash /qemu.sh 2.8.0 arm
+    bash /qemu.sh arm
 
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
     CC_arm_unknown_linux_gnueabi=arm-linux-gnueabi-gcc \

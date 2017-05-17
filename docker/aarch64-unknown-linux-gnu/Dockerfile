@@ -17,7 +17,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-aarch64-linux-gnu \
     libc6-dev-arm64-cross && \
     bash /openssl.sh linux-aarch64 aarch64-linux-gnu- && \
-    bash /qemu.sh 2.8.0 aarch64
+    bash /qemu.sh aarch64
 
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
     CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc \
