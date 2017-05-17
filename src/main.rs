@@ -1,7 +1,10 @@
 #[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate lazy_static;
 extern crate libc;
 extern crate rustc_version;
+extern crate semver;
 extern crate toml;
 
 mod cargo;
