@@ -133,10 +133,18 @@ EOF
     if [ $OPENSSL ]; then
         td=$(mktemp -d)
 
+        # If tag name v$OPENSSL fails we try openssl-sys-v$OPENSSL
+        git clone \
+            --depth 1 \
+            --branch v$OPENSSL \
+            https://github.com/sfackler/rust-openssl $td || \
+        git clone \
+            --depth 1 \
+            --branch openssl-sys-v$OPENSSL \
+            https://github.com/sfackler/rust-openssl $td
+
         pushd $td
-        cargo clone openssl-sys --vers $OPENSSL
-        cd openssl-sys
-        cross build --target $TARGET
+        cross build --package openssl-sys --target $TARGET
         popd
 
         rm -rf $td
