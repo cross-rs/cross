@@ -15,6 +15,15 @@ main() {
 
     export QEMU_STRACE=1
 
+    # test `cross check`
+    td=$(mktemp -d)
+    cargo init --lib --name foo $td
+    pushd $td
+    echo '#![no_std]' > src/lib.rs
+    cargo check --target $TARGET
+    popd
+    rm -rf $td
+
     # `cross run` test for thumb targets
     case $TARGET in
         thumb*-none-eabi*)
