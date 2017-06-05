@@ -144,7 +144,9 @@ EOF
             https://github.com/sfackler/rust-openssl $td
 
         pushd $td
-        cross build --package openssl-sys --target $TARGET
+        # avoid problems building openssl-sys in a virtual workspace
+        rm -f Cargo.toml
+        cd openssl-sys && cross build --target $TARGET
         popd
 
         rm -rf $td
