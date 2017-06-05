@@ -20,7 +20,7 @@ main() {
     cargo init --lib --name foo $td
     pushd $td
     echo '#![no_std]' > src/lib.rs
-    cargo check --target $TARGET
+    cross check --target $TARGET
     popd
     rm -rf $td
 
