@@ -66,6 +66,17 @@ EOF
         popd
 
         rm -rf $td
+    elif [ "$TARGET" = "asmjs-unknown-emscripten" -o \
+           "$TARGET" = "wasm32-unknown-emscripten" ]; then
+        td=$(mktemp -d)
+
+        git clone --depth 1 https://github.com/bluss/rust-itertools $td
+
+        pushd $td
+        cross build --target $TARGET
+        popd
+
+        rm -rf $td
     else
         td=$(mktemp -d)
 
