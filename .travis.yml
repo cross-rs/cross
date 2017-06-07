@@ -48,6 +48,10 @@ matrix:
     - env: TARGET=x86_64-pc-windows-gnu           CPP=1         STD=1                RUN=1
     - env: TARGET=i686-pc-windows-gnu             CPP=1         STD=1                RUN=1
 
+    # Emscripten
+    - env: TARGET=asmjs-unknown-emscripten        CPP=1         STD=1                RUN=1
+    - env: TARGET=wasm32-unknown-emscripten       CPP=1         STD=1                RUN=1
+
     # Bare metal
     - env: TARGET=thumbv6m-none-eabi                                                 RUN=1
     - env: TARGET=thumbv7em-none-eabi                                                RUN=1
