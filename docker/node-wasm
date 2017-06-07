@@ -1,0 +1,19 @@
+#!/bin/bash
+
+path="$(dirname $1)"
+file="$(basename $1)"
+
+# Workaround for
+# https://github.com/kripken/emscripten/issues/4542
+
+if [ "$(basename $path)" != "deps" ]; then
+    path="$path/deps"
+fi
+
+cd "$path"
+
+if [ -f "$file" ]; then
+    /node-*/bin/node "$file"
+else
+    /node-*/bin/node "../$file"
+fi

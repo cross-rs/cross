@@ -122,6 +122,10 @@ pub enum Target {
     X86_64PcWindowsGnu,
     I686PcWindowsGnu,
 
+    // Emscripten
+    AsmjsUnknownEmscripten,
+    Wasm32UnknownEmscripten,
+
     // Bare metal
     Thumbv6mNoneEabi,
     Thumbv7emNoneEabi,
@@ -168,6 +172,14 @@ impl Target {
         }
     }
 
+    fn is_emscripten(&self) -> bool {
+        match *self {
+            Target::AsmjsUnknownEmscripten |
+            Target::Wasm32UnknownEmscripten => true,
+            _ => false,
+        }
+    }
+
     fn is_linux(&self) -> bool {
         match *self {
             Target::Aarch64UnknownLinuxGnu |
@@ -202,7 +214,7 @@ impl Target {
 
     fn needs_docker(&self) -> bool {
         self.is_linux() || self.is_android() || self.is_bare_metal() || self.is_bsd() ||
-        !self.is_builtin() || self.is_windows()
+        !self.is_builtin() || self.is_windows() || self.is_emscripten()
     }
 
     fn needs_interpreter(&self) -> bool {
@@ -237,6 +249,7 @@ impl Target {
             Armv7LinuxAndroideabi => "armv7-linux-androideabi",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
             Armv7UnknownLinuxMusleabihf => "armv7-unknown-linux-musleabihf",
+            AsmjsUnknownEmscripten => "asmjs-unknown-emscripten",
             I686AppleDarwin => "i686-apple-darwin",
             I686LinuxAndroid => "i686-linux-android",
             I686PcWindowsGnu => "i686-pc-windows-gnu",
@@ -256,6 +269,7 @@ impl Target {
             Thumbv7emNoneEabi => "thumbv7em-none-eabi",
             Thumbv7emNoneEabihf => "thumbv7em-none-eabihf",
             Thumbv7mNoneEabi => "thumbv7m-none-eabi",
+            Wasm32UnknownEmscripten => "wasm32-unknown-emscripten",
             X86_64AppleDarwin => "x86_64-apple-darwin",
             X86_64PcWindowsGnu => "x86_64-pc-windows-gnu",
             X86_64LinuxAndroid => "x86_64-linux-android",
@@ -285,6 +299,7 @@ impl Target {
             "armv7-linux-androideabi" => Armv7LinuxAndroideabi,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
             "armv7-unknown-linux-musleabihf" => Armv7UnknownLinuxMusleabihf,
+            "asmjs-unknown-emscripten" => AsmjsUnknownEmscripten,
             "i686-apple-darwin" => I686AppleDarwin,
             "i686-linux-android" => I686LinuxAndroid,
             "i686-pc-windows-gnu" => I686PcWindowsGnu,
@@ -304,6 +319,7 @@ impl Target {
             "thumbv7em-none-eabi" => Thumbv7emNoneEabi,
             "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,
             "thumbv7m-none-eabi" => Thumbv7mNoneEabi,
+            "wasm32-unknown-emscripten" => Wasm32UnknownEmscripten,
             "x86_64-apple-darwin" => X86_64AppleDarwin,
             "x86_64-linux-android" => X86_64LinuxAndroid,
             "x86_64-pc-windows-gnu" => X86_64PcWindowsGnu,
