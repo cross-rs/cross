@@ -116,7 +116,12 @@ EOF
         cargo init --bin --name hello $td
 
         pushd $td
+        mkdir examples tests
+        echo "fn main() { println!(\"Example!\"); }" > examples/e.rs
+        echo "#[test] fn t() {}" > tests/t.rs
         cross run --target $TARGET
+        cross run --target $TARGET --example e
+        cross test --target $TARGET
         popd
 
         rm -rf $td
