@@ -6,14 +6,42 @@ file="$(basename $1)"
 # Workaround for
 # https://github.com/kripken/emscripten/issues/4542
 
-if [ "$(basename $path)" != "deps" ]; then
-    path="$path/deps"
-fi
+# Consider a project with this struct
+# ├── src
+# │   ├── bin
+# │   │   └── prog.rs
+# │   └── lib.rs
+# ├── benches
+# │   └── b.rs
+# ├── examples
+# │   └── a.rs
+# └── tests
+#     └── t.rs
+#
+# We expect that the artifacts will be generated in
+# (where ? = release or debug)
+#
+# target/wasm32-unknown-emscripten/?/deps/
+# for tests and benches
+#
+# target/wasm32-unknown-emscripten/?/examples/
+# for examples
+#
+# target/wasm32-unknown-emscripten/?/
+# for main programs (main.rs and bin/*.rs)
+#
+# Because of https://github.com/kripken/emscripten/issues/4542
+# the script must be executed from where the dependencies are.
 
-cd "$path"
 
-if [ -f "$file" ]; then
-    /node-*/bin/node "$file"
+base="$(basename $path)"
+if [ "$base" != "deps" -a "$base" != "examples"  ]; then
+    # main programs requeries the artifacts in $path/deps
+    cd "$path/deps"
+    exec /node-*/bin/node "../$file"
 else
-    /node-*/bin/node "../$file"
+    # all deps of tests, benches and examples are in $path dir
+    cd "$path"
+    exec /node-*/bin/node "$file"
 fi
+
