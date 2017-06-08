@@ -199,7 +199,8 @@ where libc was extracted.
 
 [3] libc = newlib
 
-[4] libc = musl, gcc = emcc
+[4] libc = musl, gcc = emcc; Some projects that use libc may fail due to wrong
+    definitions (will be fixed by https://github.com/rust-lang/libc/pull/610)
 
 ## Debugging
 
