@@ -479,7 +479,7 @@ impl Toml {
     }
 
     /// Returns the list of environment variables to pass through for `target`,
-    /// including variables sepcified under `build` and under `target`.
+    /// including variables specified under `build` and under `target`.
     pub fn env_passthrough(&self, target: &Target) -> Result<Vec<&str>> {
         let mut bwl = self.build_env_passthrough()?;
         let mut twl = self.target_env_passthrough(target)?;
