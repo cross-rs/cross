@@ -5,6 +5,24 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.11] - 2017-06-10
+
+### Added
+
+- Build and test support for `i686-pc-windows-gnu`, `x86_64-pc-windows-gnu`,
+  `asmjs-unknown-emscripten` and `wasm-unknown-emscripten`.
+
+- Build support for `aarch64-linux-android`, `arm-linux-androideabi`,
+  `armv7-linux-androideabi`, `x86_64-linux-android` and `i686-linux-android`
+
+- A `build.env.passthrough` / `build.target.*.passthrough` option to Cross.toml
+  to support passing environment variables from the host to the Docker image.
+
+### Changed
+
+- Bumped OpenSSL version to 1.0.2k
+- Bumped QEMU version to 2.9.0
+
 ## [v0.1.10] - 2017-04-02
 
 ### Added
@@ -135,7 +153,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.11...HEAD
+[v0.1.11]: https://github.com/japaric/cross/compare/v0.1.10...v0.1.11
+[v0.1.10]: https://github.com/japaric/cross/compare/v0.1.9...v0.1.10
 [v0.1.9]: https://github.com/japaric/cross/compare/v0.1.8...v0.1.9
 [v0.1.8]: https://github.com/japaric/cross/compare/v0.1.7...v0.1.8
 [v0.1.7]: https://github.com/japaric/cross/compare/v0.1.6...v0.1.7
