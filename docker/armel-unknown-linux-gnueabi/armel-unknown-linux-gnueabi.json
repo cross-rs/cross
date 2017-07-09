@@ -1,0 +1,37 @@
+{
+  "abi-blacklist": [
+    "stdcall",
+    "fastcall",
+    "vectorcall",
+    "thiscall",
+    "win64",
+    "sysv64"
+  ],
+  "arch": "arm",
+  "data-layout": "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64",
+  "dynamic-linking": true,
+  "env": "gnu",
+  "exe-allocation-crate": "alloc_system",
+  "lib-allocation-crate": "alloc_system",
+  "executables": true,
+  "features": "+soft-float,+strict-align",
+  "has-elf-tls": true,
+  "has-rpath": true,
+  "is-builtin": false,
+  "linker-flavor": "gcc",
+  "linker-is-gnu": true,
+  "llvm-target": "armv5te-unknown-linux-gnueabi",
+  "max-atomic-width": 32,
+  "os": "linux",
+  "position-independent-executables": true,
+  "pre-link-args": {
+    "gcc": [
+      "-Wl,--as-needed",
+      "-Wl,-z,noexecstack"
+    ]
+  },
+  "target-endian": "little",
+  "target-family": "unix",
+  "target-pointer-width": "32",
+  "vendor": "unknown"
+}
