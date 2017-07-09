@@ -191,8 +191,8 @@ worst, "hang" (never terminate).
 | `arm-linux-androideabi`              | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
 | `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `arm-unknown-linux-musleabi`         | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
-| `armel-unknown-linux-gnueabi`        | 2.19   | 4.9.2   | 1.0.2k  | ✓   | 2.9.0 |   ✓    |
-| `armv7-linux-androideabi` [5]        | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
+| `armel-unknown-linux-gnueabi` [5]    | 2.19   | 4.9.2   | 1.0.2k  | ✓   | 2.9.0 |   ✓    |
+| `armv7-linux-androideabi`            | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
 | `asmjs-unknown-emscripten` [4]       | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
