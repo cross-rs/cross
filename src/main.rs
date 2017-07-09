@@ -150,6 +150,7 @@ impl Target {
     fn is_builtin(&self) -> bool {
         match *self {
             Target::Custom { .. } => false,
+            Target::ArmelUnknownLinuxGnueabi => false,
             _ => true,
         }
     }
@@ -211,13 +212,6 @@ impl Target {
         match *self {
             Target::I686PcWindowsGnu => true,
             Target::X86_64PcWindowsGnu => true,
-            _ => false,
-        }
-    }
-
-    fn needs_std_rebuilt(&self) -> bool {
-        match *self {
-            Target::ArmelUnknownLinuxGnueabi => true,
             _ => false,
         }
     }
@@ -293,7 +287,7 @@ impl Target {
     }
 
     fn needs_xargo(&self) -> bool {
-        self.is_bare_metal() || self.needs_std_rebuilt() || !self.is_builtin()
+        self.is_bare_metal() || !self.is_builtin()
     }
 }
 
