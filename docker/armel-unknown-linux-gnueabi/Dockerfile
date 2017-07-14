@@ -36,7 +36,7 @@ ENV CARGO_TARGET_ARMEL_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
     HOST=x86_64-unknown-linux-gnu \
     CC_armel_unknown_linux_gnueabi=arm-linux-gnueabi-gcc \
     CXX_armel_unknown_linux_gnueabi=arm-linux-gnueabi-g++ \
-    CFLAGS_armel_unknown_linux_gnueabi="-Wall -Os -fPIC -D__arm__ -mfloat-abi=soft" \
+    CFLAGS_armel_unknown_linux_gnueabi="-march=armv5te -Wall -Os -fPIC -D__arm__ -mfloat-abi=soft" \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib \
