@@ -16,7 +16,7 @@ main() {
     export QEMU_STRACE=1
 
     # test `cross check`
-    if [ -z $STD ]; then
+    if [ ! -z $STD ]; then
         td=$(mktemp -d)
         cargo init --lib --name foo $td
         pushd $td
