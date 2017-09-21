@@ -2,9 +2,7 @@
 
 set -e
 
-export HOME=/tmp/
-
-cp /emsdk-portable/.emscripten $HOME/
+export HOME=/emsdk-portable/
 
 source /emsdk-portable/emsdk_env.sh &> /dev/null
 
