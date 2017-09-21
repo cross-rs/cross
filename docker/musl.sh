@@ -32,7 +32,7 @@ main() {
     fi
 
     CFLAGS="-fPIC ${@:3}" ./configure \
-          --disabled-shared \
+          --disable-shared \
           --prefix=/usr/local \
           $(test -z $target || echo --target=$target)
     nice make -j$(nproc)
