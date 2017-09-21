@@ -57,7 +57,12 @@ matrix:
     - env: TARGET=thumbv7em-none-eabi                                                RUN=1
     - env: TARGET=thumbv7em-none-eabihf                                              RUN=1
     - env: TARGET=thumbv7m-none-eabi                                                 RUN=1
+  # FIXME(#110) these targets are broken in Travis
+  allow_failures:
+    - env: TARGET=asmjs-unknown-emscripten        CPP=1         STD=1                RUN=1
+    - env: TARGET=wasm32-unknown-emscripten       CPP=1         STD=1                RUN=1
 env:       TARGET=x86_64-unknown-linux-gnu        CPP=1 DYLIB=1       OPENSSL=0.5.5  RUN=1 DEPLOY=1
+
 
 install:
   - curl https://sh.rustup.rs -sSf |
