@@ -8,6 +8,7 @@ use extensions::CommandExt;
 #[derive(Clone, Copy)]
 pub enum Subcommand {
     Build,
+    Check,
     Other,
     Run,
     Rustc,
@@ -34,6 +35,7 @@ impl<'a> From<&'a str> for Subcommand {
     fn from(s: &str) -> Subcommand {
         match s {
             "build" => Subcommand::Build,
+            "check" => Subcommand::Check,
             "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,
             "test" => Subcommand::Test,
