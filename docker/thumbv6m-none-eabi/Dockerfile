@@ -18,4 +18,5 @@ RUN apt-get install -y --no-install-recommends \
     libnewlib-arm-none-eabi && \
     bash /qemu.sh arm
 
-ENV QEMU_CPU=cortex-m3
+ENV QEMU_CPU=cortex-m3 \
+    CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER=qemu-arm

@@ -39,5 +39,6 @@ COPY windows-entry.sh /
 ENTRYPOINT ["/windows-entry.sh"]
 
 ENV CARGO_TARGET_I686_PC_WINDOWS_GNU_LINKER=i686-w64-mingw32-gcc \
+    CARGO_TARGET_I686_PC_WINDOWS_GNU_RUNNER=wine \
     CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc \
     CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++
