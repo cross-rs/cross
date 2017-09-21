@@ -20,6 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     bash /qemu.sh arm
 
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
+    CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_RUNNER=qemu-arm \
     CC_arm_unknown_linux_gnueabi=arm-linux-gnueabi-gcc \
     CXX_arm_unknown_linux_gnueabi=arm-linux-gnueabi-g++ \
     OPENSSL_DIR=/openssl \

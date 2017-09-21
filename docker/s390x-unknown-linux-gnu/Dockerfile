@@ -20,6 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     bash /qemu.sh s390x
 
 ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
+    CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER=qemu-s390x \
     CC_s390x_unknown_linux_gnu=s390x-linux-gnu-gcc \
     CXX_s390x_unknown_linux_gnu=s390x-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

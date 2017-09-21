@@ -19,5 +19,6 @@ RUN apt-get install -y --no-install-recommends \
     gcc-arm-linux-gnueabihf
 
 ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc \
+    CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_RUNNER=qemu-arm \
     CC_armv7_unknown_linux_musleabihf=arm-linux-gnueabihf-gcc \
     RUST_TEST_THREADS=1

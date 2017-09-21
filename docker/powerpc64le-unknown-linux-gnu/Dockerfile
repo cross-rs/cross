@@ -20,6 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     bash /qemu.sh ppc64le
 
 ENV CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_LINKER=powerpc64le-linux-gnu-gcc \
+    CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_RUNNER=qemu-ppc64le \
     CC_powerpc64le_unknown_linux_gnu=powerpc64le-linux-gnu-gcc \
     CXX_powerpc64le_unknown_linux_gnu=powerpc64le-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
