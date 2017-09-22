@@ -5,6 +5,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.12] - 2017-09-22
+
+### Added
+
+- Support for `cross check`. This subcommand won't use any Docker container.
+
+### Changed
+
+- `binfmt_misc` is not required on the host for toolchain v1.19.0 and newer.
+  With these toolchains `binfmt_misc` interpreters don't need to be installed
+  on the host saving a *privileged* docker run which some systems don't allow.
+
 ## [v0.1.11] - 2017-06-10
 
 ### Added
@@ -153,7 +165,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.12...HEAD
+[v0.1.12]: https://github.com/japaric/cross/compare/v0.1.11...v0.1.12
 [v0.1.11]: https://github.com/japaric/cross/compare/v0.1.10...v0.1.11
 [v0.1.10]: https://github.com/japaric/cross/compare/v0.1.9...v0.1.10
 [v0.1.9]: https://github.com/japaric/cross/compare/v0.1.8...v0.1.9
