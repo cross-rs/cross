@@ -23,15 +23,11 @@ main() {
         tar -xz
     cd /emsdk-portable
 
-    ./emsdk update
-    ./emsdk install latest
-    ./emsdk activate latest
+    export HOME=/emsdk-portable/
 
-    # Make emsdk usable by any user
-    cp /root/.emscripten /emsdk-portable
-    chmod a+r -R /emsdk-portable/
-    chmod a+x /emsdk-portable/emsdk
-    chmod a+xw /emsdk-portable/
+    ./emsdk update
+    ./emsdk install sdk-1.37.21-64bit
+    ./emsdk activate sdk-1.37.21-64bit
 
     # Compile and cache libc
     source ./emsdk_env.sh
@@ -42,8 +38,10 @@ main() {
     emcc a.cpp
     emcc -s BINARYEN=1 a.cpp
     rm -f a.*
-    chmod a+rw -R /emsdk-portable/.emscripten_cache/
-    rm /emsdk-portable/.emscripten_cache.lock
+
+    # Make emsdk usable by any user
+    chmod a+rw -R /emsdk-portable/
+    chmod a+x `find /emsdk-portable/ -executable -print` || true
 
     # Clean up
     apt-get purge --auto-remove -y ${purge_list[@]}
