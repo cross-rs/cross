@@ -34,7 +34,10 @@
 
 - [rustup](https://rustup.rs/)
 
-- [Docker](https://www.docker.com/)
+- [Docker](https://www.docker.com/). Note that non-sudo users need to be in the
+  `docker` group. Read the official [post-installation steps for Linux][post].
+
+[post]: https://docs.docker.com/engine/installation/linux/linux-postinstall/
 
 - A Linux kernel with [binfmt_misc] support is required for cross testing.
 
