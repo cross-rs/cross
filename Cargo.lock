@@ -1,6 +1,6 @@
 [root]
 name = "cross"
-version = "0.1.12"
+version = "0.1.13-dev"
 dependencies = [
  "error-chain 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
