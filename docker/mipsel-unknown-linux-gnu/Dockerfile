@@ -20,6 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     bash /qemu.sh mipsel
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc \
+    CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_RUNNER=qemu-mipsel \
     CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc \
     CXX_mipsel_unknown_linux_gnu=mipsel-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

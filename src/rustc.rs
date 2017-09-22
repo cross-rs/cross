@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-use rustc_version;
+use rustc_version::{Version, VersionMeta};
 
 use Host;
 use errors::*;
@@ -17,8 +17,25 @@ impl TargetList {
     }
 }
 
-pub fn host() -> Host {
-    Host::from(&*rustc_version::version_meta().host)
+pub trait VersionMetaExt {
+    fn host(&self) -> Host;
+    fn needs_interpreter(&self) -> bool;
+}
+
+impl VersionMetaExt for VersionMeta {
+    fn host(&self) -> Host {
+        Host::from(&*self.host)
+    }
+
+    fn needs_interpreter(&self) -> bool {
+        !(self.semver >= Version {
+            major: 1,
+            minor: 19,
+            patch: 0,
+            pre: vec![],
+            build: vec![],
+        })
+    }
 }
 
 pub fn target_list(verbose: bool) -> Result<TargetList> {
@@ -26,12 +43,15 @@ pub fn target_list(verbose: bool) -> Result<TargetList> {
         .args(&["--print", "target-list"])
         .run_and_get_stdout(verbose)
         .map(|s| {
-            TargetList { triples: s.lines().map(|l| l.to_owned()).collect() }
+            TargetList {
+                triples: s.lines().map(|l| l.to_owned()).collect(),
+            }
         })
 }
 
 pub fn sysroot(verbose: bool) -> Result<PathBuf> {
-    let mut stdout = Command::new("rustc").args(&["--print", "sysroot"])
+    let mut stdout = Command::new("rustc")
+        .args(&["--print", "sysroot"])
         .run_and_get_stdout(verbose)?;
 
     if stdout.ends_with('\n') {

@@ -20,6 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     bash /qemu.sh mips
 
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
+    CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_RUNNER=qemu-mips \
     CC_mips_unknown_linux_gnu=mips-linux-gnu-gcc \
     CXX_mips_unknown_linux_gnu=mips-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

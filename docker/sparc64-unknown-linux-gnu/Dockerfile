@@ -20,6 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     bash /qemu.sh sparc64
 
 ENV CARGO_TARGET_SPARC64_UNKNOWN_LINUX_GNU_LINKER=sparc64-linux-gnu-gcc \
+    CARGO_TARGET_SPARC64_UNKNOWN_LINUX_GNU_LINKER=qemu-sparc64 \
     CC_sparc64_unknown_linux_gnu=sparc64-linux-gnu-gcc \
     CXX_sparc64_unknown_linux_gnu=sparc64-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

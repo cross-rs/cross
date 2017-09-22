@@ -20,6 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     bash /qemu.sh ppc
 
 ENV CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
+    CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_RUNNER=qemu-ppc \
     CC_powerpc_unknown_linux_gnu=powerpc-linux-gnu-gcc \
     CXX_powerpc_unknown_linux_gnu=powerpc-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

@@ -26,7 +26,7 @@ use toml::{Parser, Value};
 
 use cargo::Root;
 use errors::*;
-use rustc::TargetList;
+use rustc::{TargetList, VersionMetaExt};
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, PartialEq)]
@@ -393,8 +393,9 @@ fn run() -> Result<ExitStatus> {
     let verbose =
         args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
+    let version_meta = rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version")?;
     if let Some(root) = cargo::root()? {
-        let host = rustc::host();
+        let host = version_meta.host();
 
         if host.is_supported(args.target.as_ref()) {
             let target = args.target
@@ -418,10 +419,11 @@ fn run() -> Result<ExitStatus> {
 
             if target.needs_docker() &&
                args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
-                if args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false) &&
-                   target.needs_interpreter() &&
-                   !interpreter::is_registered(&target)? {
-                    docker::register(&target, verbose)?
+                if version_meta.needs_interpreter() &&
+                    args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false) &&
+                    target.needs_interpreter() &&
+                    !interpreter::is_registered(&target)? {
+                        docker::register(&target, verbose)?
                 }
 
                 return docker::run(&target,
