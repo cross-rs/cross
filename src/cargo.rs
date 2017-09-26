@@ -13,6 +13,7 @@ pub enum Subcommand {
     Run,
     Rustc,
     Test,
+    Deb,
 }
 
 impl Subcommand {
@@ -39,6 +40,7 @@ impl<'a> From<&'a str> for Subcommand {
             "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,
             "test" => Subcommand::Test,
+            "deb" => Subcommand::Deb,
             _ => Subcommand::Other,
         }
     }
