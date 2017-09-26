@@ -1,15 +1,13 @@
-#![allow(unused_variables, dead_code, unused_imports, unused_must_use)]
+use std::env::home_dir;
+use std::fs;
+use std::path::Path;
 
-use errors::*;
 use Target;
 use Toml;
 use docker;
-use extensions::CommandExt;
-use std::path::{Path, PathBuf, MAIN_SEPARATOR};
-use std::env::home_dir;
-use std::fs;
-use id;
 use errors::*;
+use extensions::CommandExt;
+use id;
 
 // TODO: replace with something like "japaric/cross-volume-manager"
 static VOLUME_IMAGE: &'static str = "volmgr";
@@ -22,10 +20,15 @@ pub struct VolumeInfo {
 
 pub fn populate_volume(
     target: &Target,
-    args: &[String],
+    _args: &[String],
     toml: Option<&Toml>,
     uses_xargo: bool,
     verbose: bool) -> Result<VolumeInfo> {
+
+    // TODO: Take any direction from `args`?
+    // Maybe allow the user to specify xargo/cargo/rust dirs to
+    // avoid volume management with a specific (self compiled)
+    // version of Rust?
 
     let toolchain = match toml {
         Some(t) => t.toolchain(target)?.unwrap_or("stable"),
