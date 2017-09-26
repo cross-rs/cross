@@ -3,7 +3,6 @@ extern crate error_chain;
 #[macro_use]
 extern crate lazy_static;
 extern crate libc;
-extern crate rustc_version;
 extern crate semver;
 extern crate toml;
 
@@ -14,9 +13,6 @@ mod errors;
 mod extensions;
 mod file;
 mod id;
-mod interpreter;
-mod rustc;
-mod rustup;
 mod volume;
 
 use std::io::Write;
@@ -27,7 +23,6 @@ use toml::{Parser, Value};
 
 use cargo::Root;
 use errors::*;
-use rustc::{TargetList, VersionMetaExt};
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, PartialEq)]
@@ -39,29 +34,6 @@ pub enum Host {
 
     // Linux
     X86_64UnknownLinuxGnu,
-}
-
-impl Host {
-    /// Checks if this `(host, target)` pair is supported by `cross`
-    ///
-    /// `target == None` means `target == host`
-    fn is_supported(&self, target: Option<&Target>) -> bool {
-        if *self == Host::X86_64AppleDarwin {
-            target.map(|t| *t == Target::I686AppleDarwin).unwrap_or(false)
-        } else if *self == Host::X86_64UnknownLinuxGnu {
-            target.map(|t| t.needs_docker()).unwrap_or(true)
-        } else {
-            false
-        }
-    }
-
-    fn triple(&self) -> &'static str {
-        match *self {
-            Host::X86_64AppleDarwin => "x86_64-apple-darwin",
-            Host::X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
-            Host::Other => unimplemented!(),
-        }
-    }
 }
 
 impl<'a> From<&'a str> for Host {
@@ -157,99 +129,6 @@ impl Target {
         }
     }
 
-    fn is_bsd(&self) -> bool {
-        match *self {
-            Target::I686UnknownFreebsd |
-            Target::X86_64UnknownDragonfly |
-            Target::X86_64UnknownFreebsd |
-            Target::X86_64UnknownNetbsd => true,
-            _ => false,
-        }
-    }
-
-    fn is_solaris(&self) -> bool {
-        match *self {
-            Target::Sparcv9SunSolaris |
-            Target::X86_64SunSolaris => true,
-            _ => false,
-        }
-    }
-
-    fn is_android(&self) -> bool {
-        match *self {
-            Target::ArmLinuxAndroideabi |
-            Target::Armv7LinuxAndroideabi |
-            Target::Aarch64LinuxAndroid |
-            Target::I686LinuxAndroid |
-            Target::X86_64LinuxAndroid => true,
-            _ => false,
-        }
-    }
-
-    fn is_emscripten(&self) -> bool {
-        match *self {
-            Target::AsmjsUnknownEmscripten |
-            Target::Wasm32UnknownEmscripten => true,
-            _ => false,
-        }
-    }
-
-    fn is_linux(&self) -> bool {
-        match *self {
-            Target::Aarch64UnknownLinuxGnu |
-            Target::ArmUnknownLinuxGnueabi |
-            Target::ArmUnknownLinuxMusleabi |
-            Target::Armv7UnknownLinuxGnueabihf |
-            Target::Armv7UnknownLinuxMusleabihf |
-            Target::I586UnknownLinuxGnu |
-            Target::I686UnknownLinuxGnu |
-            Target::I686UnknownLinuxMusl |
-            Target::Mips64UnknownLinuxGnuabi64 |
-            Target::Mips64elUnknownLinuxGnuabi64 |
-            Target::MipsUnknownLinuxGnu |
-            Target::MipselUnknownLinuxGnu |
-            Target::Powerpc64UnknownLinuxGnu |
-            Target::Powerpc64leUnknownLinuxGnu |
-            Target::PowerpcUnknownLinuxGnu |
-            Target::S390xUnknownLinuxGnu |
-            Target::Sparc64UnknownLinuxGnu |
-            Target::X86_64UnknownLinuxGnu |
-            Target::X86_64UnknownLinuxMusl => true,
-            _ => false,
-        }
-    }
-
-    fn is_windows(&self) -> bool {
-        match *self {
-            Target::I686PcWindowsGnu => true,
-            Target::X86_64PcWindowsGnu => true,
-            _ => false,
-        }
-    }
-
-    fn needs_docker(&self) -> bool {
-        self.is_linux() || self.is_android() || self.is_bare_metal() || self.is_bsd() ||
-        self.is_solaris() || !self.is_builtin() || self.is_windows() || self.is_emscripten()
-    }
-
-    fn needs_interpreter(&self) -> bool {
-        let not_native = match *self {
-            Target::Custom { ref triple } => {
-                return !triple.starts_with("x86_64") &&
-                       !triple.starts_with("i586") &&
-                       !triple.starts_with("i686")
-            }
-            Target::I586UnknownLinuxGnu |
-            Target::I686UnknownLinuxGnu |
-            Target::I686UnknownLinuxMusl |
-            Target::X86_64UnknownLinuxGnu |
-            Target::X86_64UnknownLinuxMusl => false,
-            _ => true,
-        };
-
-        not_native && (self.is_linux() || self.is_windows() || self.is_bare_metal())
-    }
-
     fn triple(&self) -> &str {
         use Target::*;
 
@@ -306,7 +185,7 @@ impl Target {
 }
 
 impl Target {
-    fn from(triple: &str, target_list: &TargetList) -> Target {
+    fn from(triple: &str) -> Target {
         use Target::*;
 
         match triple {
@@ -403,8 +282,7 @@ pub fn main() {
 }
 
 fn run() -> Result<ExitStatus> {
-    let target_list = rustc::target_list(false)?;
-    let args = cli::parse(&target_list);
+    let args = cli::parse();
 
 
     if args.all.iter().any(|a| a == "--version" || a == "-V") &&
@@ -433,6 +311,16 @@ fn run() -> Result<ExitStatus> {
                                 uses_xargo,
                                 verbose
         )?;
+
+        // AJM TODO - what is this doing? Still necessary if all actions happen in docker?
+        // if target.needs_docker() &&
+        //    args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
+        //     if version_meta.needs_interpreter() &&
+        //         args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false) &&
+        //         target.needs_interpreter() &&
+        //         !interpreter::is_registered(&target)? {
+        //             docker::register(&target, verbose)?
+        //     }
 
         return docker::run(&target,
                            &args.all,

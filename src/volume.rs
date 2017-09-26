@@ -5,13 +5,14 @@ use Target;
 use Toml;
 use docker;
 use extensions::CommandExt;
-use std::path::Path;
+use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+use std::env::home_dir;
 use std::fs;
 use id;
+use errors::*;
 
 // TODO: replace with something like "japaric/cross-volume-manager"
 static VOLUME_IMAGE: &'static str = "volmgr";
-static WORKING_DIR: &'static str = "/tmp/solocross";
 
 pub struct VolumeInfo {
     pub xargo_dir: String,
@@ -26,18 +27,15 @@ pub fn populate_volume(
     uses_xargo: bool,
     verbose: bool) -> Result<VolumeInfo> {
 
+    let toolchain = match toml {
+        Some(t) => t.toolchain(target)?.unwrap_or("stable"),
+        None => "stable"
+    };
 
-    let toolchain = toml.expect("Cross.toml required (for now)...")
-        .toolchain(target)
-        .expect("Badly formed Cross.toml...")
-        .unwrap_or("stable");
-
-    // TODO: get toolchain from Toml
-    // TODO: use path.join, otherwise wont work on Windows
     let rust_toolchain = format!("RUST_TOOLCHAIN={}", toolchain);
-    let xargo_dir = format!("{}/xargo", WORKING_DIR);
-    let cargo_dir = format!("{}/{}/cargo", WORKING_DIR, toolchain);
-    let rust_dir = format!("{}/{}/rust", WORKING_DIR, toolchain);
+    let xargo_dir = working_path(&["xargo"])?;
+    let cargo_dir = working_path(&[&toolchain, "cargo"])?;
+    let rust_dir = working_path(&[&toolchain, "rust"])?;
 
     let cargo_mapping = format!("{}:/cargo", &cargo_dir);
     let rust_mapping = format!("{}:/rust", &rust_dir);
@@ -50,7 +48,6 @@ pub fn populate_volume(
         fs::create_dir_all(&rust_dir).ok();
 
         println!("Installing toolchain...");
-
 
         docker::docker_command("run")
             .arg("--rm")
@@ -69,7 +66,14 @@ pub fn populate_volume(
     if needs_xargo_install {
         fs::create_dir_all(&xargo_dir).ok();
 
-        let cmd = "curl -LSfs http://japaric.github.io/trust/install.sh | sh -s -- --git japaric/xargo --tag v0.3.5 --target x86_64-unknown-linux-gnu --to /xargo";
+        let cmd = r#"
+            curl -LSfs http://japaric.github.io/trust/install.sh | \
+            sh -s -- \
+                --git japaric/xargo \
+                --tag v0.3.5 \
+                --target x86_64-unknown-linux-gnu \
+                --to /xargo
+        "#;
 
         docker::docker_command("run")
             .arg("--rm")
@@ -86,13 +90,17 @@ pub fn populate_volume(
 
     // Run target install, rustup will be polite and do nothing if necessary
     // If the target isn't available, skip it
+    //
+    // We have to fake a bit of the Rustup environment to get it to play nicely
     let cmd = format!(r#"
         export PATH=/rust/bin:/cargo/bin:$PATH && \
         mkdir -p ~/.rustup/toolchains && \
         ln -s /rust/settings.toml ~/.rustup/settings.toml && \
         ln -s /rust ~/.rustup/toolchains/{toolchain}-x86_64-unknown-linux-gnu;
         rustup target list | grep -wq {target}
-        if [ $? -eq 0 ]; then rustup target add {target}; fi
+        if [ $? -eq 0 ]; then
+            rustup target add {target};
+        fi
         "#, toolchain=toolchain, target=target.triple());
 
     docker::docker_command("run")
@@ -109,4 +117,16 @@ pub fn populate_volume(
         cargo_dir: cargo_dir,
         rust_dir: rust_dir,
     })
+}
+
+fn working_path(items: &[&str]) -> Result<String> {
+    let mut path_builder = home_dir().ok_or(Error::from("No Home directory"))?;
+    path_builder.push(".cross");
+    path_builder.push("volumes");
+
+    for i in items {
+        path_builder.push(Path::new(i));
+    }
+
+    Ok(format!("{}", path_builder.display()))
 }

@@ -16,22 +16,6 @@ pub enum Subcommand {
     Deb,
 }
 
-impl Subcommand {
-    pub fn needs_docker(&self) -> bool {
-        match *self {
-            Subcommand::Other => false,
-            _ => true,
-        }
-    }
-
-    pub fn needs_interpreter(&self) -> bool {
-        match *self {
-            Subcommand::Run | Subcommand::Test => true,
-            _ => false,
-        }
-    }
-}
-
 impl<'a> From<&'a str> for Subcommand {
     fn from(s: &str) -> Subcommand {
         match s {
