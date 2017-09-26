@@ -11,6 +11,7 @@ use errors::*;
 use extensions::CommandExt;
 use id;
 use rustc;
+use volume::VolumeInfo;
 
 lazy_static! {
     /// Retrieve the Docker Daemon version.
@@ -72,23 +73,15 @@ pub fn run(target: &Target,
            root: &Root,
            toml: Option<&Toml>,
            uses_xargo: bool,
-           verbose: bool)
+           verbose: bool,
+           vol_info: &VolumeInfo)
            -> Result<ExitStatus> {
     let root = root.path();
-    let home_dir = env::home_dir().ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?;
-    let cargo_dir = env::var_os("CARGO_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home_dir.join(".cargo"));
-    let xargo_dir = env::var_os("XARGO_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home_dir.join(".xargo"));
     let target_dir = root.join("target");
 
     // create the directories we are going to mount before we mount them,
     // otherwise `docker` will create them but they will be owned by `root`
     fs::create_dir(&target_dir).ok();
-    fs::create_dir(&cargo_dir).ok();
-    fs::create_dir(&xargo_dir).ok();
 
     let mut cmd = if uses_xargo {
         Command::new("xargo")
@@ -133,10 +126,12 @@ pub fn run(target: &Target,
 
     docker
         .args(&["-e", "XARGO_HOME=/xargo"])
-        .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
-        .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
+
+        .args(&["-v", &format!("{}:/xargo", &vol_info.xargo_dir)])
+        .args(&["-v", &format!("{}:/cargo", &vol_info.cargo_dir)])
+        .args(&["-v", &format!("{}:/rust:ro", &vol_info.rust_dir)])
+
         .args(&["-v", &format!("{}:/project:ro", root.display())])
-        .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
         .args(&["-it", &image(toml, target)?])

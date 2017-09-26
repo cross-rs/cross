@@ -17,6 +17,7 @@ mod id;
 mod interpreter;
 mod rustc;
 mod rustup;
+mod volume;
 
 use std::io::Write;
 use std::process::ExitStatus;
@@ -405,6 +406,7 @@ fn run() -> Result<ExitStatus> {
     let target_list = rustc::target_list(false)?;
     let args = cli::parse(&target_list);
 
+
     if args.all.iter().any(|a| a == "--version" || a == "-V") &&
        args.subcommand.is_none() {
         println!(concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
@@ -414,47 +416,32 @@ fn run() -> Result<ExitStatus> {
     let verbose =
         args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
-    let version_meta = rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version")?;
     if let Some(root) = cargo::root()? {
-        let host = version_meta.host();
+        let target = args.target.unwrap_or_else(|| Target::X86_64UnknownLinuxGnu);
+        let toml = toml(&root)?;
 
-        if host.is_supported(args.target.as_ref()) {
-            let target = args.target
-                .unwrap_or(Target::from(host.triple(), &target_list));
-            let toml = toml(&root)?;
-            let uses_xargo = if let Some(toml) = toml.as_ref() {
-                    toml.xargo(&target)?
-                } else {
-                    None
-                }
-                .unwrap_or_else(|| target.needs_xargo());
-
-            if !uses_xargo &&
-               rustup::available_targets(verbose)?.contains(&target) {
-                rustup::install(&target, verbose)?;
-            }
-
-            if uses_xargo && !rustup::rust_src_is_installed(verbose)? {
-                rustup::install_rust_src(verbose)?;
-            }
-
-            if target.needs_docker() &&
-               args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
-                if version_meta.needs_interpreter() &&
-                    args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false) &&
-                    target.needs_interpreter() &&
-                    !interpreter::is_registered(&target)? {
-                        docker::register(&target, verbose)?
-                }
-
-                return docker::run(&target,
-                                   &args.all,
-                                   &root,
-                                   toml.as_ref(),
-                                   uses_xargo,
-                                   verbose);
-            }
+        let uses_xargo = if let Some(toml) = toml.as_ref() {
+            toml.xargo(&target)?
+        } else {
+            None
         }
+        .unwrap_or_else(|| target.needs_xargo());
+
+        let vol_info = volume::populate_volume(&target,
+                                &args.all,
+                                toml.as_ref(),
+                                uses_xargo,
+                                verbose
+        )?;
+
+        return docker::run(&target,
+                           &args.all,
+                           &root,
+                           toml.as_ref(),
+                           uses_xargo,
+                           verbose,
+                           &vol_info);
+
     }
 
     cargo::run(&args.all, verbose)
@@ -475,6 +462,21 @@ impl Toml {
             Ok(Some(value.as_str()
                 .ok_or_else(|| {
                     format!("target.{}.image must be a string", triple)
+                })?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Returns the `target.{}.toolchain` part of `Cross.toml`
+    pub fn toolchain(&self, target: &Target) -> Result<Option<&str>> {
+        let triple = target.triple();
+
+        if let Some(value) = self.table
+            .lookup(&format!("target.{}.toolchain", triple)) {
+            Ok(Some(value.as_str()
+                .ok_or_else(|| {
+                    format!("target.{}.toolchain must be a string", triple)
                 })?))
         } else {
             Ok(None)
