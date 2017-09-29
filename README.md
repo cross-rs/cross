@@ -189,16 +189,16 @@ worst, "hang" (never terminate).
 
 | Target                               |  libc  |   GCC   | OpenSSL | C++ | QEMU  | `test` |
 |--------------------------------------|--------|---------|---------|:---:|-------|:------:|
-| `aarch64-linux-android`              | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
+| `aarch64-linux-android` [5]          | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |   ✓    |
 | `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
-| `arm-linux-androideabi`              | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
+| `arm-linux-androideabi` [5]          | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `arm-unknown-linux-musleabi`         | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
-| `armv7-linux-androideabi`            | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
+| `armv7-linux-androideabi` [5]        | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
 | `asmjs-unknown-emscripten` [4]       | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
-| `i686-linux-android`                 | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
+| `i686-linux-android` [5]             | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 6.2.0   | N/A     | ✓   | N/A   |   ✓    |
 | `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0   | 1.0.2k  |     | N/A   |        |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | 1.0.2k  | ✓   | N/A   |   ✓    |
@@ -217,7 +217,7 @@ worst, "hang" (never terminate).
 | `thumbv7em-none-eabihf` [3]          | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
 | `thumbv7m-none-eabi` [3]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
 | `wasm32-unknown-emscripten` [4]      | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
-| `x86_64-linux-android`               | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
+| `x86_64-linux-android` [5]           | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 6.2.0   | N/A     | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0   | 1.0.2k  |     | N/A   |   ✓    |
 | `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0   | 1.0.2k  |     | N/A   |        |
@@ -234,6 +234,9 @@ where libc was extracted.
 
 [4] libc = musl, gcc = emcc; Some projects that use libc may fail due to wrong
     definitions (will be fixed by https://github.com/rust-lang/libc/pull/610)
+
+[5] Only works with native tests, that is, tests that do not depends on the
+    Android Runtime
 
 ## Debugging
 
