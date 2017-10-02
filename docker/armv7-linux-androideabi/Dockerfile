@@ -20,7 +20,7 @@ RUN bash /android-ndk.sh arm 21
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY openssl.sh /
-RUN bash /openssl.sh android arm-linux-androideabi-
+RUN bash /openssl.sh android-armv7 arm-linux-androideabi-
 
 COPY android-system.sh /
 RUN bash /android-system.sh arm
@@ -35,6 +35,7 @@ ENV CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib \
+    RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \
     ANDROID_ROOT=/system \
