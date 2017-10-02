@@ -4,7 +4,7 @@ main() {
     local version=2.10.0
 
     local arch=$1 \
-          target=$2 \
+          os=$2 \
           td=$(mktemp -d)
 
     local dependencies=(
@@ -36,7 +36,9 @@ main() {
         tar --strip-components=1 -xj
 
     # Allow qemu to run android (bionic libc) binaries
-    if [[ "$target" == "android" ]]; then
+    # AT_SECURE change is based on https://gist.github.com/whitequark/ad704d48a86d889b8cdb
+    # RNDGETENTCNT change forward ioctl(_, RNDGETENTCNT, _) to the host
+    if [[ "$os" == "android" ]]; then
       patch -p1 <<'EOF'
 diff -ur qemu-2.10.0/linux-user/elfload.c qemu-2.10.0.new/linux-user/elfload.c
 --- qemu-2.10.0/linux-user/elfload.c	2017-09-27 11:27:13.866595788 -0300
