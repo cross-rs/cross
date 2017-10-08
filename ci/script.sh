@@ -37,7 +37,7 @@ main() {
                 https://github.com/japaric/cortest $td
 
             pushd $td
-            cross run --target $TARGET --example hello
+            cross run --target $TARGET --example hello --release
             popd
 
             rm -rf $td
@@ -114,7 +114,7 @@ EOF
             pushd $td
             cross test \
                   --no-default-features \
-                  --features gen-tests \
+                  --features "gen-tests mangled-names" \
                   --target $TARGET
             popd
 
