@@ -202,7 +202,7 @@ worst, "hang" (never terminate).
 | `i686-pc-windows-gnu`                | N/A    | 6.2.0   | N/A     | ✓   | N/A   |   ✓    |
 | `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0   | 1.0.2k  |     | N/A   |        |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | 1.0.2k  | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1   | N/A     |     | N/A   |   ✓    |
+| `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1   | 1.0.2k  |     | N/A   |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
