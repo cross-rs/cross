@@ -36,8 +36,8 @@ main() {
         tar --strip-components=1 -xj
 
     # Allow qemu to run android (bionic libc) binaries
-    # AT_SECURE change is based on https://gist.github.com/whitequark/ad704d48a86d889b8cdb
-    # RNDGETENTCNT change forward ioctl(_, RNDGETENTCNT, _) to the host
+    # https://lists.nongnu.org/archive/html/qemu-trivial/2017-10/msg00025.html
+    # https://lists.nongnu.org/archive/html/qemu-trivial/2017-10/msg00023.html
     if [[ "$os" == "android" ]]; then
       patch -p1 <<'EOF'
 diff -ur qemu-2.10.0/linux-user/elfload.c qemu-2.10.0.new/linux-user/elfload.c
@@ -56,44 +56,53 @@ diff -ur qemu-2.10.0/linux-user/elfload.c qemu-2.10.0.new/linux-user/elfload.c
      NEW_AUX_ENT(AT_HWCAP, (abi_ulong) ELF_HWCAP);
      NEW_AUX_ENT(AT_CLKTCK, (abi_ulong) sysconf(_SC_CLK_TCK));
      NEW_AUX_ENT(AT_RANDOM, (abi_ulong) u_rand_bytes);
-+    NEW_AUX_ENT(AT_SECURE, (abi_ulong)0);
++    NEW_AUX_ENT(AT_SECURE, (abi_ulong) (getuid() != geteuid() || getgid() != getegid()));
  
  #ifdef ELF_HWCAP2
      NEW_AUX_ENT(AT_HWCAP2, (abi_ulong) ELF_HWCAP2);
 diff -ur qemu-2.10.0/linux-user/ioctls.h qemu-2.10.0.new/linux-user/ioctls.h
 --- qemu-2.10.0/linux-user/ioctls.h	2017-09-27 11:27:13.858595669 -0300
 +++ qemu-2.10.0.new/linux-user/ioctls.h	2017-09-27 11:43:40.613299859 -0300
-@@ -430,6 +430,7 @@
-                 MK_PTR(MK_STRUCT(STRUCT_rtentry)))
-   IOCTL_SPECIAL(SIOCDELRT, IOC_W, do_ioctl_rt,
-                 MK_PTR(MK_STRUCT(STRUCT_rtentry)))
-+  IOCTL(RNDGETENTCNT, IOC_R, MK_PTR(TYPE_INT))
+@@ -173,6 +173,11 @@
+   IOCTL(SIOCGSTAMP, IOC_R, MK_PTR(MK_STRUCT(STRUCT_timeval)))
+   IOCTL(SIOCGSTAMPNS, IOC_R, MK_PTR(MK_STRUCT(STRUCT_timespec)))
  
- #ifdef TARGET_TIOCSTART
-   IOCTL_IGNORE(TIOCSTART)
++  IOCTL(RNDGETENTCNT, IOC_R, MK_PTR(TYPE_INT))
++  IOCTL(RNDADDTOENTCNT, IOC_W, MK_PTR(TYPE_INT))
++  IOCTL(RNDZAPENTCNT, 0, TYPE_NULL)
++  IOCTL(RNDCLEARPOOL, 0, TYPE_NULL)
++
+   IOCTL(CDROMPAUSE, 0, TYPE_NULL)
+   IOCTL(CDROMSTART, 0, TYPE_NULL)
+   IOCTL(CDROMSTOP, 0, TYPE_NULL)
 diff -ur qemu-2.10.0/linux-user/syscall.c qemu-2.10.0.new/linux-user/syscall.c
 --- qemu-2.10.0/linux-user/syscall.c	2017-09-27 11:27:13.862595729 -0300
 +++ qemu-2.10.0.new/linux-user/syscall.c	2017-09-27 11:44:26.133987660 -0300
-@@ -55,6 +55,7 @@
- //#include <sys/user.h>
- #include <netinet/ip.h>
- #include <netinet/tcp.h>
-+#include <linux/random.h>
- #include <linux/wireless.h>
+@@ -59,6 +59,7 @@ int __clone2(int (*fn)(void *), void *child_stack_base,
  #include <linux/icmp.h>
  #include <linux/icmpv6.h>
+ #include <linux/errqueue.h>
++#include <linux/random.h>
+ #include "qemu-common.h"
+ #ifdef CONFIG_TIMERFD
+ #include <sys/timerfd.h>
 diff -ur qemu-2.10.0/linux-user/syscall_defs.h qemu-2.10.0.new/linux-user/syscall_defs.h
 --- qemu-2.10.0/linux-user/syscall_defs.h	2017-09-27 11:27:13.862595729 -0300
 +++ qemu-2.10.0.new/linux-user/syscall_defs.h	2017-09-27 11:46:09.303545817 -0300
-@@ -971,6 +971,8 @@
-     short revents;    /* returned events */
- };
+@@ -1060,6 +1060,13 @@ struct target_pollfd {
  
-+#define TARGET_RNDGETENTCNT    TARGET_IOR('R', 0x00, int)
+ #define TARGET_SIOCGIWNAME     0x8B01          /* get name == wireless protocol */
+ 
++/* From <linux/random.h> */
 +
- /* virtual terminal ioctls */
- #define TARGET_KIOCSOUND       0x4B2F	/* start sound generation (0 for off) */
- #define TARGET_KDMKTONE	       0x4B30	/* generate tone */
++#define TARGET_RNDGETENTCNT    TARGET_IOR('R', 0x00, int)
++#define TARGET_RNDADDTOENTCNT  TARGET_IOW('R', 0x01, int)
++#define TARGET_RNDZAPENTCNT    TARGET_IO('R', 0x04)
++#define TARGET_RNDCLEARPOOL    TARGET_IO('R', 0x06)
++
+ /* From <linux/fs.h> */
+ 
+ #define TARGET_BLKROSET   TARGET_IO(0x12,93) /* set device read-only (0 = read-write) */
 EOF
    fi
 
