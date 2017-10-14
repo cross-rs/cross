@@ -41,9 +41,13 @@ matrix:
 
     # BSD
     - env: TARGET=i686-unknown-freebsd                  DYLIB=1 STD=1 OPENSSL=0.7.17
-    - env: TARGET=x86_64-unknown-dragonfly               DYLIB=1       OPENSSL=0.5.5
+    - env: TARGET=x86_64-unknown-dragonfly              DYLIB=1       OPENSSL=0.5.5
     - env: TARGET=x86_64-unknown-freebsd                DYLIB=1 STD=1 OPENSSL=0.5.5
     - env: TARGET=x86_64-unknown-netbsd                 DYLIB=1 STD=1 OPENSSL=0.7.17
+
+    # Solaris
+    - env: TARGET=sparcv9-unknown-freebsd               DYLIB=1 STD=1 OPENSSL=0.7.17
+    - env: TARGET=x86_64-unknown-freebsd                DYLIB=1 STD=1 OPENSSL=0.7.17
 
     # Windows
     - env: TARGET=x86_64-pc-windows-gnu           CPP=1         STD=1                RUN=1

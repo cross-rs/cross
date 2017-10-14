@@ -118,6 +118,10 @@ pub enum Target {
     X86_64UnknownFreebsd,
     X86_64UnknownNetbsd,
 
+    // Solaris / illumos
+    Sparcv9SunSolaris,
+    X86_64SunSolaris,
+
     // Windows
     X86_64PcWindowsGnu,
     I686PcWindowsGnu,
@@ -157,6 +161,14 @@ impl Target {
             Target::X86_64UnknownDragonfly |
             Target::X86_64UnknownFreebsd |
             Target::X86_64UnknownNetbsd => true,
+            _ => false,
+        }
+    }
+
+    fn is_solaris(&self) -> bool {
+        match *self {
+            Target::Sparcv9SunSolaris |
+            Target::X86_64SunSolaris => true,
             _ => false,
         }
     }
@@ -214,7 +226,7 @@ impl Target {
 
     fn needs_docker(&self) -> bool {
         self.is_linux() || self.is_android() || self.is_bare_metal() || self.is_bsd() ||
-        !self.is_builtin() || self.is_windows() || self.is_emscripten()
+        self.is_solaris() || !self.is_builtin() || self.is_windows() || self.is_emscripten()
     }
 
     fn needs_interpreter(&self) -> bool {
@@ -265,6 +277,7 @@ impl Target {
             PowerpcUnknownLinuxGnu => "powerpc-unknown-linux-gnu",
             S390xUnknownLinuxGnu => "s390x-unknown-linux-gnu",
             Sparc64UnknownLinuxGnu => "sparc64-unknown-linux-gnu",
+            Sparcv9SunSolaris => "sparcv9-sun-solaris",
             Thumbv6mNoneEabi => "thumbv6m-none-eabi",
             Thumbv7emNoneEabi => "thumbv7em-none-eabi",
             Thumbv7emNoneEabihf => "thumbv7em-none-eabihf",
@@ -273,6 +286,7 @@ impl Target {
             X86_64AppleDarwin => "x86_64-apple-darwin",
             X86_64PcWindowsGnu => "x86_64-pc-windows-gnu",
             X86_64LinuxAndroid => "x86_64-linux-android",
+            X86_64SunSolaris => "x86_64-sun-solaris",
             X86_64UnknownDragonfly => "x86_64-unknown-dragonfly",
             X86_64UnknownFreebsd => "x86_64-unknown-freebsd",
             X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
@@ -315,6 +329,7 @@ impl Target {
             "powerpc64le-unknown-linux-gnu" => Powerpc64leUnknownLinuxGnu,
             "s390x-unknown-linux-gnu" => S390xUnknownLinuxGnu,
             "sparc64-unknown-linux-gnu" => Sparc64UnknownLinuxGnu,
+            "sparcv9-sun-solaris" => Sparcv9SunSolaris,
             "thumbv6m-none-eabi" => Thumbv6mNoneEabi,
             "thumbv7em-none-eabi" => Thumbv7emNoneEabi,
             "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,
@@ -323,6 +338,7 @@ impl Target {
             "x86_64-apple-darwin" => X86_64AppleDarwin,
             "x86_64-linux-android" => X86_64LinuxAndroid,
             "x86_64-pc-windows-gnu" => X86_64PcWindowsGnu,
+            "x86_64-sun-solaris" => X86_64SunSolaris,
             "x86_64-unknown-dragonfly" => X86_64UnknownDragonfly,
             "x86_64-unknown-freebsd" => X86_64UnknownFreebsd,
             "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
