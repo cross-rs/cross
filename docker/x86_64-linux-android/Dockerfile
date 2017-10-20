@@ -19,6 +19,9 @@ ENV PATH=$PATH:/android-ndk/bin
 COPY openssl.sh /
 RUN bash /openssl.sh linux-x86_64 x86_64-linux-android- -mandroid -fomit-frame-pointer
 
+COPY android-system.sh /
+RUN bash /android-system.sh x86_64
+
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android-gcc \
@@ -29,5 +32,7 @@ ENV CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android-gcc \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib \
-    RUST_TEST_THREADS=1 \
-    HOME=/tmp/
+    HOME=/tmp/ \
+    TMPDIR=/tmp/ \
+    ANDROID_ROOT=/system \
+    ANDROID_DATA=/

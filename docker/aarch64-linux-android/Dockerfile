@@ -12,6 +12,9 @@ RUN apt-get update && \
 COPY xargo.sh /
 RUN bash /xargo.sh
 
+COPY qemu.sh /
+RUN bash /qemu.sh aarch64 android
+
 COPY android-ndk.sh /
 RUN bash /android-ndk.sh arm64 21
 ENV PATH=$PATH:/android-ndk/bin
@@ -19,9 +22,13 @@ ENV PATH=$PATH:/android-ndk/bin
 COPY openssl.sh /
 RUN bash /openssl.sh linux-generic64 aarch64-linux-android- -mandroid -fomit-frame-pointer
 
+COPY android-system.sh /
+RUN bash /android-system.sh arm64
+
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-gcc \
+    CARGO_TARGET_AARCH64_LINUX_ANDROID_RUNNER=qemu-aarch64 \
     CC_aarch64_linux_android=aarch64-linux-android-gcc \
     CXX_aarch64_linux_android=aarch64-linux-android-g++ \
     DEP_Z_ROOT=/android-ndk/sysroot/usr/ \
@@ -30,4 +37,7 @@ ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-gcc \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib \
     RUST_TEST_THREADS=1 \
-    HOME=/tmp/
+    HOME=/tmp/ \
+    TMPDIR=/tmp/ \
+    ANDROID_ROOT=/system \
+    ANDROID_DATA=/
