@@ -28,6 +28,7 @@ RUN bash /android-system.sh arm
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_ARM_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
+    CARGO_TARGET_ARM_LINUX_ANDROIDEABI_RUNNER=qemu-arm \
     CC_arm_linux_androideabi=arm-linux-androideabi-gcc \
     CXX_arm_linux_androideabi=arm-linux-androideabi-g++ \
     DEP_Z_ROOT=/android-ndk/sysroot/usr/ \

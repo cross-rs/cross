@@ -28,6 +28,7 @@ RUN bash /android-system.sh arm64
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-gcc \
+    CARGO_TARGET_AARCH64_LINUX_ANDROID_RUNNER=qemu-aarch64 \
     CC_aarch64_linux_android=aarch64-linux-android-gcc \
     CXX_aarch64_linux_android=aarch64-linux-android-g++ \
     DEP_Z_ROOT=/android-ndk/sysroot/usr/ \
