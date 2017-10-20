@@ -236,7 +236,10 @@ where libc was extracted.
     definitions (will be fixed by https://github.com/rust-lang/libc/pull/610)
 
 [5] Only works with native tests, that is, tests that do not depends on the
-    Android Runtime
+    Android Runtime. For i686 some tests may fails with the error `assertion
+    failed: signal(libc::SIGPIPE, libc::SIG_IGN) != libc::SIG_ERR`, see
+    [issue #140](https://github.com/japaric/cross/issues/140) for more
+    information.
 
 ## Debugging
 
