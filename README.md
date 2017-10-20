@@ -194,6 +194,7 @@ worst, "hang" (never terminate).
 | `arm-linux-androideabi`              | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
 | `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `arm-unknown-linux-musleabi`         | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
+| `armel-unknown-linux-gnueabi` [5]    | 2.19   | 4.9.2   | 1.0.2k  | ✓   | 2.9.0 |   ✓    |
 | `armv7-linux-androideabi`            | N/A    | 4.9     | 1.0.2k  | ✓   | N/A   |        |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2k  | ✓   | 2.8.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
@@ -236,6 +237,8 @@ where libc was extracted.
 
 [4] libc = musl, gcc = emcc; Some projects that use libc may fail due to wrong
     definitions (will be fixed by https://github.com/rust-lang/libc/pull/610)
+
+[5] armel = armv5te; See [Target Notes](./TARGET-NOTES.md#armv5) for additional info
 
 ## Debugging
 

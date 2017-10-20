@@ -112,6 +112,9 @@ pub enum Target {
     X86_64UnknownLinuxGnu,
     X86_64UnknownLinuxMusl,
 
+    // Linux, but must rebuild std
+    ArmelUnknownLinuxGnueabi,
+
     // *BSD
     I686UnknownFreebsd,
     X86_64UnknownDragonfly,
@@ -151,6 +154,7 @@ impl Target {
     fn is_builtin(&self) -> bool {
         match *self {
             Target::Custom { .. } => false,
+            Target::ArmelUnknownLinuxGnueabi => false,
             _ => true,
         }
     }
@@ -258,6 +262,7 @@ impl Target {
             ArmLinuxAndroideabi => "arm-linux-androideabi",
             ArmUnknownLinuxGnueabi => "arm-unknown-linux-gnueabi",
             ArmUnknownLinuxMusleabi => "arm-unknown-linux-musleabi",
+            ArmelUnknownLinuxGnueabi => "armel-unknown-linux-gnueabi",
             Armv7LinuxAndroideabi => "armv7-linux-androideabi",
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
             Armv7UnknownLinuxMusleabihf => "armv7-unknown-linux-musleabihf",
@@ -310,6 +315,7 @@ impl Target {
             "arm-linux-androideabi" => ArmLinuxAndroideabi,
             "arm-unknown-linux-gnueabi" => ArmUnknownLinuxGnueabi,
             "arm-unknown-linux-musleabi" => ArmUnknownLinuxMusleabi,
+            "armel-unknown-linux-gnueabi" => ArmelUnknownLinuxGnueabi,
             "armv7-linux-androideabi" => Armv7LinuxAndroideabi,
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
             "armv7-unknown-linux-musleabihf" => Armv7UnknownLinuxMusleabihf,
