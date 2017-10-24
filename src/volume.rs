@@ -11,6 +11,14 @@ use id;
 
 // TODO: replace with something like "japaric/cross-volume-manager"
 static VOLUME_IMAGE: &'static str = "volmgr";
+static INSTALL_XARGO: &'static str = r#"
+    curl -LSfs http://japaric.github.io/trust/install.sh | \
+    sh -s -- \
+        --git japaric/xargo \
+        --tag v0.3.5 \
+        --target x86_64-unknown-linux-gnu \
+        --to /volwork/xargo
+"#;
 
 pub struct VolumeInfo {
     pub xargo_dir: String,
@@ -23,105 +31,106 @@ pub fn populate_volume(
     _args: &[String],
     toml: Option<&Toml>,
     uses_xargo: bool,
-    verbose: bool) -> Result<VolumeInfo> {
-
+    verbose: bool,
+) -> Result<VolumeInfo> {
     // TODO: Take any direction from `args`?
     // Maybe allow the user to specify xargo/cargo/rust dirs to
     // avoid volume management with a specific (self compiled)
     // version of Rust?
 
-    let toolchain = match toml {
-        Some(t) => t.toolchain(target)?.unwrap_or("stable"),
-        None => "stable"
+    let base_path = working_path(&[])?;
+    let base_mapping = format!("{}:/volwork", &base_path);
+    let toolchain = toml.expect("gotta have a toml")
+        .toolchain(target)?
+        .expect("thats not a good target");
+    let rust_toolchain = format!("RUST_TOOLCHAIN={}", toolchain);
+
+    // Avoid copy and paste
+    let docker_cmd = || {
+        let mut cmd = docker::docker_command("run");
+        cmd.arg("--rm");
+        cmd.args(&["--user", &format!("{}:{}", id::user(), id::group())]);
+        cmd.args(&["-e", &format!("USER={}", id::username())]);
+        cmd.args(&["-e", &rust_toolchain]);
+        cmd.args(&["-v", &base_mapping]);
+        cmd.args(&["-t", VOLUME_IMAGE]);
+        cmd
     };
 
-    let rust_toolchain = format!("RUST_TOOLCHAIN={}", toolchain);
-    let xargo_dir = working_path(&["xargo"])?;
-    let cargo_dir = working_path(&[&toolchain, "cargo"])?;
-    let rust_dir = working_path(&[&toolchain, "rust"])?;
+    let fqtc = format!("{}-x86_64-unknown-linux-gnu", toolchain);
+    let target_path = working_path(&[".rustup", "toolchains", &fqtc])?;
 
-    let cargo_mapping = format!("{}:/cargo", &cargo_dir);
-    let rust_mapping = format!("{}:/rust", &rust_dir);
-    let xargo_mapping = format!("{}:/xargo", &xargo_dir);
+    if !Path::new(&base_path).exists() {
+        // If no cross directory exists, create a new one with the currently
+        // requested toolchain
+        println!("Initializing Cross workspace...");
 
-    if !(Path::new(&cargo_dir).exists() && Path::new(&rust_dir).exists()) {
-        // create the directories we are going to mount before we mount them,
-        // otherwise `docker` will create them but they will be owned by `root`
-        fs::create_dir_all(&cargo_dir).ok();
-        fs::create_dir_all(&rust_dir).ok();
+        fs::create_dir_all(&base_path).ok();
 
-        println!("Installing toolchain...");
-
-        docker::docker_command("run")
-            .arg("--rm")
-            .args(&["--user", &format!("{}:{}", id::user(), id::group())])
-            .args(&["-e", &format!("USER={}", id::username())])
-            .args(&["-e", &rust_toolchain])
-            .args(&["-v", &cargo_mapping])
-            .args(&["-v", &rust_mapping])
-            .args(&["-t", VOLUME_IMAGE])
+        docker_cmd()
             .run_and_get_status(verbose)?;
-    } else {
-        println!("Skipping toolchain install...");
+    } else if !Path::new(&target_path).exists() {
+        // Top level exists, but requested target does not
+        println!("Installing toolchain {}...", fqtc);
+        let cmd = format!("~/.cargo/bin/rustup toolchain install {}", fqtc);
+        docker_cmd()
+            .args(&["sh", "-c", &cmd])
+            .run_and_get_status(verbose)?;
     }
+
+    let xargo_dir = working_path(&["xargo"])?;
+    let cargo_dir = working_path(&[".cargo"])?;
 
     let needs_xargo_install = uses_xargo && !Path::new(&xargo_dir).exists();
 
     if needs_xargo_install {
+        println!("Installing Xargo...");
         fs::create_dir_all(&xargo_dir).ok();
 
-        let cmd = r#"
-            curl -LSfs http://japaric.github.io/trust/install.sh | \
-            sh -s -- \
-                --git japaric/xargo \
-                --tag v0.3.5 \
-                --target x86_64-unknown-linux-gnu \
-                --to /xargo
-        "#;
-
-        docker::docker_command("run")
-            .arg("--rm")
-            .args(&["--user", &format!("{}:{}", id::user(), id::group())])
-            .args(&["-e", &format!("USER={}", id::username())])
-            .args(&["-v", &xargo_mapping])
-            .args(&["-t", VOLUME_IMAGE])
-            .args(&["sh", "-c", cmd])
+        docker_cmd()
+            .args(&["sh", "-c", INSTALL_XARGO])
             .run_and_get_status(verbose)?;
     } else {
         println!("Skipping Xargo install...");
     }
 
-    println!("Targeting");
+    let target_check_path = working_path(&[
+        ".rustup",
+        "toolchains",
+        &fqtc,
+        "lib",
+        "rustlib",
+        target.triple(),
+    ])?;
 
-    // Run target install, rustup will be polite and do nothing if necessary
-    // If the target isn't available, skip it
-    //
-    // We have to fake a bit of the Rustup environment to get it to play nicely
-    let cmd = format!(r#"
-        export PATH=/rust/bin:/cargo/bin:$PATH && \
-        mkdir -p ~/.rustup/toolchains && \
-        ln -s /rust/settings.toml ~/.rustup/settings.toml && \
-        ln -s /rust ~/.rustup/toolchains/{toolchain}-x86_64-unknown-linux-gnu;
-        rustup target list | grep -wq {target}
-        if [ $? -eq 0 ]; then
-            rustup target add {target};
-        fi
-        "#, toolchain=toolchain, target=target.triple());
+    if !Path::new(&target_check_path).exists()
+    {
+        println!("Targeting");
 
-    docker::docker_command("run")
-        .arg("--rm")
-        .args(&["--user", &format!("{}:{}", id::user(), id::group())])
-        .args(&["-e", &format!("USER={}", id::username())])
-        .args(&["-v", &rust_mapping])
-        .args(&["-v", &cargo_mapping])
-        .args(&["-t", VOLUME_IMAGE])
-        .args(&["sh", "-c", &cmd])
-        .run_and_get_status(verbose)?;
+        // Run target install. If the target isn't available, skip it
+        let cmd = format!(
+            r#"
+            export PATH=/volwork/.rustup/toolchains/{toolchain}-x86_64-unknown-linux-gnu/bin:/volwork/.cargo/bin:$PATH && \
+            rustup target list | grep -wq {target}
+            if [ $? -eq 0 ]; then
+                rustup target add {target};
+            fi
+            "#,
+            toolchain = toolchain,
+            target = target.triple()
+        );
+
+        docker_cmd()
+            .args(&["sh", "-c", &cmd])
+            .run_and_get_status(verbose)?;
+    } else {
+        println!("Skipping targeting");
+    }
 
     Ok(VolumeInfo {
         xargo_dir: xargo_dir,
         cargo_dir: cargo_dir,
-        rust_dir: rust_dir,
+        rust_dir: target_path,
     })
 }
 
