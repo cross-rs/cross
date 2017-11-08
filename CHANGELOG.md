@@ -5,6 +5,26 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.13] - 2017-11-08
+
+### Added
+
+- Support for the custom [`deb`] subcommand.
+
+[`deb`]: https://github.com/mmstick/cargo-deb
+
+- Partial `test` / `run` support for android targets. Using the android API via `cross run` / `cross
+  test` is *not* supported because Cross is using QEMU instead of the official Android emulator.
+
+- Partial support for the `sparcv9-sun-solaris` and `x86_64-sun-solaris` targets. `cross test` and
+  `cross run` doesn't work for these new targets.
+
+- OpenSSL support for the `i686-unknown-linux-musl` target.
+
+### Changed
+
+- Bump OpenSSL version to 1.0.2m.
+
 ## [v0.1.12] - 2017-09-22
 
 ### Added
@@ -165,7 +185,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.12...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.13...HEAD
+[v0.1.13]: https://github.com/japaric/cross/compare/v0.1.12...v0.1.13
 [v0.1.12]: https://github.com/japaric/cross/compare/v0.1.11...v0.1.12
 [v0.1.11]: https://github.com/japaric/cross/compare/v0.1.10...v0.1.11
 [v0.1.10]: https://github.com/japaric/cross/compare/v0.1.9...v0.1.10
