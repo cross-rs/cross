@@ -113,12 +113,15 @@ pub fn run(target: &Target,
     docker
         .arg("--rm")
         .args(&["--user", &format!("{}:{}", id::user(), id::group())])
+        .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-e", "CARGO_HOME=/cargo"])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
         .args(&["-e", &format!("USER={}", id::username())]);
 
-    if let Some(strace) = env::var("QEMU_STRACE").ok() {
-        docker.args(&["-e", &format!("QEMU_STRACE={}", strace)]);
+    for name in &["QEMU_STRACE", "CROSS_RUNNER"] {
+        if let Some(value) = env::var(name).ok() {
+            docker.args(&["-e", &format!("{}={}", name, value)]);
+        }
     }
 
     if let Some(toml) = toml {
@@ -134,7 +137,6 @@ pub fn run(target: &Target,
     }
 
     docker
-        .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", root.display())])

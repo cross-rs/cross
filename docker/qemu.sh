@@ -5,6 +5,7 @@ main() {
 
     local arch=$1 \
           os=$2 \
+          softmmu=$3 \
           td=$(mktemp -d)
 
     local dependencies=(
@@ -20,6 +21,8 @@ main() {
         pkg-config
         python
         zlib1g-dev
+        libcap-dev
+        libattr1-dev
     )
 
     apt-get update
@@ -139,18 +142,35 @@ EOF
  {
 EOF
 
+   local targets="$arch-linux-user"
+   local virtfs=""
+   case "$softmmu" in
+      softmmu)
+         targets="$targets,$arch-softmmu"
+         virtfs="--enable-virtfs"
+         ;;
+      "")
+         true
+         ;;
+      *)
+         echo "Invalid option $softmmu=$softmmu"
+         ;;
+   esac
+
     ./configure \
         --disable-kvm \
         --disable-vnc \
         --enable-user \
         --static \
-        --target-list=$arch-linux-user
+        $virtfs \
+        --target-list=$targets
     nice make -j$(nproc)
     make install
 
     # HACK the binfmt_misc interpreter we'll use expects the QEMU binary to be
     # in /usr/bin. Create an appropriate symlink
     ln -s /usr/local/bin/qemu-$arch /usr/bin/qemu-$arch-static
+    ln -s /usr/local/bin/qemu-system-$arch /usr/bin/qemu-system-$arch || true
 
     # Clean up
     apt-get purge --auto-remove -y ${purge_list[@]}

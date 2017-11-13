@@ -16,15 +16,32 @@ COPY cmake.sh /
 RUN apt-get purge --auto-remove -y cmake && \
     bash /cmake.sh 3.5.1
 
-COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-aarch64-linux-gnu \
-    libc6-dev-arm64-cross && \
-    bash /openssl.sh linux-aarch64 aarch64-linux-gnu- && \
-    bash /qemu.sh aarch64
+    libc6-dev-arm64-cross \
+    netcat-openbsd \
+    ipxe-qemu
 
-ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
-    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER=qemu-aarch64 \
+COPY openssl.sh /
+RUN bash /openssl.sh linux-aarch64 aarch64-linux-gnu-
+
+COPY qemu.sh /
+RUN bash /qemu.sh aarch64 linux softmmu
+
+ENV MIRROR=http://ftp.debian.org/debian/
+COPY linux-image.sh /
+RUN bash /linux-image.sh \
+        aarch64 \
+        gnu \
+        $MIRROR/dists/stretch/main/installer-arm64/current/images/netboot/debian-installer/arm64/linux \
+        $MIRROR/dists/stretch/main/installer-arm64/current/images/netboot/debian-installer/arm64/initrd.gz \
+        $MIRROR/pool/main/l/linux/linux-image-4.9.0-4-arm64_4.9.51-1_arm64.deb
+
+COPY linux-runner /
+
+ENV CROSS_RUNNER="qemu-user" \
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner aarch64" \
     CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc \
     CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
