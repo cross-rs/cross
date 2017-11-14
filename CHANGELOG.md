@@ -13,7 +13,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - OpenSSL support for the `armv7-unknown-linux-musleabihf` target.
 - Build and test support for `aarch64-unknown-linux-musl`, `arm-unknown-linux-musleabihf`,
   `armv5te-unknown-linux-musleabi`, `i586-unknown-linux-musl`, `mips-unknown-linux-musl`,
-  add `mipsel-unknown-linux-musl` targets.
+  add `mipsel-unknown-linux-musl` targets,
+- Add support for arm-unknown-linux-gnueabihf .
 
 ## [v0.1.14] - 2017-11-22
 
