@@ -12,6 +12,7 @@ matrix:
     - env: TARGET=arm-unknown-linux-musleabi                    STD=1                RUN=1
     - env: TARGET=armv7-unknown-linux-gnueabihf   CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=armv7-unknown-linux-musleabihf                STD=1                RUN=1
+    - env: TARGET=i586-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=i686-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=i686-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=mips-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1

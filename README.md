@@ -198,6 +198,7 @@ worst, "hang" (never terminate).
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
 | `asmjs-unknown-emscripten` [4]       | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
+| `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2m  | ✓   | N/A   |   ✓    |
 | `i686-linux-android` [5]             | N/A    | 4.9     | 1.0.2m  | ✓   | N/A   |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 6.2.0   | N/A     | ✓   | N/A   |   ✓    |
 | `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0   | 1.0.2m  |     | N/A   |        |
