@@ -5,7 +5,7 @@ main() {
 
     local binutils=2.25.1 \
           gcc=5.3.0 \
-          target=$arch-sun-solaris2.11
+          target=$arch-sun-solaris2.10
 
     local dependencies=(
         bzip2

@@ -14,10 +14,10 @@ RUN bash /xargo.sh
 
 COPY solaris.sh openssl.sh /
 RUN bash /solaris.sh sparcv9 && \
-    bash /openssl.sh solaris64-sparcv9-gcc sparcv9-sun-solaris2.11-
+    bash /openssl.sh solaris64-sparcv9-gcc sparcv9-sun-solaris2.10-
 
-ENV CARGO_TARGET_SPARCV9_SUN_SOLARIS_LINKER=sparcv9-sun-solaris2.11-gcc \
-    CC_sparcv9_sun_solaris=sparcv9-sun-solaris2.11-gcc \
+ENV CARGO_TARGET_SPARCV9_SUN_SOLARIS_LINKER=sparcv9-sun-solaris2.10-gcc \
+    CC_sparcv9_sun_solaris=sparcv9-sun-solaris2.10-gcc \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib
