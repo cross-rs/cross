@@ -98,6 +98,7 @@ pub enum Target {
     ArmUnknownLinuxMusleabi,
     Armv7UnknownLinuxGnueabihf,
     Armv7UnknownLinuxMusleabihf,
+    I586UnknownLinuxGnu,
     I686UnknownLinuxGnu,
     I686UnknownLinuxMusl,
     Mips64UnknownLinuxGnuabi64,
@@ -199,6 +200,7 @@ impl Target {
             Target::ArmUnknownLinuxMusleabi |
             Target::Armv7UnknownLinuxGnueabihf |
             Target::Armv7UnknownLinuxMusleabihf |
+            Target::I586UnknownLinuxGnu |
             Target::I686UnknownLinuxGnu |
             Target::I686UnknownLinuxMusl |
             Target::Mips64UnknownLinuxGnuabi64 |
@@ -236,6 +238,7 @@ impl Target {
                        !triple.starts_with("i586") &&
                        !triple.starts_with("i686")
             }
+            Target::I586UnknownLinuxGnu |
             Target::I686UnknownLinuxGnu |
             Target::I686UnknownLinuxMusl |
             Target::X86_64UnknownLinuxGnu |
@@ -262,6 +265,7 @@ impl Target {
             Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
             Armv7UnknownLinuxMusleabihf => "armv7-unknown-linux-musleabihf",
             AsmjsUnknownEmscripten => "asmjs-unknown-emscripten",
+            I586UnknownLinuxGnu => "i586-unknown-linux-gnu",
             I686AppleDarwin => "i686-apple-darwin",
             I686LinuxAndroid => "i686-linux-android",
             I686PcWindowsGnu => "i686-pc-windows-gnu",
@@ -314,6 +318,7 @@ impl Target {
             "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
             "armv7-unknown-linux-musleabihf" => Armv7UnknownLinuxMusleabihf,
             "asmjs-unknown-emscripten" => AsmjsUnknownEmscripten,
+            "i586-unknown-linux-gnu" => I586UnknownLinuxGnu,
             "i686-apple-darwin" => I686AppleDarwin,
             "i686-linux-android" => I686LinuxAndroid,
             "i686-pc-windows-gnu" => I686PcWindowsGnu,

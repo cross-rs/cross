@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Add support for the `i586-unknown-linux-gnu` target.
+
 ## [v0.1.13] - 2017-11-08
 
 ### Added
