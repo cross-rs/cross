@@ -5,7 +5,16 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- Add support for the `i586-unknown-linux-gnu` target.
+## [v0.1.14] - 2017-11-22
+
+### Added
+
+- Support for the `i586-unknown-linux-gnu` target.
+
+### Changed
+
+- Downgraded the Solaris toolchains from 2.11 to 2.10 to make the binaries produced by Cross more
+  compatible (this version matches what rust-lang/rust is using).
 
 ## [v0.1.13] - 2017-11-08
 
@@ -187,7 +196,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/japaric/cross/compare/v0.1.13...HEAD
+[Unreleased]: https://github.com/japaric/cross/compare/v0.1.14...HEAD
+[v0.1.14]: https://github.com/japaric/cross/compare/v0.1.13...v0.1.14
 [v0.1.13]: https://github.com/japaric/cross/compare/v0.1.12...v0.1.13
 [v0.1.12]: https://github.com/japaric/cross/compare/v0.1.11...v0.1.12
 [v0.1.11]: https://github.com/japaric/cross/compare/v0.1.10...v0.1.11
