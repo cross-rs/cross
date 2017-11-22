@@ -20,7 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-aarch64-linux-gnu \
     libc6-dev-arm64-cross \
     netcat-openbsd \
-    ipxe-qemu
+    vde2
 
 COPY openssl.sh /
 RUN bash /openssl.sh linux-aarch64 aarch64-linux-gnu-
@@ -28,14 +28,8 @@ RUN bash /openssl.sh linux-aarch64 aarch64-linux-gnu-
 COPY qemu.sh /
 RUN bash /qemu.sh aarch64 linux softmmu
 
-ENV MIRROR=http://ftp.debian.org/debian/
 COPY linux-image.sh /
-RUN bash /linux-image.sh \
-        aarch64 \
-        gnu \
-        $MIRROR/dists/stretch/main/installer-arm64/current/images/netboot/debian-installer/arm64/linux \
-        $MIRROR/dists/stretch/main/installer-arm64/current/images/netboot/debian-installer/arm64/initrd.gz \
-        $MIRROR/pool/main/l/linux/linux-image-4.9.0-4-arm64_4.9.51-1_arm64.deb
+RUN bash /linux-image.sh aarch64
 
 COPY linux-runner /
 

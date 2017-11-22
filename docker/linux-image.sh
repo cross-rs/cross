@@ -2,18 +2,26 @@ set -ex
 
 main() {
     local arch=$1 \
-          abi=$2 \
-          url_kernel=$3 \
-          url_initrd=$4 \
-          url_modules=$5
+          kernel=
+
+    case $arch in
+        aarch64)
+            arch=arm64
+            kernel=4.9.0-4-arm64
+            ;;
+        *)
+            echo "Invalid arch: $arch"
+            exit 1
+            ;;
+    esac
 
     local dependencies=(
-        curl
         cpio
+        debian-archive-keyring
     )
 
-    apt-get update
     local purge_list=()
+    apt-get update
     for dep in ${dependencies[@]}; do
         if ! dpkg -L $dep; then
             apt-get install --no-install-recommends -y $dep
@@ -21,72 +29,88 @@ main() {
         fi
     done
 
-    mkdir -m 777 /qemu
+    # Download packages
+    mv /etc/apt/sources.list /etc/apt/sources.list.bak
+    echo "deb http://http.debian.net/debian/ stretch main contrib non-free" > \
+        /etc/apt/sources.list
+
+    dpkg --add-architecture $arch
+    apt-get update
+
+    mkdir -p -m 777 /qemu/$arch
+    cd /qemu/$arch
+    apt-get -t stretch -d --no-install-recommends download \
+        busybox:$arch \
+        libc6:$arch \
+        libgcc1:$arch \
+        libssl1*:$arch \
+        libstdc++6:$arch \
+        linux-image-$kernel:$arch \
+        zlib1g:$arch
     cd /qemu
 
-    curl -L $url_kernel -o vmlinuz
-    curl -L $url_initrd -o initrd.gz
-    curl -L $url_modules -o modules.deb
+    # Install packages
+    root=root-$arch
+    mkdir -p $root/{bin,etc,root,sys,dev,proc,sbin,usr/{bin,sbin}}
+    for deb in $arch/*deb; do
+        dpkg -x $deb $root/
+    done
 
-    # Extract initrd
-    mkdir init
-    cd init
-    gunzip -c ../initrd.gz | cpio -id
-    cd -
+    # kernel
+    cp $root/boot/vmlinu* kernel
 
-    # Remove some unecessary modules
-    rm -rf init/lib/modules/*/kernel/drivers/net/wireless/
-    rm -rf init/lib/modules/*/kernel/drivers/net/ethernet/
-    rm -rf init/lib/modules/*/kernel/drivers/net/usb/
-    rm -rf init/lib/modules/*/kernel/drivers/usb/
-    rm -rf init/lib/modules/*/kernel/drivers/gpu/
-    rm -rf init/lib/modules/*/kernel/drivers/mmc/
-    rm -rf init/lib/modules/*/kernel/drivers/staging/
-    rm -rf init/lib/modules/*/kernel/net/wireless/
+    # initrd
+    mkdir -p $root/modules
+    cp \
+        $root/lib/modules/*/kernel/drivers/virtio/* \
+        $root/lib/modules/*/kernel/fs/9p/9p.ko \
+        $root/lib/modules/*/kernel/fs/fscache/fscache.ko \
+        $root/lib/modules/*/kernel/net/9p/9pnet.ko \
+        $root/lib/modules/*/kernel/net/9p/9pnet_virtio.ko \
+        $root/modules || true # some file may not exist
+    rm -rf $root/boot
+    rm -rf $root/lib/modules
 
-    # Copy 9p modules
-    dpkg -x modules.deb modules
-    cp ./modules/lib/modules/*/kernel/fs/fscache/fscache.ko \
-       ./modules/lib/modules/*/kernel/net/9p/9pnet.ko \
-       ./modules/lib/modules/*/kernel/net/9p/9pnet_virtio.ko \
-       ./modules/lib/modules/*/kernel/fs/9p/9p.ko \
-       /qemu/init/lib/modules/
-    rm -rf modules
+    cat << 'EOF' > $root/init
+#!/bin/busybox sh
 
-    # Copy libgcc and libstdc++
-    cp /usr/$arch-linux-$abi/lib/libgcc_s.so.1 \
-       /usr/$arch-linux-$abi/lib/libstdc++.so.6 \
-       /qemu/init/usr/lib/
+set -e
 
-    # Alternative init
-    cat << EOF > /qemu/init/init-alt
-#!/bin/sh
+/bin/busybox --install
 
-ip addr add 10.0.2.15/24 dev enp0s1
-ip link set enp0s1 up
-ip route add default via 10.0.2.2 dev enp0s1
+mount -t devtmpfs devtmpfs /dev
+mount -t proc none /proc
+mount -t sysfs none /sys
 
-insmod /lib/modules/fscache.ko
-insmod /lib/modules/9pnet.ko
-insmod /lib/modules/9pnet_virtio.ko
-insmod /lib/modules/9p.ko
+# some archs does not have virtio modules
+insmod /modules/virtio.ko || true
+insmod /modules/virtio_ring.ko || true
+insmod /modules/virtio_mmio.ko || true
+insmod /modules/virtio_pci.ko || true
+insmod /modules/fscache.ko
+insmod /modules/9pnet.ko
+insmod /modules/9pnet_virtio.ko || true
+insmod /modules/9p.ko
 
 mkdir /target
-mount -t 9p -o trans=virtio target /target -oversion=9p2000.L
+mount -t 9p -o trans=virtio target /target -oversion=9p2000.L || true
 
-exec /bin/sh
+echo "emulator is ready! $(cut -d' ' -f1 /proc/uptime)"
+
+exec sh
 EOF
 
-    chmod +x /qemu/init/init-alt
-
-    # Create the new initrd
-    cd init
-    find . | cpio --create --format='newc' --quiet | gzip > ../initrd.gz
-    cd ../
-    rm -rf init
+    chmod +x $root/init
+    cd $root && find . | cpio --create --format='newc' --quiet | gzip > ../initrd.gz
 
     # Clean up
+    rm -rf $root $arch
+    mv -f /etc/apt/sources.list.bak /etc/apt/sources.list
+    # can fail if arch is used (amd64 and/or i386)
+    dpkg --remove-architecture $arch || true
+    apt-get update
     apt-get purge --auto-remove -y ${purge_list[@]}
+    ls -lh /qemu
 }
 
 main "${@}"

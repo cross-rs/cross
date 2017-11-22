@@ -6,75 +6,96 @@ arch=$1
 prog=$2
 
 case "$CROSS_RUNNER" in
-  native)
-    exec $prog
-    ;;
-  qemu-user)
-    exec qemu-$arch $prog
-    ;;
-  qemu-system)
-    true
-    ;;
-  *)
-    echo "Invalid CROSS_RUNNER: $CROSS_RUNNER";
-    echo "This is a bug, please report it at https://github.com/japaric/cross"
-    exit 1
-    ;;
+    native)
+        exec $prog
+        ;;
+    qemu-user)
+        exec qemu-$arch $prog
+        ;;
+    qemu-system)
+        true
+        ;;
+    *)
+        echo "Invalid CROSS_RUNNER: $CROSS_RUNNER";
+        echo "This is a bug, please report it at https://github.com/japaric/cross"
+        exit 1
+        ;;
 esac
 
-if [ "$arch" = "arm" ]; then
-  opt="-machine virt"
-fi
+n=$(nproc)
+memory=1G
+driver9p="virtio-9p-pci"
 
-if [ "$arch" = "aarch64" ]; then
-  opt="-machine virt -cpu cortex-a57"
-fi
+case "$arch" in
+    aarch64)
+        opt="-machine virt -cpu cortex-a57"
+        ;;
+esac
 
 (
-  flock -n 200 || exit 0
+    flock -n 200 || exit 0
 
-  qemu-system-$arch \
-    -m 1024 \
-    -smp 4 \
-    -nographic \
-    $opt \
-    -kernel /qemu/vmlinuz \
-    -initrd /qemu/initrd.gz \
-    -serial tcp:127.0.0.1:4444,server,nowait \
-    -virtfs local,path=/target,security_model=mapped,mount_tag=target \
-    -append init=/init-alt > /dev/null &
+    echo Booting QEMU virtual machine with $n cpus...
 
-  sleep 5
+    dpipe qemu-system-$arch \
+        -m $memory \
+        -smp $n \
+        -nographic \
+        -monitor none \
+        -net none \
+        -kernel /qemu/kernel \
+        -initrd /qemu/initrd.gz \
+        $opt \
+        -fsdev local,id=fs0,path=/target,security_model=mapped \
+        -device $driver9p,fsdev=fs0,mount_tag=target \
+    = nc -l -k 127.0.0.1 4444 &
 
-  nc -w 5 127.0.0.1 4444 > /dev/null
+    # wait nc server to start
+    sleep 3
+
+    # wait the ready message
+    nc 127.0.0.1 4444 | while read line; do
+        line=$(echo "$line" | tr -d '\r')
+        if [[ "$line" == "emulator is ready!"* ]]; then
+            echo "Booted in ${line##* } seconds"
+            break
+        fi
+    done
 
 ) 200>/tmp/qemu.lock
 
-# use a random prefix so we can differenciate the exit code tag from the
+# use a random prefix so we can differentiate the exit code tag from the
 # program output
 begin_tag="oach8aobiePheew1kahl-start"
 end_tag="oach8aobiePheew1kahl-end"
 
 begin=no
 
+rm -f /tmp/xxx
+mkfifo /tmp/xxx
+nc -q 10000 127.0.0.1 4444 << EOF > /tmp/xxx &
+echo $begin_tag; $prog; echo $end_tag \$?
+EOF
+nc_pid=$!
+
 # execute the program and then print the exit code
-echo "echo $begin_tag; $prog; echo $end_tag \$?" | nc -q -1 127.0.0.1 4444 | while read LINE; do
-  LINE=$(echo "$LINE" | tr -d '\r')
-  if [[ "$LINE" == "oach8aobiePheew1kahl-start" ]]; then
-    begin=yes
-    continue
-  fi
-  if [[ $begin == "no" ]]; then
-    continue
-  fi
-  if [[ "$LINE" == $end_tag* ]]; then
-    # kill nc
-    for pid in $(ps | grep nc); do
-      kill $pid || true
-      break
-    done
-    exit ${LINE##* }
-  else
-    echo $LINE
-  fi
-done
+while read line; do
+    line=$(echo "$line" | tr -d '\r')
+    if [[ "$line" == $begin_tag ]]; then
+        begin=yes
+        continue
+    fi
+    if [[ $begin == no ]]; then
+        continue
+    fi
+    if [[ "$line" == $end_tag* ]]; then
+        kill $nc_pid
+        exit ${line##* }
+    else
+        echo $line
+    fi
+done < /tmp/xxx
+
+echo linux-runner crashed!
+
+exit 1

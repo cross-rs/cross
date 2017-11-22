@@ -153,7 +153,8 @@ EOF
          true
          ;;
       *)
-         echo "Invalid option $softmmu=$softmmu"
+         echo "Invalid softmmu option: $softmmu"
+         exit 1
          ;;
    esac
 
@@ -170,7 +171,6 @@ EOF
     # HACK the binfmt_misc interpreter we'll use expects the QEMU binary to be
     # in /usr/bin. Create an appropriate symlink
     ln -s /usr/local/bin/qemu-$arch /usr/bin/qemu-$arch-static
-    ln -s /usr/local/bin/qemu-system-$arch /usr/bin/qemu-system-$arch || true
 
     # Clean up
     apt-get purge --auto-remove -y ${purge_list[@]}
