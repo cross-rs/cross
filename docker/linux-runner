@@ -17,6 +17,7 @@ case "$CROSS_RUNNER" in
     ;;
   *)
     echo "Invalid CROSS_RUNNER: $CROSS_RUNNER";
+    echo "This is a bug, please report it at https://github.com/japaric/cross"
     exit 1
     ;;
 esac

@@ -74,6 +74,7 @@ pub fn run(target: &Target,
            root: &Root,
            toml: Option<&Toml>,
            uses_xargo: bool,
+           needs_interpreter: bool,
            verbose: bool)
            -> Result<ExitStatus> {
     let root = root.path();
@@ -118,11 +119,11 @@ pub fn run(target: &Target,
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
         .args(&["-e", &format!("USER={}", id::username())]);
 
-    for name in &["QEMU_STRACE", "CROSS_RUNNER"] {
-        if let Some(value) = env::var(name).ok() {
-            docker.args(&["-e", &format!("{}={}", name, value)]);
-        }
+    if let Some(value) = env::var("QEMU_STRACE").ok() {
+        docker.args(&["-e", &format!("QEMU_STRACE={}", value)]);
     }
+
+    let mut runner = target.default_runner();
 
     if let Some(toml) = toml {
         for var in toml.env_passthrough(target)? {
@@ -130,13 +131,32 @@ pub fn run(target: &Target,
                 bail!("environment variable names must not contain the '=' character");
             }
 
+            if var == "CROSS_RUNNER" {
+                bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
+            }
+
             // Only specifying the environment variable name in the "-e"
             // flag forwards the value from the parent shell
             docker.args(&["-e", var]);
         }
+
+        if let Some(r) = toml.runner(target)? {
+            runner = r;
+        }
+    }
+
+    if runner.is_none() && needs_interpreter {
+        if target.default_runner().is_none() {
+            bail!("{} target does not support a runner to be used with {:?} subcommand",
+                  target.triple(),
+                  args[0]);
+        } else {
+            bail!("none runner cannot be used with the command: {:?}", cmd);
+        }
     }
 
     docker
+        .args(&["-e", &format!("CROSS_RUNNER={}", runner)])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", root.display())])
