@@ -1,4 +1,4 @@
-FROM ubuntu:12.04
+FROM ubuntu:14.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -11,10 +11,6 @@ RUN apt-get update && \
 
 COPY xargo.sh /
 RUN bash /xargo.sh
-
-COPY cmake.sh /
-RUN apt-get purge --auto-remove -y cmake && \
-    bash /cmake.sh 2.8.11
 
 COPY openssl.sh /
 RUN apt-get install -y --no-install-recommends \
