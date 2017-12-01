@@ -2,15 +2,16 @@
 
 set -e
 
+# arch in the rust target
 arch=$1
-prog=$2
+shift
 
 case "$CROSS_RUNNER" in
     native)
-        exec $prog
+        exec "${@}"
         ;;
     qemu-user)
-        exec qemu-$arch $prog
+        exec qemu-$arch "${@}"
         ;;
     qemu-system)
         true
@@ -24,8 +25,10 @@ esac
 
 n=$(nproc)
 memory=1G
-driver9p="virtio-9p-pci"
+driver9p="virtio-9p-device"
+drivernet="virtio-net-device"
 
+# select qemu parameters
 case "$arch" in
     aarch64)
         opt="-machine virt -cpu cortex-a57"
@@ -37,65 +40,34 @@ esac
 
     echo Booting QEMU virtual machine with $n cpus...
 
-    dpipe qemu-system-$arch \
+    touch /tmp/qemu.log
+
+    qemu-system-$arch \
         -m $memory \
         -smp $n \
         -nographic \
         -monitor none \
-        -net none \
+        -netdev user,id=net0,hostfwd=tcp::10022-:22 \
+        -device $drivernet,netdev=net0 \
         -kernel /qemu/kernel \
         -initrd /qemu/initrd.gz \
         $opt \
         -fsdev local,id=fs0,path=/target,security_model=mapped \
-        -device $driver9p,fsdev=fs0,mount_tag=target \
-    = nc -l -k 127.0.0.1 4444 &
+        -device $driver9p,fsdev=fs0,mount_tag=target 2>&1 >> /tmp/qemu.log &
 
-    # wait nc server to start
-    sleep 3
-
-    # wait the ready message
-    nc 127.0.0.1 4444 | while read line; do
-        line=$(echo "$line" | tr -d '\r')
-        if [[ "$line" == "emulator is ready!"* ]]; then
-            echo "Booted in ${line##* } seconds"
+    while read line; do
+        if [[ "$line" == *"Not backgrounding"* ]]; then
             break
         fi
-    done
+    done < <(tailf /tmp/qemu.log)
+
+    echo Booted in $(dbclient -K 1 -p 10022 -y -y root@localhost "cut -d' ' -f1 /proc/uptime") seconds
 
 ) 200>/tmp/qemu.lock
 
-# use a random prefix so we can differentiate the exit code tag from the
-# program output
-begin_tag="oach8aobiePheew1kahl-start"
-end_tag="oach8aobiePheew1kahl-end"
-
-begin=no
-
-rm -f /tmp/xxx
-mkfifo /tmp/xxx
-nc -q 10000 127.0.0.1 4444 << EOF > /tmp/xxx &
-echo $begin_tag; $prog; echo $end_tag \$?
-EOF
-nc_pid=$!
-
-# execute the program and then print the exit code
-while read line; do
-    line=$(echo "$line" | tr -d '\r')
-    if [[ "$line" == $begin_tag ]]; then
-        begin=yes
-        continue
-    fi
-    if [[ $begin == no ]]; then
-        continue
-    fi
-    if [[ "$line" == $end_tag* ]]; then
-        kill $nc_pid
-        exit ${line##* }
-    else
-        echo $line
-    fi
-done < /tmp/xxx
-
-echo linux-runner crashed!
-
-exit 1
+exec dbclient \
+    -t \
+    -p 10022 \
+    -y -y \
+    root@localhost \
+    "${@}"

@@ -18,15 +18,16 @@ RUN apt-get purge --auto-remove -y cmake && \
 
 RUN apt-get install -y --no-install-recommends \
     g++-aarch64-linux-gnu \
-    libc6-dev-arm64-cross \
-    netcat-openbsd \
-    vde2
+    libc6-dev-arm64-cross
 
 COPY openssl.sh /
 RUN bash /openssl.sh linux-aarch64 aarch64-linux-gnu-
 
 COPY qemu.sh /
 RUN bash /qemu.sh aarch64 linux softmmu
+
+COPY dropbear.sh /
+RUN bash /dropbear.sh
 
 COPY linux-image.sh /
 RUN bash /linux-image.sh aarch64
