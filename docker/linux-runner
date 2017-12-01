@@ -13,6 +13,17 @@ fi
 arch=$1
 shift
 
+# select qemu arch
+qarch=$arch
+case "$arch" in
+    armv7)
+        qarch="arm"
+        ;;
+    i686)
+        qarch="i386"
+        ;;
+esac
+
 case "$CROSS_RUNNER" in
     native)
         exec "${@}"
@@ -44,7 +55,11 @@ case "$arch" in
         ;;
     armv7)
         opt="-machine virt"
-        arch="arm"
+        ;;
+    i686)
+        opt="-append console=ttyS0"
+        driver9p="virtio-9p-pci"
+        drivernet="virtio-net-pci"
         ;;
 esac
 

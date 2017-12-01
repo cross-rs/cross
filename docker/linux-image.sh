@@ -13,7 +13,11 @@ main() {
             ;;
         armv7)
             arch=armhf
-            kernel=4.9.0-4-armmp
+            kernel=$kversion-armmp
+            ;;
+        i686)
+            arch=i386
+            kernel=$kversion-686
             ;;
         *)
             echo "Invalid arch: $arch"

@@ -11,7 +11,7 @@ matrix:
     - env: TARGET=arm-unknown-linux-gnueabi       CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=armv7-unknown-linux-gnueabihf   CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1 RUNNERS="qemu-user qemu-system"
     - env: TARGET=i586-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
-    - env: TARGET=i686-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=i686-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1 RUNNERS="native qemu-user qemu-system"
     - env: TARGET=mips-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=mips64-unknown-linux-gnuabi64   CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1
     - env: TARGET=mips64el-unknown-linux-gnuabi64 CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1
