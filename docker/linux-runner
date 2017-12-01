@@ -42,6 +42,10 @@ case "$arch" in
     aarch64)
         opt="-machine virt -cpu cortex-a57"
         ;;
+    armv7)
+        opt="-machine virt"
+        arch="arm"
+        ;;
 esac
 
 (

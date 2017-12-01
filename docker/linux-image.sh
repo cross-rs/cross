@@ -11,6 +11,10 @@ main() {
             arch=arm64
             kernel=$kversion-arm64
             ;;
+        armv7)
+            arch=armhf
+            kernel=4.9.0-4-armmp
+            ;;
         *)
             echo "Invalid arch: $arch"
             exit 1
