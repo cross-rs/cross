@@ -70,6 +70,14 @@ case "$arch" in
         driver9p="virtio-9p-pci"
         drivernet="virtio-net-pci"
         ;;
+    mips64el)
+        # avoid kernel error
+        # https://blahcat.github.io/2017/07/14/building-a-debian-stretch-qemu-image-for-mipsel/
+        opt="-append nokaslr -cpu MIPS64R2-generic"
+        n=1
+        driver9p="virtio-9p-pci"
+        drivernet="virtio-net-pci"
+        ;;
 esac
 
 (
@@ -125,11 +133,11 @@ dir=$(dirname "$1")
 shift
 
 ssh="dbclient -t -p 10022 -y -y root@localhost"
-# In some system, programs in 9p file system fails to execute.
+# In some system, programs in 9p file system fails to execute (Socket operation on non-socket)
 # The workaround is to copy the file to the ramdisk fs and then execute it.
 # See https://github.com/chaos/diod/issues/35
 case "$arch" in
-    mips|mipsel)
+    mips|mipsel|mips64el)
         $ssh mkdir -p "/tmp/$dir" ";" cp "$prog" "/tmp/$prog" ";" "/tmp/$prog" "${@}"
         R=$!
         $ssh rm -f "/tmp/$prog"

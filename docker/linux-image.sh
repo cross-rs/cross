@@ -22,6 +22,9 @@ main() {
         mips|mipsel)
             kernel=$kversion-4kc-malta
             ;;
+        mips64el)
+            kernel=$kversion-5kc-malta
+            ;;
         *)
             echo "Invalid arch: $arch"
             exit 1
