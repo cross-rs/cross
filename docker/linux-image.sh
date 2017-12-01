@@ -19,6 +19,9 @@ main() {
             arch=i386
             kernel=$kversion-686
             ;;
+        mips|mipsel)
+            kernel=$kversion-4kc-malta
+            ;;
         *)
             echo "Invalid arch: $arch"
             exit 1

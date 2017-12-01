@@ -12,15 +12,26 @@ RUN apt-get update && \
 COPY xargo.sh /
 RUN bash /xargo.sh
 
-COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-mips-linux-gnu \
-    libc6-dev-mips-cross && \
-    bash /openssl.sh linux-mips32 mips-linux-gnu- && \
-    bash /qemu.sh mips
+    libc6-dev-mips-cross
+
+COPY openssl.sh /
+RUN bash /openssl.sh linux-mips32 mips-linux-gnu-
+
+COPY qemu.sh /
+RUN bash /qemu.sh mips linux softmmu
+
+COPY dropbear.sh /
+RUN bash /dropbear.sh
+
+COPY linux-image.sh /
+RUN bash /linux-image.sh mips
+
+COPY linux-runner /
 
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
-    CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_RUNNER=qemu-mips \
+    CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner mips" \
     CC_mips_unknown_linux_gnu=mips-linux-gnu-gcc \
     CXX_mips_unknown_linux_gnu=mips-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
