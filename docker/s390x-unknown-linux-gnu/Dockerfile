@@ -12,15 +12,26 @@ RUN apt-get update && \
 COPY xargo.sh /
 RUN bash /xargo.sh
 
-COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-s390x-linux-gnu \
-    libc6-dev-s390x-cross && \
-    bash /openssl.sh linux64-s390x s390x-linux-gnu- && \
-    bash /qemu.sh s390x
+    libc6-dev-s390x-cross
+
+COPY openssl.sh /
+RUN bash /openssl.sh linux64-s390x s390x-linux-gnu-
+
+COPY qemu.sh /
+RUN bash /qemu.sh s390x linux softmmu
+
+COPY dropbear.sh /
+RUN bash /dropbear.sh
+
+COPY linux-image.sh /
+RUN bash /linux-image.sh s390x
+
+COPY linux-runner /
 
 ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
-    CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER=qemu-s390x \
+    CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner s390x" \
     CC_s390x_unknown_linux_gnu=s390x-linux-gnu-gcc \
     CXX_s390x_unknown_linux_gnu=s390x-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

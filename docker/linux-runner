@@ -72,7 +72,6 @@ case "$arch" in
         # avoid kernel error
         # https://blahcat.github.io/2017/07/14/building-a-debian-stretch-qemu-image-for-mipsel/
         opt="-append nokaslr"
-        # fails if > 1
         n=1
         driver9p="virtio-9p-pci"
         drivernet="virtio-net-pci"
@@ -89,6 +88,11 @@ case "$arch" in
         opt="-append console=hvc0 --nodefaults -serial stdio"
         driver9p="virtio-9p-pci"
         drivernet="virtio-net-pci"
+        ;;
+    s390x)
+        n=1
+        driver9p="virtio-9p-ccw"
+        drivernet="virtio-net-ccw"
         ;;
 esac
 

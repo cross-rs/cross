@@ -29,6 +29,10 @@ main() {
             arch=ppc64el
             kernel=$kversion-powerpc64le
             ;;
+        s390x)
+            arch=s390x
+            kernel=$kversion-s390x
+            ;;
         *)
             echo "Invalid arch: $arch"
             exit 1
