@@ -22,6 +22,13 @@ case "$arch" in
     i686)
         qarch="i386"
         ;;
+    powerpc64le)
+        if [ "$CROSS_RUNNER" = "qemu-user" ]; then
+            qarch="ppc64le"
+        else
+            qarch="ppc64"
+        fi
+        ;;
 esac
 
 case "$CROSS_RUNNER" in
@@ -75,6 +82,11 @@ case "$arch" in
         # https://blahcat.github.io/2017/07/14/building-a-debian-stretch-qemu-image-for-mipsel/
         opt="-append nokaslr -cpu MIPS64R2-generic"
         n=1
+        driver9p="virtio-9p-pci"
+        drivernet="virtio-net-pci"
+        ;;
+    powerpc64le)
+        opt="-append console=hvc0 --nodefaults -serial stdio"
         driver9p="virtio-9p-pci"
         drivernet="virtio-net-pci"
         ;;

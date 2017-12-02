@@ -12,15 +12,26 @@ RUN apt-get update && \
 COPY xargo.sh /
 RUN bash /xargo.sh
 
-COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-powerpc64le-linux-gnu \
-    libc6-dev-ppc64el-cross && \
-    bash /openssl.sh linux-ppc64le powerpc64le-linux-gnu- && \
-    bash /qemu.sh ppc64le
+    libc6-dev-ppc64el-cross
+
+COPY openssl.sh /
+RUN bash /openssl.sh linux-ppc64le powerpc64le-linux-gnu-
+
+COPY qemu.sh /
+RUN bash /qemu.sh ppc64le linux softmmu
+
+COPY dropbear.sh /
+RUN bash /dropbear.sh
+
+COPY linux-image.sh /
+RUN bash /linux-image.sh powerpc64le
+
+COPY linux-runner /
 
 ENV CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_LINKER=powerpc64le-linux-gnu-gcc \
-    CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_RUNNER=qemu-ppc64le \
+    CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner powerpc64le" \
     CC_powerpc64le_unknown_linux_gnu=powerpc64le-linux-gnu-gcc \
     CXX_powerpc64le_unknown_linux_gnu=powerpc64le-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

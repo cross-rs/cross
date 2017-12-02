@@ -25,6 +25,10 @@ main() {
         mips64el)
             kernel=$kversion-5kc-malta
             ;;
+        powerpc64le)
+            arch=ppc64el
+            kernel=$kversion-powerpc64le
+            ;;
         *)
             echo "Invalid arch: $arch"
             exit 1

@@ -126,7 +126,11 @@ EOF
    local virtfs=""
    case "$softmmu" in
       softmmu)
-         targets="$targets,$arch-softmmu"
+         if [ "$arch" = "ppc64le" ]; then
+            targets="$targets,ppc64-softmmu"
+         else
+            targets="$targets,$arch-softmmu"
+         fi
          virtfs="--enable-virtfs"
          ;;
       "")
