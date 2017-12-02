@@ -52,47 +52,42 @@ esac
 n=$(nproc)
 n=$(( n > 8 ? 8 : n ))
 memory=1G
-driver9p="virtio-9p-device"
-drivernet="virtio-net-device"
+driver9p="virtio-9p-pci"
+drivernet="virtio-net-pci"
 
 # select qemu parameters
 case "$arch" in
     aarch64)
         opt="-machine virt -cpu cortex-a57"
+        driver9p="virtio-9p-device"
+        drivernet="virtio-net-device"
         ;;
     armv7)
         opt="-machine virt"
         ;;
     i686)
         opt="-append console=ttyS0"
-        driver9p="virtio-9p-pci"
-        drivernet="virtio-net-pci"
         ;;
     mips|mipsel)
         # avoid kernel error
         # https://blahcat.github.io/2017/07/14/building-a-debian-stretch-qemu-image-for-mipsel/
         opt="-append nokaslr"
         n=1
-        driver9p="virtio-9p-pci"
-        drivernet="virtio-net-pci"
         ;;
     mips64el)
         # avoid kernel error
         # https://blahcat.github.io/2017/07/14/building-a-debian-stretch-qemu-image-for-mipsel/
         opt="-append nokaslr -cpu MIPS64R2-generic"
         n=1
-        driver9p="virtio-9p-pci"
-        drivernet="virtio-net-pci"
         ;;
     powerpc64le)
         opt="-append console=hvc0 --nodefaults -serial stdio"
-        driver9p="virtio-9p-pci"
-        drivernet="virtio-net-pci"
         ;;
     s390x)
         n=1
-        driver9p="virtio-9p-ccw"
-        drivernet="virtio-net-ccw"
+        ;;
+    x86_64)
+        opt="-append console=ttyS0"
         ;;
 esac
 

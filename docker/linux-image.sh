@@ -33,6 +33,10 @@ main() {
             arch=s390x
             kernel=$kversion-s390x
             ;;
+        x86_64)
+            arch=amd64
+            kernel=$kversion-amd64
+            ;;
         *)
             echo "Invalid arch: $arch"
             exit 1
@@ -65,6 +69,7 @@ main() {
         cp /etc/dpkg/dpkg.cfg.d/multiarch /etc/dpkg/dpkg.cfg.d/multiarch.bak
     fi
     dpkg --add-architecture $arch || echo "foreign-architecture $arch" > /etc/dpkg/dpkg.cfg.d/multiarch
+
     # Add debian keys
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com EF0F382A1A7B6500
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 9D6D8F6BC857C906
@@ -79,7 +84,7 @@ main() {
         dropbear-bin:$arch \
         libc6:$arch \
         libgcc1:$arch \
-        libssl1*:$arch \
+        libssl1.1:$arch \
         libstdc++6:$arch \
         linux-image-$kernel:$arch \
         ncurses-base \
