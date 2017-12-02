@@ -8,6 +8,8 @@ main() {
     local debsource="deb http://http.debian.net/debian/ stretch main"
     debsource="$debsource\ndeb http://security.debian.org/ stretch/updates main"
 
+    local dropbear="dropbear-bin"
+
     # select debian arch and kernel version
     case $arch in
         aarch64)
@@ -27,6 +29,14 @@ main() {
             ;;
         mips64el)
             kernel=$kversion-5kc-malta
+            ;;
+        powerpc)
+            # there is no stretch powerpc port, so we use jessie
+            # use a more recent kernel from backports
+            kernel=4.9.0-0.bpo.4-powerpc
+            debsource="deb http://http.debian.net/debian/ jessie main"
+            debsource="$debsource\ndeb http://http.debian.net/debian/ jessie-backports main"
+            dropbear="dropbear"
             ;;
         powerpc64)
             arch=ppc64
@@ -90,6 +100,7 @@ main() {
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8B48AD6246925553
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 7638D0442B90D010
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8BC3A7D46F930576 # ports
+    apt-key adv --recv-key --keyserver keyserver.ubuntu.com CBF8D6FD518E17E1
     apt-get update
 
     mkdir -p -m 777 /qemu/$arch
@@ -97,10 +108,10 @@ main() {
     apt-get -d --no-install-recommends download \
         $deps \
         busybox:$arch \
-        dropbear-bin:$arch \
+        $dropbear:$arch \
         libc6:$arch \
         libgcc1:$arch \
-        libssl1.1:$arch \
+        libssl1.0:$arch \
         libstdc++6:$arch \
         linux-image-$kernel:$arch \
         ncurses-base \

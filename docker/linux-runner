@@ -22,6 +22,9 @@ case "$arch" in
     i686)
         qarch="i386"
         ;;
+    powerpc)
+        qarch="ppc"
+        ;;
     powerpc64)
         qarch="ppc64"
         ;;
@@ -81,6 +84,10 @@ case "$arch" in
         # avoid kernel error
         # https://blahcat.github.io/2017/07/14/building-a-debian-stretch-qemu-image-for-mipsel/
         opt="-append nokaslr -cpu MIPS64R2-generic"
+        n=1
+        ;;
+    powerpc)
+        opt="-append console=ttyPZ0"
         n=1
         ;;
     powerpc64|powerpc64le)
