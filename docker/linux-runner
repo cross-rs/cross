@@ -150,7 +150,7 @@ esac
         fi
     fi
 
-    echo Booted in $(dbclient -K 1 -p 10022 -y -y root@localhost "cut -d' ' -f1 /proc/uptime") seconds
+    echo Booted in $SECONDS seconds
 
 ) 200>$LOCK
 
