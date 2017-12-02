@@ -12,15 +12,26 @@ RUN apt-get update && \
 COPY xargo.sh /
 RUN bash /xargo.sh
 
-COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-sparc64-linux-gnu \
-    libc6-dev-sparc64-cross && \
-    bash /openssl.sh linux64-sparcv9 sparc64-linux-gnu- && \
-    bash /qemu.sh sparc64
+    libc6-dev-sparc64-cross
+
+COPY openssl.sh /
+RUN bash /openssl.sh linux64-sparcv9 sparc64-linux-gnu-
+
+COPY qemu.sh /
+RUN bash /qemu.sh sparc64 linux softmmu
+
+COPY dropbear.sh /
+RUN bash /dropbear.sh
+
+COPY linux-image.sh /
+RUN bash /linux-image.sh sparc64
+
+COPY linux-runner /
 
 ENV CARGO_TARGET_SPARC64_UNKNOWN_LINUX_GNU_LINKER=sparc64-linux-gnu-gcc \
-    CARGO_TARGET_SPARC64_UNKNOWN_LINUX_GNU_RUNNER=qemu-sparc64 \
+    CARGO_TARGET_SPARC64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner sparc64" \
     CC_sparc64_unknown_linux_gnu=sparc64-linux-gnu-gcc \
     CXX_sparc64_unknown_linux_gnu=sparc64-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

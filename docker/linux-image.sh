@@ -44,6 +44,12 @@ main() {
             arch=s390x
             kernel=$kversion-s390x
             ;;
+        sparc64)
+            kernel=4.14.0-1-sparc64
+            debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
+            deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
+            ;;
         x86_64)
             arch=amd64
             kernel=$kversion-amd64
@@ -109,7 +115,12 @@ main() {
     done
 
     # kernel
-    cp $root/boot/vmlinu* kernel
+    if [ "$arch" = "sparc64" ]; then
+        # the but fails if the kernel is compressed
+        zcat $root/boot/vmlinu* > kernel
+    else
+        cp $root/boot/vmlinu* kernel
+    fi
 
     # initrd
     mkdir -p $root/modules

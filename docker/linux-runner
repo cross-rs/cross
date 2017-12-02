@@ -89,6 +89,9 @@ case "$arch" in
     s390x)
         n=1
         ;;
+    sparc64)
+        n=1
+        ;;
     x86_64)
         opt="-append console=ttyS0"
         ;;
@@ -147,11 +150,12 @@ dir=$(dirname "$1")
 shift
 
 ssh="dbclient -t -p 10022 -y -y root@localhost"
-# In some system, programs in 9p file system fails to execute (Socket operation on non-socket)
+# In some system, programs in 9p file system fails to execute
+# (mips: Socket operation on non-socket, sparc64: Level 2 not synchronized)
 # The workaround is to copy the file to the ramdisk fs and then execute it.
 # See https://github.com/chaos/diod/issues/35
 case "$arch" in
-    mips|mipsel|mips64el)
+    mips|mipsel|mips64el|sparc64)
         $ssh mkdir -p "/tmp/$dir" ";" cp "$prog" "/tmp/$prog" ";" "/tmp/$prog" "${@}"
         R=$!
         $ssh rm -f "/tmp/$prog"
