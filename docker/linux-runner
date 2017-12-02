@@ -22,6 +22,9 @@ case "$arch" in
     i686)
         qarch="i386"
         ;;
+    powerpc64)
+        qarch="ppc64"
+        ;;
     powerpc64le)
         if [ "$CROSS_RUNNER" = "qemu-user" ]; then
             qarch="ppc64le"
@@ -80,7 +83,7 @@ case "$arch" in
         opt="-append nokaslr -cpu MIPS64R2-generic"
         n=1
         ;;
-    powerpc64le)
+    powerpc64|powerpc64le)
         opt="-append console=hvc0 --nodefaults -serial stdio"
         ;;
     s390x)

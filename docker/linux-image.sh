@@ -5,6 +5,9 @@ main() {
     local arch=$1 \
           kversion=4.9.0-8
 
+    local debsource="deb http://http.debian.net/debian/ stretch main"
+    debsource="$debsource\ndeb http://security.debian.org/ stretch/updates main"
+
     # select debian arch and kernel version
     case $arch in
         aarch64)
@@ -24,6 +27,14 @@ main() {
             ;;
         mips64el)
             kernel=$kversion-5kc-malta
+            ;;
+        powerpc64)
+            arch=ppc64
+            kernel=4.14.0-1-powerpc64
+            debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
+            # sid version of dropbear requeries this depencendies
+            deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
             ;;
         powerpc64le)
             arch=ppc64el
@@ -59,10 +70,7 @@ main() {
 
     # Download packages
     mv /etc/apt/sources.list /etc/apt/sources.list.bak
-    echo "deb http://http.debian.net/debian/ stretch main" > \
-        /etc/apt/sources.list
-    echo "deb http://security.debian.org/ stretch/updates main" >> \
-        /etc/apt/sources.list
+    echo -e "$debsource" > /etc/apt/sources.list
 
     # Old ubuntu does not support --add-architecture, so we directly change multiarch file
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch ]; then
@@ -75,11 +83,13 @@ main() {
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 9D6D8F6BC857C906
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8B48AD6246925553
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 7638D0442B90D010
+    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8BC3A7D46F930576 # ports
     apt-get update
 
     mkdir -p -m 777 /qemu/$arch
     cd /qemu/$arch
-    apt-get -t stretch -d --no-install-recommends download \
+    apt-get -d --no-install-recommends download \
+        $deps \
         busybox:$arch \
         dropbear-bin:$arch \
         libc6:$arch \
