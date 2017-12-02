@@ -214,7 +214,7 @@ ifconfig eth0 10.0.2.15
 route add default gw 10.0.2.2 eth0
 
 mkdir /target
-mount -t 9p -o trans=virtio target /target -oversion=9p2000.L || true
+mount -t 9p -o trans=virtio target /target -oversion=9p2000.u || true
 
 exec dropbear -F -E -B
 EOF
