@@ -34,7 +34,6 @@ RUN bash /linux-image.sh x86_64
 
 COPY linux-runner /
 
-
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner x86_64" \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \

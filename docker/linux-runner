@@ -65,11 +65,11 @@ drivernet="virtio-net-pci"
 case "$arch" in
     aarch64)
         opt="-machine virt -cpu cortex-a57"
-        driver9p="virtio-9p-device"
-        drivernet="virtio-net-device"
         ;;
     armv7)
         opt="-machine virt"
+        driver9p="virtio-9p-device"
+        drivernet="virtio-net-device"
         ;;
     i686)
         opt="-append console=ttyS0"

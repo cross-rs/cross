@@ -9,6 +9,7 @@ main() {
     debsource="$debsource\ndeb http://security.debian.org/ stretch/updates main"
 
     local dropbear="dropbear-bin"
+    local libssl="libssl1.0.2"
 
     # select debian arch and kernel version
     case $arch in
@@ -37,8 +38,10 @@ main() {
             debsource="deb http://http.debian.net/debian/ jessie main"
             debsource="$debsource\ndeb http://http.debian.net/debian/ jessie-backports main"
             dropbear="dropbear"
+            libssl="libssl1.0.0"
             ;;
         powerpc64)
+            # there is no stable port
             arch=ppc64
             kernel=4.14.0-1-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
@@ -55,9 +58,11 @@ main() {
             kernel=$kversion-s390x
             ;;
         sparc64)
+            # there is no stable port
             kernel=4.14.0-1-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
+            # sid version of dropbear requeries this depencendies
             deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
             ;;
         x86_64)
@@ -111,7 +116,7 @@ main() {
         $dropbear:$arch \
         libc6:$arch \
         libgcc1:$arch \
-        libssl1.0:$arch \
+        $libssl:$arch \
         libstdc++6:$arch \
         linux-image-$kernel:$arch \
         ncurses-base \
