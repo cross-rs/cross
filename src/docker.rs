@@ -61,7 +61,7 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
     docker_command("run")
         .arg("--privileged")
         .arg("--rm")
-        .arg("-it")
+        .arg("-i")
         .arg("ubuntu:16.04")
         .args(&["sh", "-c", cmd])
         .run(verbose)
@@ -139,7 +139,7 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
-        .args(&["-it", &image(toml, target)?])
+        .args(&["-i", &image(toml, target)?])
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
