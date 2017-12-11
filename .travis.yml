@@ -31,8 +31,7 @@ matrix:
     - env: TARGET=aarch64-linux-android           CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=arm-linux-androideabi           CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=armv7-linux-androideabi         CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
-    # NOTE RUN=1 missing due to issue #143
-    - env: TARGET=i686-linux-android              CPP=1         STD=1 OPENSSL=0.5.5
+    - env: TARGET=i686-linux-android              CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=x86_64-linux-android            CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
 
     # OSX
