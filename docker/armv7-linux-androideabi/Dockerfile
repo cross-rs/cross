@@ -12,18 +12,20 @@ RUN apt-get update && \
 COPY xargo.sh /
 RUN bash /xargo.sh
 
-COPY qemu.sh /
-RUN bash /qemu.sh arm android
-
 COPY android-ndk.sh /
 RUN bash /android-ndk.sh arm 21
 ENV PATH=$PATH:/android-ndk/bin
 
+COPY android-system.sh /
+RUN bash /android-system.sh arm
+
+COPY qemu.sh /
+RUN bash /qemu.sh arm android
+
 COPY openssl.sh /
 RUN bash /openssl.sh android-armv7 arm-linux-androideabi-
 
-COPY android-system.sh /
-RUN bash /android-system.sh arm
+RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
@@ -31,7 +33,7 @@ ENV CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
     CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_RUNNER=qemu-arm \
     CC_armv7_linux_androideabi=arm-linux-androideabi-gcc \
     CXX_armv7_linux_androideabi=arm-linux-androideabi-g++ \
-    DEP_Z_ROOT=/android-ndk/sysroot/usr/ \
+    DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
     OPENSSL_STATIC=1 \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
@@ -39,5 +41,6 @@ ENV CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \
-    ANDROID_ROOT=/system \
-    ANDROID_DATA=/
+    ANDROID_DATA=/ \
+    ANDROID_DNS_MODE=local \
+    ANDROID_ROOT=/system
