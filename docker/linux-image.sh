@@ -125,7 +125,7 @@ main() {
 
     # Install packages
     root=root-$arch
-    mkdir -p $root/{bin,etc/dropbear,root,sys,dev,proc,sbin,usr/{bin,sbin},var/log}
+    mkdir -p $root/{bin,etc/dropbear,root,sys,dev,proc,sbin,tmp,usr/{bin,sbin},var/log}
     for deb in $arch/*deb; do
         dpkg -x $deb $root/
     done
