@@ -46,7 +46,7 @@ impl Host {
     /// `target == None` means `target == host`
     fn is_supported(&self, target: Option<&Target>) -> bool {
         if *self == Host::X86_64AppleDarwin {
-            target.map(|t| *t == Target::I686AppleDarwin).unwrap_or(false)
+            target.map(|t| *t == Target::I686AppleDarwin || t.needs_docker()).unwrap_or(false)
         } else if *self == Host::X86_64UnknownLinuxGnu {
             target.map(|t| t.needs_docker()).unwrap_or(true)
         } else {
