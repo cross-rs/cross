@@ -59,7 +59,7 @@ main() {
             ;;
         sparc64)
             # there is no stable port
-            kernel=4.14.0-1-sparc64
+            kernel=4.14.0-3-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
             # sid version of dropbear requeries this depencendies
