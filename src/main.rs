@@ -46,7 +46,7 @@ impl Host {
     /// `target == None` means `target == host`
     fn is_supported(&self, target: Option<&Target>) -> bool {
         if *self == Host::X86_64AppleDarwin {
-            target.map(|t| *t == Target::I686AppleDarwin).unwrap_or(false)
+            target.map(|t| t.triple() == "i686-apple-darwin").unwrap_or(false)
         } else if *self == Host::X86_64UnknownLinuxGnu {
             target.map(|t| t.needs_docker()).unwrap_or(true)
         } else {
@@ -73,157 +73,61 @@ impl<'a> From<&'a str> for Host {
     }
 }
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Target {
+    BuiltIn { triple: String },
     Custom { triple: String },
-
-    // Other built-in
-    Other,
-
-    // OSX
-    I686AppleDarwin,
-    X86_64AppleDarwin,
-
-    // Android
-    ArmLinuxAndroideabi,
-    Armv7LinuxAndroideabi,
-    Aarch64LinuxAndroid,
-    I686LinuxAndroid,
-    X86_64LinuxAndroid,
-
-    // Linux
-    Aarch64UnknownLinuxGnu,
-    ArmUnknownLinuxGnueabi,
-    ArmUnknownLinuxMusleabi,
-    Armv7UnknownLinuxGnueabihf,
-    Armv7UnknownLinuxMusleabihf,
-    I586UnknownLinuxGnu,
-    I686UnknownLinuxGnu,
-    I686UnknownLinuxMusl,
-    Mips64UnknownLinuxGnuabi64,
-    Mips64elUnknownLinuxGnuabi64,
-    MipsUnknownLinuxGnu,
-    MipselUnknownLinuxGnu,
-    Powerpc64UnknownLinuxGnu,
-    Powerpc64leUnknownLinuxGnu,
-    PowerpcUnknownLinuxGnu,
-    S390xUnknownLinuxGnu,
-    Sparc64UnknownLinuxGnu,
-    X86_64UnknownLinuxGnu,
-    X86_64UnknownLinuxMusl,
-
-    // *BSD
-    I686UnknownFreebsd,
-    X86_64UnknownDragonfly,
-    X86_64UnknownFreebsd,
-    X86_64UnknownNetbsd,
-
-    // Solaris / illumos
-    Sparcv9SunSolaris,
-    X86_64SunSolaris,
-
-    // Windows
-    X86_64PcWindowsGnu,
-    I686PcWindowsGnu,
-
-    // Emscripten
-    AsmjsUnknownEmscripten,
-    Wasm32UnknownEmscripten,
-
-    // Bare metal
-    Thumbv6mNoneEabi,
-    Thumbv7emNoneEabi,
-    Thumbv7emNoneEabihf,
-    Thumbv7mNoneEabi,
 }
 
 impl Target {
-    fn is_bare_metal(&self) -> bool {
+    fn new_built_in(triple: &str) -> Self {
+        Target::BuiltIn { triple: triple.to_owned() }
+    }
+
+    fn new_custom(triple: &str) -> Self {
+        Target::Custom { triple: triple.to_owned() }
+    }
+
+    fn triple(&self) -> &str {
         match *self {
-            Target::Thumbv6mNoneEabi |
-            Target::Thumbv7emNoneEabi |
-            Target::Thumbv7emNoneEabihf |
-            Target::Thumbv7mNoneEabi => true,
-            _ => false,
+            Target::BuiltIn{ref triple} => triple,
+            Target::Custom{ref triple} => triple,
         }
+    }
+
+    fn is_bare_metal(&self) -> bool {
+        self.triple().contains("thumb")
     }
 
     fn is_builtin(&self) -> bool {
         match *self {
-            Target::Custom { .. } => false,
-            _ => true,
+            Target::BuiltIn{ .. } => true,
+            Target::Custom{ .. } => false,
         }
     }
 
     fn is_bsd(&self) -> bool {
-        match *self {
-            Target::I686UnknownFreebsd |
-            Target::X86_64UnknownDragonfly |
-            Target::X86_64UnknownFreebsd |
-            Target::X86_64UnknownNetbsd => true,
-            _ => false,
-        }
+        self.triple().contains("bsd")
     }
 
     fn is_solaris(&self) -> bool {
-        match *self {
-            Target::Sparcv9SunSolaris |
-            Target::X86_64SunSolaris => true,
-            _ => false,
-        }
+        self.triple().contains("solaris")
     }
 
     fn is_android(&self) -> bool {
-        match *self {
-            Target::ArmLinuxAndroideabi |
-            Target::Armv7LinuxAndroideabi |
-            Target::Aarch64LinuxAndroid |
-            Target::I686LinuxAndroid |
-            Target::X86_64LinuxAndroid => true,
-            _ => false,
-        }
+        self.triple().contains("android")
     }
 
     fn is_emscripten(&self) -> bool {
-        match *self {
-            Target::AsmjsUnknownEmscripten |
-            Target::Wasm32UnknownEmscripten => true,
-            _ => false,
-        }
+        self.triple().contains("emscripten")
     }
 
     fn is_linux(&self) -> bool {
-        match *self {
-            Target::Aarch64UnknownLinuxGnu |
-            Target::ArmUnknownLinuxGnueabi |
-            Target::ArmUnknownLinuxMusleabi |
-            Target::Armv7UnknownLinuxGnueabihf |
-            Target::Armv7UnknownLinuxMusleabihf |
-            Target::I586UnknownLinuxGnu |
-            Target::I686UnknownLinuxGnu |
-            Target::I686UnknownLinuxMusl |
-            Target::Mips64UnknownLinuxGnuabi64 |
-            Target::Mips64elUnknownLinuxGnuabi64 |
-            Target::MipsUnknownLinuxGnu |
-            Target::MipselUnknownLinuxGnu |
-            Target::Powerpc64UnknownLinuxGnu |
-            Target::Powerpc64leUnknownLinuxGnu |
-            Target::PowerpcUnknownLinuxGnu |
-            Target::S390xUnknownLinuxGnu |
-            Target::Sparc64UnknownLinuxGnu |
-            Target::X86_64UnknownLinuxGnu |
-            Target::X86_64UnknownLinuxMusl => true,
-            _ => false,
-        }
+        self.triple().contains("linux") && !self.is_android()
     }
 
     fn is_windows(&self) -> bool {
-        match *self {
-            Target::I686PcWindowsGnu => true,
-            Target::X86_64PcWindowsGnu => true,
-            _ => false,
-        }
+        self.triple().contains("windows")
     }
 
     fn needs_docker(&self) -> bool {
@@ -232,71 +136,11 @@ impl Target {
     }
 
     fn needs_interpreter(&self) -> bool {
-        let not_native = match *self {
-            Target::Custom { ref triple } => {
-                return !triple.starts_with("x86_64") &&
-                       !triple.starts_with("i586") &&
-                       !triple.starts_with("i686")
-            }
-            Target::I586UnknownLinuxGnu |
-            Target::I686UnknownLinuxGnu |
-            Target::I686UnknownLinuxMusl |
-            Target::X86_64UnknownLinuxGnu |
-            Target::X86_64UnknownLinuxMusl => false,
-            _ => true,
-        };
+        let native = self.triple().starts_with("x86_64") ||
+            self.triple().starts_with("i586") ||
+            self.triple().starts_with("i686");
 
-        not_native && (self.is_linux() || self.is_windows() || self.is_bare_metal())
-    }
-
-    fn triple(&self) -> &str {
-        use Target::*;
-
-        match *self {
-            Custom { ref triple } => triple,
-            Other => unreachable!(),
-
-            Aarch64LinuxAndroid => "aarch64-linux-android",
-            Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
-            ArmLinuxAndroideabi => "arm-linux-androideabi",
-            ArmUnknownLinuxGnueabi => "arm-unknown-linux-gnueabi",
-            ArmUnknownLinuxMusleabi => "arm-unknown-linux-musleabi",
-            Armv7LinuxAndroideabi => "armv7-linux-androideabi",
-            Armv7UnknownLinuxGnueabihf => "armv7-unknown-linux-gnueabihf",
-            Armv7UnknownLinuxMusleabihf => "armv7-unknown-linux-musleabihf",
-            AsmjsUnknownEmscripten => "asmjs-unknown-emscripten",
-            I586UnknownLinuxGnu => "i586-unknown-linux-gnu",
-            I686AppleDarwin => "i686-apple-darwin",
-            I686LinuxAndroid => "i686-linux-android",
-            I686PcWindowsGnu => "i686-pc-windows-gnu",
-            I686UnknownFreebsd => "i686-unknown-freebsd",
-            I686UnknownLinuxGnu => "i686-unknown-linux-gnu",
-            I686UnknownLinuxMusl => "i686-unknown-linux-musl",
-            Mips64UnknownLinuxGnuabi64 => "mips64-unknown-linux-gnuabi64",
-            Mips64elUnknownLinuxGnuabi64 => "mips64el-unknown-linux-gnuabi64",
-            MipsUnknownLinuxGnu => "mips-unknown-linux-gnu",
-            MipselUnknownLinuxGnu => "mipsel-unknown-linux-gnu",
-            Powerpc64UnknownLinuxGnu => "powerpc64-unknown-linux-gnu",
-            Powerpc64leUnknownLinuxGnu => "powerpc64le-unknown-linux-gnu",
-            PowerpcUnknownLinuxGnu => "powerpc-unknown-linux-gnu",
-            S390xUnknownLinuxGnu => "s390x-unknown-linux-gnu",
-            Sparc64UnknownLinuxGnu => "sparc64-unknown-linux-gnu",
-            Sparcv9SunSolaris => "sparcv9-sun-solaris",
-            Thumbv6mNoneEabi => "thumbv6m-none-eabi",
-            Thumbv7emNoneEabi => "thumbv7em-none-eabi",
-            Thumbv7emNoneEabihf => "thumbv7em-none-eabihf",
-            Thumbv7mNoneEabi => "thumbv7m-none-eabi",
-            Wasm32UnknownEmscripten => "wasm32-unknown-emscripten",
-            X86_64AppleDarwin => "x86_64-apple-darwin",
-            X86_64PcWindowsGnu => "x86_64-pc-windows-gnu",
-            X86_64LinuxAndroid => "x86_64-linux-android",
-            X86_64SunSolaris => "x86_64-sun-solaris",
-            X86_64UnknownDragonfly => "x86_64-unknown-dragonfly",
-            X86_64UnknownFreebsd => "x86_64-unknown-freebsd",
-            X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
-            X86_64UnknownLinuxMusl => "x86_64-unknown-linux-musl",
-            X86_64UnknownNetbsd => "x86_64-unknown-netbsd",
-        }
+        !native && (self.is_linux() || self.is_windows() || self.is_bare_metal())
     }
 
     fn needs_xargo(&self) -> bool {
@@ -306,51 +150,10 @@ impl Target {
 
 impl Target {
     fn from(triple: &str, target_list: &TargetList) -> Target {
-        use Target::*;
-
-        match triple {
-            "aarch64-linux-android" => Aarch64LinuxAndroid,
-            "aarch64-unknown-linux-gnu" => Aarch64UnknownLinuxGnu,
-            "arm-linux-androideabi" => ArmLinuxAndroideabi,
-            "arm-unknown-linux-gnueabi" => ArmUnknownLinuxGnueabi,
-            "arm-unknown-linux-musleabi" => ArmUnknownLinuxMusleabi,
-            "armv7-linux-androideabi" => Armv7LinuxAndroideabi,
-            "armv7-unknown-linux-gnueabihf" => Armv7UnknownLinuxGnueabihf,
-            "armv7-unknown-linux-musleabihf" => Armv7UnknownLinuxMusleabihf,
-            "asmjs-unknown-emscripten" => AsmjsUnknownEmscripten,
-            "i586-unknown-linux-gnu" => I586UnknownLinuxGnu,
-            "i686-apple-darwin" => I686AppleDarwin,
-            "i686-linux-android" => I686LinuxAndroid,
-            "i686-pc-windows-gnu" => I686PcWindowsGnu,
-            "i686-unknown-freebsd" => I686UnknownFreebsd,
-            "i686-unknown-linux-gnu" => I686UnknownLinuxGnu,
-            "i686-unknown-linux-musl" => I686UnknownLinuxMusl,
-            "mips-unknown-linux-gnu" => MipsUnknownLinuxGnu,
-            "mips64-unknown-linux-gnuabi64" => Mips64UnknownLinuxGnuabi64,
-            "mips64el-unknown-linux-gnuabi64" => Mips64elUnknownLinuxGnuabi64,
-            "mipsel-unknown-linux-gnu" => MipselUnknownLinuxGnu,
-            "powerpc-unknown-linux-gnu" => PowerpcUnknownLinuxGnu,
-            "powerpc64-unknown-linux-gnu" => Powerpc64UnknownLinuxGnu,
-            "powerpc64le-unknown-linux-gnu" => Powerpc64leUnknownLinuxGnu,
-            "s390x-unknown-linux-gnu" => S390xUnknownLinuxGnu,
-            "sparc64-unknown-linux-gnu" => Sparc64UnknownLinuxGnu,
-            "sparcv9-sun-solaris" => Sparcv9SunSolaris,
-            "thumbv6m-none-eabi" => Thumbv6mNoneEabi,
-            "thumbv7em-none-eabi" => Thumbv7emNoneEabi,
-            "thumbv7em-none-eabihf" => Thumbv7emNoneEabihf,
-            "thumbv7m-none-eabi" => Thumbv7mNoneEabi,
-            "wasm32-unknown-emscripten" => Wasm32UnknownEmscripten,
-            "x86_64-apple-darwin" => X86_64AppleDarwin,
-            "x86_64-linux-android" => X86_64LinuxAndroid,
-            "x86_64-pc-windows-gnu" => X86_64PcWindowsGnu,
-            "x86_64-sun-solaris" => X86_64SunSolaris,
-            "x86_64-unknown-dragonfly" => X86_64UnknownDragonfly,
-            "x86_64-unknown-freebsd" => X86_64UnknownFreebsd,
-            "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
-            "x86_64-unknown-linux-musl" => X86_64UnknownLinuxMusl,
-            "x86_64-unknown-netbsd" => X86_64UnknownNetbsd,
-            _ if target_list.contains(triple) => Other,
-            _ => Custom { triple: triple.to_owned() },
+        if target_list.contains(triple) {
+            Target::new_built_in(triple)
+        } else {
+            Target::new_custom(triple)
         }
     }
 }
@@ -358,8 +161,8 @@ impl Target {
 impl From<Host> for Target {
     fn from(host: Host) -> Target {
         match host {
-            Host::X86_64UnknownLinuxGnu => Target::X86_64UnknownLinuxGnu,
-            Host::X86_64AppleDarwin => Target::X86_64AppleDarwin,
+            Host::X86_64UnknownLinuxGnu => Target::new_built_in("x86_64-unknown-linux-gnu"),
+            Host::X86_64AppleDarwin => Target::new_built_in("x86_64-apple-darwin"),
             Host::Other => unreachable!(),
         }
     }

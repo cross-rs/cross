@@ -1,6 +1,6 @@
 use std::env;
 use std::error::Error;
-use std::fs::File;
+use std::fs::{read_dir, File};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
@@ -21,6 +21,11 @@ fn main() {
     File::create(out_dir.join("commit-info.txt"))
         .unwrap()
         .write_all(commit_info().as_bytes())
+        .unwrap();
+
+    File::create(out_dir.join("docker-images.rs"))
+        .unwrap()
+        .write_all(docker_images().as_bytes())
         .unwrap();
 }
 
@@ -52,4 +57,20 @@ fn commit_date() -> Result<String, Some> {
     } else {
         Err(Some {})
     }
+}
+
+fn docker_images() -> String {
+    let mut images = String::from("[");
+    let mut dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+    dir.push("docker");
+    for entry in read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            images.push_str("\"");
+            images.push_str(path.file_name().unwrap().to_str().unwrap());
+            images.push_str("\", ");
+        }
+    }
+    images.push_str("]");
+    images
 }
