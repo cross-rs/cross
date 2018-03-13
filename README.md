@@ -116,7 +116,7 @@ RUN dpkg --add-architecture arm64 && \
 $ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
 ```
 
-### Passing environment variables into the build environemnt
+### Passing environment variables into the build environment
 
 By default, `cross` does not pass any environment variables into the build
 environment from the calling shell. This is chosen as a safe default as most use
