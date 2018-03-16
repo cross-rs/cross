@@ -3,7 +3,7 @@ set -ex
 main() {
     # arch in the rust target
     local arch=$1 \
-          kversion=4.9.0-4
+          kversion=4.9.0-6
 
     # select debian arch and kernel version
     case $arch in
@@ -33,7 +33,7 @@ main() {
 
     # Download packages
     mv /etc/apt/sources.list /etc/apt/sources.list.bak
-    echo "deb http://http.debian.net/debian/ stretch main contrib non-free" > \
+    echo "deb http://http.debian.net/debian/ stretch main" > \
         /etc/apt/sources.list
 
     # Old ubuntu does not support --add-architecture, so we directly change multiarch file
@@ -42,7 +42,7 @@ main() {
     fi
     dpkg --add-architecture $arch || echo "foreign-architecture $arch" > /etc/dpkg/dpkg.cfg.d/multiarch
     # Add debian keys
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8B48AD6246925553
+    apt-key adv --recv-key --keyserver keyserver.ubuntu.com EF0F382A1A7B6500
     apt-get update
 
     mkdir -p -m 777 /qemu/$arch
