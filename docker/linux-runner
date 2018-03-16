@@ -2,6 +2,13 @@
 
 set -e
 
+LOG=/tmp/qemu.log
+LOCK=/tmp/qemu.lock
+
+if [ -n "$CROSS_DEBUG" ]; then
+    set -x
+fi
+
 # arch in the rust target
 arch=$1
 shift
@@ -23,7 +30,9 @@ case "$CROSS_RUNNER" in
         ;;
 esac
 
+# 8 is the max number of cpu supported by qemu-aarch64
 n=$(nproc)
+n=$(( n > 8 ? 8 : n ))
 memory=1G
 driver9p="virtio-9p-device"
 drivernet="virtio-net-device"
@@ -40,9 +49,7 @@ esac
 
     echo Booting QEMU virtual machine with $n cpus...
 
-    touch /tmp/qemu.log
-
-    qemu-system-$arch \
+    QEMU_CMD="qemu-system-$arch \
         -m $memory \
         -smp $n \
         -nographic \
@@ -53,17 +60,21 @@ esac
         -initrd /qemu/initrd.gz \
         $opt \
         -fsdev local,id=fs0,path=/target,security_model=mapped \
-        -device $driver9p,fsdev=fs0,mount_tag=target 2>&1 >> /tmp/qemu.log &
+        -device $driver9p,fsdev=fs0,mount_tag=target"
 
-    while read line; do
-        if [[ "$line" == *"Not backgrounding"* ]]; then
-            break
-        fi
-    done < <(tailf /tmp/qemu.log)
+    touch $LOG
+    if [ -n "$CROSS_DEBUG" ]; then
+        ($QEMU_CMD 2>&1 | tee -a $LOG) &
+    else
+        $QEMU_CMD 2>&1 >> $LOG &
+    fi
+
+    # wait for dropbear
+    tailf $LOG | grep -m1 "Not backgrounding" > /dev/null
 
     echo Booted in $(dbclient -K 1 -p 10022 -y -y root@localhost "cut -d' ' -f1 /proc/uptime") seconds
 
-) 200>/tmp/qemu.lock
+) 200>$LOCK
 
 exec dbclient \
     -t \

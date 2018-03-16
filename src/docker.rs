@@ -123,6 +123,10 @@ pub fn run(target: &Target,
         docker.args(&["-e", &format!("QEMU_STRACE={}", value)]);
     }
 
+    if let Some(value) = env::var("CROSS_DEBUG").ok() {
+        docker.args(&["-e", &format!("CROSS_DEBUG={}", value)]);
+    }
+
     let mut runner = target.default_runner();
 
     if let Some(toml) = toml {
