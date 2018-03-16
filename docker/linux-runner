@@ -70,13 +70,29 @@ esac
     fi
 
     # wait for dropbear
-    tailf $LOG | grep -m1 "Not backgrounding" > /dev/null
+    for i in $(seq 240); do
+        if grep -q "Not backgrounding" $LOG; then
+            READY=1
+            break
+        fi
+        sleep 0.5s
+    done
+
+    if [ -z "$READY" ]; then
+        if [ -n "$CROSS_DEBUG" ]; then
+            echo "Not ready but continuing because CROSS_DEBUG is set"
+        else
+            echo "Qemu is not ready..."
+            echo "Set the environment variable CROSS_DEBUG=1 to debug"
+            exit 1
+        fi
+    fi
 
     echo Booted in $(dbclient -K 1 -p 10022 -y -y root@localhost "cut -d' ' -f1 /proc/uptime") seconds
 
 ) 200>$LOCK
 
-exec dbclient \
+dbclient \
     -t \
     -p 10022 \
     -y -y \
