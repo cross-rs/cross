@@ -305,7 +305,7 @@ fn run() -> Result<ExitStatus> {
         .unwrap_or_else(|| target.needs_xargo());
 
         let vol_info = volume::populate_volume(&target,
-                                &args.all,
+                                args.toolchain,
                                 toml.as_ref(),
                                 uses_xargo,
                                 verbose

@@ -28,7 +28,7 @@ pub struct VolumeInfo {
 
 pub fn populate_volume(
     target: &Target,
-    _args: &[String],
+    args_toolchain: Option<String>,
     toml: Option<&Toml>,
     uses_xargo: bool,
     verbose: bool,
@@ -40,9 +40,20 @@ pub fn populate_volume(
 
     let base_path = working_path(&[])?;
     let base_mapping = format!("{}:/volwork", &base_path);
-    let toolchain = toml.expect("gotta have a toml")
-        .toolchain(target)?
-        .expect("thats not a good target");
+    let toolchain = match (args_toolchain, toml) {
+        // `cross +nightly ...`
+        (Some(tc), _) => tc,
+        // `cross ...`
+        (None, Some(toml)) => {
+            toml.toolchain(target)?
+                .ok_or_else(|| Error::from(format!("target.{}.toolchain not found in Cross.toml!", target.triple())))?
+                .to_owned()
+        },
+        (None, None) => {
+            bail!("No cross toolchain specified!")
+        }
+    };
+
     let rust_toolchain = format!("RUST_TOOLCHAIN={}", toolchain);
 
     // Avoid copy and paste
@@ -105,14 +116,20 @@ pub fn populate_volume(
 
     if !Path::new(&target_check_path).exists()
     {
-        println!("Targeting");
+        println!("Targeting {} {}", toolchain, target.triple());
 
-        // Run target install. If the target isn't available, skip it
         let cmd = format!(
             r#"
+            # Place the correct binaries in PATH
             export PATH=/volwork/.rustup/toolchains/{toolchain}-x86_64-unknown-linux-gnu/bin:/volwork/.cargo/bin:$PATH && \
+
+            # Make sure we are using the correct toolchain
+            rustup default {toolchain}
+
+            # Install the target if possible through rustup
             rustup target list | grep -wq {target}
             if [ $? -eq 0 ]; then
+                echo "adding {target}"
                 rustup target add {target};
             fi
             "#,
