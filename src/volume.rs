@@ -15,7 +15,7 @@ static INSTALL_XARGO: &'static str = r#"
     curl -LSfs http://japaric.github.io/trust/install.sh | \
     sh -s -- \
         --git japaric/xargo \
-        --tag v0.3.5 \
+        --tag v0.3.11 \
         --target x86_64-unknown-linux-gnu \
         --to /volwork/xargo
 "#;

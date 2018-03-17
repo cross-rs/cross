@@ -15,9 +15,8 @@ mod file;
 mod id;
 mod volume;
 
-use std::io::Write;
 use std::process::ExitStatus;
-use std::{env, io, process};
+use std::{env, process};
 
 use toml::{Parser, Value};
 
@@ -251,23 +250,18 @@ pub fn main() {
 
     match run() {
         Err(e) => {
-            let stderr = io::stderr();
-            let mut stderr = stderr.lock();
-
-            writeln!(stderr, "error: {}", e).ok();
+            eprintln!("error: {}", e);
 
             for e in e.iter().skip(1) {
-                writeln!(stderr, "caused by: {}", e).ok();
+                eprintln!("caused by: {}", e);
             }
 
             if show_backtrace() {
                 if let Some(backtrace) = e.backtrace() {
-                    writeln!(stderr, "{:?}", backtrace).ok();
+                    eprintln!("{:?}", backtrace);
                 }
             } else {
-                writeln!(stderr,
-                         "note: run with `RUST_BACKTRACE=1` for a backtrace")
-                    .ok();
+                eprintln!("note: run with `RUST_BACKTRACE=1` for a backtrace");
             }
 
             process::exit(1)
@@ -311,16 +305,6 @@ fn run() -> Result<ExitStatus> {
                                 verbose
         )?;
 
-        // AJM TODO - what is this doing? Still necessary if all actions happen in docker?
-        // if target.needs_docker() &&
-        //    args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
-        //     if version_meta.needs_interpreter() &&
-        //         args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false) &&
-        //         target.needs_interpreter() &&
-        //         !interpreter::is_registered(&target)? {
-        //             docker::register(&target, verbose)?
-        //     }
-
         return docker::run(&target,
                            &args.all,
                            &root,
@@ -331,6 +315,7 @@ fn run() -> Result<ExitStatus> {
 
     }
 
+    eprintln!("Warning! Failed to `cross`. Passing through to Cargo...");
     cargo::run(&args.all, verbose)
 }
 
