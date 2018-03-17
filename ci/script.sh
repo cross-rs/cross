@@ -21,7 +21,7 @@ main() {
         cargo init --lib --name foo $td
         pushd $td
         echo '#![no_std]' > src/lib.rs
-        cross check --target $TARGET
+        cross +nightly check --target $TARGET
         popd
         rm -rf $td
     fi
@@ -37,7 +37,7 @@ main() {
                 https://github.com/japaric/cortest $td
 
             pushd $td
-            cross run --target $TARGET --example hello --release
+            cross +nightly run --target $TARGET --example hello --release
             popd
 
             rm -rf $td
@@ -58,7 +58,7 @@ main() {
 [build]
 xargo = true
 EOF
-        cross build --features c --lib --target $TARGET
+        cross +nightly build --features c --lib --target $TARGET
         popd
 
         rm -rf $td
@@ -73,7 +73,7 @@ EOF
         git clone --depth 1 https://github.com/rust-lang/cargo $td
 
         pushd $td
-        cross build --target $TARGET
+        cross +nightly build --target $TARGET
         popd
 
         rm -rf $td
@@ -84,7 +84,7 @@ EOF
         git clone --depth 1 https://github.com/bluss/rust-itertools $td
 
         pushd $td
-        cross build --target $TARGET
+        cross +nightly build --target $TARGET
         popd
 
         rm -rf $td
@@ -94,7 +94,7 @@ EOF
         git clone --depth 1 https://github.com/japaric/xargo $td
 
         pushd $td
-        cross build --target $TARGET
+        cross +nightly build --target $TARGET
         popd
 
         rm -rf $td
@@ -112,7 +112,7 @@ EOF
                 $td
 
             pushd $td
-            cross test \
+            cross +nightly test \
                   --no-default-features \
                   --features "gen-tests mangled-names" \
                   --target $TARGET
@@ -130,9 +130,9 @@ EOF
         mkdir examples tests
         echo "fn main() { println!(\"Example!\"); }" > examples/e.rs
         echo "#[test] fn t() {}" > tests/t.rs
-        cross run --target $TARGET
-        cross run --target $TARGET --example e
-        cross test --target $TARGET
+        cross +nightly run --target $TARGET
+        cross +nightly run --target $TARGET --example e
+        cross +nightly test --target $TARGET
         popd
 
         rm -rf $td
@@ -147,9 +147,9 @@ EOF
         pushd $td
         cargo update -p gcc
         if [ $RUN ]; then
-            cross run --target $TARGET
+            cross +nightly run --target $TARGET
         else
-            cross build --target $TARGET
+            cross +nightly build --target $TARGET
         fi
         popd
 
@@ -173,7 +173,7 @@ EOF
         pushd $td
         # avoid problems building openssl-sys in a virtual workspace
         rm -f Cargo.toml
-        cd openssl-sys && cross build --target $TARGET
+        cd openssl-sys && cross +nightly build --target $TARGET
         popd
 
         rm -rf $td

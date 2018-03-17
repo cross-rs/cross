@@ -24,28 +24,6 @@ use cargo::Root;
 use errors::*;
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy, PartialEq)]
-pub enum Host {
-    Other,
-
-    // OSX
-    X86_64AppleDarwin,
-
-    // Linux
-    X86_64UnknownLinuxGnu,
-}
-
-impl<'a> From<&'a str> for Host {
-    fn from(s: &str) -> Host {
-        match s {
-            "x86_64-apple-darwin" => Host::X86_64AppleDarwin,
-            "x86_64-unknown-linux-gnu" => Host::X86_64UnknownLinuxGnu,
-            _ => Host::Other,
-        }
-    }
-}
-
-#[allow(non_camel_case_types)]
 #[derive(Clone, PartialEq)]
 pub enum Target {
     Custom { triple: String },
@@ -229,16 +207,6 @@ impl Target {
             "x86_64-unknown-linux-musl" => X86_64UnknownLinuxMusl,
             "x86_64-unknown-netbsd" => X86_64UnknownNetbsd,
             _ => Custom { triple: triple.to_owned() },
-        }
-    }
-}
-
-impl From<Host> for Target {
-    fn from(host: Host) -> Target {
-        match host {
-            Host::X86_64UnknownLinuxGnu => Target::X86_64UnknownLinuxGnu,
-            Host::X86_64AppleDarwin => Target::X86_64AppleDarwin,
-            Host::Other => unreachable!(),
         }
     }
 }
