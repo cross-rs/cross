@@ -229,7 +229,6 @@ impl Target {
             "x86_64-unknown-linux-gnu" => X86_64UnknownLinuxGnu,
             "x86_64-unknown-linux-musl" => X86_64UnknownLinuxMusl,
             "x86_64-unknown-netbsd" => X86_64UnknownNetbsd,
-            _ if target_list.contains(triple) => Other,
             _ => Custom { triple: triple.to_owned() },
         }
     }
