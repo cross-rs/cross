@@ -111,7 +111,7 @@ esac
 
     echo Booting QEMU virtual machine with $n cpus...
 
-    QEMU_CMD="qemu-system-$arch \
+    QEMU_CMD="qemu-system-$qarch \
         -m $memory \
         -smp $n \
         -nographic \
