@@ -43,7 +43,7 @@ main() {
         powerpc64)
             # there is no stable port
             arch=ppc64
-            kernel=4.14.0-1-powerpc64
+            kernel=4.15.0-2-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
             # sid version of dropbear requeries this depencendies
@@ -59,7 +59,7 @@ main() {
             ;;
         sparc64)
             # there is no stable port
-            kernel=4.14.0-3-sparc64
+            kernel=4.15.0-1-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
             # sid version of dropbear requeries this depencendies
@@ -106,6 +106,7 @@ main() {
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 7638D0442B90D010
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8BC3A7D46F930576 # ports
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com CBF8D6FD518E17E1
+    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 06AED62430CB581C
     apt-get update
 
     mkdir -p -m 777 /qemu/$arch
