@@ -54,9 +54,7 @@ case "$CROSS_RUNNER" in
         ;;
 esac
 
-# 8 is the max number of cpu supported by qemu-aarch64
 n=$(nproc)
-n=$(( n > 8 ? 8 : n ))
 memory=1G
 driver9p="virtio-9p-pci"
 drivernet="virtio-net-pci"
@@ -64,6 +62,8 @@ drivernet="virtio-net-pci"
 # select qemu parameters
 case "$arch" in
     aarch64)
+        # 8 is the max number of cpu supported by qemu-aarch64
+        n=$(( n > 8 ? 8 : n ))
         opt="-machine virt -cpu cortex-a57"
         ;;
     armv7)
