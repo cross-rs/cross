@@ -114,7 +114,7 @@ EOF
             pushd $td
             cross test \
                   --no-default-features \
-                  --features "gen-tests mangled-names" \
+                  --features "mangled-names" \
                   --target $TARGET
             popd
 
