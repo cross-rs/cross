@@ -12,6 +12,10 @@ main() {
         ca-certificates
         curl
         g++
+        libgmp-dev
+        libisl-dev
+        libmpc-dev
+        libmpfr-dev
         make
         wget
         xz-utils
@@ -37,10 +41,6 @@ main() {
         tar -C $td/gcc --strip-components=1 -xj
 
     pushd $td
-
-    cd gcc
-    ./contrib/download_prerequisites
-    cd ..
 
     local bsd_arch=
     case $arch in

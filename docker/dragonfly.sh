@@ -12,6 +12,10 @@ main() {
         ca-certificates
         curl
         g++
+        libgmp-dev
+        libisl-dev
+        libmpc-dev
+        libmpfr-dev
         make
         patch
         wget
@@ -40,7 +44,6 @@ main() {
     pushd $td
 
     cd gcc
-    ./contrib/download_prerequisites
     patch -p0 <<'EOF'
 --- libatomic/configure.tgt.orig	2015-07-09 16:08:55 UTC
 +++ libatomic/configure.tgt
