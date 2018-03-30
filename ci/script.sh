@@ -113,8 +113,7 @@ EOF
 
             pushd $td
             cross test \
-                  --no-default-features \
-                  --features "mangled-names" \
+                  --manifest-path testcrate/Cargo.toml \
                   --target $TARGET
             popd
 
