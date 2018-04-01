@@ -36,14 +36,26 @@ lazy_static! {
         VersionReq::parse(">= 1.24")
             .expect("Unable to parse version requirements")
     };
+
+    /// Version requirements for user namespace.
+    ///
+    /// # Panics
+    /// Panics if the parsing fails
+    static ref PLATFORM_REQUIREMENT: VersionReq = {
+        VersionReq::parse(">= 1.32")
+            .expect("Unable to parse version requirements")
+    };
 }
 
-/// Add the `userns` flag, if needed
+/// Add the `userns` and `platform` flags, if needed
 pub fn docker_command(subcommand: &str) -> Command {
     let mut docker = Command::new("docker");
     docker.arg(subcommand);
     if USERNS_REQUIREMENT.matches(&DOCKER_VERSION) {
         docker.args(&["--userns", "host"]);
+    }
+    if PLATFORM_REQUIREMENT.matches(&DOCKER_VERSION) {
+        docker.args(&["--platform", "linux"]);
     }
     docker
 }
