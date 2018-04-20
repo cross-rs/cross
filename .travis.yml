@@ -80,9 +80,8 @@ after_success:
 branches:
   only:
     - /^v\d+\.\d+\.\d+.*$/
-    - auto
-    - master
-    - try
+    - staging
+    - trying
 
 before_deploy:
   - sh ci/before_deploy.sh
