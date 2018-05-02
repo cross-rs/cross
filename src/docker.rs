@@ -135,7 +135,7 @@ pub fn run(target: &Target,
         .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
-        .args(&["-v", &format!("{}:/project:ro", root.display())])
+        .args(&["-v", &format!("{}:/project", root.display())])
         .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
