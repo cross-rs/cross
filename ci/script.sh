@@ -178,6 +178,14 @@ EOF
 
         rm -rf $td
     fi
+
+    cd crates
+
+    cd build_rs_write
+    cross build --target $TARGET
+    cd ..
+
+    cd ..
 }
 
 main
