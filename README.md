@@ -119,6 +119,16 @@ RUN dpkg --add-architecture arm64 && \
 $ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
 ```
 
+`cross` can also use a local image and build it for you by specifying the path to
+the docker context using the target's `docker_context` variable:
+
+``` toml
+[target.aarch64-unknown-linux-gnu]
+docker_context = "ci/docker/aarch64-unknown-linux-gnu"
+```
+
+Note that `image` and `docker_context` are incompatible with each other.
+
 ### Passing environment variables into the build environment
 
 By default, `cross` does not pass any environment variables into the build

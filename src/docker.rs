@@ -154,18 +154,48 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
-        .args(&["-it", &image(toml, target)?])
+        .args(&["-it", &image(toml, target, verbose)?])
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
 
-fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
+fn image(toml: Option<&Toml>, target: &Target, verbose: bool) -> Result<String> {
     if let Some(toml) = toml {
-        if let Some(image) = toml.image(target)?.map(|s| s.to_owned()) {
-            return Ok(image)
+        let img = toml.image(target)?;
+        let context = toml.context(target)?;
+
+        if img.is_some() && context.is_some() {
+            return Err(
+                format!(
+                    "target {} contains two incompatible options: image ({}) and docker_context ({})",
+                    target.triple(), img.unwrap(), context.unwrap()).into()
+            );
+        }
+
+        // If there is an image in the toml file, we just use that:
+        if let Some(img) = img {
+            return Ok(img.to_owned());
+        }
+        // If there is no image, but there is a docker context
+        // we build the image from the docker context and use that
+        if let Some(p) = context {
+            let path = PathBuf::from(p);
+            let image_name = format!("cross_local_image_{}:0.1", target.triple());
+            let mut cmd = Command::new("docker");
+            cmd.arg("build")
+                .arg(&image_name)
+                .run(verbose)
+                .chain_err(|| {
+                    format!(
+                        "couldn't build image for target {} from context at {:?}",
+                        target.triple(), path)
+                })?;
+            return Ok(image_name);
         }
     }
-
+    // If there is no toml file, or there is a toml file without image and
+    // context for the current target, we just use the default image for the
+    // current cross version:
     let version = env!("CARGO_PKG_VERSION");
     let tag = if version.ends_with("-dev") {
         Cow::from("latest")

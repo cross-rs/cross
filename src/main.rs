@@ -269,6 +269,8 @@ pub struct Toml {
 
 impl Toml {
     /// Returns the `target.{}.image` part of `Cross.toml`
+    ///
+    /// Incompatible with the `docker_context` option.
     pub fn image(&self, target: &Target) -> Result<Option<&str>> {
         let triple = target.triple();
 
@@ -295,6 +297,23 @@ impl Toml {
             Ok(Some(value))
         } else {
             Ok(None)
+        }
+    }
+
+    /// Returns the `target.{}.docker_context` part of `Cross.toml`
+    ///
+    /// Incompatible with the `image` option.
+    pub fn context(&self, target: &Target) -> Result<Option<&str>> {
+        let triple = target.triple();
+
+        if let Some(value) = self.table
+            .lookup(&format!("target.{}.docker_context", triple)) {
+                Ok(Some(value.as_str()
+                        .ok_or_else(|| {
+                            format!("target.{}.docker_context must be a string", triple)
+                        })?))
+            } else {
+                Ok(None)
         }
     }
 
