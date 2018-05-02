@@ -1,5 +1,4 @@
-# wine in ubuntu versions less than 17.04 hangs in the tests
-FROM ubuntu:17.04
+FROM ubuntu:18.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

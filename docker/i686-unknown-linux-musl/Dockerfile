@@ -1,4 +1,4 @@
-FROM i386/ubuntu:16.04
+FROM i386/ubuntu:18.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
