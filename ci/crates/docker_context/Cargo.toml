@@ -1,0 +1,6 @@
+[package]
+name = "docker_context"
+version = "0.1.0"
+authors = ["gnzlbg <gonzalobg88@gmail.com>"]
+
+[dependencies]
