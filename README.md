@@ -200,7 +200,7 @@ worst, "hang" (never terminate).
 | `asmjs-unknown-emscripten` [4]       | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2m  | ✓   | N/A   |   ✓    |
 | `i686-linux-android` [5]             | N/A    | 4.9     | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `i686-pc-windows-gnu`                | N/A    | 6.2.0   | N/A     | ✓   | N/A   |   ✓    |
+| `i686-pc-windows-gnu`                | N/A    | 7.3.0   | N/A     | ✓   | N/A   |   ✓    |
 | `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0   | 1.0.2m  | ✓   | N/A   |        |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | 1.0.2m  | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1   | 1.0.2m  |     | N/A   |   ✓    |
@@ -220,7 +220,7 @@ worst, "hang" (never terminate).
 | `thumbv7m-none-eabi` [3]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
 | `wasm32-unknown-emscripten` [4]      | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
 | `x86_64-linux-android` [5]           | N/A    | 4.9     | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `x86_64-pc-windows-gnu`              | N/A    | 6.2.0   | N/A     | ✓   | N/A   |   ✓    |
+| `x86_64-pc-windows-gnu`              | N/A    | 7.3.0   | N/A     | ✓   | N/A   |   ✓    |
 | `x86_64-sun-solaris` [1]             | 2.11   | 5.3.0   | 1.0.2m  | ✓   | N/A   |        |
 | `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0   | 1.0.2m  | ✓   | N/A   |        |
 | `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0   | 1.0.2m  | ✓   | N/A   |        |
