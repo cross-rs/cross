@@ -113,10 +113,7 @@ EOF
                 $td
 
             pushd $td
-            cross test \
-                  --no-default-features \
-                  --features "gen-tests mangled-names" \
-                  --target $TARGET
+            cross test --manifest-path testcrate/Cargo.toml --target $TARGET
             popd
 
             rm -rf $td
