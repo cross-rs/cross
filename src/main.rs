@@ -300,7 +300,7 @@ impl Target {
     }
 
     fn needs_xargo(&self) -> bool {
-        self.is_bare_metal() || !self.is_builtin()
+        !self.is_builtin()
     }
 }
 

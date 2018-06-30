@@ -61,10 +61,10 @@ matrix:
       rust: nightly-2017-10-24
 
     # Bare metal
-    - env: TARGET=thumbv6m-none-eabi                                                 RUN=1
-    - env: TARGET=thumbv7em-none-eabi                                                RUN=1
-    - env: TARGET=thumbv7em-none-eabihf                                              RUN=1
-    - env: TARGET=thumbv7m-none-eabi                                                 RUN=1
+    - env: TARGET=thumbv6m-none-eabi                            STD=1
+    - env: TARGET=thumbv7em-none-eabi                           STD=1
+    - env: TARGET=thumbv7em-none-eabihf                         STD=1
+    - env: TARGET=thumbv7m-none-eabi                            STD=1
 
 install:
   - curl https://sh.rustup.rs -sSf |
