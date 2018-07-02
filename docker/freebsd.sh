@@ -69,11 +69,14 @@ main() {
     cp $td/freebsd/lib/libm.so.5 $destdir/lib
     cp $td/freebsd/lib/libthr.so.3 $destdir/lib/libpthread.so
     cp $td/freebsd/lib/libutil.so.9 $destdir/lib
+    cp $td/freebsd/usr/lib/libc++.so.1 $destdir/lib
+    cp $td/freebsd/usr/lib/libc++.a $destdir/lib
     cp $td/freebsd/usr/lib/lib{c,util,m}.a $destdir/lib
     cp $td/freebsd/usr/lib/lib{rt,execinfo}.so.1 $destdir/lib
     cp $td/freebsd/usr/lib/{crt1,Scrt1,crti,crtn}.o $destdir/lib
 
     ln -s libc.so.7 $destdir/lib/libc.so
+    ln -s libc++.so.1 $destdir/lib/libc++.so
     ln -s libexecinfo.so.1 $destdir/lib/libexecinfo.so
     ln -s libm.so.5 $destdir/lib/libm.so
     ln -s librt.so.1 $destdir/lib/librt.so
