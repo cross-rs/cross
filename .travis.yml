@@ -66,6 +66,11 @@ matrix:
     - env: TARGET=thumbv7em-none-eabihf                         STD=1
     - env: TARGET=thumbv7m-none-eabi                            STD=1
 
+  allow_failures:
+    # FIXME: error undefined reference to symbol 'setvbuf'
+    - env: TARGET=x86_64-unknown-netbsd           CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
+
+
 install:
   - curl https://sh.rustup.rs -sSf |
     sh -s -- -y --default-toolchain $TRAVIS_RUST_VERSION
