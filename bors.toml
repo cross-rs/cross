@@ -1,4 +1,4 @@
-status = [
-  "continuous-integration/travis-ci/push",
-]
+delete_merged_branches = true
+required_approvals = 1
+status = ["continuous-integration/travis-ci/push"]
 timeout_sec = 10800
