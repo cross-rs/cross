@@ -12,6 +12,10 @@ main() {
         ca-certificates
         curl
         g++
+        libgmp-dev
+        libisl-dev
+        libmpc-dev
+        libmpfr-dev
         make
         software-properties-common
         wget
@@ -38,10 +42,6 @@ main() {
         tar -C $td/gcc --strip-components=1 -xj
 
     pushd $td
-
-    cd gcc
-    ./contrib/download_prerequisites
-    cd ..
 
     local apt_arch=
     local lib_arch=
