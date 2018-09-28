@@ -76,6 +76,7 @@ EOF
         git clone --depth 1 https://github.com/japaric/xargo $td
 
         pushd $td
+        sed -i -e 's/#!\[deny(warnings)\]//g' src/main.rs
         sed -i -e 's/unused_doc_comment/unused_doc_comments/g' src/errors.rs
         cross build --target $TARGET
         popd
