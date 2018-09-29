@@ -13,8 +13,6 @@ main() {
 
     cargo install --force --path .
 
-    export QEMU_STRACE=1
-
     # test `cross check`
     if [ ! -z $STD ]; then
         td=$(mktemp -d)
