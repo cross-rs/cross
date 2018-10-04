@@ -68,6 +68,11 @@ matrix:
     - env: TARGET=thumbv7m-none-eabi                            STD=1
 
 
+before_install:
+  # workaround for https://github.com/travis-ci/travis-ci/issues/4704
+  - python3 -c 'import os,sys; os.set_blocking(sys.stdout.fileno(), True)'
+
+
 install:
   - curl https://sh.rustup.rs -sSf |
     sh -s -- -y --default-toolchain $TRAVIS_RUST_VERSION
