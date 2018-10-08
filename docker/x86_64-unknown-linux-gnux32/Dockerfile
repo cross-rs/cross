@@ -14,7 +14,7 @@ RUN bash /xargo.sh
 
 COPY cmake.sh /
 RUN apt-get purge --auto-remove -y cmake && \
-    bash /cmake.sh 2.8.11
+    bash /cmake.sh 3.5.1
 
 COPY openssl.sh /
 RUN bash /openssl.sh linux-x32
