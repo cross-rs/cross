@@ -14,6 +14,6 @@ wineboot &> /dev/null
 # Put libstdc++ and some other mingw dlls in WINEPATH
 # This must work for x86_64 and i686
 P1=$(dirname $(find /usr -name libwinpthread-1.dll))
-export WINEPATH="$(ls -d /usr/lib/gcc/*-w64-mingw32/*win32);$P1"
+export WINEPATH="$(ls -d /usr/lib/gcc/*-w64-mingw32/*posix);$P1"
 
 exec "$@"

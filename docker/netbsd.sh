@@ -38,10 +38,11 @@ main() {
     pushd $td
 
     cd gcc
+    sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites
     ./contrib/download_prerequisites
     local patches=(
-        ftp://ftp.netbsd.org/pub/pkgsrc/pkgsrc-2016Q4/pkgsrc/lang/gcc5/patches/patch-libstdc++-v3_config_os_bsd_netbsd_ctype__base.h
-        ftp://ftp.netbsd.org/pub/pkgsrc/pkgsrc-2016Q4/pkgsrc/lang/gcc5/patches/patch-libstdc++-v3_config_os_bsd_netbsd_ctype__configure__char.cc
+        ftp://ftp.netbsd.org/pub/pkgsrc/pkgsrc-2017Q1/pkgsrc/lang/gcc5/patches/patch-libstdc++-v3_config_os_bsd_netbsd_ctype__base.h
+        ftp://ftp.netbsd.org/pub/pkgsrc/pkgsrc-2017Q1/pkgsrc/lang/gcc5/patches/patch-libstdc++-v3_config_os_bsd_netbsd_ctype__configure__char.cc
     )
 
     local patch

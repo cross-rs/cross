@@ -1,5 +1,4 @@
-# wine in ubuntu versions less than 17.04 hangs in the tests
-FROM ubuntu:17.04
+FROM ubuntu:18.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -38,5 +37,5 @@ ENTRYPOINT ["/windows-entry.sh"]
 
 ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc \
     CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER=wine \
-    CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc \
-    CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++
+    CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix \
+    CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++-posix
