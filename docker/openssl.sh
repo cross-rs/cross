@@ -1,7 +1,7 @@
 set -ex
 
 main() {
-    local version=1.0.2m
+    local version=1.0.2p
     local os=$1 \
           triple=$2
 

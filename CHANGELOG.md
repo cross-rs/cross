@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Bump OpenSSL version to 1.0.2p.
+
 ## [v0.1.14] - 2017-11-22
 
 ### Added
