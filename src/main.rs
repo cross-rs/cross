@@ -142,10 +142,6 @@ impl Target {
 
         !native && (self.is_linux() || self.is_windows() || self.is_bare_metal())
     }
-
-    fn needs_xargo(&self) -> bool {
-        !self.is_builtin()
-    }
 }
 
 impl Target {
@@ -225,19 +221,19 @@ fn run() -> Result<ExitStatus> {
             let target = args.target
                 .unwrap_or(Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
-            let uses_xargo = if let Some(toml) = toml.as_ref() {
+            let available_targets = rustup::available_targets(verbose)?;
+            let uses_xargo = !target.is_builtin() ||
+                !available_targets.contains(&target) ||
+                if let Some(toml) = toml.as_ref() {
                     toml.xargo(&target)?
                 } else {
                     None
                 }
-                .unwrap_or_else(|| target.needs_xargo());
+                .unwrap_or(false);
 
-            if !uses_xargo &&
-               rustup::available_targets(verbose)?.contains(&target) {
+            if !uses_xargo && !available_targets.is_installed(&target) {
                 rustup::install(&target, verbose)?;
-            }
-
-            if uses_xargo && !rustup::rust_src_is_installed(verbose)? {
+            } else if !rustup::rust_src_is_installed(verbose)? {
                 rustup::install_rust_src(verbose)?;
             }
 
