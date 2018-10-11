@@ -107,7 +107,7 @@ impl Target {
     }
 
     fn is_bsd(&self) -> bool {
-        self.triple().contains("bsd")
+        self.triple().contains("bsd") || self.triple().contains("dragonfly")
     }
 
     fn is_solaris(&self) -> bool {
