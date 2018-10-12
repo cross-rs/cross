@@ -196,17 +196,17 @@ worst, "hang" (never terminate).
 | `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
 | `arm-linux-androideabi` [5]          | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
+| `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
 | `armv7-linux-androideabi` [5]        | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
-| `asmjs-unknown-emscripten` [4]       | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
+| `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
+| `asmjs-unknown-emscripten` [4]       | 1.1.20 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `i686-linux-android` [5]             | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 7.3.0   | N/A     | ✓   | N/A   |   ✓    |
 | `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0   | 1.0.2p  |     | N/A   |        |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1   | 1.0.2p  |     | N/A   |   ✓    |
+| `i686-unknown-linux-musl`            | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
 | `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
 | `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
@@ -228,7 +228,7 @@ worst, "hang" (never terminate).
 | `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 | `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0   | 1.0.2p  |     | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `x86_64-unknown-linux-musl`          | 1.1.15 | 5.3.1   | 1.0.2p  |     | N/A   |   ✓    |
+| `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
 | `x86_64-unknown-netbsd`[1]           | 7.0    | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 
 [1] For *BSD and Solaris targets, the libc column indicates the OS release version from

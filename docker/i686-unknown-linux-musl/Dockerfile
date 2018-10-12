@@ -1,4 +1,4 @@
-FROM i386/ubuntu:16.04
+FROM ubuntu:18.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -13,17 +13,13 @@ COPY xargo.sh /
 RUN bash /xargo.sh
 
 COPY musl.sh /
-RUN apt-get install -y --no-install-recommends \
-    gcc-multilib && \
-    bash /musl.sh 1.1.15 i386 -m32
-
-ENV CC_i686_unknown_linux_musl=musl-gcc
+RUN bash /musl.sh TARGET=i686-linux-musl
 
 COPY openssl.sh /
-RUN apt-get install -y --no-install-recommends \
-    g++-multilib && \
-    bash /openssl.sh linux-elf musl- -m32
+RUN bash /openssl.sh linux-elf i686-linux-musl-
 
-ENV OPENSSL_DIR=/openssl \
+ENV CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_LINKER=i686-linux-musl-gcc \
+    CC_i686_unknown_linux_musl=i686-linux-musl-gcc \
+    OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib

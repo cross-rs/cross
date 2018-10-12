@@ -6,6 +6,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - Bump OpenSSL version to 1.0.2p.
+- Bump musl version to 1.1.20.
+- Bump Ubuntu to 18.04 to all musl targets.
+- Bump gcc version to 6.3.0 for all musl targets.
+- Add OpenSSL support for the arm-unknown-linux-musleabi target.
+- Add OpenSSL support for the armv7-unknown-linux-musleabihf target.
 
 ## [v0.1.14] - 2017-11-22
 
