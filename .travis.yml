@@ -25,6 +25,7 @@ matrix:
 
     # Linux musl
     - env: TARGET=aarch64-unknown-linux-musl                    STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=arm-unknown-linux-musleabihf                  STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=arm-unknown-linux-musleabi                    STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=armv7-unknown-linux-musleabihf                STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=i686-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
