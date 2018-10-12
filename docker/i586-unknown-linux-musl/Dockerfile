@@ -20,6 +20,7 @@ RUN bash /openssl.sh linux-elf i586-linux-musl-
 
 ENV CARGO_TARGET_I586_UNKNOWN_LINUX_MUSL_LINKER=i586-linux-musl-gcc \
     CC_i586_unknown_linux_musl=i586-linux-musl-gcc \
+    CXX_i586_unknown_linux_musl=i586-linux-musl-g++ \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib

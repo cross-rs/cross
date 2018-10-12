@@ -33,6 +33,7 @@ ENV RUSTFLAGS="-C link-arg=-lgcc"
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUNNER=qemu-aarch64 \
     CC_aarch64_unknown_linux_musl=aarch64-linux-musl-gcc \
+    CXX_aarch64_unknown_linux_musl=aarch64-linux-musl-g++ \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib \
