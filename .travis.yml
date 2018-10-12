@@ -34,6 +34,10 @@ matrix:
     - env: TARGET=armv7-unknown-linux-musleabihf                STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=i586-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=i686-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
+    # We only test CPP in mips and mipsl because they use dynamic link by default.
+    # The other targets fails with: undefined reference to `__dso_handle'
+    # See https://github.com/rust-lang/rust/issues/36710
+    - env: TARGET=mips-unknown-linux-musl         CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=x86_64-unknown-linux-musl                     STD=1 OPENSSL=0.5.5  RUN=1 DEPLOY=1
 
     # Android
