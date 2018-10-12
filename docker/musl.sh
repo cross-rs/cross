@@ -1,5 +1,21 @@
 set -ex
 
+hide_output() {
+    set +x
+    on_err="
+echo ERROR: An error was encountered with the build.
+cat /tmp/build.log
+exit 1
+"
+    trap "$on_err" ERR
+    bash -c "while true; do sleep 30; echo \$(date) - building ...; done" &
+    PING_LOOP_PID=$!
+    "$@" &> /tmp/build.log
+    trap - ERR
+    kill $PING_LOOP_PID
+    set -x
+}
+
 main() {
     local dependencies=(
         ca-certificates
@@ -26,12 +42,12 @@ main() {
     echo "469b3af68a49188c8db4cc94077719152c0d41f1  musl-1.1.20.tar.gz" \
             > hashes/musl-1.1.20.tar.gz.sha1
 
-    nice make install -j$(nproc) \
+    hide_output nice make install -j$(nproc) \
         GCC_VER=6.3.0 \
         MUSL_VER=1.1.20 \
         DL_CMD="curl -C - -L -o" \
         OUTPUT=/usr/local/ \
-        "${@}"
+        "$@"
 
     # clean up
     apt-get purge --auto-remove -y ${purge_list[@]}
