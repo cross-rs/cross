@@ -38,6 +38,7 @@ matrix:
     # The other targets fails with: undefined reference to `__dso_handle'
     # See https://github.com/rust-lang/rust/issues/36710
     - env: TARGET=mips-unknown-linux-musl         CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=mipsel-unknown-linux-musl       CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=x86_64-unknown-linux-musl                     STD=1 OPENSSL=0.5.5  RUN=1 DEPLOY=1
 
     # Android
