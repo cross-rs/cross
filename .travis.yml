@@ -32,6 +32,7 @@ matrix:
     #        undefined reference to `__sync_add_and_fetch_4'
     - env: TARGET=armv5te-unknown-linux-musleabi                STD=1                RUN=1
     - env: TARGET=armv7-unknown-linux-musleabihf                STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=i586-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=i686-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=x86_64-unknown-linux-musl                     STD=1 OPENSSL=0.5.5  RUN=1 DEPLOY=1
 
