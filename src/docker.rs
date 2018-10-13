@@ -74,7 +74,6 @@ pub fn run(target: &Target,
            root: &Root,
            toml: Option<&Toml>,
            uses_xargo: bool,
-           needs_interpreter: bool,
            verbose: bool)
            -> Result<ExitStatus> {
     let root = root.path();
@@ -127,7 +126,7 @@ pub fn run(target: &Target,
         docker.args(&["-e", &format!("CROSS_DEBUG={}", value)]);
     }
 
-    let mut runner = target.default_runner();
+    let mut runner = None;
 
     if let Some(toml) = toml {
         for var in toml.env_passthrough(target)? {
@@ -144,23 +143,11 @@ pub fn run(target: &Target,
             docker.args(&["-e", var]);
         }
 
-        if let Some(r) = toml.runner(target)? {
-            runner = r;
-        }
-    }
-
-    if runner.is_none() && needs_interpreter {
-        if target.default_runner().is_none() {
-            bail!("{} target does not support a runner to be used with {:?} subcommand",
-                  target.triple(),
-                  args[0]);
-        } else {
-            bail!("none runner cannot be used with the command: {:?}", cmd);
-        }
+        runner = toml.runner(target)?;
     }
 
     docker
-        .args(&["-e", &format!("CROSS_RUNNER={}", runner)])
+        .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(|| String::new()))])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", root.display())])

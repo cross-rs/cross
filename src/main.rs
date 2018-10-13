@@ -15,7 +15,6 @@ mod extensions;
 mod file;
 mod id;
 mod interpreter;
-mod runner;
 mod rustc;
 mod rustup;
 
@@ -26,7 +25,6 @@ use std::{env, io, process};
 use toml::{Parser, Value};
 
 use cargo::Root;
-use runner::Runner;
 use errors::*;
 use rustc::{TargetList, VersionMetaExt};
 
@@ -135,34 +133,6 @@ impl Target {
     fn needs_docker(&self) -> bool {
         self.is_linux() || self.is_android() || self.is_bare_metal() || self.is_bsd() ||
         self.is_solaris() || !self.is_builtin() || self.is_windows() || self.is_emscripten()
-    }
-
-    fn runners(&self) -> &'static [Runner] {
-        if !self.needs_interpreter() {
-            &[Runner::Native]
-        } else if self.is_linux() || self.is_android() || self.is_bare_metal() {
-            if self == &Target::Aarch64UnknownLinuxGnu {
-                &[Runner::QemuUser, Runner::QemuSystem]
-            } else if self == &Target::S390xUnknownLinuxGnu {
-                &[Runner::None]
-            } else {
-                &[Runner::QemuUser]
-            }
-        } else if self.is_windows() {
-            &[Runner::Wine]
-        } else if self.is_emscripten() {
-            &[Runner::Node]
-        } else {
-            &[Runner::None]
-        }
-    }
-
-    fn default_runner(&self) -> Runner {
-        self.runners()[0]
-    }
-
-    fn is_valid_runner(&self, runner: Runner) -> bool {
-        self.runners().contains(&runner)
     }
 
     fn needs_interpreter(&self) -> bool {
@@ -283,7 +253,6 @@ fn run() -> Result<ExitStatus> {
                                    &root,
                                    toml.as_ref(),
                                    uses_xargo,
-                                   needs_interpreter,
                                    verbose);
             }
         }
@@ -315,32 +284,14 @@ impl Toml {
     }
 
     /// Returns the `target.{}.runner` part of `Cross.toml`
-    pub fn runner(&self, target: &Target) -> Result<Option<Runner>> {
+    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
         let triple = target.triple();
 
         if let Some(value) = self.table
             .lookup(&format!("target.{}.runner", triple)) {
             let value = value.as_str()
                 .ok_or_else(|| format!("target.{}.runner must be a string", triple))?
-                .parse()
-                .and_then(|v| if !target.is_valid_runner(v) {
-                    Err("")
-                } else {
-                    Ok(v)
-                })
-                .map_err(|_| {
-                    use std::fmt::Write;
-                    let mut inters = String::new();
-                    for i in target.runners() {
-                        write!(inters, "{}, ", i).unwrap();
-                    }
-                    inters.pop();
-                    inters.pop();
-                    format!("target.{}.runner must be one of: {}",
-                        triple,
-                        inters)
-                })?;
-
+                .to_string();
             Ok(Some(value))
         } else {
             Ok(None)

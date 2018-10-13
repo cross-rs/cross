@@ -17,15 +17,15 @@ case "$CROSS_RUNNER" in
     native)
         exec "${@}"
         ;;
-    qemu-user)
+    qemu-user | "")
         exec qemu-$arch "${@}"
         ;;
     qemu-system)
         true
         ;;
     *)
-        echo "Invalid CROSS_RUNNER: $CROSS_RUNNER";
-        echo "This is a bug, please report it at https://github.com/japaric/cross"
+        echo "Invalid runner: \"$CROSS_RUNNER\"";
+        echo "Valid runners are: native, qemu-user and qemu-system"
         exit 1
         ;;
 esac
