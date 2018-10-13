@@ -40,6 +40,7 @@ main() {
     pushd $td
 
     cd gcc
+    sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites
     ./contrib/download_prerequisites
     cd ..
 

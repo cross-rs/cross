@@ -26,24 +26,6 @@ main() {
         rm -rf $td
     fi
 
-    # `cross run` test for thumb targets
-    case $TARGET in
-        thumb*-none-eabi*)
-            td=$(mktemp -d)
-
-            git clone \
-                --depth 1 \
-                --recursive \
-                https://github.com/japaric/cortest $td
-
-            pushd $td
-            cross run --target $TARGET --example hello --release
-            popd
-
-            rm -rf $td
-        ;;
-    esac
-
     # `cross build` test for targets where `std` is not available
     if [ -z "$STD" ]; then
         td=$(mktemp -d)
@@ -88,12 +70,14 @@ EOF
         popd
 
         rm -rf $td
-    else
+    elif [[ "$TARGET" != thumb* ]]; then
         td=$(mktemp -d)
 
         git clone --depth 1 https://github.com/japaric/xargo $td
 
         pushd $td
+        sed -i -e 's/#!\[deny(warnings)\]//g' src/main.rs
+        sed -i -e 's/unused_doc_comment/unused_doc_comments/g' src/errors.rs
         cross build --target $TARGET
         popd
 
@@ -112,30 +96,46 @@ EOF
                 $td
 
             pushd $td
-            cross test \
-                  --no-default-features \
-                  --features "gen-tests mangled-names" \
-                  --target $TARGET
+            cross test --manifest-path testcrate/Cargo.toml --target $TARGET
             popd
 
             rm -rf $td
         fi
 
         # `cross run` test
-        td=$(mktemp -d)
+        case $TARGET in
+            thumb*-none-eabi*)
+                td=$(mktemp -d)
 
-        cargo init --bin --name hello $td
+                git clone \
+                    --depth 1 \
+                    --recursive \
+                    https://github.com/japaric/cortest $td
 
-        pushd $td
-        mkdir examples tests
-        echo "fn main() { println!(\"Example!\"); }" > examples/e.rs
-        echo "#[test] fn t() {}" > tests/t.rs
-        cross run --target $TARGET
-        cross run --target $TARGET --example e
-        cross test --target $TARGET
-        popd
+                pushd $td
+                cross run --target $TARGET --example hello --release
+                popd
 
-        rm -rf $td
+                rm -rf $td
+            ;;
+            *)
+                td=$(mktemp -d)
+
+                cargo init --bin --name hello $td
+
+                pushd $td
+                mkdir examples tests
+                echo "fn main() { println!(\"Example!\"); }" > examples/e.rs
+                echo "#[test] fn t() {}" > tests/t.rs
+                cross run --target $TARGET
+                cross run --target $TARGET --example e
+                cross test --target $TARGET
+                popd
+
+                rm -rf $td
+            ;;
+        esac
+
     fi
 
     # Test C++ support

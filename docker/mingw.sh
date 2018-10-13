@@ -23,11 +23,8 @@ main() {
         fi
     done
 
-    # The build fails with the default gcc-6-source version (6.3.0-12ubuntu2)
-    # Downgrading to the previous version makes the build works
-    echo "deb http://archive.ubuntu.com/ubuntu yakkety main universe" >> /etc/apt/sources.list
     apt-get update
-    apt-get install -y --no-install-recommends gcc-6-source=6.2.0-5ubuntu12 ${purge_list[@]}
+    apt-get install -y --no-install-recommends ${purge_list[@]}
 
     pushd $td
 
@@ -36,11 +33,13 @@ main() {
 
     # We are using dwarf exceptions instead of sjlj
     sed -i -e 's/libgcc_s_sjlj-1/libgcc_s_dw2-1/g' debian/gcc-mingw-w64-i686.install
+    # Do not install gcc with win32 thread model
+    sed -i -e '/i686-w64-mingw32-gcc-win32/d' debian/gcc-mingw-w64-i686.install
 
     # Only build i686 packages (disable x86_64)
     patch -p0 <<'EOF'
---- debian/control.template.ori	2017-06-02 15:58:53.965834005 -0300
-+++ debian/control.template
+--- debian/control.template.ori	2018-03-12 16:25:30.000000000 +0000
++++ debian/control.template	2018-03-12 16:25:30.000000000 +0000
 @@ -1,7 +1,6 @@
  Package: @@PACKAGE@@-mingw-w64
  Architecture: all
@@ -77,29 +76,28 @@ EOF
     # Disable build of fortran,objc,obj-c++ and use configure options
     # --disable-sjlj-exceptions --with-dwarf2
     patch -p0 <<'EOF'
---- debian/rules.ori     2016-08-20 15:24:54.000000000 +0000
-+++ debian/rules
-@@ -57,9 +57,7 @@
+--- debian/rules.ori	2018-03-12 16:25:30.000000000 +0000
++++ debian/rules	2018-03-12 16:25:30.000000000 +0000
+@@ -58,7 +58,7 @@
      INSTALL_TARGET := install-gcc
  else
  # Build the full GCC.
--    languages := c,c++,fortran,objc,obj-c++
--    debian_extra_langs := ada
--    export debian_extra_langs
+-    languages := c,c++,fortran,objc,obj-c++,ada
 +    languages := c,c++
      BUILD_TARGET :=
      INSTALL_TARGET := install install-lto-plugin
  endif
-@@ -86,7 +84,7 @@
+@@ -85,7 +85,7 @@
  	sed -i 's/@@VERSION@@/$(target_version)/g' debian/control
  	touch $@
  
 -targets := i686-w64-mingw32 x86_64-w64-mingw32
 +targets := i686-w64-mingw32
- threads := posix win32
+-threads := posix win32
++threads := posix
  
  # Hardening on the host, none on the target
-@@ -213,6 +211,10 @@
+@@ -216,6 +216,10 @@
  # Enable libatomic
  CONFFLAGS += \
  	--enable-libatomic
@@ -107,13 +105,13 @@ EOF
 +CONFFLAGS += \
 +	--disable-sjlj-exceptions \
 +	--with-dwarf2
- 
- spelling = grep -rl "$(1)" $(upstream_dir) | xargs -r sed -i "s/$(1)/$(2)/g"
- 
+ # Enable experimental::filesystem
+ CONFFLAGS += \
+ 	--enable-libstdcxx-filesystem-ts=yes
 EOF
 
     # Build the modified mingw packages
-    MAKEFLAGS=--silent dpkg-buildpackage -nc -B
+    MAKEFLAGS=--silent dpkg-buildpackage -nc -B --jobs=auto
 
     # Replace installed mingw packages with the new ones
     dpkg -i ../g*-mingw-w64-i686*.deb ../gcc-mingw-w64-base*.deb

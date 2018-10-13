@@ -9,12 +9,9 @@ matrix:
     # Linux
     - env: TARGET=aarch64-unknown-linux-gnu       CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=arm-unknown-linux-gnueabi       CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
-    - env: TARGET=arm-unknown-linux-musleabi                    STD=1                RUN=1
     - env: TARGET=armv7-unknown-linux-gnueabihf   CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
-    - env: TARGET=armv7-unknown-linux-musleabihf                STD=1                RUN=1
     - env: TARGET=i586-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=i686-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
-    - env: TARGET=i686-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=mips-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=mips64-unknown-linux-gnuabi64   CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1
     - env: TARGET=mips64el-unknown-linux-gnuabi64 CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1
@@ -26,6 +23,23 @@ matrix:
     - env: TARGET=sparc64-unknown-linux-gnu       CPP=1 DYLIB=1       OPENSSL=0.5.5  RUN=1
     - env: TARGET=x86_64-unknown-linux-gnu        CPP=1 DYLIB=1       OPENSSL=0.5.5  RUN=1 DEPLOY=1
     - env: TARGET=x86_64-unknown-linux-gnux32     CPP=1 DYLIB=1       OPENSSL=0.5.5  RUN=1
+
+    # Linux musl
+    - env: TARGET=aarch64-unknown-linux-musl                    STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=arm-unknown-linux-musleabihf                  STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=arm-unknown-linux-musleabi                    STD=1 OPENSSL=0.5.5  RUN=1
+    # FIXME: enabling openssl makes cargo build fails with:
+    #        undefined reference to `__sync_sub_and_fetch_4'
+    #        undefined reference to `__sync_add_and_fetch_4'
+    - env: TARGET=armv5te-unknown-linux-musleabi                STD=1                RUN=1
+    - env: TARGET=armv7-unknown-linux-musleabihf                STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=i586-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=i686-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
+    # We only test CPP in mips and mipsl because they use dynamic link by default.
+    # The other targets fails with: undefined reference to `__dso_handle'
+    # See https://github.com/rust-lang/rust/issues/36710
+    - env: TARGET=mips-unknown-linux-musl         CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=mipsel-unknown-linux-musl       CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=x86_64-unknown-linux-musl                     STD=1 OPENSSL=0.5.5  RUN=1 DEPLOY=1
 
     # Android
@@ -36,20 +50,21 @@ matrix:
     - env: TARGET=x86_64-linux-android            CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
 
     # OSX
-    - env: TARGET=i686-apple-darwin                     DYLIB=1 STD=1                RUN=1
+    - env: TARGET=i686-apple-darwin               CPP=1 DYLIB=1 STD=1                RUN=1
       os: osx
-    - env: TARGET=x86_64-apple-darwin                   DYLIB=1 STD=1                RUN=1 DEPLOY=1
+    - env: TARGET=x86_64-apple-darwin             CPP=1 DYLIB=1 STD=1                RUN=1 DEPLOY=1
       os: osx
 
     # BSD
+    # FIXME: freebsd fails to link when CPP=1
     - env: TARGET=i686-unknown-freebsd                  DYLIB=1 STD=1 OPENSSL=0.7.17
-    - env: TARGET=x86_64-unknown-dragonfly              DYLIB=1       OPENSSL=0.5.5
+    - env: TARGET=x86_64-unknown-dragonfly        CPP=1 DYLIB=1       OPENSSL=0.5.5
     - env: TARGET=x86_64-unknown-freebsd                DYLIB=1 STD=1 OPENSSL=0.5.5
-    - env: TARGET=x86_64-unknown-netbsd                 DYLIB=1 STD=1 OPENSSL=0.7.17
+    - env: TARGET=x86_64-unknown-netbsd           CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
 
     # Solaris
-    - env: TARGET=sparcv9-sun-solaris                   DYLIB=1 STD=1 OPENSSL=0.7.17
-    - env: TARGET=x86_64-sun-solaris                    DYLIB=1 STD=1 OPENSSL=0.7.17
+    - env: TARGET=sparcv9-sun-solaris             CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
+    - env: TARGET=x86_64-sun-solaris              CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
 
     # Windows
     - env: TARGET=x86_64-pc-windows-gnu           CPP=1         STD=1                RUN=1
@@ -62,10 +77,16 @@ matrix:
       rust: nightly-2017-10-24
 
     # Bare metal
-    - env: TARGET=thumbv6m-none-eabi                                                 RUN=1
-    - env: TARGET=thumbv7em-none-eabi                                                RUN=1
-    - env: TARGET=thumbv7em-none-eabihf                                              RUN=1
-    - env: TARGET=thumbv7m-none-eabi                                                 RUN=1
+    - env: TARGET=thumbv6m-none-eabi                            STD=1
+    - env: TARGET=thumbv7em-none-eabi                           STD=1
+    - env: TARGET=thumbv7em-none-eabihf                         STD=1
+    - env: TARGET=thumbv7m-none-eabi                            STD=1
+
+
+before_install:
+  # workaround for https://github.com/travis-ci/travis-ci/issues/4704
+  - python3 -c 'import os,sys; os.set_blocking(sys.stdout.fileno(), True)'
+
 
 install:
   - curl https://sh.rustup.rs -sSf |

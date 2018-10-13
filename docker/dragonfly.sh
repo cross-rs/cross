@@ -40,6 +40,7 @@ main() {
     pushd $td
 
     cd gcc
+    sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites
     ./contrib/download_prerequisites
     patch -p0 <<'EOF'
 --- libatomic/configure.tgt.orig	2015-07-09 16:08:55 UTC

@@ -18,10 +18,10 @@ RUN bash /qemu.sh arm
 COPY musl.sh /
 RUN bash /musl.sh \
     TARGET=arm-linux-musleabihf \
-    "COMMON_CONFIG += --with-arch=armv7-a \
-                      --with-fpu=neon \
+    "COMMON_CONFIG += --with-arch=armv6 \
+                      --with-fpu=vfp \
                       --with-float=hard \
-                      --with-mode=thumb"
+                      --with-mode=arm"
 
 COPY openssl.sh /
 RUN bash /openssl.sh linux-armv4 arm-linux-musleabihf-
@@ -30,12 +30,12 @@ RUN bash /openssl.sh linux-armv4 arm-linux-musleabihf-
 RUN ln -sf \
     /usr/local/arm-linux-musleabihf/lib/libc.so \
     /usr/local/arm-linux-musleabihf/lib/ld-musl-armhf.so.1
-ENV QEMU_LD_PREFIX=/usr/local/arm-linux-musleabihd
+ENV QEMU_LD_PREFIX=/usr/local/arm-linux-musleabihf
 
-ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-musleabihf-gcc \
-    CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_RUNNER=qemu-arm \
-    CC_armv7_unknown_linux_musleabihf=arm-linux-musleabihf-gcc \
-    CXX_armv7_unknown_linux_musleabihf=arm-linux-musleabihf-g++ \
+ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-musleabihf-gcc \
+    CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_RUNNER=qemu-arm \
+    CC_arm_unknown_linux_musleabihf=arm-linux-musleabihf-gcc \
+    CXX_arm_unknown_linux_musleabihf=arm-linux-musleabihf-g++ \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib \

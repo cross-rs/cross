@@ -18,7 +18,7 @@ RUN bash /qemu.sh arm
 COPY musl.sh /
 RUN bash /musl.sh \
     TARGET=arm-linux-musleabi \
-    "COMMON_CONFIG += --with-arch=armv6 \
+    "COMMON_CONFIG += --with-arch=armv5te \
                       --with-float=soft \
                       --with-mode=arm"
 
@@ -31,10 +31,10 @@ RUN ln -sf \
     /usr/local/arm-linux-musleabi/lib/ld-musl-arm.so.1
 ENV QEMU_LD_PREFIX=/usr/local/arm-linux-musleabi
 
-ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABI_LINKER=arm-linux-musleabi-gcc \
-    CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABI_RUNNER=qemu-arm \
-    CC_arm_unknown_linux_musleabi=arm-linux-musleabi-gcc \
-    CXX_arm_unknown_linux_musleabi=arm-linux-musleabi-g++ \
+ENV CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_MUSLEABI_LINKER=arm-linux-musleabi-gcc \
+    CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_MUSLEABI_RUNNER=qemu-arm \
+    CC_armv5te_unknown_linux_musleabi=arm-linux-musleabi-gcc \
+    CXX_armv5te_unknown_linux_musleabi=arm-linux-musleabi-g++ \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib \
