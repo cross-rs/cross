@@ -18,6 +18,7 @@ main() {
         make
         patch
         pkg-config
+        python
         zlib1g-dev
     )
 
@@ -105,6 +106,38 @@ diff -ur qemu-2.10.0/linux-user/syscall_defs.h qemu-2.10.0.new/linux-user/syscal
  #define TARGET_BLKROSET   TARGET_IO(0x12,93) /* set device read-only (0 = read-write) */
 EOF
    fi
+
+# Fix build with new glibc
+# See https://git.qemu.org/?p=qemu.git;a=commit;h=75e5b70e6b5dcc4f2219992d7cffa462aa406af0
+
+    patch -p1 <<'EOF'
+--- a/util/memfd.c
++++ b/util/memfd.c
+@@ -31,9 +31,7 @@
+ 
+ #include "qemu/memfd.h"
+ 
+-#ifdef CONFIG_MEMFD
+-#include <sys/memfd.h>
+-#elif defined CONFIG_LINUX
++#if defined CONFIG_LINUX && !defined CONFIG_MEMFD
+ #include <sys/syscall.h>
+ #include <asm/unistd.h>
+EOF
+
+    patch -p1 <<'EOF'
+--- a/configure
++++ b/configure
+@@ -3923,7 +3923,7 @@ fi
+ # check if memfd is supported
+ memfd=no
+ cat > $TMPC << EOF
+-#include <sys/memfd.h>
++#include <sys/mman.h>
+ 
+ int main(void)
+ {
+EOF
 
     ./configure \
         --disable-kvm \

@@ -1,13 +1,26 @@
 set -ex
 
-main() {
-    local version=$1 \
-          target=$2
+hide_output() {
+    set +x
+    on_err="
+echo ERROR: An error was encountered with the build.
+cat /tmp/build.log
+exit 1
+"
+    trap "$on_err" ERR
+    bash -c "while true; do sleep 30; echo \$(date) - building ...; done" &
+    PING_LOOP_PID=$!
+    "$@" &> /tmp/build.log
+    trap - ERR
+    kill $PING_LOOP_PID
+    set -x
+}
 
+main() {
     local dependencies=(
         ca-certificates
         curl
-        make
+        build-essential
     )
 
     apt-get update
@@ -22,26 +35,19 @@ main() {
     local td=$(mktemp -d)
 
     pushd $td
-    curl https://www.musl-libc.org/releases/musl-$version.tar.gz | \
+    curl -L https://github.com/richfelker/musl-cross-make/archive/v0.9.7.tar.gz | \
         tar --strip-components=1 -xz
 
-    if [ ! -z $target ]; then
-        ln -s /usr/bin/{,$target-}ar
-        ln -s /usr/bin/{,$target-}cc
-        ln -s /usr/bin/{,$target-}ranlib
-    fi
+    # musl-cross-make 0.9.7 does not have musl 1.1.20 hash
+    echo "469b3af68a49188c8db4cc94077719152c0d41f1  musl-1.1.20.tar.gz" \
+            > hashes/musl-1.1.20.tar.gz.sha1
 
-    CFLAGS="-fPIC ${@:3}" ./configure \
-          --disable-shared \
-          --prefix=/usr/local \
-          $(test -z $target || echo --target=$target)
-    nice make -j$(nproc)
-    nice make install
-    ln -s /usr/bin/ar /usr/local/bin/musl-ar
-
-    if [ ! -z $target ]; then
-        rm /usr/bin/$target-{ar,ranlib}
-    fi
+    hide_output nice make install -j$(nproc) \
+        GCC_VER=6.3.0 \
+        MUSL_VER=1.1.20 \
+        DL_CMD="curl -C - -L -o" \
+        OUTPUT=/usr/local/ \
+        "$@"
 
     # clean up
     apt-get purge --auto-remove -y ${purge_list[@]}

@@ -9,12 +9,9 @@ matrix:
     # Linux
     - env: TARGET=aarch64-unknown-linux-gnu       CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=arm-unknown-linux-gnueabi       CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
-    - env: TARGET=arm-unknown-linux-musleabi                    STD=1                RUN=1
     - env: TARGET=armv7-unknown-linux-gnueabihf   CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
-    - env: TARGET=armv7-unknown-linux-musleabihf                STD=1                RUN=1
     - env: TARGET=i586-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=i686-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
-    - env: TARGET=i686-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=mips-unknown-linux-gnu          CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=mips64-unknown-linux-gnuabi64   CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1
     - env: TARGET=mips64el-unknown-linux-gnuabi64 CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1
@@ -25,6 +22,23 @@ matrix:
     - env: TARGET=s390x-unknown-linux-gnu         CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
     - env: TARGET=sparc64-unknown-linux-gnu       CPP=1 DYLIB=1       OPENSSL=0.5.5  RUN=1
     - env: TARGET=x86_64-unknown-linux-gnu        CPP=1 DYLIB=1       OPENSSL=0.5.5  RUN=1 DEPLOY=1
+
+    # Linux musl
+    - env: TARGET=aarch64-unknown-linux-musl                    STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=arm-unknown-linux-musleabihf                  STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=arm-unknown-linux-musleabi                    STD=1 OPENSSL=0.5.5  RUN=1
+    # FIXME: enabling openssl makes cargo build fails with:
+    #        undefined reference to `__sync_sub_and_fetch_4'
+    #        undefined reference to `__sync_add_and_fetch_4'
+    - env: TARGET=armv5te-unknown-linux-musleabi                STD=1                RUN=1
+    - env: TARGET=armv7-unknown-linux-musleabihf                STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=i586-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=i686-unknown-linux-musl                       STD=1 OPENSSL=0.5.5  RUN=1
+    # We only test CPP in mips and mipsl because they use dynamic link by default.
+    # The other targets fails with: undefined reference to `__dso_handle'
+    # See https://github.com/rust-lang/rust/issues/36710
+    - env: TARGET=mips-unknown-linux-musl         CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
+    - env: TARGET=mipsel-unknown-linux-musl       CPP=1         STD=1 OPENSSL=0.5.5  RUN=1
     - env: TARGET=x86_64-unknown-linux-musl                     STD=1 OPENSSL=0.5.5  RUN=1 DEPLOY=1
 
     # Android
