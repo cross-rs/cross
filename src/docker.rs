@@ -12,6 +12,8 @@ use extensions::CommandExt;
 use id;
 use rustc;
 
+const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
+
 lazy_static! {
     /// Retrieve the Docker Daemon version.
     ///
@@ -145,18 +147,22 @@ pub fn run(target: &Target,
 }
 
 fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
-    Ok(if let Some(toml) = toml {
-            toml.image(target)?.map(|s| s.to_owned())
-        } else {
-            None
+    if let Some(toml) = toml {
+        if let Some(image) = toml.image(target)?.map(|s| s.to_owned()) {
+            return Ok(image)
         }
-        .unwrap_or_else(|| {
-            let version = env!("CARGO_PKG_VERSION");
-            let tag = if version.ends_with("-dev") {
-                Cow::from("latest")
-            } else {
-                Cow::from(format!("v{}", version))
-            };
-            format!("japaric/{}:{}", target.triple(), tag)
-        }))
+    }
+
+    let version = env!("CARGO_PKG_VERSION");
+    let tag = if version.ends_with("-dev") {
+        Cow::from("latest")
+    } else {
+        Cow::from(format!("v{}", version))
+    };
+    let triple = target.triple();
+    if !DOCKER_IMAGES.contains(&triple) {
+        bail!("cross does not provide docker image for {} target, \
+               specify a custom image in Cross.toml", triple);
+    }
+    Ok(format!("japaric/{}:{}", target.triple(), tag))
 }

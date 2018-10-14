@@ -4,14 +4,22 @@ use Target;
 use errors::*;
 use extensions::CommandExt;
 
+#[derive(Debug)]
 pub struct AvailableTargets {
-    triples: Vec<String>,
+    default: String,
+    installed: Vec<String>,
+    not_installed: Vec<String>,
 }
 
 impl AvailableTargets {
     pub fn contains(&self, target: &Target) -> bool {
+        let triple = target.triple();
+        self.is_installed(target) || self.not_installed.iter().any(|x| x == triple)
+    }
+
+    pub fn is_installed(&self, target: &Target) -> bool {
         let target = target.triple();
-        self.triples.iter().any(|t| t == target)
+        target == self.default || self.installed.iter().any(|x| x == target)
     }
 }
 
@@ -19,16 +27,23 @@ pub fn available_targets(verbose: bool) -> Result<AvailableTargets> {
     let out = Command::new("rustup").args(&["target", "list"])
         .run_and_get_stdout(verbose)?;
 
-    Ok(AvailableTargets {
-        triples: out.lines()
-            .filter_map(|line| if line.contains("installed") ||
-                                  line.contains("default") {
-                None
-            } else {
-                Some(line.to_owned())
-            })
-            .collect(),
-    })
+    let mut default = String::new();
+    let mut installed = vec![];
+    let mut not_installed = vec![];
+
+    for line in out.lines() {
+        let target = line.split(' ').next().unwrap().to_string();
+        if line.contains("(default)") {
+            assert!(default.is_empty());
+            default = target;
+        } else if line.contains("(installed)") {
+            installed.push(target)
+        } else {
+            not_installed.push(target)
+        }
+    }
+
+    Ok(AvailableTargets { default, installed, not_installed })
 }
 
 pub fn install(target: &Target, verbose: bool) -> Result<()> {
