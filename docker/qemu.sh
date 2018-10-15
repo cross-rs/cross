@@ -41,26 +41,6 @@ main() {
     # https://lists.nongnu.org/archive/html/qemu-trivial/2017-10/msg00023.html
     if [[ "$os" == "android" ]]; then
       patch -p1 <<'EOF'
-diff -ur qemu-2.10.0/linux-user/elfload.c qemu-2.10.0.new/linux-user/elfload.c
---- qemu-2.10.0/linux-user/elfload.c	2017-09-27 11:27:13.866595788 -0300
-+++ qemu-2.10.0.new/linux-user/elfload.c	2017-09-27 11:58:30.662613425 -0300
-@@ -1354,7 +1354,7 @@
-                                  ~(abi_ulong)(TARGET_ELF_EXEC_PAGESIZE-1))
- #define TARGET_ELF_PAGEOFFSET(_v) ((_v) & (TARGET_ELF_EXEC_PAGESIZE-1))
- 
--#define DLINFO_ITEMS 14
-+#define DLINFO_ITEMS 15
- 
- static inline void memcpy_fromfs(void * to, const void * from, unsigned long n)
- {
-@@ -1782,6 +1782,7 @@
-     NEW_AUX_ENT(AT_HWCAP, (abi_ulong) ELF_HWCAP);
-     NEW_AUX_ENT(AT_CLKTCK, (abi_ulong) sysconf(_SC_CLK_TCK));
-     NEW_AUX_ENT(AT_RANDOM, (abi_ulong) u_rand_bytes);
-+    NEW_AUX_ENT(AT_SECURE, (abi_ulong) (getuid() != geteuid() || getgid() != getegid()));
- 
- #ifdef ELF_HWCAP2
-     NEW_AUX_ENT(AT_HWCAP2, (abi_ulong) ELF_HWCAP2);
 diff -ur qemu-2.10.0/linux-user/ioctls.h qemu-2.10.0.new/linux-user/ioctls.h
 --- qemu-2.10.0/linux-user/ioctls.h	2017-09-27 11:27:13.858595669 -0300
 +++ qemu-2.10.0.new/linux-user/ioctls.h	2017-09-27 11:43:40.613299859 -0300
