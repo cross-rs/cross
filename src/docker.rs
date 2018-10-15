@@ -113,13 +113,20 @@ pub fn run(target: &Target,
     docker
         .arg("--rm")
         .args(&["--user", &format!("{}:{}", id::user(), id::group())])
+        .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-e", "CARGO_HOME=/cargo"])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
         .args(&["-e", &format!("USER={}", id::username())]);
 
-    if let Some(strace) = env::var("QEMU_STRACE").ok() {
-        docker.args(&["-e", &format!("QEMU_STRACE={}", strace)]);
+    if let Some(value) = env::var("QEMU_STRACE").ok() {
+        docker.args(&["-e", &format!("QEMU_STRACE={}", value)]);
     }
+
+    if let Some(value) = env::var("CROSS_DEBUG").ok() {
+        docker.args(&["-e", &format!("CROSS_DEBUG={}", value)]);
+    }
+
+    let mut runner = None;
 
     if let Some(toml) = toml {
         for var in toml.env_passthrough(target)? {
@@ -127,14 +134,20 @@ pub fn run(target: &Target,
                 bail!("environment variable names must not contain the '=' character");
             }
 
+            if var == "CROSS_RUNNER" {
+                bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
+            }
+
             // Only specifying the environment variable name in the "-e"
             // flag forwards the value from the parent shell
             docker.args(&["-e", var]);
         }
+
+        runner = toml.runner(target)?;
     }
 
     docker
-        .args(&["-e", "XARGO_HOME=/xargo"])
+        .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(|| String::new()))])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", root.display())])

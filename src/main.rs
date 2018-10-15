@@ -237,10 +237,12 @@ fn run() -> Result<ExitStatus> {
                 rustup::install_rust_src(verbose)?;
             }
 
+            let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
+
             if target.needs_docker() &&
                args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
                 if version_meta.needs_interpreter() &&
-                    args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false) &&
+                    needs_interpreter &&
                     target.needs_interpreter() &&
                     !interpreter::is_registered(&target)? {
                         docker::register(&target, verbose)?
@@ -259,6 +261,7 @@ fn run() -> Result<ExitStatus> {
     cargo::run(&args.all, verbose)
 }
 
+
 /// Parsed `Cross.toml`
 pub struct Toml {
     table: Value,
@@ -275,6 +278,21 @@ impl Toml {
                 .ok_or_else(|| {
                     format!("target.{}.image must be a string", triple)
                 })?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Returns the `target.{}.runner` part of `Cross.toml`
+    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
+        let triple = target.triple();
+
+        if let Some(value) = self.table
+            .lookup(&format!("target.{}.runner", triple)) {
+            let value = value.as_str()
+                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?
+                .to_string();
+            Ok(Some(value))
         } else {
             Ok(None)
         }

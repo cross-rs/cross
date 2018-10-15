@@ -1,0 +1,100 @@
+#!/bin/bash
+
+set -e
+
+LOG=/tmp/qemu.log
+LOCK=/tmp/qemu.lock
+
+if [ -n "$CROSS_DEBUG" ]; then
+    set -x
+fi
+
+# arch in the rust target
+arch=$1
+shift
+
+case "$CROSS_RUNNER" in
+    native)
+        exec "${@}"
+        ;;
+    qemu-user | "")
+        exec qemu-$arch "${@}"
+        ;;
+    qemu-system)
+        true
+        ;;
+    *)
+        echo "Invalid runner: \"$CROSS_RUNNER\"";
+        echo "Valid runners are: native, qemu-user and qemu-system"
+        exit 1
+        ;;
+esac
+
+# 8 is the max number of cpu supported by qemu-aarch64
+n=$(nproc)
+n=$(( n > 8 ? 8 : n ))
+memory=1G
+driver9p="virtio-9p-device"
+drivernet="virtio-net-device"
+
+# select qemu parameters
+case "$arch" in
+    aarch64)
+        opt="-machine virt -cpu cortex-a57"
+        ;;
+esac
+
+(
+    flock -n 200 || exit 0
+
+    echo Booting QEMU virtual machine with $n cpus...
+
+    QEMU_CMD="qemu-system-$arch \
+        -m $memory \
+        -smp $n \
+        -nographic \
+        -monitor none \
+        -netdev user,id=net0,hostfwd=tcp::10022-:22 \
+        -device $drivernet,netdev=net0 \
+        -kernel /qemu/kernel \
+        -initrd /qemu/initrd.gz \
+        $opt \
+        -fsdev local,id=fs0,path=/target,security_model=mapped \
+        -device $driver9p,fsdev=fs0,mount_tag=target"
+
+    touch $LOG
+    if [ -n "$CROSS_DEBUG" ]; then
+        ($QEMU_CMD 2>&1 | tee -a $LOG) &
+    else
+        $QEMU_CMD 2>&1 >> $LOG &
+    fi
+
+    # wait for dropbear
+    for i in $(seq 240); do
+        if grep -q "Not backgrounding" $LOG; then
+            READY=1
+            break
+        fi
+        sleep 0.5s
+    done
+
+    if [ -z "$READY" ]; then
+        if [ -n "$CROSS_DEBUG" ]; then
+            echo "Not ready but continuing because CROSS_DEBUG is set"
+        else
+            echo "Qemu is not ready..."
+            echo "Set the environment variable CROSS_DEBUG=1 to debug"
+            exit 1
+        fi
+    fi
+
+    echo Booted in $(dbclient -K 1 -p 10022 -y -y root@localhost "cut -d' ' -f1 /proc/uptime") seconds
+
+) 200>$LOCK
+
+dbclient \
+    -t \
+    -p 10022 \
+    -y -y \
+    root@localhost \
+    "${@}"

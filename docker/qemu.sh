@@ -5,6 +5,7 @@ main() {
 
     local arch=$1 \
           os=$2 \
+          softmmu=$3 \
           td=$(mktemp -d)
 
     local dependencies=(
@@ -20,6 +21,8 @@ main() {
         pkg-config
         python
         zlib1g-dev
+        libcap-dev
+        libattr1-dev
     )
 
     apt-get update
@@ -119,12 +122,29 @@ EOF
  {
 EOF
 
+   local targets="$arch-linux-user"
+   local virtfs=""
+   case "$softmmu" in
+      softmmu)
+         targets="$targets,$arch-softmmu"
+         virtfs="--enable-virtfs"
+         ;;
+      "")
+         true
+         ;;
+      *)
+         echo "Invalid softmmu option: $softmmu"
+         exit 1
+         ;;
+   esac
+
     ./configure \
         --disable-kvm \
         --disable-vnc \
         --enable-user \
         --static \
-        --target-list=$arch-linux-user
+        $virtfs \
+        --target-list=$targets
     nice make -j$(nproc)
     make install
 

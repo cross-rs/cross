@@ -96,7 +96,7 @@ EOF
                 $td
 
             pushd $td
-            cross test --manifest-path testcrate/Cargo.toml --target $TARGET
+            cross_test --manifest-path testcrate/Cargo.toml --target $TARGET
             popd
 
             rm -rf $td
@@ -113,7 +113,7 @@ EOF
                     https://github.com/japaric/cortest $td
 
                 pushd $td
-                cross run --target $TARGET --example hello --release
+                cross_run --target $TARGET --example hello --release
                 popd
 
                 rm -rf $td
@@ -127,9 +127,9 @@ EOF
                 mkdir examples tests
                 echo "fn main() { println!(\"Example!\"); }" > examples/e.rs
                 echo "#[test] fn t() {}" > tests/t.rs
-                cross run --target $TARGET
-                cross run --target $TARGET --example e
-                cross test --target $TARGET
+                cross_run --target $TARGET
+                cross_run --target $TARGET --example e
+                cross_test --target $TARGET
                 popd
 
                 rm -rf $td
@@ -147,7 +147,7 @@ EOF
         pushd $td
         cargo update -p gcc
         if [ $RUN ]; then
-            cross run --target $TARGET
+            cross_run --target $TARGET
         else
             cross build --target $TARGET
         fi
@@ -177,6 +177,28 @@ EOF
         popd
 
         rm -rf $td
+    fi
+}
+
+cross_run() {
+    if [ -z "$RUNNERS" ]; then
+        cross run "$@"
+    else
+        for runner in $RUNNERS; do
+            echo -e "[target.$TARGET]\nrunner = \"$runner\"" > Cross.toml
+            cross run "$@"
+        done
+    fi
+}
+
+cross_test() {
+    if [ -z "$RUNNERS" ]; then
+        cross test "$@"
+    else
+        for runner in $RUNNERS; do
+            echo -e "[target.$TARGET]\nrunner = \"$runner\"" > Cross.toml
+            cross test "$@"
+        done
     fi
 }
 
