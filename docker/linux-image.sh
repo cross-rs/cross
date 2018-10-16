@@ -133,7 +133,7 @@ main() {
 
     # kernel
     if [ "$arch" = "sparc64" ]; then
-        # the but fails if the kernel is compressed
+        # boot fails if the kernel is compressed
         zcat $root/boot/vmlinu* > kernel
     else
         cp $root/boot/vmlinu* kernel
