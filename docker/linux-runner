@@ -42,7 +42,7 @@ case "$CROSS_RUNNER" in
         exec "${@}"
         ;;
     qemu-user | "")
-        exec qemu-$arch "${@}"
+        exec qemu-$qarch "${@}"
         ;;
     qemu-system)
         true
