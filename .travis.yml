@@ -20,7 +20,7 @@ matrix:
     - env: TARGET=powerpc64-unknown-linux-gnu     CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-user qemu-system"
     - env: TARGET=powerpc64le-unknown-linux-gnu   CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-user qemu-system"
     - env: TARGET=s390x-unknown-linux-gnu         CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-system"
-    - env: TARGET=sparc64-unknown-linux-gnu       CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1 RUNNERS="qemu-system"
+    - env: TARGET=sparc64-unknown-linux-gnu       CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-system"
     - env: TARGET=x86_64-unknown-linux-gnu        CPP=1 DYLIB=1       OPENSSL=0.5.5  RUN=1 DEPLOY=1 RUNNERS="native qemu-user qemu-system"
 
     # Linux musl
