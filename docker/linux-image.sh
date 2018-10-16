@@ -43,7 +43,7 @@ main() {
         powerpc64)
             # there is no stable port
             arch=ppc64
-            kernel=4.15.0-2-powerpc64
+            kernel=4.18.0-2-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
             # sid version of dropbear requeries this depencendies
@@ -59,7 +59,7 @@ main() {
             ;;
         sparc64)
             # there is no stable port
-            kernel=4.15.0-1-sparc64
+            kernel=4.18.0-2-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
             # sid version of dropbear requeries this depencendies
@@ -142,12 +142,14 @@ main() {
     # initrd
     mkdir -p $root/modules
     cp \
+        $root/lib/modules/*/kernel/drivers/net/net_failover.ko \
         $root/lib/modules/*/kernel/drivers/net/virtio_net.ko \
         $root/lib/modules/*/kernel/drivers/virtio/* \
         $root/lib/modules/*/kernel/fs/9p/9p.ko \
         $root/lib/modules/*/kernel/fs/fscache/fscache.ko \
         $root/lib/modules/*/kernel/net/9p/9pnet.ko \
         $root/lib/modules/*/kernel/net/9p/9pnet_virtio.ko \
+        $root/lib/modules/*/kernel/net/core/failover.ko \
         $root/modules || true # some file may not exist
     rm -rf $root/boot
     rm -rf $root/lib/modules
@@ -205,6 +207,8 @@ mkdir /dev/pts
 mount -t devpts none /dev/pts/
 
 # some archs does not have virtio modules
+insmod /modules/failover.ko || true
+insmod /modules/net_failover.ko || true
 insmod /modules/virtio.ko || true
 insmod /modules/virtio_ring.ko || true
 insmod /modules/virtio_mmio.ko || true
