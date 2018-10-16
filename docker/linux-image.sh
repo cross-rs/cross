@@ -34,7 +34,7 @@ main() {
         powerpc)
             # there is no stretch powerpc port, so we use jessie
             # use a more recent kernel from backports
-            kernel=4.9.0-0.bpo.4-powerpc
+            kernel=4.9.0-0.bpo.6-powerpc
             debsource="deb http://http.debian.net/debian/ jessie main"
             debsource="$debsource\ndeb http://http.debian.net/debian/ jessie-backports main"
             dropbear="dropbear"
