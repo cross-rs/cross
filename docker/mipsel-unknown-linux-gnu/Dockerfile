@@ -12,15 +12,26 @@ RUN apt-get update && \
 COPY xargo.sh /
 RUN bash /xargo.sh
 
-COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-mipsel-linux-gnu \
-    libc6-dev-mipsel-cross && \
-    bash /openssl.sh linux-mips32 mipsel-linux-gnu- && \
-    bash /qemu.sh mipsel
+    libc6-dev-mipsel-cross
+
+COPY openssl.sh /
+RUN bash /openssl.sh linux-mips32 mipsel-linux-gnu-
+
+COPY qemu.sh /
+RUN bash /qemu.sh mipsel linux softmmu
+
+COPY dropbear.sh /
+RUN bash /dropbear.sh
+
+COPY linux-image.sh /
+RUN bash /linux-image.sh mipsel
+
+COPY linux-runner /
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc \
-    CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_RUNNER=qemu-mipsel \
+    CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner mipsel" \
     CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc \
     CXX_mipsel_unknown_linux_gnu=mipsel-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \

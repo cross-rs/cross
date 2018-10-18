@@ -16,11 +16,24 @@ COPY cmake.sh /
 RUN apt-get purge --auto-remove -y cmake && \
     bash /cmake.sh 3.5.1
 
-COPY openssl.sh /
 RUN apt-get install -y --no-install-recommends \
-    g++-multilib && \
-    bash /openssl.sh linux-elf "" -m32
+    g++-multilib
 
-ENV OPENSSL_DIR=/openssl \
+COPY openssl.sh /
+RUN bash /openssl.sh linux-elf "" -m32
+
+COPY qemu.sh /
+RUN bash /qemu.sh i386 linux softmmu
+
+COPY dropbear.sh /
+RUN bash /dropbear.sh
+
+COPY linux-image.sh /
+RUN bash /linux-image.sh i686
+
+COPY linux-runner /
+
+ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner i686" \
+    OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib

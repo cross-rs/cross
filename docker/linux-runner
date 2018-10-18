@@ -13,12 +13,36 @@ fi
 arch=$1
 shift
 
+# select qemu arch
+qarch=$arch
+case "$arch" in
+    armv7)
+        qarch="arm"
+        ;;
+    i686)
+        qarch="i386"
+        ;;
+    powerpc)
+        qarch="ppc"
+        ;;
+    powerpc64)
+        qarch="ppc64"
+        ;;
+    powerpc64le)
+        if [ "$CROSS_RUNNER" = "qemu-user" ]; then
+            qarch="ppc64le"
+        else
+            qarch="ppc64"
+        fi
+        ;;
+esac
+
 case "$CROSS_RUNNER" in
     native)
         exec "${@}"
         ;;
     qemu-user | "")
-        exec qemu-$arch "${@}"
+        exec qemu-$qarch "${@}"
         ;;
     qemu-system)
         true
@@ -30,17 +54,55 @@ case "$CROSS_RUNNER" in
         ;;
 esac
 
-# 8 is the max number of cpu supported by qemu-aarch64
 n=$(nproc)
-n=$(( n > 8 ? 8 : n ))
 memory=1G
-driver9p="virtio-9p-device"
-drivernet="virtio-net-device"
+driver9p="virtio-9p-pci"
+drivernet="virtio-net-pci"
 
 # select qemu parameters
 case "$arch" in
     aarch64)
+        # 8 is the max number of cpu supported by qemu-aarch64
+        n=$(( n > 8 ? 8 : n ))
         opt="-machine virt -cpu cortex-a57"
+        ;;
+    armv7)
+        opt="-machine virt"
+        driver9p="virtio-9p-device"
+        drivernet="virtio-net-device"
+        ;;
+    i686)
+        opt="-append console=ttyS0"
+        ;;
+    mips|mipsel)
+        # avoid kernel error
+        # https://blahcat.github.io/2017/07/14/building-a-debian-stretch-qemu-image-for-mipsel/
+        opt="-append nokaslr"
+        n=1
+        ;;
+    mips64el)
+        # avoid kernel error
+        # https://blahcat.github.io/2017/07/14/building-a-debian-stretch-qemu-image-for-mipsel/
+        opt="-append nokaslr -cpu MIPS64R2-generic"
+        n=1
+        ;;
+    powerpc)
+        opt="-append console=ttyPZ0"
+        n=1
+        ;;
+    powerpc64|powerpc64le)
+        opt="-append console=hvc0 --nodefaults -serial stdio"
+        ;;
+    s390x)
+        n=1
+        driver9p="virtio-9p-ccw"
+        drivernet="virtio-net-ccw"
+        ;;
+    sparc64)
+        n=1
+        ;;
+    x86_64)
+        opt="-append console=ttyS0"
         ;;
 esac
 
@@ -49,7 +111,7 @@ esac
 
     echo Booting QEMU virtual machine with $n cpus...
 
-    QEMU_CMD="qemu-system-$arch \
+    QEMU_CMD="qemu-system-$qarch \
         -m $memory \
         -smp $n \
         -nographic \
@@ -88,13 +150,8 @@ esac
         fi
     fi
 
-    echo Booted in $(dbclient -K 1 -p 10022 -y -y root@localhost "cut -d' ' -f1 /proc/uptime") seconds
+    echo Booted in $SECONDS seconds
 
 ) 200>$LOCK
 
-dbclient \
-    -t \
-    -p 10022 \
-    -y -y \
-    root@localhost \
-    "${@}"
+exec dbclient -t -p 10022 -y -y root@localhost "${@}"

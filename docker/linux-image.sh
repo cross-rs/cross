@@ -5,11 +5,69 @@ main() {
     local arch=$1 \
           kversion=4.9.0-8
 
+    local debsource="deb http://http.debian.net/debian/ stretch main"
+    debsource="$debsource\ndeb http://security.debian.org/ stretch/updates main"
+
+    local dropbear="dropbear-bin"
+    local libssl="libssl1.0.2"
+
     # select debian arch and kernel version
     case $arch in
         aarch64)
             arch=arm64
             kernel=$kversion-arm64
+            ;;
+        armv7)
+            arch=armhf
+            kernel=$kversion-armmp
+            ;;
+        i686)
+            arch=i386
+            kernel=$kversion-686
+            ;;
+        mips|mipsel)
+            kernel=$kversion-4kc-malta
+            ;;
+        mips64el)
+            kernel=$kversion-5kc-malta
+            ;;
+        powerpc)
+            # there is no stretch powerpc port, so we use jessie
+            # use a more recent kernel from backports
+            kernel=4.9.0-0.bpo.6-powerpc
+            debsource="deb http://http.debian.net/debian/ jessie main"
+            debsource="$debsource\ndeb http://http.debian.net/debian/ jessie-backports main"
+            dropbear="dropbear"
+            libssl="libssl1.0.0"
+            ;;
+        powerpc64)
+            # there is no stable port
+            arch=ppc64
+            kernel=4.18.0-2-powerpc64
+            debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
+            # sid version of dropbear requeries this depencendies
+            deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
+            ;;
+        powerpc64le)
+            arch=ppc64el
+            kernel=$kversion-powerpc64le
+            ;;
+        s390x)
+            arch=s390x
+            kernel=$kversion-s390x
+            ;;
+        sparc64)
+            # there is no stable port
+            kernel=4.18.0-2-sparc64
+            debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
+            # sid version of dropbear requeries this depencendies
+            deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
+            ;;
+        x86_64)
+            arch=amd64
+            kernel=$kversion-amd64
             ;;
         *)
             echo "Invalid arch: $arch"
@@ -33,31 +91,33 @@ main() {
 
     # Download packages
     mv /etc/apt/sources.list /etc/apt/sources.list.bak
-    echo "deb http://http.debian.net/debian/ stretch main" > \
-        /etc/apt/sources.list
-    echo "deb http://security.debian.org/ stretch/updates main" >> \
-        /etc/apt/sources.list
+    echo -e "$debsource" > /etc/apt/sources.list
 
     # Old ubuntu does not support --add-architecture, so we directly change multiarch file
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch ]; then
         cp /etc/dpkg/dpkg.cfg.d/multiarch /etc/dpkg/dpkg.cfg.d/multiarch.bak
     fi
     dpkg --add-architecture $arch || echo "foreign-architecture $arch" > /etc/dpkg/dpkg.cfg.d/multiarch
+
     # Add debian keys
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com EF0F382A1A7B6500
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 9D6D8F6BC857C906
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8B48AD6246925553
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 7638D0442B90D010
+    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8BC3A7D46F930576 # ports
+    apt-key adv --recv-key --keyserver keyserver.ubuntu.com CBF8D6FD518E17E1
+    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 06AED62430CB581C
     apt-get update
 
     mkdir -p -m 777 /qemu/$arch
     cd /qemu/$arch
-    apt-get -t stretch -d --no-install-recommends download \
+    apt-get -d --no-install-recommends download \
+        $deps \
         busybox:$arch \
-        dropbear-bin:$arch \
+        $dropbear:$arch \
         libc6:$arch \
         libgcc1:$arch \
-        libssl1*:$arch \
+        $libssl:$arch \
         libstdc++6:$arch \
         linux-image-$kernel:$arch \
         ncurses-base \
@@ -66,23 +126,30 @@ main() {
 
     # Install packages
     root=root-$arch
-    mkdir -p $root/{bin,etc/dropbear,root,sys,dev,proc,sbin,usr/{bin,sbin},var/log}
+    mkdir -p $root/{bin,etc/dropbear,root,sys,dev,proc,sbin,tmp,usr/{bin,sbin},var/log}
     for deb in $arch/*deb; do
         dpkg -x $deb $root/
     done
 
     # kernel
-    cp $root/boot/vmlinu* kernel
+    if [ "$arch" = "sparc64" ]; then
+        # boot fails if the kernel is compressed
+        zcat $root/boot/vmlinu* > kernel
+    else
+        cp $root/boot/vmlinu* kernel
+    fi
 
     # initrd
     mkdir -p $root/modules
     cp \
+        $root/lib/modules/*/kernel/drivers/net/net_failover.ko \
         $root/lib/modules/*/kernel/drivers/net/virtio_net.ko \
         $root/lib/modules/*/kernel/drivers/virtio/* \
         $root/lib/modules/*/kernel/fs/9p/9p.ko \
         $root/lib/modules/*/kernel/fs/fscache/fscache.ko \
         $root/lib/modules/*/kernel/net/9p/9pnet.ko \
         $root/lib/modules/*/kernel/net/9p/9pnet_virtio.ko \
+        $root/lib/modules/*/kernel/net/core/failover.ko \
         $root/modules || true # some file may not exist
     rm -rf $root/boot
     rm -rf $root/lib/modules
@@ -140,6 +207,8 @@ mkdir /dev/pts
 mount -t devpts none /dev/pts/
 
 # some archs does not have virtio modules
+insmod /modules/failover.ko || true
+insmod /modules/net_failover.ko || true
 insmod /modules/virtio.ko || true
 insmod /modules/virtio_ring.ko || true
 insmod /modules/virtio_mmio.ko || true
@@ -155,7 +224,7 @@ ifconfig eth0 10.0.2.15
 route add default gw 10.0.2.2 eth0
 
 mkdir /target
-mount -t 9p -o trans=virtio target /target -oversion=9p2000.L || true
+mount -t 9p -o trans=virtio target /target -oversion=9p2000.u || true
 
 exec dropbear -F -E -B
 EOF

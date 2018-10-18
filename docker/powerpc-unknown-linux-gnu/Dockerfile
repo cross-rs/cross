@@ -16,15 +16,26 @@ COPY cmake.sh /
 RUN apt-get purge --auto-remove -y cmake && \
     bash /cmake.sh 3.5.1
 
-COPY openssl.sh qemu.sh /
 RUN apt-get install -y --no-install-recommends \
     g++-powerpc-linux-gnu \
-    libc6-dev-powerpc-cross && \
-    bash /openssl.sh linux-ppc powerpc-linux-gnu- && \
-    bash /qemu.sh ppc
+    libc6-dev-powerpc-cross
+
+COPY openssl.sh /
+RUN bash /openssl.sh linux-ppc powerpc-linux-gnu-
+
+COPY qemu.sh /
+RUN bash /qemu.sh ppc linux softmmu
+
+COPY dropbear.sh /
+RUN bash /dropbear.sh
+
+COPY linux-image.sh /
+RUN bash /linux-image.sh powerpc
+
+COPY linux-runner /
 
 ENV CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
-    CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_RUNNER=qemu-ppc \
+    CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner powerpc" \
     CC_powerpc_unknown_linux_gnu=powerpc-linux-gnu-gcc \
     CXX_powerpc_unknown_linux_gnu=powerpc-linux-gnu-g++ \
     OPENSSL_DIR=/openssl \
