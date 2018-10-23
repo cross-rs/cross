@@ -1,5 +1,5 @@
 [target.aarch64-unknown-linux-gnu]
-docker_context = "ci/docker/aarch64-unknown-linux-gnu2"
+docker_context = "ci/aarch64-unknown-linux-gnu"
 
 [target.arm-unknown-linux-gnueabi]
 image = "japaric/arm-unknown-linux-gnueabi"
