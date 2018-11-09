@@ -7,7 +7,16 @@ RUN apt-get update && \
     gcc \
     libc6-dev \
     make \
-    pkg-config
+    pkg-config \
+    g++ \
+    git \
+    automake \
+    libtool \
+    m4 \
+    autoconf \
+    make \
+    file \
+    binutils
 
 RUN apt-get install -y --no-install-recommends python
 
