@@ -8,7 +8,6 @@ RUN apt-get update && \
     libc6-dev \
     make \
     pkg-config \
-    g++ \
     git \
     automake \
     libtool \
