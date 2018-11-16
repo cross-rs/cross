@@ -19,7 +19,7 @@ matrix:
     - env: TARGET=powerpc-unknown-linux-gnu       CPP=1 DYLIB=1 STD=1 OPENSSL=0.5.5  RUN=1 RUNNERS="qemu-user qemu-system"
     - env: TARGET=powerpc64-unknown-linux-gnu     CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-user qemu-system"
     - env: TARGET=powerpc64le-unknown-linux-gnu   CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-user qemu-system"
-    - env: TARGET=s390x-unknown-linux-gnu         CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-system"
+    #- env: TARGET=s390x-unknown-linux-gnu         CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-system"
     - env: TARGET=sparc64-unknown-linux-gnu       CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17 RUN=1 RUNNERS="qemu-system"
     - env: TARGET=x86_64-unknown-linux-gnu        CPP=1 DYLIB=1       OPENSSL=0.5.5  RUN=1 DEPLOY=1 RUNNERS="native qemu-user qemu-system"
 
@@ -56,9 +56,9 @@ matrix:
 
     # BSD
     # FIXME: freebsd fails to link when CPP=1
-    - env: TARGET=i686-unknown-freebsd                  DYLIB=1 STD=1 OPENSSL=0.7.17
+    #- env: TARGET=i686-unknown-freebsd                  DYLIB=1 STD=1 OPENSSL=0.7.17
     - env: TARGET=x86_64-unknown-dragonfly        CPP=1 DYLIB=1       OPENSSL=0.5.5
-    - env: TARGET=x86_64-unknown-freebsd                DYLIB=1 STD=1 OPENSSL=0.5.5
+    #- env: TARGET=x86_64-unknown-freebsd                DYLIB=1 STD=1 OPENSSL=0.5.5
     - env: TARGET=x86_64-unknown-netbsd           CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
 
     # Solaris
@@ -67,10 +67,10 @@ matrix:
 
     # Windows
     - env: TARGET=x86_64-pc-windows-gnu           CPP=1         STD=1                RUN=1
-    - env: TARGET=i686-pc-windows-gnu             CPP=1         STD=1                RUN=1
+    #- env: TARGET=i686-pc-windows-gnu             CPP=1         STD=1                RUN=1
 
     # Emscripten
-    - env: TARGET=asmjs-unknown-emscripten        CPP=1         STD=1                RUN=1
+    #- env: TARGET=asmjs-unknown-emscripten        CPP=1         STD=1                RUN=1
     - env: TARGET=wasm32-unknown-emscripten       CPP=1         STD=1                RUN=1
       # work around rust-lang/cargo#4689
       rust: nightly-2017-10-24
