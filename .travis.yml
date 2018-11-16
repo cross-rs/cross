@@ -70,7 +70,7 @@ matrix:
     #- env: TARGET=i686-pc-windows-gnu             CPP=1         STD=1                RUN=1
 
     # Emscripten
-    - env: TARGET=asmjs-unknown-emscripten        CPP=1         STD=1                RUN=1
+    #- env: TARGET=asmjs-unknown-emscripten        CPP=1         STD=1                RUN=1
     - env: TARGET=wasm32-unknown-emscripten       CPP=1         STD=1                RUN=1
       # work around rust-lang/cargo#4689
       rust: nightly-2017-10-24
