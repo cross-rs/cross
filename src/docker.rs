@@ -126,6 +126,11 @@ pub fn run(target: &Target,
         docker.args(&["-e", &format!("CROSS_DEBUG={}", value)]);
     }
 
+    if let Some(value) = env::var("DOCKER_OPTS").ok() {
+        let opts: Vec<&str> = value.split(" ").collect();
+        docker.args(&opts);
+    }
+
     let mut runner = None;
 
     if let Some(toml) = toml {
