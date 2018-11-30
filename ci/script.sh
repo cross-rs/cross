@@ -52,9 +52,11 @@ EOF
     if [ $OPENSSL ]; then
         td=$(mktemp -d)
 
-        git clone --depth 1 https://github.com/rust-lang/cargo $td
-
         pushd $td
+        cargo init --bin --name hello .
+        # test that linking (to SSL) works
+        echo 'openssl = "0.10.15"' >> Cargo.toml
+        echo 'extern crate openssl;' >> src/main.rs
         cross build --target $TARGET
         popd
 
@@ -63,9 +65,8 @@ EOF
            "$TARGET" = "wasm32-unknown-emscripten" ]; then
         td=$(mktemp -d)
 
-        git clone --depth 1 https://github.com/bluss/rust-itertools $td
-
         pushd $td
+        cargo init --lib --name foo .
         cross build --target $TARGET
         popd
 
@@ -73,11 +74,9 @@ EOF
     elif [[ "$TARGET" != thumb* ]]; then
         td=$(mktemp -d)
 
-        git clone --depth 1 https://github.com/japaric/xargo $td
-
         pushd $td
-        sed -i -e 's/#!\[deny(warnings)\]//g' src/main.rs
-        sed -i -e 's/unused_doc_comment/unused_doc_comments/g' src/errors.rs
+        # test that linking works
+        cargo init --bin --name hello .
         cross build --target $TARGET
         popd
 
@@ -89,14 +88,9 @@ EOF
         if [ $DYLIB ]; then
             td=$(mktemp -d)
 
-            git clone \
-                --depth 1 \
-                --recursive \
-                https://github.com/rust-lang-nursery/compiler-builtins \
-                $td
-
             pushd $td
-            cross_test --manifest-path testcrate/Cargo.toml --target $TARGET
+            cargo init --lib --name foo .
+            cross_test --target $TARGET
             popd
 
             rm -rf $td
