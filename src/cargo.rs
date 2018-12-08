@@ -13,6 +13,7 @@ pub enum Subcommand {
     Run,
     Rustc,
     Test,
+    Bench,
     Deb,
 }
 
@@ -26,7 +27,7 @@ impl Subcommand {
 
     pub fn needs_interpreter(&self) -> bool {
         match *self {
-            Subcommand::Run | Subcommand::Test => true,
+            Subcommand::Run | Subcommand::Test | Subcommand::Bench => true,
             _ => false,
         }
     }
@@ -40,6 +41,7 @@ impl<'a> From<&'a str> for Subcommand {
             "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,
             "test" => Subcommand::Test,
+            "bench" => Subcommand::Bench,
             "deb" => Subcommand::Deb,
             _ => Subcommand::Other,
         }

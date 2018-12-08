@@ -91,6 +91,7 @@ EOF
             pushd $td
             cargo init --lib --name foo .
             cross_test --target $TARGET
+            cross_bench --target $TARGET
             popd
 
             rm -rf $td
@@ -124,6 +125,7 @@ EOF
                 cross_run --target $TARGET
                 cross_run --target $TARGET --example e
                 cross_test --target $TARGET
+                cross_bench --target $TARGET
                 popd
 
                 rm -rf $td
@@ -192,6 +194,17 @@ cross_test() {
         for runner in $RUNNERS; do
             echo -e "[target.$TARGET]\nrunner = \"$runner\"" > Cross.toml
             cross test "$@"
+        done
+    fi
+}
+
+cross_bench() {
+    if [ -z "$RUNNERS" ]; then
+        cross bench "$@"
+    else
+        for runner in $RUNNERS; do
+            echo -e "[target.$TARGET]\nrunner = \"$runner\"" > Cross.toml
+            cross bench "$@"
         done
     fi
 }
