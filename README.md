@@ -80,11 +80,10 @@ You can place a `Cross.toml` file in the root of your Cargo project to tweak
 
 ### Custom Docker images
 
-The default Docker image that `cross` uses provides a C environment that tries
-to cover the most common cross compilation cases. However, it can't cover every
-single use case out there. When the default image is not enough, you can use the
-`target.$TARGET.image` field in `Cross.toml` to use custom Docker image for a
-specific target:
+`cross` provides default Docker images for the targets listed below. However, it
+can't cover every single use case out there. For other targets, or when the
+default image is not enough, you can use the `target.$TARGET.image` field in
+`Cross.toml` to use custom Docker image for a specific target:
 
 ``` toml
 [target.aarch64-unknown-linux-gnu]
