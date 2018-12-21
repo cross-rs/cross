@@ -58,5 +58,8 @@ pub fn sysroot(verbose: bool) -> Result<PathBuf> {
         stdout.pop();
     }
 
+    // On hosts other than linux, specify the correct toolchain path.
+    stdout = stdout.replacen("-apple-darwin", "-unknown-linux-gnu", 1);
+
     Ok(PathBuf::from(stdout))
 }
