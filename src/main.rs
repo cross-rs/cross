@@ -224,7 +224,7 @@ fn run() -> Result<ExitStatus> {
                 .unwrap_or(Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
 
-            let sysroot = rustc::sysroot(verbose)?;
+            let sysroot = rustc::sysroot(&host, &target, verbose)?;
             let toolchain = sysroot.file_name().and_then(|file_name| file_name.to_str())
                 .ok_or("couldn't get toolchain name")?;
 
