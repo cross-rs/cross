@@ -1,3 +1,5 @@
+#![deny(missing_debug_implementations)]
+
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
@@ -29,7 +31,7 @@ use errors::*;
 use rustc::{TargetList, VersionMetaExt};
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Host {
     Other,
 
@@ -73,7 +75,7 @@ impl<'a> From<&'a str> for Host {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Target {
     BuiltIn { triple: String },
     Custom { triple: String },
@@ -263,6 +265,7 @@ fn run() -> Result<ExitStatus> {
 
 
 /// Parsed `Cross.toml`
+#[derive(Debug)]
 pub struct Toml {
     table: Value,
 }

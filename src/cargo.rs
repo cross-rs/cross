@@ -5,7 +5,7 @@ use std::{env, fs};
 use errors::*;
 use extensions::CommandExt;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Subcommand {
     Build,
     Check,
@@ -48,6 +48,7 @@ impl<'a> From<&'a str> for Subcommand {
     }
 }
 
+#[derive(Debug)]
 pub struct Root {
     path: PathBuf,
 }
