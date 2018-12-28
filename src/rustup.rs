@@ -23,8 +23,17 @@ impl AvailableTargets {
     }
 }
 
-pub fn available_targets(verbose: bool) -> Result<AvailableTargets> {
-    let out = Command::new("rustup").args(&["target", "list"])
+pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
+    let out = Command::new("rustup")
+        .args(&["toolchain", "list"])
+        .run_and_get_stdout(verbose)?;
+
+    Ok(out.lines().map(|l| l.replace(" (default)", "").trim().to_owned()).collect())
+}
+
+pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTargets> {
+    let out = Command::new("rustup")
+        .args(&["target", "list", "--toolchain", toolchain])
         .run_and_get_stdout(verbose)?;
 
     let mut default = String::new();
@@ -46,11 +55,18 @@ pub fn available_targets(verbose: bool) -> Result<AvailableTargets> {
     Ok(AvailableTargets { default, installed, not_installed })
 }
 
-pub fn install(target: &Target, verbose: bool) -> Result<()> {
+pub fn install_toolchain(toolchain: &str, verbose: bool) -> Result<()> {
+    Command::new("rustup")
+        .args(&["toolchain", "add", toolchain])
+        .run(verbose)
+        .chain_err(|| format!("couldn't install toolchain `{}`", toolchain))
+}
+
+pub fn install(target: &Target, toolchain: &str, verbose: bool) -> Result<()> {
     let target = target.triple();
 
     Command::new("rustup")
-        .args(&["target", "install", target])
+        .args(&["target", "add", target, "--toolchain", toolchain])
         .run(verbose)
         .chain_err(|| format!("couldn't install `std` for {}", target))
 }

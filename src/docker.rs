@@ -10,7 +10,6 @@ use cargo::Root;
 use errors::*;
 use extensions::CommandExt;
 use id;
-use rustc;
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 
@@ -74,6 +73,7 @@ pub fn run(target: &Target,
            root: &Root,
            toml: Option<&Toml>,
            uses_xargo: bool,
+           sysroot: &PathBuf,
            verbose: bool)
            -> Result<ExitStatus> {
     let root = root.path();
@@ -156,7 +156,7 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
         .args(&["-v", &format!("{}:/project:ro", root.display())])
-        .args(&["-v", &format!("{}:/rust:ro", rustc::sysroot(verbose)?.display())])
+        .args(&["-v", &format!("{}:/rust:ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
         .args(&["-w", "/project"])
         .args(&["-it", &image(toml, target)?])
