@@ -3,7 +3,7 @@ use std::process::Command;
 
 use rustc_version::{Version, VersionMeta};
 
-use Host;
+use {Host, Target};
 use errors::*;
 use extensions::CommandExt;
 
@@ -49,7 +49,7 @@ pub fn target_list(verbose: bool) -> Result<TargetList> {
         })
 }
 
-pub fn sysroot(verbose: bool) -> Result<PathBuf> {
+pub fn sysroot(host: &Host, target: &Target, verbose: bool) -> Result<PathBuf> {
     let mut stdout = Command::new("rustc")
         .args(&["--print", "sysroot"])
         .run_and_get_stdout(verbose)?;
@@ -58,8 +58,10 @@ pub fn sysroot(verbose: bool) -> Result<PathBuf> {
         stdout.pop();
     }
 
-    // On hosts other than linux, specify the correct toolchain path.
-    stdout = stdout.replacen("-apple-darwin", "-unknown-linux-gnu", 1);
+    // On hosts other than Linux, specify the correct toolchain path.
+    if host != &Host::X86_64UnknownLinuxGnu && target.needs_docker() {
+        stdout = stdout.replacen(host.triple(), Host::X86_64UnknownLinuxGnu.triple(), 1);
+    }
 
     Ok(PathBuf::from(stdout))
 }

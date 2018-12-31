@@ -1,3 +1,5 @@
+#![deny(missing_debug_implementations)]
+
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
@@ -29,7 +31,7 @@ use errors::*;
 use rustc::{TargetList, VersionMetaExt};
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Host {
     Other,
 
@@ -46,7 +48,7 @@ impl Host {
     /// `target == None` means `target == host`
     fn is_supported(&self, target: Option<&Target>) -> bool {
         if *self == Host::X86_64AppleDarwin {
-            target.map(|t| t.triple() == "i686-apple-darwin").unwrap_or(false)
+            target.map(|t| t.triple() == "i686-apple-darwin" || t.needs_docker()).unwrap_or(false)
         } else if *self == Host::X86_64UnknownLinuxGnu {
             target.map(|t| t.needs_docker()).unwrap_or(true)
         } else {
@@ -73,7 +75,7 @@ impl<'a> From<&'a str> for Host {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Target {
     BuiltIn { triple: String },
     Custom { triple: String },
@@ -221,7 +223,18 @@ fn run() -> Result<ExitStatus> {
             let target = args.target
                 .unwrap_or(Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
-            let available_targets = rustup::available_targets(verbose)?;
+
+            let sysroot = rustc::sysroot(&host, &target, verbose)?;
+            let toolchain = sysroot.file_name().and_then(|file_name| file_name.to_str())
+                .ok_or("couldn't get toolchain name")?;
+
+            let installed_toolchains = rustup::installed_toolchains(verbose)?;
+
+            if !installed_toolchains.into_iter().any(|t| t == toolchain) {
+              rustup::install_toolchain(&toolchain, verbose)?;
+            }
+
+            let available_targets = rustup::available_targets(&toolchain, verbose)?;
             let uses_xargo = !target.is_builtin() ||
                 !available_targets.contains(&target) ||
                 if let Some(toml) = toml.as_ref() {
@@ -232,7 +245,7 @@ fn run() -> Result<ExitStatus> {
                 .unwrap_or(false);
 
             if !uses_xargo && !available_targets.is_installed(&target) {
-                rustup::install(&target, verbose)?;
+                rustup::install(&target, &toolchain, verbose)?;
             } else if !rustup::rust_src_is_installed(verbose)? {
                 rustup::install_rust_src(verbose)?;
             }
@@ -253,6 +266,7 @@ fn run() -> Result<ExitStatus> {
                                    &root,
                                    toml.as_ref(),
                                    uses_xargo,
+                                   &sysroot,
                                    verbose);
             }
         }
@@ -263,6 +277,7 @@ fn run() -> Result<ExitStatus> {
 
 
 /// Parsed `Cross.toml`
+#[derive(Debug)]
 pub struct Toml {
     table: Value,
 }
