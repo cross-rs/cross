@@ -1,6 +1,6 @@
 [![crates.io](https://img.shields.io/crates/v/cross.svg)](https://crates.io/crates/cross)
 [![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
-[![Build Status](https://travis-ci.org/rust-embedded/cross.svg?branch=master)](https://travis-ci.org/rust-embedded/cross) 
+[![Build Status](https://travis-ci.org/rust-embedded/cross.svg?branch=master)](https://travis-ci.org/rust-embedded/cross)
 
 # `cross`
 
@@ -196,6 +196,7 @@ worst, "hang" (never terminate).
 | `aarch64-unknown-linux-musl`         | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
 | `arm-linux-androideabi` [5]          | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
+| `arm-unknown-linux-gnueabihf`        | 2.19   | 4.8.3   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
 | `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
 | `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
 | `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |  N/A    |     | 2.8.0 |   ✓    |
