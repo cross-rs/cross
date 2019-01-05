@@ -15,6 +15,7 @@ pub enum Subcommand {
     Test,
     Bench,
     Deb,
+    Clippy,
 }
 
 impl Subcommand {
@@ -43,6 +44,7 @@ impl<'a> From<&'a str> for Subcommand {
             "test" => Subcommand::Test,
             "bench" => Subcommand::Bench,
             "deb" => Subcommand::Deb,
+            "clippy" => Subcommand::Clippy,
             _ => Subcommand::Other,
         }
     }
