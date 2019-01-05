@@ -5,7 +5,7 @@ use std::{env, fs};
 use errors::*;
 use extensions::CommandExt;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subcommand {
     Build,
     Check,
