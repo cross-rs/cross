@@ -246,8 +246,8 @@ fn run() -> Result<ExitStatus> {
 
             if !uses_xargo && !available_targets.is_installed(&target) {
                 rustup::install(&target, &toolchain, verbose)?;
-            } else if !rustup::rust_src_is_installed(verbose)? {
-                rustup::install_rust_src(verbose)?;
+            } else if !rustup::component_is_installed("rust-src", toolchain, verbose)? {
+                rustup::install_component("rust-src", toolchain, verbose)?;
             }
 
             let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
