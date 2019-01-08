@@ -104,7 +104,7 @@ main() {
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 9D6D8F6BC857C906
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8B48AD6246925553
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 7638D0442B90D010
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8BC3A7D46F930576 # ports
+    apt-key adv --recv-key --keyserver keyserver.ubuntu.com DA1B2CEA81DCBC61 # debian-ports
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com CBF8D6FD518E17E1
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 06AED62430CB581C
     apt-get update
