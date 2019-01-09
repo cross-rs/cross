@@ -26,7 +26,7 @@ use std::{env, io, process};
 
 use toml::{Parser, Value};
 
-use cargo::Root;
+use cargo::{Root, Subcommand};
 use errors::*;
 use rustc::{TargetList, VersionMetaExt};
 
@@ -246,8 +246,14 @@ fn run() -> Result<ExitStatus> {
 
             if !uses_xargo && !available_targets.is_installed(&target) {
                 rustup::install(&target, &toolchain, verbose)?;
-            } else if !rustup::rust_src_is_installed(verbose)? {
-                rustup::install_rust_src(verbose)?;
+            } else if !rustup::component_is_installed("rust-src", toolchain, verbose)? {
+                rustup::install_component("rust-src", toolchain, verbose)?;
+            }
+
+            if args.subcommand.map(|sc| sc == Subcommand::Clippy).unwrap_or(false) {
+                if !rustup::component_is_installed("clippy", toolchain, verbose)? {
+                    rustup::install_component("clippy", toolchain, verbose)?;
+                }
             }
 
             let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);

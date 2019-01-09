@@ -86,7 +86,7 @@ EOF
 EOF
     cd ..
 
-    curl https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-$dragonfly.iso.bz2 | \
+    curl https://mirrors.dotsrc.org/dragonflybsd/iso-images/dfly-x86_64-$dragonfly.iso.bz2 | \
         bzcat | \
         bsdtar xf - -C $td/dragonfly ./usr/include ./usr/lib ./lib
 

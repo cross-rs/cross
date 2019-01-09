@@ -71,17 +71,17 @@ pub fn install(target: &Target, toolchain: &str, verbose: bool) -> Result<()> {
         .chain_err(|| format!("couldn't install `std` for {}", target))
 }
 
-pub fn install_rust_src(verbose: bool) -> Result<()> {
+pub fn install_component(component: &str, toolchain: &str, verbose: bool) -> Result<()> {
     Command::new("rustup")
-        .args(&["component", "add", "rust-src"])
+        .args(&["component", "add", component, "--toolchain", toolchain])
         .run(verbose)
-        .chain_err(|| format!("couldn't install the `rust-src` component"))
+        .chain_err(|| format!("couldn't install the `{}` component", component))
 }
 
-pub fn rust_src_is_installed(verbose: bool) -> Result<bool> {
+pub fn component_is_installed(component: &str, toolchain: &str, verbose: bool) -> Result<bool> {
     Ok(Command::new("rustup")
-        .args(&["component", "list"])
+        .args(&["component", "list", "--toolchain", toolchain])
         .run_and_get_stdout(verbose)?
         .lines()
-        .any(|l| l.starts_with("rust-src") && l.contains("installed")))
+        .any(|l| l.starts_with(component) && l.contains("installed")))
 }

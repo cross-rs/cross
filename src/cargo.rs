@@ -5,7 +5,7 @@ use std::{env, fs};
 use errors::*;
 use extensions::CommandExt;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subcommand {
     Build,
     Check,
@@ -15,6 +15,7 @@ pub enum Subcommand {
     Test,
     Bench,
     Deb,
+    Clippy,
 }
 
 impl Subcommand {
@@ -43,6 +44,7 @@ impl<'a> From<&'a str> for Subcommand {
             "test" => Subcommand::Test,
             "bench" => Subcommand::Bench,
             "deb" => Subcommand::Deb,
+            "clippy" => Subcommand::Clippy,
             _ => Subcommand::Other,
         }
     }
