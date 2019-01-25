@@ -201,7 +201,7 @@ worst, "hang" (never terminate).
 | `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
 | `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |  N/A    |     | 2.8.0 |   ✓    |
 | `armv7-linux-androideabi` [5]        | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
+| `armv7-unknown-linux-gnueabihf`      | 2.19   | 4.8.4   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
 | `asmjs-unknown-emscripten` [4]       | 1.1.20 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2p  | ✓   | N/A   |   ✓    |
