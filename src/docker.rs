@@ -155,6 +155,7 @@ pub fn run(target: &Target,
         .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(|| String::new()))])
         .args(&["-v", &format!("{}:/xargo", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo", cargo_dir.display())])
+        .args(&["-v", "/cargo/bin"]) // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", &format!("{}:/project:ro", root.display())])
         .args(&["-v", &format!("{}:/rust:ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target", target_dir.display())])
