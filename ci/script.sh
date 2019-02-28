@@ -40,7 +40,7 @@ main() {
 [build]
 xargo = true
 EOF
-        cross build --features c --lib --target $TARGET
+        cross build --lib --target $TARGET
         popd
 
         rm -rf $td

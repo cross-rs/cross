@@ -2,7 +2,7 @@ set -ex
 
 main() {
     local binutils=2.25.1 \
-          dragonfly=4.6.0_REL \
+          dragonfly=4.6.1_REL \
           gcc=5.3.0 \
           target=x86_64-unknown-dragonfly
 
@@ -86,7 +86,7 @@ EOF
 EOF
     cd ..
 
-    curl https://mirrors.dotsrc.org/dragonflybsd/iso-images/dfly-x86_64-$dragonfly.iso.bz2 | \
+    curl https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-$dragonfly.iso.bz2 | \
         bzcat | \
         bsdtar xf - -C $td/dragonfly ./usr/include ./usr/lib ./lib
 

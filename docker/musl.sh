@@ -35,16 +35,12 @@ main() {
     local td=$(mktemp -d)
 
     pushd $td
-    curl -L https://github.com/richfelker/musl-cross-make/archive/v0.9.7.tar.gz | \
+    curl -L https://github.com/richfelker/musl-cross-make/archive/v0.9.8.tar.gz | \
         tar --strip-components=1 -xz
 
-    # musl-cross-make 0.9.7 does not have musl 1.1.20 hash
-    echo "469b3af68a49188c8db4cc94077719152c0d41f1  musl-1.1.20.tar.gz" \
-            > hashes/musl-1.1.20.tar.gz.sha1
-
     hide_output nice make install -j$(nproc) \
-        GCC_VER=6.3.0 \
-        MUSL_VER=1.1.20 \
+        GCC_VER=6.4.0 \
+        MUSL_VER=1.1.22 \
         DL_CMD="curl -C - -L -o" \
         OUTPUT=/usr/local/ \
         "$@"
