@@ -33,21 +33,22 @@ main() {
             ;;
         powerpc)
             # there is no stretch powerpc port, so we use jessie
-            # use a more recent kernel from backports
-            kernel=4.9.0-0.bpo.6-powerpc
+            # use a more recent kernel from jessie-updates
+            kernel=3.16.0-6-powerpc
             debsource="deb http://http.debian.net/debian/ jessie main"
-            debsource="$debsource\ndeb http://http.debian.net/debian/ jessie-backports main"
+            debsource="$debsource\ndeb http://http.debian.net/debian/ jessie-updates main"
             dropbear="dropbear"
             libssl="libssl1.0.0"
             ;;
         powerpc64)
             # there is no stable port
             arch=ppc64
-            kernel=4.19.0-1-powerpc64
+            kernel=4.19.0-4-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
-            # sid version of dropbear requeries this depencendies
+            # sid version of dropbear requeries this dependencies
             deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
+            libssl="libssl1.1"
             ;;
         powerpc64le)
             arch=ppc64el
@@ -59,11 +60,12 @@ main() {
             ;;
         sparc64)
             # there is no stable port
-            kernel=4.19.0-1-sparc64
+            kernel=4.19.0-4-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
-            # sid version of dropbear requeries this depencendies
+            # sid version of dropbear requeries this dependencies
             deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
+            libssl="libssl1.1"
             ;;
         x86_64)
             arch=amd64
