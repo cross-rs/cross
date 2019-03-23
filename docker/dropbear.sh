@@ -1,7 +1,7 @@
 set -ex
 
 main() {
-    local version=2017.75 \
+    local version=2019.77 \
           td=$(mktemp -d)
 
     local dependencies=(
