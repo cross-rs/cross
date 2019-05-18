@@ -209,7 +209,7 @@ worst, "hang" (never terminate).
 | `i686-linux-android` [5]             | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 7.3.0   | N/A     | ✓   | N/A   |   ✓    |
 | `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0   | 1.0.2p  |     | N/A   |        |
-| `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
+| `i686-unknown-linux-gnu`             | 2.23   | 5.4.0   | 1.0.2g  | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
 | `mips-unknown-linux-musl`            | 1.1.20 | 6.3.0   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
@@ -233,7 +233,7 @@ worst, "hang" (never terminate).
 | `x86_64-sun-solaris` [1]             | 2.11   | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 | `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 | `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0   | 1.0.2p  |     | N/A   |        |
-| `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
+| `x86_64-unknown-linux-gnu`           | 2.23   | 5.4.0   | 1.0.2g  | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
 | `x86_64-unknown-netbsd`[1]           | 7.0    | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 
