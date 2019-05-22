@@ -46,7 +46,7 @@ main() {
             kernel=4.19.0-4-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
-            # sid version of dropbear requeries this dependencies
+            # sid version of dropbear requires these dependencies
             deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
             libssl="libssl1.1"
             ;;
@@ -63,7 +63,7 @@ main() {
             kernel=4.19.0-4-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
-            # sid version of dropbear requeries this dependencies
+            # sid version of dropbear requires these dependencies
             deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
             libssl="libssl1.1"
             ;;
