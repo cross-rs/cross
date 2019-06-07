@@ -35,19 +35,26 @@ main() {
             # there is no stretch powerpc port, so we use jessie
             # use a more recent kernel from backports
             kernel=4.9.0-0.bpo.6-powerpc
-            debsource="deb http://http.debian.net/debian/ jessie main"
-            debsource="$debsource\ndeb http://http.debian.net/debian/ jessie-backports main"
+            debsource="deb http://archive.debian.org/debian jessie main"
+            debsource="$debsource\ndeb http://archive.debian.org/debian jessie-backports main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
+
+            # archive.debian.org Release files are expired.
+            echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
+
             dropbear="dropbear"
             libssl="libssl1.0.0"
             ;;
         powerpc64)
             # there is no stable port
             arch=ppc64
-            kernel=4.19.0-1-powerpc64
-            debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
+            kernel=4.19.0-5-powerpc64
+            debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
             # sid version of dropbear requeries this depencendies
             deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
+            libssl="libssl1.1"
             ;;
         powerpc64le)
             arch=ppc64el
@@ -59,11 +66,12 @@ main() {
             ;;
         sparc64)
             # there is no stable port
-            kernel=4.19.0-1-sparc64
-            debsource="deb http://ftp.ports.debian.org/debian-ports/ unreleased main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports/ unstable main"
+            kernel=4.19.0-5-sparc64
+            debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
             # sid version of dropbear requeries this depencendies
             deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
+            libssl="libssl1.1"
             ;;
         x86_64)
             arch=amd64
@@ -131,13 +139,7 @@ main() {
         dpkg -x $deb $root/
     done
 
-    # kernel
-    if [ "$arch" = "sparc64" ]; then
-        # boot fails if the kernel is compressed
-        zcat $root/boot/vmlinu* > kernel
-    else
-        cp $root/boot/vmlinu* kernel
-    fi
+    cp $root/boot/vmlinu* kernel
 
     # initrd
     mkdir -p $root/modules
@@ -230,7 +232,9 @@ exec dropbear -F -E -B
 EOF
 
     chmod +x $root/init
-    cd $root && find . | cpio --create --format='newc' --quiet | gzip > ../initrd.gz
+    cd $root
+    find . | cpio --create --format='newc' --quiet | gzip > ../initrd.gz
+    cd -
 
     # Clean up
     rm -rf /qemu/$root /qemu/$arch

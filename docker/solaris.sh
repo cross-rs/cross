@@ -13,6 +13,7 @@ main() {
         curl
         g++
         make
+        patch
         software-properties-common
         wget
         xz-utils
@@ -84,6 +85,24 @@ main() {
     nice make -j$(nproc)
     make install
     cd ..
+
+    patch -p0 <<'EOF'
+--- solaris/usr/include/floatingpoint.h.orig	2019-05-29 16:00:48 UTC
++++ solaris/usr/include/floatingpoint.h
+@@ -184,12 +184,6 @@
+  */
+ extern double atof(const char *);
+ extern double strtod(const char *, char **);
+-#if __cplusplus >= 199711L
+-}
+-
+-using std::atof;
+-using std::strtod;
+-#endif /* end of namespace std */
+
+ #ifdef __cplusplus
+ }
+EOF
 
     local destdir=/usr/local/$target
     mkdir $destdir/usr
