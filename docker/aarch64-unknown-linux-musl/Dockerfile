@@ -15,7 +15,12 @@ RUN apt-get update && \
     autoconf \
     make \
     file \
-    binutils
+    binutils \
+    openssl \
+    libssl-dev \
+    llvm-dev \
+    libclang-dev \
+    clang
 
 COPY xargo.sh /
 RUN bash /xargo.sh
