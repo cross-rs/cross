@@ -95,6 +95,7 @@ script:
 branches:
   only:
     - /^v\d+\.\d+\.\d+.*$/
+    - master
     - staging
     - trying
 

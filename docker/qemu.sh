@@ -1,7 +1,7 @@
 set -ex
 
 main() {
-    local version=4.0.0
+    local version=4.1.0
 
     local arch=$1 \
           os=$2 \
