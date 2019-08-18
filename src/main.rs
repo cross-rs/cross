@@ -28,7 +28,7 @@ use std::io::Write;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
-use toml::{Parser, Value};
+use toml::{Value, value::Table};
 
 use cargo::{Root, Subcommand};
 use errors::*;
@@ -297,7 +297,7 @@ fn run() -> Result<ExitStatus> {
 /// Parsed `Cross.toml`
 #[derive(Debug)]
 pub struct Toml {
-    table: Value,
+    table: Table,
 }
 
 impl Toml {
@@ -305,8 +305,7 @@ impl Toml {
     pub fn image(&self, target: &Target) -> Result<Option<&str>> {
         let triple = target.triple();
 
-        if let Some(value) = self.table
-            .lookup(&format!("target.{}.image", triple)) {
+        if let Some(value) = self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("image")) {
             Ok(Some(value.as_str()
                 .ok_or_else(|| {
                     format!("target.{}.image must be a string", triple)
@@ -320,8 +319,7 @@ impl Toml {
     pub fn runner(&self, target: &Target) -> Result<Option<String>> {
         let triple = target.triple();
 
-        if let Some(value) = self.table
-            .lookup(&format!("target.{}.runner", triple)) {
+        if let Some(value) = self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("runner")) {
             let value = value.as_str()
                 .ok_or_else(|| format!("target.{}.runner must be a string", triple))?
                 .to_string();
@@ -335,13 +333,12 @@ impl Toml {
     pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
         let triple = target.triple();
 
-        if let Some(value) = self.table.lookup("build.xargo") {
+        if let Some(value) = self.table.get("build").and_then(|b| b.get("xargo")) {
             return Ok(Some(value.as_bool()
                 .ok_or_else(|| "build.xargo must be a boolean")?));
         }
 
-        if let Some(value) = self.table
-            .lookup(&format!("target.{}.xargo", triple)) {
+        if let Some(value) = self.table.get("target").and_then(|b| b.get(triple)).and_then(|t| t.get("xargo")) {
             Ok(Some(value.as_bool()
                 .ok_or_else(|| {
                     format!("target.{}.xargo must be a boolean", triple)
@@ -363,7 +360,7 @@ impl Toml {
 
     /// Returns the `build.env.passthrough` part of `Cross.toml`
     fn build_env_passthrough(&self) -> Result<Vec<&str>> {
-        match self.table.lookup("build.env.passthrough") {
+        match self.table.get("build").and_then(|b| b.get("env")).and_then(|e| e.get("passthrough")) {
             Some(&Value::Array(ref vec)) => {
                 if vec.iter().any(|val| val.as_str().is_none()) {
                     bail!("every build.env.passthrough element must be a string");
@@ -380,7 +377,7 @@ impl Toml {
 
         let key = format!("target.{}.env.passthrough", triple);
 
-        match self.table.lookup(&key) {
+        match self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("env")).and_then(|e| e.get("passthrough")) {
             Some(&Value::Array(ref vec)) => {
                 if vec.iter().any(|val| val.as_str().is_none()) {
                     bail!("every {} element must be a string", key);
@@ -398,10 +395,11 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
 
     if path.exists() {
         Ok(Some(Toml {
-            table: Value::Table(Parser::new(&file::read(&path)?).parse()
-                .ok_or_else(|| {
-                    format!("couldn't parse {} as TOML", path.display())
-                })?),
+            table: if let Ok(Value::Table(table)) = file::read(&path)?.parse() {
+                table
+            } else {
+                return Err(format!("couldn't parse {} as TOML table", path.display()).into())
+            },
         }))
     } else {
         Ok(None)
