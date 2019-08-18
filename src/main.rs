@@ -8,6 +8,7 @@ extern crate libc;
 extern crate rustc_version;
 extern crate semver;
 extern crate toml;
+extern crate nix;
 
 #[cfg(target_os = "windows")]
 extern crate winapi;
