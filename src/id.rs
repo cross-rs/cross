@@ -43,7 +43,7 @@ pub fn username() -> String {
             return "".to_owned();
         }
 
-        // Remove trailing space in user name.
+        // Remove null terminator.
         username.set_len((size - 1) as usize);
 
         String::from_utf16(&username).unwrap()
