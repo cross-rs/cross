@@ -118,15 +118,15 @@ pub fn run(target: &Target,
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
         .args(&["-e", &format!("USER={}", id::username())]);
 
-    if let Some(value) = env::var("QEMU_STRACE").ok() {
+    if let Ok(value) = env::var("QEMU_STRACE") {
         docker.args(&["-e", &format!("QEMU_STRACE={}", value)]);
     }
 
-    if let Some(value) = env::var("CROSS_DEBUG").ok() {
+    if let Ok(value) = env::var("CROSS_DEBUG") {
         docker.args(&["-e", &format!("CROSS_DEBUG={}", value)]);
     }
 
-    if let Some(value) = env::var("DOCKER_OPTS").ok() {
+    if let Ok(value) = env::var("DOCKER_OPTS") {
         let opts: Vec<&str> = value.split(" ").collect();
         docker.args(&opts);
     }
