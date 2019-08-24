@@ -102,12 +102,12 @@ the default one. Normal Docker behavior applies, so:
 - If only `tag` is omitted, then Docker will use the `latest` tag.
 
 It's recommended to base your custom image on the default Docker image that
-cross uses: `japaric/$TARGET:$VERSION` (where `$VERSION` is cross's version).
+cross uses: `rustembedded/cross:$TARGET-$VERSION` (where `$VERSION` is cross's version).
 This way you won't have to figure out how to install a cross C toolchain in your
 custom image. Example below:
 
 ``` Dockerfile
-FROM japaric/aarch64-unknown-linux-gnu:v0.1.4
+FROM rustembedded/cross:aarch64-unknown-linux-gnu-0.1.4
 
 RUN dpkg --add-architecture arm64 && \
     apt-get update && \
@@ -251,7 +251,7 @@ where libc was extracted.
 [5] Only works with native tests, that is, tests that do not depends on the
     Android Runtime. For i686 some tests may fails with the error `assertion
     failed: signal(libc::SIGPIPE, libc::SIG_IGN) != libc::SIG_ERR`, see
-    [issue #140](https://github.com/japaric/cross/issues/140) for more
+    [issue #140](https://github.com/rust-embedded/cross/issues/140) for more
     information.
 
 ## Debugging

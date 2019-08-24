@@ -1,11 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
 set -ex
 
 run() {
+    tag="${TRAVIS_TAG##v}"
     docker build \
-           -t japaric/$1:${TRAVIS_TAG:-latest} \
-           -f docker/${1}/Dockerfile \
+           -t "rustembedded/cross:${1}${tag:+-$tag}" \
+           -f "docker/${1}/Dockerfile" \
            docker
 }
 

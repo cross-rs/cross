@@ -1,12 +1,12 @@
 [package]
-authors = ["Jorge Aparicio <japaricious@gmail.com>"]
+authors = ["Jorge Aparicio <japaricious@gmail.com>", "Markus Reiter <me@reitermark.us>"]
 build = "build.rs"
 description = "Zero setup cross compilation and cross testing"
-documentation = "https://github.com/japaric/cross#cross"
+documentation = "https://github.com/rust-embedded/cross"
 keywords = ["cross", "compilation", "testing", "tool"]
 license = "MIT OR Apache-2.0"
 name = "cross"
-repository = "https://github.com/japaric/cross"
+repository = "https://github.com/rust-embedded/cross"
 version = "0.1.15-dev"
 
 [dependencies]
