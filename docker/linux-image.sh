@@ -49,7 +49,8 @@ main() {
         powerpc64)
             # there is no stable port
             arch=ppc64
-            kernel=4.19.0-5-powerpc64
+            # https://packages.debian.org/de/sid/linux-image-powerpc64
+            kernel=5.2.0-2-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
             # sid version of dropbear requeries this depencendies
@@ -66,7 +67,8 @@ main() {
             ;;
         sparc64)
             # there is no stable port
-            kernel=4.19.0-5-sparc64
+            # https://packages.debian.org/de/sid/linux-image-sparc64
+            kernel=5.2.0-2-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
             # sid version of dropbear requeries this depencendies

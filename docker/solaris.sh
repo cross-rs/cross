@@ -3,8 +3,8 @@ set -ex
 main() {
     local arch=$1
 
-    local binutils=2.25.1 \
-          gcc=5.3.0 \
+    local binutils=2.28.1 \
+          gcc=6.4.0 \
           target=$arch-sun-solaris2.10
 
     local dependencies=(
@@ -32,11 +32,11 @@ main() {
 
     mkdir $td/{binutils,gcc}{,-build} $td/solaris
 
-    curl https://ftp.gnu.org/gnu/binutils/binutils-$binutils.tar.bz2 | \
-        tar -C $td/binutils --strip-components=1 -xj
+    curl https://ftp.gnu.org/gnu/binutils/binutils-$binutils.tar.xz | \
+        tar -C $td/binutils --strip-components=1 -xJ
 
-    curl https://ftp.gnu.org/gnu/gcc/gcc-$gcc/gcc-$gcc.tar.bz2 | \
-        tar -C $td/gcc --strip-components=1 -xj
+    curl https://ftp.gnu.org/gnu/gcc/gcc-$gcc/gcc-$gcc.tar.xz | \
+        tar -C $td/gcc --strip-components=1 -xJ
 
     pushd $td
 
@@ -82,26 +82,19 @@ main() {
     cd binutils-build
     ../binutils/configure \
         --target=$target
-    nice make -j$(nproc)
+    make -j$(nproc)
     make install
     cd ..
 
-    patch -p0 <<'EOF'
---- solaris/usr/include/floatingpoint.h.orig	2019-05-29 16:00:48 UTC
-+++ solaris/usr/include/floatingpoint.h
-@@ -184,12 +184,6 @@
-  */
- extern double atof(const char *);
- extern double strtod(const char *, char **);
--#if __cplusplus >= 199711L
--}
--
--using std::atof;
--using std::strtod;
--#endif /* end of namespace std */
+    # Remove Solaris 11 functions that are optionally used by libbacktrace.
+    # This is for Solaris 10 compatibility.
+    rm solaris/usr/include/link.h
 
- #ifdef __cplusplus
- }
+    patch -p0  << 'EOF'
+--- solaris/usr/include/string.h
++++ solaris/usr/include/string10.h
+@@ -93 +92,0 @@
+-extern size_t strnlen(const char *, size_t);
 EOF
 
     local destdir=/usr/local/$target
