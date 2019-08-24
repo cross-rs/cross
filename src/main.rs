@@ -9,6 +9,9 @@ extern crate rustc_version;
 extern crate semver;
 extern crate toml;
 
+#[cfg(target_os = "windows")]
+extern crate winapi;
+
 mod cargo;
 mod cli;
 mod docker;
@@ -40,6 +43,9 @@ pub enum Host {
 
     // Linux
     X86_64UnknownLinuxGnu,
+
+    // Windows MSVC
+    X86_64PcWindowsMsvc
 }
 
 impl Host {
@@ -51,6 +57,8 @@ impl Host {
             target.map(|t| t.triple() == "i686-apple-darwin" || t.needs_docker()).unwrap_or(false)
         } else if *self == Host::X86_64UnknownLinuxGnu {
             target.map(|t| t.needs_docker()).unwrap_or(true)
+        } else if *self == Host::X86_64PcWindowsMsvc {
+            target.map(|t| t.needs_docker()).unwrap_or(false)
         } else {
             false
         }
@@ -60,7 +68,8 @@ impl Host {
         match *self {
             Host::X86_64AppleDarwin => "x86_64-apple-darwin",
             Host::X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
-            Host::Other => unimplemented!(),
+            Host::X86_64PcWindowsMsvc => "x86_64-pc-windows-msvc",
+            Host::Other => unimplemented!()
         }
     }
 }
@@ -70,6 +79,7 @@ impl<'a> From<&'a str> for Host {
         match s {
             "x86_64-apple-darwin" => Host::X86_64AppleDarwin,
             "x86_64-unknown-linux-gnu" => Host::X86_64UnknownLinuxGnu,
+            "x86_64-pc-windows-msvc" => Host::X86_64PcWindowsMsvc,
             _ => Host::Other,
         }
     }
@@ -161,7 +171,8 @@ impl From<Host> for Target {
         match host {
             Host::X86_64UnknownLinuxGnu => Target::new_built_in("x86_64-unknown-linux-gnu"),
             Host::X86_64AppleDarwin => Target::new_built_in("x86_64-apple-darwin"),
-            Host::Other => unreachable!(),
+            Host::X86_64PcWindowsMsvc => Target::new_built_in("x86_64-pc-windows-msvc"),
+            Host::Other => unimplemented!(),
         }
     }
 }
