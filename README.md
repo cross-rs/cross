@@ -177,17 +177,18 @@ that only support `xargo`.
 A target is considered as "supported" if `cross` can cross compile a
 "non-trivial" (binary) crate, usually Cargo, for that target.
 
-Testing support is more complicated. It relies on QEMU user emulation, so
-testing may sometimes fail due to QEMU bug sand not because there's a bug in the
-crate. That being said, `cross test` is assumed to "work" (`test` column in the
-table below) if it can successfully
-run [compiler-builtins](https://github.com/rust-lang-nursery/compiler-builtins)
-test suite.
+Testing support (`cross test`) is more complicated. It relies on [QEMU]
+emulation, so testing may fail due to QEMU bugs rather than bugs in your crate.
+That said, a target has a ✓ in `test` column of the table below if it can run
+the [`compiler-builtins`] test suite.
 
-Also, testing is very slow. `cross` will actually run units tests *sequentially*
-because QEMU gets upset when you spawn several threads. This also means that, if
-one of your unit tests spawns several threads then it's more likely to fail or,
-worst, "hang" (never terminate).
+[QEMU]: https://www.qemu.org/
+[`compiler-builtins`]: https://github.com/rust-lang-nursery/compiler-builtins
+
+Also, testing is very slow. `cross test` runs units tests *sequentially* because
+QEMU gets upset when you spawn multiple threads. This means that, if one of your
+unit tests spawns threads, then it's more likely to fail or, worst, never
+terminate.
 
 | Target                               |  libc  |   GCC   | OpenSSL | C++ | QEMU  | `test` |
 |--------------------------------------|--------|---------|---------|:---:|-------|:------:|
