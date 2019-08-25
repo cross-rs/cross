@@ -172,16 +172,20 @@ fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
         }
     }
 
-    let version = env!("CARGO_PKG_VERSION");
-    let tag = if version.ends_with("-dev") {
-        Cow::from("latest")
-    } else {
-        Cow::from(format!("v{}", version))
-    };
     let triple = target.triple();
+
     if !DOCKER_IMAGES.contains(&triple) {
         bail!("cross does not provide docker image for {} target, \
                specify a custom image in Cross.toml", triple);
     }
-    Ok(format!("japaric/{}:{}", target.triple(), tag))
+
+    let version = env!("CARGO_PKG_VERSION");
+
+    let image = if version.contains("dev") || version.contains("alpha") {
+        format!("rustembedded/cross:{}", triple)
+    } else {
+        format!("rustembedded/cross:{}-{}", triple, version)
+    };
+
+    Ok(image)
 }
