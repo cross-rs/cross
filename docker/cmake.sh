@@ -1,7 +1,7 @@
 set -ex
 
 main() {
-    local version=$1
+    local version=3.5.1
 
     local dependencies=(
         curl
@@ -18,7 +18,7 @@ main() {
         fi
     done
 
-    local td=$(mktemp -d)
+    local td="$(mktemp -d)"
 
     pushd $td
 

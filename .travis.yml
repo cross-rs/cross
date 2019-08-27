@@ -1,5 +1,5 @@
 language: rust
-rust: nightly
+rust: stable
 services:
   - docker
 sudo: required
@@ -59,14 +59,13 @@ matrix:
     # FIXME: freebsd fails to link when CPP=1
     #- env: TARGET=i686-unknown-freebsd                  DYLIB=1 STD=1 OPENSSL=0.7.17
     - env: TARGET=x86_64-unknown-dragonfly        CPP=1 DYLIB=1       OPENSSL=0.5.5
+      rust: nightly
     #- env: TARGET=x86_64-unknown-freebsd                DYLIB=1 STD=1 OPENSSL=0.5.5
     - env: TARGET=x86_64-unknown-netbsd           CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
 
     # Solaris
     - env: TARGET=sparcv9-sun-solaris             CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
-      rust: nightly-2019-05-15
     - env: TARGET=x86_64-sun-solaris              CPP=1 DYLIB=1 STD=1 OPENSSL=0.7.17
-      rust: nightly-2019-05-15
 
     # Windows
     - env: TARGET=x86_64-pc-windows-gnu           CPP=1         STD=1                RUN=1
@@ -74,9 +73,7 @@ matrix:
 
     # Emscripten
     #- env: TARGET=asmjs-unknown-emscripten        CPP=1         STD=1                RUN=1
-    - env: TARGET=wasm32-unknown-emscripten       CPP=1         STD=1                RUN=1
-      # work around rust-lang/cargo#4689
-      rust: nightly-2017-10-24
+    - env: TARGET=wasm32-unknown-emscripten                     STD=1
 
     # Bare metal
     - env: TARGET=thumbv6m-none-eabi                            STD=1
@@ -95,6 +92,7 @@ script:
 branches:
   only:
     - /^v\d+\.\d+\.\d+.*$/
+    - master
     - staging
     - trying
 
