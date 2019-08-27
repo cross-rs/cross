@@ -119,8 +119,8 @@ deploy:
       docker push "rustembedded/cross:$TARGET${tag:+-$tag}"
     skip_cleanup: true
     on:
-      condition: $TRAVIS_BRANCH = master && $TRAVIS_OS_NAME = linux
-      tags: true
+      condition: $TRAVIS_OS_NAME = linux
+      branch: master
 
 before_cache:
   - test $TRAVIS_OS_NAME = osx ||
