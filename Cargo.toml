@@ -13,9 +13,12 @@ version = "0.1.15-dev"
 error-chain = "0.12"
 lazy_static = "1.0"
 libc = "0.2.18"
-rustc_version = "0.2.1"
-semver = "0.9.0"
-toml = "0.2.1"
+rustc_version = "0.2"
+semver = "0.9"
+toml = "0.5"
+
+[target.'cfg(not(windows))'.dependencies]
+nix = "0.15"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.7", features = ["winbase"] }
