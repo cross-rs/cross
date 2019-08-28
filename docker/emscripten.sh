@@ -26,8 +26,8 @@ main() {
     export HOME=/emsdk-portable/
 
     ./emsdk update
-    ./emsdk install sdk-1.37.21-64bit
-    ./emsdk activate sdk-1.37.21-64bit
+    ./emsdk install sdk-1.38.15-64bit
+    ./emsdk activate sdk-1.38.15-64bit
 
     # Compile and cache libc
     source ./emsdk_env.sh
