@@ -110,13 +110,7 @@ deploy:
       condition: $DEPLOY = 1
       tags: true
   - provider: script
-    script: |
-      set -e
-
-      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-      tag="${TRAVIS_TAG##v}"
-      docker push "rustembedded/cross:$TARGET${tag:+-$tag}"
+    script: ./ci/deploy.sh
     skip_cleanup: true
     on:
       condition: $TRAVIS_OS_NAME = linux
