@@ -5,9 +5,8 @@ set -ex
 cd docker
 
 run() {
-    tag="${TRAVIS_TAG##v}"
     docker build \
-           -t "rustembedded/cross:${1}${tag:+-$tag}" \
+           -t "rustembedded/cross:${1}" \
            -f "Dockerfile.${1}" \
            .
 }
