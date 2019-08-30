@@ -116,21 +116,21 @@ deploy:
       condition: $TRAVIS_OS_NAME = linux
       branch: master
 
+before_install:
+  - |
+    if [ $TRAVIS_OS_NAME = linux ]; then
+      docker load --input "$HOME/docker/$TARGET.tar" || true
+    fi
+
 before_cache:
-  - test $TRAVIS_OS_NAME = osx ||
-    docker history -q "rustembedded/cross:$TARGET" |
-    grep -v \<missing\> |
-    xargs docker save |
-    gzip > $HOME/docker/$TARGET.tar.gz
+  - |
+    if [ $TRAVIS_OS_NAME = linux ]; then
+      docker save "rustembedded/cross:$TARGET" --output "$HOME/docker/$TARGET.tar"
+    fi
 
 cache:
   directories:
     - $HOME/docker
-
-# restore the cache
-before_install:
-  - test $TRAVIS_OS_NAME = osx ||
-    zcat $HOME/docker/$TARGET.tar.gz | docker load || true
 
 notifications:
   email:
