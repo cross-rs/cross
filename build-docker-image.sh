@@ -8,8 +8,8 @@ run() {
   local dockerfile="Dockerfile.${1}"
   local image="rustembedded/cross:${1}"
 
-  time docker pull "${image}" || true
-  time docker build --pull --cache-from "${image}" -t "${image}" -f "${dockerfile}" .
+  docker pull "${image}" || true
+  docker build --pull --cache-from "${image}" -t "${image}" -f "${dockerfile}" .
 }
 
 if [ -z "${1}" ]; then
