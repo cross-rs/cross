@@ -4,6 +4,8 @@ services:
   - docker
 sudo: required
 
+cache: cargo
+
 matrix:
   include:
     # Linux
