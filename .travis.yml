@@ -4,6 +4,8 @@ services:
   - docker
 sudo: required
 
+cache: cargo
+
 matrix:
   include:
     # Linux
@@ -115,22 +117,6 @@ deploy:
     on:
       condition: $TRAVIS_OS_NAME = linux
       branch: master
-
-before_cache:
-  - test $TRAVIS_OS_NAME = osx ||
-    docker history -q "rustembedded/cross:$TARGET" |
-    grep -v \<missing\> |
-    xargs docker save |
-    gzip > $HOME/docker/$TARGET.tar.gz
-
-cache:
-  directories:
-    - $HOME/docker
-
-# restore the cache
-before_install:
-  - test $TRAVIS_OS_NAME = osx ||
-    zcat $HOME/docker/$TARGET.tar.gz | docker load || true
 
 notifications:
   email:
