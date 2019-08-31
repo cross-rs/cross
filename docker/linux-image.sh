@@ -53,7 +53,7 @@ main() {
             kernel=5.2.0-2-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
-            # sid version of dropbear requeries this depencendies
+            # sid version of dropbear requires these depencendies
             deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
             libssl="libssl1.1"
             ;;
@@ -71,7 +71,7 @@ main() {
             kernel=5.2.0-2-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
-            # sid version of dropbear requeries this depencendies
+            # sid version of dropbear requires these depencendies
             deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
             libssl="libssl1.1"
             ;;
