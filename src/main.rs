@@ -1,5 +1,6 @@
 #![deny(missing_debug_implementations)]
 
+extern crate atty;
 #[macro_use]
 extern crate error_chain;
 #[macro_use]

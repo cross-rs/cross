@@ -156,4 +156,8 @@ esac
 
 ) 200>$LOCK
 
-exec dbclient -t -p 10022 -y -y root@localhost "${@}"
+if [ -t 1 ] && [ -t 2]; then
+  tty_flag='-t'
+fi
+
+exec dbclient ${tty_flag} -p 10022 -y -y root@localhost "${@}"
