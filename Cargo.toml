@@ -10,6 +10,7 @@ repository = "https://github.com/rust-embedded/cross"
 version = "0.1.15-dev"
 
 [dependencies]
+atty = "0.2"
 error-chain = "0.12"
 lazy_static = "1.0"
 libc = "0.2.18"

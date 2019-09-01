@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
+use atty::Stream;
 use semver::{Version, VersionReq};
 
 use {Target, Toml};
@@ -61,7 +62,7 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
     docker_command("run")
         .arg("--privileged")
         .arg("--rm")
-        .arg("-it")
+        .arg("-i")
         .arg("ubuntu:16.04")
         .args(&["sh", "-c", cmd])
         .run(verbose)
@@ -158,8 +159,14 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/project:Z,ro", root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
-        .args(&["-w", "/project"])
-        .args(&["-it", &image(toml, target)?])
+        .args(&["-w", "/project"]);
+
+    if atty::is(Stream::Stdout) && atty::is(Stream::Stderr) {
+        docker.arg("-t");
+    }
+
+    docker
+        .args(&["-i", &image(toml, target)?])
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
