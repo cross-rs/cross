@@ -1,6 +1,7 @@
 [![crates.io](https://img.shields.io/crates/v/cross.svg)](https://crates.io/crates/cross)
 [![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
 [![Build Status](https://travis-ci.org/rust-embedded/cross.svg?branch=master)](https://travis-ci.org/rust-embedded/cross)
+[![Docker Pulls](https://img.shields.io/docker/pulls/rustembedded/cross)](https://hub.docker.com/r/rustembedded/cross)
 
 # `cross`
 
