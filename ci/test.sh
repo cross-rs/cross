@@ -1,16 +1,39 @@
 set -ex
 
+function retry {
+  local tries=${TRIES-5}
+  local timeout=${TIMEOUT-1}
+  local try=0
+  local exit_code=0
+
+  while (( ${try} < ${tries} )); do
+    if "${@}"; then
+      return 0
+    else
+      exit_code=$?
+    fi
+
+    sleep ${timeout}
+    echo "Retrying ..." 1>&2
+    try=$(( try + 1 ))
+    timeout=$(( timeout * 2 ))
+  done
+
+  return ${exit_code}
+}
+
 main() {
     local td=
 
-    if [ "$TRAVIS_OS_NAME" = linux ]; then
+    if [ "${OS}" = linux ]; then
         ./build-docker-image.sh $TARGET
     fi
 
-    if [ "$TRAVIS_BRANCH" = master ] || [ ! -z "$TRAVIS_TAG" ]; then
+    if [ "${BRANCH-}" = master ] || [[ "${TAG-}" =~ ^v.* ]]; then
         return
     fi
 
+    retry cargo fetch
     cargo install --force --path .
 
     export QEMU_STRACE=1
@@ -40,6 +63,7 @@ main() {
 [build]
 xargo = true
 EOF
+        retry cargo fetch
         cross build --lib --target $TARGET
         popd
 
@@ -55,8 +79,9 @@ EOF
         pushd $td
         cargo init --bin --name hello .
         # test that linking (to SSL) works
-        echo 'openssl = "0.10.15"' >> Cargo.toml
+        echo "openssl = \"${OPENSSL}\"" >> Cargo.toml
         echo 'extern crate openssl;' >> src/main.rs
+        retry cargo fetch
         cross build --target $TARGET
         popd
 
@@ -67,6 +92,7 @@ EOF
 
         pushd $td
         cargo init --lib --name foo .
+        retry cargo fetch
         cross build --target $TARGET
         popd
 
@@ -77,6 +103,7 @@ EOF
         pushd $td
         # test that linking works
         cargo init --bin --name hello .
+        retry cargo fetch
         cross build --target $TARGET
         popd
 
@@ -142,6 +169,7 @@ EOF
 
         pushd $td
         cargo update -p gcc
+        retry cargo fetch
         if [ $RUN ]; then
             cross_run --target $TARGET
         else
@@ -159,17 +187,16 @@ EOF
         # If tag name v$OPENSSL fails we try openssl-sys-v$OPENSSL
         git clone \
             --depth 1 \
-            --branch v$OPENSSL \
-            https://github.com/sfackler/rust-openssl $td || \
-        git clone \
-            --depth 1 \
-            --branch openssl-sys-v$OPENSSL \
+            --branch openssl-v$OPENSSL \
             https://github.com/sfackler/rust-openssl $td
 
         pushd $td
         # avoid problems building openssl-sys in a virtual workspace
         rm -f Cargo.toml
-        cd openssl-sys && cross build --target $TARGET
+        pushd openssl-sys
+        retry cargo fetch
+        cross build --target $TARGET
+        popd
         popd
 
         rm -rf $td
