@@ -9,6 +9,8 @@ extern crate libc;
 extern crate rustc_version;
 extern crate semver;
 extern crate toml;
+
+#[cfg(not(target_os = "windows"))]
 extern crate nix;
 
 #[cfg(target_os = "windows")]

@@ -26,7 +26,7 @@ pub fn user() -> u32 {
 }
 
 #[cfg(target_os = "windows")]
-pub fn username() -> String {
+pub fn username() -> Result<Option<String>, String> {
     use std::ptr;
 
     use winapi::um::winbase::GetUserNameW;
@@ -36,19 +36,19 @@ pub fn username() -> String {
         GetUserNameW(ptr::null_mut(), &mut size);
 
         if size == 0 {
-            return "".to_owned()
+            return Ok(None)
         }
 
         let mut username = Vec::with_capacity(size as usize);
 
         if GetUserNameW(username.as_mut_ptr(), &mut size) == 0 {
-            return "".to_owned();
+            return Err("Could not get UserName.".to_owned());
         }
 
         // Remove null terminator.
         username.set_len((size - 1) as usize);
 
-        String::from_utf16(&username).unwrap()
+        Ok(Some(String::from_utf16_lossy(&username)))
     }
 }
 
