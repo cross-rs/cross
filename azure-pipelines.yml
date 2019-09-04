@@ -71,9 +71,9 @@ steps:
   - template: ci/azure-install-rust.yml
   - bash: echo "##vso[task.setvariable variable=OS]$(echo "${AGENT_OS}" | tr '[:upper:]' '[:lower:]')"
     displayName: Set OS variable
-  - bash: echo "##vso[task.setvariable variable=BRANCH]${BUILD_SOURCEBRANCH##refs/branches/}"
+  - bash: echo "##vso[task.setvariable variable=BRANCH]${BUILD_SOURCEBRANCH##refs/heads/}"
     displayName: Set BRANCH variable
-    condition: startsWith(variables['Build.SourceBranch'], 'refs/branches/')
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/')
   - bash: echo "##vso[task.setvariable variable=TAG]${BUILD_SOURCEBRANCH##refs/tags/}"
     displayName: Set TAG variable
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
