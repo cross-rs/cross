@@ -79,6 +79,7 @@ steps:
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
   - bash: ci/test.sh
     displayName: Test
+    timeoutInMinutes: 360
   - bash: cargo publish
     displayName: Publish on crates.io
     env:
