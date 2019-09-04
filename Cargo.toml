@@ -23,3 +23,6 @@ nix = "0.15"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.7", features = ["winbase"] }
+
+[profile.release]
+lto = true
