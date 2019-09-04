@@ -1,11 +1,11 @@
 [![crates.io](https://img.shields.io/crates/v/cross.svg)](https://crates.io/crates/cross)
 [![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
-[![Build Status](https://travis-ci.org/rust-embedded/cross.svg?branch=master)](https://travis-ci.org/rust-embedded/cross)
+[![Build Status](https://img.shields.io/azure-devops/build/rust-embedded/c0ce10ee-fd41-4551-b3e3-9612e8ab62f3/2/master)](https://dev.azure.com/rust-embedded/cross/_build?definitionId=2)
 [![Docker Pulls](https://img.shields.io/docker/pulls/rustembedded/cross)](https://hub.docker.com/r/rustembedded/cross)
 
 # `cross`
 
-> "Zero setup" cross compilation and "cross testing" of Rust crates
+> “Zero setup” cross compilation and “cross testing” of Rust crates
 
 This project is developed and maintained by the [Tools team][team].
 
@@ -19,8 +19,6 @@ This project is developed and maintained by the [Tools team][team].
 <em>`cross test`ing a crate for the aarch64-unknown-linux-gnu target</em>
 </p>
 
-**Disclaimer**: Only works on a x86_64 Linux host (e.g. Travis CI is supported)
-
 ## Features
 
 - `cross` will provide all the ingredients needed for cross compilation without
@@ -29,7 +27,7 @@ This project is developed and maintained by the [Tools team][team].
 - `cross` provides an environment, cross toolchain and cross compiled libraries
   (e.g. OpenSSL), that produces the most portable binaries.
 
-- "cross testing", `cross` can test crates for architectures other than i686 and
+- “cross testing”, `cross` can test crates for architectures other than i686 and
   x86_64.
 
 - The stable, beta and nightly channels are supported.
@@ -38,10 +36,10 @@ This project is developed and maintained by the [Tools team][team].
 
 - [rustup](https://rustup.rs/)
 
-- [Docker](https://www.docker.com/). Note that non-sudo users need to be in the
-  `docker` group. Read the official [post-installation steps for Linux][post].
+- [Docker](https://www.docker.com/). Note that on Linux non-sudo users need to be in the
+  `docker` group. Read the official [post-installation steps][post].
 
-[post]: https://docs.docker.com/engine/installation/linux/linux-postinstall/
+[post]: https://docs.docker.com/install/linux/linux-postinstall/
 
 - A Linux kernel with [binfmt_misc] support is required for cross testing.
 
@@ -83,7 +81,7 @@ You can place a `Cross.toml` file in the root of your Cargo project to tweak
 
 `cross` provides default Docker images for the targets listed below. However, it
 can't cover every single use case out there. For other targets, or when the
-default image is not enough, you can use the `target.$TARGET.image` field in
+default image is not enough, you can use the `target.{{TARGET}}.image` field in
 `Cross.toml` to use custom Docker image for a specific target:
 
 ``` toml
@@ -103,12 +101,12 @@ the default one. Normal Docker behavior applies, so:
 - If only `tag` is omitted, then Docker will use the `latest` tag.
 
 It's recommended to base your custom image on the default Docker image that
-cross uses: `rustembedded/cross:$TARGET-$VERSION` (where `$VERSION` is cross's version).
+cross uses: `rustembedded/cross:{{TARGET}}-{{VERSION}}` (where `{{VERSION}}` is cross's version).
 This way you won't have to figure out how to install a cross C toolchain in your
 custom image. Example below:
 
 ``` Dockerfile
-FROM rustembedded/cross:aarch64-unknown-linux-gnu-0.1.4
+FROM rustembedded/cross:aarch64-unknown-linux-gnu-0.1.15
 
 RUN dpkg --add-architecture arm64 && \
     apt-get update && \
@@ -128,7 +126,6 @@ environment.
 
 In the instances that you do want to pass through environment variables, this
 can be done via `build.env.passthrough` in your `Cross.toml`:
-
 
 ```toml
 [build.env]
@@ -153,7 +150,7 @@ passthrough = [
 
 By default, `cross` uses `cargo` to build your Cargo project *unless* you are
 building for one of the `thumbv*-none-eabi*` targets; in that case, it uses
-`xargo`. However, you can use the `build.xargo` or `target.$TARGET.xargo` field
+`xargo`. However, you can use the `build.xargo` or `target.{{TARGET}}.xargo` field
 in `Cross.toml` to force the use of `xargo`:
 
 ``` toml
@@ -175,8 +172,8 @@ that only support `xargo`.
 
 ## Supported targets
 
-A target is considered as "supported" if `cross` can cross compile a
-"non-trivial" (binary) crate, usually Cargo, for that target.
+A target is considered as “supported” if `cross` can cross compile a
+“non-trivial” (binary) crate, usually Cargo, for that target.
 
 Testing support (`cross test`) is more complicated. It relies on [QEMU]
 emulation, so testing may fail due to QEMU bugs rather than bugs in your crate.
@@ -260,7 +257,7 @@ where libc was extracted.
 ### QEMU_STRACE (v0.1.9+)
 
 You can set the QEMU_STRACE variable when you use `cross run` to get a backtrace
-of system calls from "foreign" (non x86_64) binaries.
+of system calls from “foreign” (non x86_64) binaries.
 
 ```
 $ cargo new --bin hello && cd $_
@@ -276,14 +273,14 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 9 exit_group(0)
 ```
 
-## Caveats / gotchas
+## Caveats
 
 - path dependencies (in Cargo.toml) that point outside the Cargo project won't
   work because `cross` use docker containers only mounts the Cargo project so
   the container doesn't have access to the rest of the filesystem.
 
 - `cross` will mount the Cargo project as READ ONLY. Thus, if any crate attempts
-  to modify its "source", the build will fail. Well behaved crates should only
+  to modify its “source”, the build will fail. Well behaved crates should only
   ever write to `$OUT_DIR` and never modify `$CARGO_MANIFEST_DIR` though.
 
 ## License
@@ -292,7 +289,7 @@ Licensed under either of
 
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
   http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
 
