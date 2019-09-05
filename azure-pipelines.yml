@@ -66,6 +66,7 @@ strategy:
     thumbv7em-none-eabi:             { TARGET: thumbv7em-none-eabi,                               STD: 1 }
     thumbv7em-none-eabihf:           { TARGET: thumbv7em-none-eabihf,                             STD: 1 }
     thumbv7m-none-eabi:              { TARGET: thumbv7m-none-eabi,                                STD: 1 }
+    x86_64-pc-windows-msvc:          { TARGET: x86_64-pc-windows-msvc,          CPP: 1,           STD: 1,                   RUN: 1, VM_IMAGE: vs2017-win2016, DEPLOY: 1 }
 
 steps:
   - template: ci/azure-install-rust.yml
