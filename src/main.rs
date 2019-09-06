@@ -58,7 +58,7 @@ impl Host {
     /// `target == None` means `target == host`
     fn is_supported(&self, target: Option<&Target>) -> bool {
         if *self == Host::X86_64AppleDarwin {
-            target.map(|t| t.triple() == "i686-apple-darwin" || t.needs_docker()).unwrap_or(false)
+            target.map(|t| t.is_apple() || t.needs_docker()).unwrap_or(false)
         } else if *self == Host::X86_64UnknownLinuxGnu {
             target.map(|t| t.needs_docker()).unwrap_or(true)
         } else if *self == Host::X86_64PcWindowsMsvc {
@@ -109,6 +109,10 @@ impl Target {
             Target::BuiltIn{ref triple} => triple,
             Target::Custom{ref triple} => triple,
         }
+    }
+
+    fn is_apple(&self) -> bool {
+        self.triple().contains("apple")
     }
 
     fn is_bare_metal(&self) -> bool {
