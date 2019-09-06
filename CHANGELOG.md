@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.15] - 2019-09-04
+
 - Images are now hosted at https://hub.docker.com/r/rustembedded/cross.
 - Bump OpenSSL version to 1.0.2p.
 - Bump musl version to 1.1.20.
@@ -207,7 +209,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/rust-embedded/cross/compare/v0.1.14...HEAD
+[Unreleased]: https://github.com/rust-embedded/cross/compare/v0.1.15...HEAD
+[v0.1.15]: https://github.com/rust-embedded/cross/compare/v0.1.14...v0.1.15
 [v0.1.14]: https://github.com/rust-embedded/cross/compare/v0.1.13...v0.1.14
 [v0.1.13]: https://github.com/rust-embedded/cross/compare/v0.1.12...v0.1.13
 [v0.1.12]: https://github.com/rust-embedded/cross/compare/v0.1.11...v0.1.12
