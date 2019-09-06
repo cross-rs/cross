@@ -35,6 +35,7 @@ strategy:
     s390x-unknown-linux-gnu:         { TARGET: s390x-unknown-linux-gnu,         CPP: 1, DYLIB: 1, STD: 1, OPENSSL: 0.10.24, RUN: 1, RUNNERS: qemu-system }
     sparc64-unknown-linux-gnu:       { TARGET: sparc64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, OPENSSL: 0.10.24, RUN: 1, RUNNERS: qemu-system }
     x86_64-unknown-linux-gnu:        { TARGET: x86_64-unknown-linux-gnu,        CPP: 1, DYLIB: 1, STD: 1, OPENSSL: 0.10.24, RUN: 1, RUNNERS: native qemu-user qemu-system, DEPLOY: 1, CRATES_IO_PUBLISH: 1 }
+    x86_64-unknown-linux-gnux32:     { TARGET: x86_64-unknown-linux-gnux32,     CPP: 1, DYLIB: 1, STD: 1, OPENSSL: 0.10.24, RUN: 1, RUNNERS: qemu-system }
     aarch64-unknown-linux-musl:      { TARGET: aarch64-unknown-linux-musl,                        STD: 1, OPENSSL: 0.10.24, RUN: 1 }
     arm-unknown-linux-musleabihf:    { TARGET: arm-unknown-linux-musleabihf,                      STD: 1, OPENSSL: 0.10.24, RUN: 1 }
     arm-unknown-linux-musleabi:      { TARGET: arm-unknown-linux-musleabi,                        STD: 1, OPENSSL: 0.10.24, RUN: 1 }

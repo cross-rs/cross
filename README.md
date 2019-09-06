@@ -230,6 +230,7 @@ terminate.
 | `x86_64-sun-solaris` [4]             | 2.11   | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 | `x86_64-unknown-dragonfly` [4] [3]   | 4.6.0  | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
+| `x86_64-unknown-linux-gnux32`        | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [4]          | 7.0    | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 

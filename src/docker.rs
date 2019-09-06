@@ -178,7 +178,10 @@ fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
         }
     }
 
-    let triple = target.triple();
+    let triple = match target.triple() {
+      "x86_64-unknown-linux-gnux32" => "x86_64-unknown-linux-gnu",
+      triple => triple,
+    };
 
     if !DOCKER_IMAGES.contains(&triple) {
         bail!("cross does not provide docker image for {} target, \

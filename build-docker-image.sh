@@ -5,8 +5,14 @@ set -ex
 cd docker
 
 run() {
-  local dockerfile="Dockerfile.${1}"
-  local image_name="rustembedded/cross:${1}"
+  local target="${1}"
+
+  case "${target}" in
+    x86_64-unknown-linux-gnux32) target=x86_64-unknown-linux-gnu;;
+  esac
+
+  local dockerfile="Dockerfile.${target}"
+  local image_name="rustembedded/cross:${target}"
 
   if docker pull "${image_name}"; then
     local cache_from_args=(--cache-from "${image_name}")
