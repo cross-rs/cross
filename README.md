@@ -203,12 +203,9 @@ terminate.
 | `armv7-linux-androideabi` [2]        | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
-| `asmjs-unknown-emscripten` [3]       | 1.1.20 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-musl`            | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
 | `i686-linux-android` [2]             | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `i686-pc-windows-gnu`                | N/A    | 7.3.0   | N/A     | ✓   | N/A   |   ✓    |
-| `i686-unknown-freebsd` [4]           | 10.2   | 5.3.0   | 1.0.2p  |     | N/A   |        |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
@@ -221,18 +218,17 @@ terminate.
 | `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.7.1 |   ✓    |
 | `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.7.1 |   ✓    |
 | `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |        |
-| `sparc64-unknown-linux-gnu` [5]      | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
+| `sparc64-unknown-linux-gnu` [3]      | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
 | `sparcv9-sun-solaris` [4]            | 2.11   | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
-| `thumbv6m-none-eabi` [6]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7em-none-eabi` [6]            | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7em-none-eabihf` [6]          | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7m-none-eabi` [6]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `wasm32-unknown-emscripten` [3]      | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
+| `thumbv6m-none-eabi` [5]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
+| `thumbv7em-none-eabi` [5]            | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
+| `thumbv7em-none-eabihf` [5]          | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
+| `thumbv7m-none-eabi` [5]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
+| `wasm32-unknown-emscripten` [6]      | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
 | `x86_64-linux-android` [2]           | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 7.3.0   | N/A     | ✓   | N/A   |   ✓    |
 | `x86_64-sun-solaris` [4]             | 2.11   | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
-| `x86_64-unknown-dragonfly` [4] [5]   | 4.6.0  | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
-| `x86_64-unknown-freebsd` [4]         | 10.2   | 5.3.0   | 1.0.2p  |     | N/A   |        |
+| `x86_64-unknown-dragonfly` [4] [3]   | 4.6.0  | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [4]          | 7.0    | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
@@ -245,15 +241,15 @@ terminate.
     [issue #140](https://github.com/rust-embedded/cross/issues/140) for more
     information.
 
-[3] libc = musl, gcc = emcc; Some projects that use libc may fail due to wrong
-    definitions (will be fixed by https://github.com/rust-lang/libc/pull/610)
-
 [4] For *BSD and Solaris targets, the libc column indicates the OS release version
     from which libc was extracted.
 
-[5] No `std` component available as of 2017-01-10
+[3] No `std` component available as of 2017-01-10
 
-[6] libc = newlib
+[5] libc = newlib
+
+[6] libc = musl, gcc = emcc; Some projects that use libc may fail due to wrong
+    definitions (will be fixed by https://github.com/rust-lang/libc/pull/610)
 
 ## Debugging
 
