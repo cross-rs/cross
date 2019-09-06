@@ -13,6 +13,10 @@ fi
 arch=$1
 shift
 
+if [ "$CROSS_RUNNER" = "" ]; then
+    CROSS_RUNNER=qemu-user
+fi
+
 # select qemu arch
 qarch=$arch
 case "$arch" in
@@ -41,7 +45,7 @@ case "$CROSS_RUNNER" in
     native)
         exec "${@}"
         ;;
-    qemu-user | "")
+    qemu-user)
         exec qemu-$qarch "${@}"
         ;;
     qemu-system)
