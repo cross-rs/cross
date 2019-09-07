@@ -171,7 +171,7 @@ pub fn run(target: &Target,
         .run_and_get_status(verbose)
 }
 
-fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
+pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
     if let Some(toml) = toml {
         if let Some(image) = toml.image(target)?.map(|s| s.to_owned()) {
             return Ok(image)
@@ -181,8 +181,8 @@ fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
     let triple = target.triple();
 
     if !DOCKER_IMAGES.contains(&triple) {
-        bail!("cross does not provide docker image for {} target, \
-               specify a custom image in Cross.toml", triple);
+        bail!("`cross` does not provide a Docker image for target {}, \
+               specify a custom image in `Cross.toml`.", triple);
     }
 
     let version = env!("CARGO_PKG_VERSION");
