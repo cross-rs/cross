@@ -277,7 +277,15 @@ fn run() -> Result<ExitStatus> {
 
             let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
 
-            if target.needs_docker() &&
+            let image_exists = match docker::image(toml.as_ref(), &target) {
+                Ok(_) => true,
+                Err(err) => {
+                    eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
+                    false
+                },
+            };
+
+            if image_exists && target.needs_docker() &&
                args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
                 if version_meta.needs_interpreter() &&
                     needs_interpreter &&
