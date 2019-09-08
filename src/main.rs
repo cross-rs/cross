@@ -62,7 +62,7 @@ impl Host {
         } else if *self == Host::X86_64UnknownLinuxGnu {
             target.map(|t| t.needs_docker()).unwrap_or(true)
         } else if *self == Host::X86_64PcWindowsMsvc {
-            target.map(|t| t.needs_docker()).unwrap_or(false)
+            target.map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()).unwrap_or(false)
         } else {
             false
         }
