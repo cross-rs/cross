@@ -3,13 +3,15 @@ use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
 use atty::Stream;
+use error_chain::bail;
+use lazy_static::lazy_static;
 use semver::{Version, VersionReq};
 
-use {Target, Toml};
-use cargo::Root;
-use errors::*;
-use extensions::CommandExt;
-use id;
+use crate::{Target, Toml};
+use crate::cargo::Root;
+use crate::errors::*;
+use crate::extensions::CommandExt;
+use crate::id;
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 

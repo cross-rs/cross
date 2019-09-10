@@ -1,20 +1,4 @@
-#![deny(missing_debug_implementations)]
-
-extern crate atty;
-#[macro_use]
-extern crate error_chain;
-#[macro_use]
-extern crate lazy_static;
-extern crate libc;
-extern crate rustc_version;
-extern crate semver;
-extern crate toml;
-
-#[cfg(not(target_os = "windows"))]
-extern crate nix;
-
-#[cfg(target_os = "windows")]
-extern crate winapi;
+#![deny(missing_debug_implementations, rust_2018_idioms)]
 
 mod cargo;
 mod cli;
@@ -31,14 +15,15 @@ use std::io::Write;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
+use error_chain::bail;
 use toml::{Value, value::Table};
 
-use cargo::{Root, Subcommand};
-use errors::*;
-use rustc::{TargetList, VersionMetaExt};
+use self::cargo::{Root, Subcommand};
+use self::errors::*;
+use self::rustc::{TargetList, VersionMetaExt};
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Host {
     Other,
 

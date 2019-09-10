@@ -1,8 +1,8 @@
 use std::env;
 
-use Target;
-use cargo::Subcommand;
-use rustc::TargetList;
+use crate::Target;
+use crate::cargo::Subcommand;
+use crate::rustc::TargetList;
 
 pub struct Args {
     pub all: Vec<String>,

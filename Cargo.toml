@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 name = "cross"
 repository = "https://github.com/rust-embedded/cross"
 version = "0.1.16"
+edition = "2018"
 
 [dependencies]
 atty = "0.2"
