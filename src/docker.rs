@@ -62,7 +62,6 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
     docker_command("run")
         .arg("--privileged")
         .arg("--rm")
-        .arg("-i")
         .arg("ubuntu:16.04")
         .args(&["sh", "-c", cmd])
         .run(verbose)
@@ -161,12 +160,15 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
         .args(&["-w", "/project"]);
 
-    if atty::is(Stream::Stdout) && atty::is(Stream::Stderr) {
-        docker.arg("-t");
+    if atty::is(Stream::Stdin) {
+        docker.arg("-i");
+        if atty::is(Stream::Stdout) && atty::is(Stream::Stderr) {
+            docker.arg("-t");
+        }
     }
 
     docker
-        .args(&["-i", &image(toml, target)?])
+        .arg(&image(toml, target)?)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
