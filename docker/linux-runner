@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -e
 
@@ -14,7 +14,11 @@ arch=$1
 shift
 
 if [ "$CROSS_RUNNER" = "" ]; then
-    CROSS_RUNNER=qemu-user
+    if [[ "${arch}" == i?86 ]] || [[ "${arch}" == x86_64 ]]; then
+        CROSS_RUNNER=native
+    else
+        CROSS_RUNNER=qemu-user
+    fi
 fi
 
 # select qemu arch
