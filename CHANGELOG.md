@@ -5,6 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.16] - 2019-09-17
+
+- Bump OpenSSL version to 1.0.2t.
+- Re-enabled `asmjs-unknown-emscripten` target.
+- Default to `native` runner instead of `qemu-user` for certain targets.
+
 ## [v0.1.15] - 2019-09-04
 
 - Images are now hosted at https://hub.docker.com/r/rustembedded/cross.
@@ -210,6 +216,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Initial release. Supports 12 targets.
 
 [Unreleased]: https://github.com/rust-embedded/cross/compare/v0.1.15...HEAD
+[v0.1.16]: https://github.com/rust-embedded/cross/compare/v0.1.15...v0.1.16
 [v0.1.15]: https://github.com/rust-embedded/cross/compare/v0.1.14...v0.1.15
 [v0.1.14]: https://github.com/rust-embedded/cross/compare/v0.1.13...v0.1.14
 [v0.1.13]: https://github.com/rust-embedded/cross/compare/v0.1.12...v0.1.13
