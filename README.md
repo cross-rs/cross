@@ -24,8 +24,8 @@ This project is developed and maintained by the [Tools team][team].
 - `cross` will provide all the ingredients needed for cross compilation without
   touching your system installation.
 
-- `cross` provides an environment, cross toolchain and cross compiled libraries
-  (e.g. OpenSSL), that produces the most portable binaries.
+- `cross` provides an environment, cross toolchain and cross compiled libraries,
+  that produces the most portable binaries.
 
 - “cross testing”, `cross` can test crates for architectures other than i686 and
   x86_64.
@@ -188,50 +188,50 @@ QEMU gets upset when you spawn multiple threads. This means that, if one of your
 unit tests spawns threads, then it's more likely to fail or, worst, never
 terminate.
 
-| Target                               |  libc  |   GCC   | OpenSSL | C++ | QEMU  | `test` |
-|--------------------------------------|-------:|--------:|--------:|:---:|------:|:------:|
-| `*-apple-ios` [1]                    | N/A    | N/A     | N/A     | N/A | N/A   |   ✓    |
-| `aarch64-linux-android` [2]          | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `aarch64-unknown-linux-musl`         | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
-| `arm-linux-androideabi` [2]          | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | 1.0.2p  | ✓   | 2.10  |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |  N/A    |     | 2.8.0 |   ✓    |
-| `armv7-linux-androideabi` [2]        | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   | 1.0.2p  |     | 2.8.0 |   ✓    |
-| `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `i586-unknown-linux-musl`            | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
-| `i686-linux-android` [2]             | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-musl`            | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
-| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `mips-unknown-linux-musl`            | 1.1.20 | 6.3.0   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `mipsel-unknown-linux-musl`          | 1.1.20 | 6.3.0   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.7.1 |   ✓    |
-| `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.7.1 |   ✓    |
-| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | 1.0.2p  | ✓   | 2.7.1 |   ✓    |
-| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |        |
-| `sparc64-unknown-linux-gnu` [3]      | 2.23   | 5.3.1   | 1.0.2p  | ✓   | 2.8.0 |   ✓    |
-| `sparcv9-sun-solaris` [4]            | 2.11   | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
-| `thumbv6m-none-eabi` [5]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7em-none-eabi` [5]            | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7em-none-eabihf` [5]          | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7m-none-eabi` [5]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `wasm32-unknown-emscripten` [6]      | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
-| `x86_64-linux-android` [2]           | N/A    | 4.9     | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `x86_64-pc-windows-gnu`              | N/A    | 7.3.0   | N/A     | ✓   | N/A   |   ✓    |
-| `x86_64-sun-solaris` [4]             | 2.11   | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
-| `x86_64-unknown-dragonfly` [4] [3]   | 4.6.0  | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
-| `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | 1.0.2p  | ✓   | N/A   |   ✓    |
-| `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   | 1.0.2p  |     | N/A   |   ✓    |
-| `x86_64-unknown-netbsd` [4]          | 7.0    | 5.3.0   | 1.0.2p  | ✓   | N/A   |        |
+| Target                               |  libc  |   GCC   | C++ | QEMU  | `test` |
+|--------------------------------------|-------:|--------:|:---:|------:|:------:|
+| `*-apple-ios` [1]                    | N/A    | N/A     | N/A | N/A   |   ✓    |
+| `aarch64-linux-android` [2]          | N/A    | 4.9     | ✓   | N/A   |   ✓    |
+| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 2.8.0 |   ✓    |
+| `aarch64-unknown-linux-musl`         | 1.1.20 | 6.3.0   |     | 2.8.0 |   ✓    |
+| `arm-linux-androideabi` [2]          | N/A    | 4.9     | ✓   | N/A   |   ✓    |
+| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | ✓   | 2.8.0 |   ✓    |
+| `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 2.10  |   ✓    |
+| `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   |     | 2.8.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   |     | 2.8.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |     | 2.8.0 |   ✓    |
+| `armv7-linux-androideabi` [2]        | N/A    | 4.9     | ✓   | N/A   |   ✓    |
+| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 2.8.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   |     | 2.8.0 |   ✓    |
+| `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | N/A   |   ✓    |
+| `i586-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `i686-linux-android` [2]             | N/A    | 4.9     | ✓   | N/A   |   ✓    |
+| `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
+| `i686-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | 2.8.0 |   ✓    |
+| `mips-unknown-linux-musl`            | 1.1.20 | 6.3.0   | ✓   | 2.8.0 |   ✓    |
+| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | ✓   | 2.8.0 |   ✓    |
+| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | ✓   | 2.8.0 |   ✓    |
+| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | ✓   | 2.8.0 |   ✓    |
+| `mipsel-unknown-linux-musl`          | 1.1.20 | 6.3.0   | ✓   | 2.8.0 |   ✓    |
+| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 2.7.1 |   ✓    |
+| `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2   | ✓   | 2.7.1 |   ✓    |
+| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | ✓   | 2.7.1 |   ✓    |
+| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | ✓   | 2.8.0 |        |
+| `sparc64-unknown-linux-gnu` [3]      | 2.23   | 5.3.1   | ✓   | 2.8.0 |   ✓    |
+| `sparcv9-sun-solaris` [4]            | 2.11   | 5.3.0   | ✓   | N/A   |        |
+| `thumbv6m-none-eabi` [5]             | 2.2.0  | 5.3.1   |     | N/A   |        |
+| `thumbv7em-none-eabi` [5]            | 2.2.0  | 5.3.1   |     | N/A   |        |
+| `thumbv7em-none-eabihf` [5]          | 2.2.0  | 5.3.1   |     | N/A   |        |
+| `thumbv7m-none-eabi` [5]             | 2.2.0  | 5.3.1   |     | N/A   |        |
+| `wasm32-unknown-emscripten` [6]      | 1.1.15 | 1.37.13 | ✓   | N/A   |   ✓    |
+| `x86_64-linux-android` [2]           | N/A    | 4.9     | ✓   | N/A   |   ✓    |
+| `x86_64-pc-windows-gnu`              | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
+| `x86_64-sun-solaris` [4]             | 2.11   | 5.3.0   | ✓   | N/A   |        |
+| `x86_64-unknown-dragonfly` [4] [3]   | 4.6.0  | 5.3.0   | ✓   | N/A   |        |
+| `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
+| `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `x86_64-unknown-netbsd` [4]          | 7.0    | 5.3.0   | ✓   | N/A   |        |
 
 [1] iOS cross compilation is supported on macOS hosts.
 

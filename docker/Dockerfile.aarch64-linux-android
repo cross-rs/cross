@@ -30,9 +30,6 @@ RUN bash /android-system.sh arm64
 COPY qemu.sh /
 RUN bash /qemu.sh aarch64 android
 
-COPY openssl.sh /
-RUN bash /openssl.sh linux-generic64 aarch64-linux-android- -mandroid -fomit-frame-pointer
-
 RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
@@ -42,10 +39,6 @@ ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-gcc \
     CC_aarch64_linux_android=aarch64-linux-android-gcc \
     CXX_aarch64_linux_android=aarch64-linux-android-g++ \
     DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
-    OPENSSL_STATIC=1 \
-    OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \

@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -ex
 
 function retry {
@@ -73,21 +75,7 @@ EOF
     fi
 
     # `cross build` test for the other targets
-    if [ $OPENSSL ]; then
-        td=$(mktemp -d)
-
-        pushd $td
-        cargo init --bin --name hello .
-        # test that linking (to SSL) works
-        echo "openssl = \"${OPENSSL}\"" >> Cargo.toml
-        echo 'extern crate openssl;' >> src/main.rs
-        retry cargo fetch
-        cross build --target $TARGET
-        popd
-
-        rm -rf $td
-    elif [ "$TARGET" = "asmjs-unknown-emscripten" -o \
-           "$TARGET" = "wasm32-unknown-emscripten" ]; then
+    if [[ "$TARGET" == *-unknown-emscripten ]]; then
         td=$(mktemp -d)
 
         pushd $td
@@ -175,28 +163,6 @@ EOF
         else
             cross build --target $TARGET
         fi
-        popd
-
-        rm -rf $td
-    fi
-
-    # Test openssl compatibility
-    if [ $OPENSSL ]; then
-        td=$(mktemp -d)
-
-        # If tag name v$OPENSSL fails we try openssl-sys-v$OPENSSL
-        git clone \
-            --depth 1 \
-            --branch openssl-v$OPENSSL \
-            https://github.com/sfackler/rust-openssl $td
-
-        pushd $td
-        # avoid problems building openssl-sys in a virtual workspace
-        rm -f Cargo.toml
-        pushd openssl-sys
-        retry cargo fetch
-        cross build --target $TARGET
-        popd
         popd
 
         rm -rf $td

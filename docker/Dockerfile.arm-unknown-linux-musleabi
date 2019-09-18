@@ -30,9 +30,6 @@ RUN bash /musl.sh \
                       --with-float=soft \
                       --with-mode=arm"
 
-COPY openssl.sh /
-RUN bash /openssl.sh linux-armv4 arm-linux-musleabi-
-
 # Allows qemu run dynamic linked binaries
 RUN ln -sf \
     /usr/local/arm-linux-musleabi/lib/libc.so \
@@ -43,7 +40,4 @@ ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABI_LINKER=arm-linux-musleabi-gcc \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABI_RUNNER=qemu-arm \
     CC_arm_unknown_linux_musleabi=arm-linux-musleabi-gcc \
     CXX_arm_unknown_linux_musleabi=arm-linux-musleabi-g++ \
-    OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib \
     RUST_TEST_THREADS=1

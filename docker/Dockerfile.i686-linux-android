@@ -37,10 +37,6 @@ RUN bash /android-system.sh x86
 COPY qemu.sh /
 RUN bash /qemu.sh i386 android
 
-# Build with no-asm to make openssl linked binaries position-independent (PIE)
-COPY openssl.sh /
-RUN bash /openssl.sh android-x86 i686-linux-android- no-asm
-
 RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
@@ -51,10 +47,6 @@ ENV CARGO_TARGET_I686_LINUX_ANDROID_LINKER=i686-linux-android-gcc \
     CXX_i686_linux_android=i686-linux-android-g++ \
     DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
     LIBZ_SYS_STATIC=1 \
-    OPENSSL_STATIC=1 \
-    OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \

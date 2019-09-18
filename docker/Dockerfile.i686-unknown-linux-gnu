@@ -27,9 +27,6 @@ RUN apt-get purge --auto-remove -y cmake && \
 RUN apt-get install -y --no-install-recommends \
     g++-multilib
 
-COPY openssl.sh /
-RUN bash /openssl.sh linux-elf "" -m32
-
 COPY qemu.sh /
 RUN bash /qemu.sh i386 linux softmmu
 
@@ -41,7 +38,4 @@ RUN bash /linux-image.sh i686
 
 COPY linux-runner /
 
-ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner i686" \
-    OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib
+ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner i686"

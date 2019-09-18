@@ -33,21 +33,17 @@ RUN mkdir /usr/arm-linux-gnueabihf && \
 
 ENV PATH /usr/arm-linux-gnueabihf/bin:$PATH
 
-COPY openssl.sh qemu.sh /
+COPY qemu.sh /
 
 RUN bash /qemu.sh arm
 
 RUN apt-get install -y --no-install-recommends \
-    libc6-dev-armhf-cross && \
-    bash /openssl.sh linux-armv4 arm-linux-gnueabihf-
+    libc6-dev-armhf-cross
 
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER=qemu-arm \
     CC_arm_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc \
     CXX_arm_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++ \
-    OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf \
     LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/lib:/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/lib \
     RUST_TEST_THREADS=1
