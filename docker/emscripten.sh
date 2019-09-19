@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -ex
 
 main() {
@@ -41,7 +43,7 @@ main() {
 
     # Make emsdk usable by any user
     chmod a+rw -R /emsdk-portable/
-    chmod a+x `find /emsdk-portable/ -executable -print` || true
+    find /emsdk-portable/ -executable -print0 | xargs -0 chmod a+x
 
     # Clean up
     apt-get purge --auto-remove -y ${purge_list[@]}

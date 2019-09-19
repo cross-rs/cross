@@ -1,34 +1,20 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 COPY android-ndk.sh /
-RUN bash /android-ndk.sh arm 21
+RUN /android-ndk.sh arm 21
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY android-system.sh /
-RUN bash /android-system.sh arm
+RUN /android-system.sh arm
 
 COPY qemu.sh /
-RUN bash /qemu.sh arm android
+RUN /qemu.sh arm android
 
 RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 

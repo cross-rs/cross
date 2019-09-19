@@ -1,31 +1,17 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 COPY android-ndk.sh /
-RUN bash /android-ndk.sh x86 21
+RUN /android-ndk.sh x86 21
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY android-system.sh /
-RUN bash /android-system.sh x86
+RUN /android-system.sh x86
 
 # We could supposedly directly run i686 binaries like we do for x86_64, but
 # doing so generates an assertion failure:
@@ -35,7 +21,7 @@ RUN bash /android-system.sh x86
 #
 # Running with qemu works as expected
 COPY qemu.sh /
-RUN bash /qemu.sh i386 android
+RUN /qemu.sh i386 android
 
 RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 

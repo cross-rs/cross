@@ -1,30 +1,16 @@
 FROM ubuntu:18.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 COPY qemu.sh /
-RUN bash /qemu.sh arm
+RUN /qemu.sh arm
 
 COPY musl.sh /
-RUN bash /musl.sh \
+RUN /musl.sh \
     TARGET=arm-linux-musleabi \
     "COMMON_CONFIG += --with-arch=armv5te \
                       --with-float=soft \

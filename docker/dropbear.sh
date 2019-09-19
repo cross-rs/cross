@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -ex
 
 main() {
@@ -42,7 +44,7 @@ main() {
        --disable-pututline \
        --disable-pututxline
 
-    nice make -j$(nproc) PROGRAMS=dbclient
+    make -j$(nproc) PROGRAMS=dbclient
     cp dbclient /usr/local/bin/
 
     # Clean up

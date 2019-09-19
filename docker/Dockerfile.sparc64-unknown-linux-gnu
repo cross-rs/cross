@@ -1,37 +1,23 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 RUN apt-get install -y --no-install-recommends \
     g++-sparc64-linux-gnu \
     libc6-dev-sparc64-cross
 
 COPY qemu.sh /
-RUN bash /qemu.sh sparc64 linux softmmu
+RUN /qemu.sh sparc64 linux softmmu
 
 COPY dropbear.sh /
-RUN bash /dropbear.sh
+RUN /dropbear.sh
 
 COPY linux-image.sh /
-RUN bash /linux-image.sh sparc64
+RUN /linux-image.sh sparc64
 
 COPY linux-runner /
 

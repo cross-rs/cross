@@ -81,7 +81,7 @@ main() {
         --static \
         $virtfs \
         --target-list=$targets
-    nice make -j$(nproc)
+    make -j$(nproc)
     make install
 
     # HACK the binfmt_misc interpreter we'll use expects the QEMU binary to be

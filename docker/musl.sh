@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -ex
 
 hide_output() {
@@ -38,7 +40,7 @@ main() {
     curl -L https://github.com/richfelker/musl-cross-make/archive/v0.9.8.tar.gz | \
         tar --strip-components=1 -xz
 
-    hide_output nice make install -j$(nproc) \
+    hide_output make install -j$(nproc) \
         GCC_VER=6.4.0 \
         MUSL_VER=1.1.22 \
         DL_CMD="curl -C - -L -o" \

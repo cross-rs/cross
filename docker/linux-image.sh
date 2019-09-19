@@ -1,15 +1,16 @@
+#!/usr/bin/env bash
+
 set -ex
 
 main() {
     # arch in the rust target
     local arch=$1 \
-          kversion=4.9.0-8
+          kversion=4.9.0-11
 
     local debsource="deb http://http.debian.net/debian/ stretch main"
     debsource="$debsource\ndeb http://security.debian.org/ stretch/updates main"
 
     local dropbear="dropbear-bin"
-    local libssl="libssl1.0.2"
 
     # select debian arch and kernel version
     case $arch in
@@ -44,18 +45,16 @@ main() {
             echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
 
             dropbear="dropbear"
-            libssl="libssl1.0.0"
             ;;
         powerpc64)
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/de/sid/linux-image-powerpc64
-            kernel=5.2.0-2-powerpc64
+            kernel=5.2.0-3-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
             # sid version of dropbear requires these dependencies
             deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
-            libssl="libssl1.1"
             ;;
         powerpc64le)
             arch=ppc64el
@@ -68,12 +67,11 @@ main() {
         sparc64)
             # there is no stable port
             # https://packages.debian.org/de/sid/linux-image-sparc64
-            kernel=5.2.0-2-sparc64
+            kernel=5.2.0-3-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
             # sid version of dropbear requires these dependencies
             deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
-            libssl="libssl1.1"
             ;;
         x86_64)
             arch=amd64
@@ -127,7 +125,6 @@ main() {
         $dropbear:$arch \
         libc6:$arch \
         libgcc1:$arch \
-        $libssl:$arch \
         libstdc++6:$arch \
         linux-image-$kernel:$arch \
         ncurses-base \
