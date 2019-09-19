@@ -22,9 +22,6 @@ RUN apt-get install -y --no-install-recommends python
 COPY emscripten.sh /
 RUN bash /emscripten.sh
 
-COPY node.sh /
-RUN bash /node.sh
-
 COPY emscripten-entry.sh /
 ENTRYPOINT ["/emscripten-entry.sh"]
 
