@@ -30,9 +30,6 @@ RUN bash /android-system.sh arm
 COPY qemu.sh /
 RUN bash /qemu.sh arm android
 
-COPY openssl.sh /
-RUN bash /openssl.sh android arm-linux-androideabi-
-
 RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
@@ -42,10 +39,6 @@ ENV CARGO_TARGET_ARM_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
     CC_arm_linux_androideabi=arm-linux-androideabi-gcc \
     CXX_arm_linux_androideabi=arm-linux-androideabi-g++ \
     DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
-    OPENSSL_STATIC=1 \
-    OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \

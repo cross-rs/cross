@@ -20,11 +20,5 @@ RUN apt-get update && \
 COPY xargo.sh /
 RUN bash /xargo.sh
 
-COPY openssl.sh /
 RUN apt-get install -y --no-install-recommends \
-    g++-multilib && \
-    bash /openssl.sh linux-elf "" -m32
-
-ENV OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib
+    g++-multilib

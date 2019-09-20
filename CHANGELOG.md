@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Removed OpenSSL from all images.
+
 ## [v0.1.16] - 2019-09-17
 
 - Bump OpenSSL version to 1.0.2t.

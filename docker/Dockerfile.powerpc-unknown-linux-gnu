@@ -28,9 +28,6 @@ RUN apt-get install -y --no-install-recommends \
     g++-powerpc-linux-gnu \
     libc6-dev-powerpc-cross
 
-COPY openssl.sh /
-RUN bash /openssl.sh linux-ppc powerpc-linux-gnu-
-
 COPY qemu.sh /
 RUN bash /qemu.sh ppc linux softmmu
 
@@ -46,8 +43,5 @@ ENV CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
     CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner powerpc" \
     CC_powerpc_unknown_linux_gnu=powerpc-linux-gnu-gcc \
     CXX_powerpc_unknown_linux_gnu=powerpc-linux-gnu-g++ \
-    OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib \
     QEMU_LD_PREFIX=/usr/powerpc-linux-gnu \
     RUST_TEST_THREADS=1
