@@ -90,7 +90,15 @@ steps:
     condition: and(startsWith(variables['TAG'], 'v'), eq(variables['CRATES_IO_PUBLISH'], '1'))
   - bash: ci/build_release.sh
     displayName: Build Release
-    condition: and(startsWith(variables['TAG'], 'v'), eq(variables['DEPLOY'], '1'))
+    condition: eq(variables['DEPLOY'], '1')
+  - task: ArchiveFiles@2
+    inputs:
+      includeRootFolder: false
+      archiveType: tar
+      tarCompression: gz
+      archiveFile: $(Build.ArtifactStagingDirectory)/cross-$(TAG)-$(TARGET).tar.gz
+      verbose: true
+    condition: eq(variables['DEPLOY'], '1')
   - task: GithubRelease@0
     displayName: Create GitHub Release
     inputs:

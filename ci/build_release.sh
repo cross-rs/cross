@@ -3,6 +3,13 @@
 set -eux
 
 cargo install --path . --force
-cross rustc --target "${TARGET}" --release -- -C lto
+cross build --target "${TARGET}" --release
 
-tar czf "${BUILD_ARTIFACTSTAGINGDIRECTORY}/cross-${TAG}-${TARGET}.tar.gz" -C "target/${TARGET}/release" cross
+rm -rf "${BUILD_BINARIESDIRECTORY}"
+mkdir "${BUILD_BINARIESDIRECTORY}"
+
+if [[ -f "target/${TARGET}/release/cross.exe" ]]; then
+  mv "target/${TARGET}/release/cross.exe" "${BUILD_BINARIESDIRECTORY}/"
+else
+  mv "target/${TARGET}/release/cross" "${BUILD_BINARIESDIRECTORY}/"
+fi
