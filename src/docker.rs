@@ -78,10 +78,8 @@ pub fn run(target: &Target,
            verbose: bool)
            -> Result<ExitStatus> {
     let root = root.path();
-    let home_dir = env::home_dir().ok_or_else(|| "couldn't get home directory. Is $HOME not set?")?;
-    let cargo_dir = env::var_os("CARGO_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home_dir.join(".cargo"));
+    let home_dir = home::home_dir().ok_or_else(|| "could not find home directory")?;
+    let cargo_dir = home::cargo_home()?;
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".xargo"));

@@ -13,6 +13,7 @@ edition = "2018"
 [dependencies]
 atty = "0.2"
 error-chain = "0.12"
+home = "0.5"
 lazy_static = "1.0"
 libc = "0.2.18"
 rustc_version = "0.2"
