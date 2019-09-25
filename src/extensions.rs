@@ -1,6 +1,6 @@
 use std::process::{Command, ExitStatus};
 
-use errors::*;
+use crate::errors::*;
 
 pub trait CommandExt {
     fn run(&mut self, verbose: bool) -> Result<()>;

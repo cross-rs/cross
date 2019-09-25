@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use errors::*;
+use crate::errors::*;
 
 pub fn read<P>(path: P) -> Result<String>
     where P: AsRef<Path>

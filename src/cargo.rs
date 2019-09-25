@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
-use errors::*;
-use extensions::CommandExt;
+use crate::errors::*;
+use crate::extensions::CommandExt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subcommand {

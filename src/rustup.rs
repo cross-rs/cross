@@ -1,8 +1,8 @@
 use std::process::Command;
 
-use Target;
-use errors::*;
-use extensions::CommandExt;
+use crate::Target;
+use crate::errors::*;
+use crate::extensions::CommandExt;
 
 #[derive(Debug)]
 pub struct AvailableTargets {

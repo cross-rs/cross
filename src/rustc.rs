@@ -3,9 +3,9 @@ use std::process::Command;
 
 use rustc_version::{Version, VersionMeta};
 
-use {Host, Target};
-use errors::*;
-use extensions::CommandExt;
+use crate::{Host, Target};
+use crate::errors::*;
+use crate::extensions::CommandExt;
 
 pub struct TargetList {
     triples: Vec<String>,
