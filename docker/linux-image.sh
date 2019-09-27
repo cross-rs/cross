@@ -3,7 +3,7 @@ set -ex
 main() {
     # arch in the rust target
     local arch=$1 \
-          kversion=4.9.0-8
+          kversion=4.9.0-11
 
     local debsource="deb http://http.debian.net/debian/ stretch main"
     debsource="$debsource\ndeb http://security.debian.org/ stretch/updates main"
