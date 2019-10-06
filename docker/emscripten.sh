@@ -20,6 +20,7 @@ main() {
 
     cd /
     git clone https://github.com/emscripten-core/emsdk.git /emsdk-portable
+    cd /emsdk-portable
 
     export HOME=/emsdk-portable/
 
