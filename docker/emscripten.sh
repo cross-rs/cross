@@ -19,24 +19,19 @@ main() {
     done
 
     cd /
-    curl -L https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz | \
-        tar -xz
-    cd /emsdk-portable
+    git clone https://github.com/emscripten-core/emsdk.git /emsdk-portable
 
     export HOME=/emsdk-portable/
 
-    ./emsdk update
-    ./emsdk install sdk-1.38.15-64bit
-    ./emsdk activate sdk-1.38.15-64bit
+    ./emsdk install 1.38.46-upstream
+    ./emsdk activate 1.38.46-upstream
 
     # Compile and cache libc
     source ./emsdk_env.sh
     echo "main(){}" > a.c
     emcc a.c
-    emcc -s BINARYEN=1 a.c
     echo -e "#include <iostream>\n void hello(){ std::cout << std::endl; }" > a.cpp
     emcc a.cpp
-    emcc -s BINARYEN=1 a.cpp
     rm -f a.*
 
     # Make emsdk usable by any user
