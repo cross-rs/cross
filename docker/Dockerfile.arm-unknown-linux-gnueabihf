@@ -1,28 +1,14 @@
 FROM ubuntu:14.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 COPY cmake.sh /
 RUN apt-get purge --auto-remove -y cmake && \
-    bash /cmake.sh
+    /cmake.sh
 
 RUN mkdir /usr/arm-linux-gnueabihf && \
     apt-get install -y --no-install-recommends curl xz-utils && \
@@ -35,7 +21,7 @@ ENV PATH /usr/arm-linux-gnueabihf/bin:$PATH
 
 COPY qemu.sh /
 
-RUN bash /qemu.sh arm
+RUN /qemu.sh arm
 
 RUN apt-get install -y --no-install-recommends \
     libc6-dev-armhf-cross

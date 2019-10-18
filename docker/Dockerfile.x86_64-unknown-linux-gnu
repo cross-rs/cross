@@ -1,41 +1,27 @@
 FROM ubuntu:14.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 COPY cmake.sh /
 RUN apt-get purge --auto-remove -y cmake && \
-    bash /cmake.sh
+    /cmake.sh
 
 RUN apt-get install -y --no-install-recommends \
     g++ \
     zlib1g-dev
 
 COPY qemu.sh /
-RUN bash /qemu.sh x86_64 linux softmmu
+RUN /qemu.sh x86_64 linux softmmu
 
 COPY dropbear.sh /
-RUN bash /dropbear.sh
+RUN /dropbear.sh
 
 COPY linux-image.sh /
-RUN bash /linux-image.sh x86_64
+RUN /linux-image.sh x86_64
 
 COPY linux-runner /
 

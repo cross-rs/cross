@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -ex
 
 main() {
@@ -123,7 +125,7 @@ EOF
         --with-gnu-as \
         --with-gnu-ld \
         --target=$target
-    nice make -j$(nproc)
+    make -j$(nproc)
     make install
     cd ..
 

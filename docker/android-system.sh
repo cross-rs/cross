@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -ex
 
 main() {
@@ -18,14 +20,14 @@ main() {
     # fake java and javac, it is not necessary for what we build, but the build
     # script ask for it
     cat << EOF > /usr/bin/java
-#!/bin/bash
+#!/usr/bin/env bash
 echo "java version \"1.7.0\""
 echo "OpenJDK Runtime Environment (IcedTea 2.6.9)"
 echo "OpenJDK 64-Bit Server VM (build 24.131-b00, mixed mode)"
 EOF
 
     cat << EOF > /usr/bin/javac
-#!/bin/bash
+#!/usr/bin/env bash
 echo "javac 1.7.0"
 EOF
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -ex
 
 main() {
@@ -25,7 +27,7 @@ main() {
     curl https://cmake.org/files/v${version%.*}/cmake-$version.tar.gz | \
         tar --strip-components 1 -xz
     ./bootstrap
-    nice make -j$(nproc)
+    make -j$(nproc)
     make install
 
     # clean up

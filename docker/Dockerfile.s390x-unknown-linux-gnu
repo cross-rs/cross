@@ -1,37 +1,23 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 RUN apt-get install -y --no-install-recommends \
     g++-s390x-linux-gnu \
     libc6-dev-s390x-cross
 
 COPY qemu.sh /
-RUN bash /qemu.sh s390x linux softmmu
+RUN /qemu.sh s390x linux softmmu
 
 COPY dropbear.sh /
-RUN bash /dropbear.sh
+RUN /dropbear.sh
 
 COPY linux-image.sh /
-RUN bash /linux-image.sh s390x
+RUN /linux-image.sh s390x
 
 COPY linux-runner /
 

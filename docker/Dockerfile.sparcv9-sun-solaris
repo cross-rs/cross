@@ -1,27 +1,13 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 COPY solaris.sh /
-RUN bash /solaris.sh sparcv9
+RUN /solaris.sh sparcv9
 
 ENV CARGO_TARGET_SPARCV9_SUN_SOLARIS_LINKER=sparcv9-sun-solaris2.10-gcc \
     CC_sparcv9_sun_solaris=sparcv9-sun-solaris2.10-gcc \

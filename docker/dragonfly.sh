@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -ex
 
 main() {
@@ -93,7 +95,7 @@ EOF
     cd binutils-build
     ../binutils/configure \
         --target=$target
-    nice make -j$(nproc)
+    make -j$(nproc)
     make install
     cd ..
 
@@ -130,7 +132,7 @@ EOF
         --disable-nls \
         --enable-languages=c,c++ \
         --target=$target
-    nice make -j$(nproc)
+    make -j$(nproc)
     make install
     cd ..
 

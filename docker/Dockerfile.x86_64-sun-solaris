@@ -1,27 +1,13 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 COPY solaris.sh /
-RUN bash /solaris.sh x86_64
+RUN /solaris.sh x86_64
 
 ENV CARGO_TARGET_X86_64_SUN_SOLARIS_LINKER=x86_64-sun-solaris2.10-gcc \
     CC_x86_64_sun_solaris=x86_64-sun-solaris2.10-gcc \

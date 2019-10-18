@@ -1,37 +1,23 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 RUN apt-get install -y --no-install-recommends \
     g++-mipsel-linux-gnu \
     libc6-dev-mipsel-cross
 
 COPY qemu.sh /
-RUN bash /qemu.sh mipsel linux softmmu
+RUN /qemu.sh mipsel linux softmmu
 
 COPY dropbear.sh /
-RUN bash /dropbear.sh
+RUN /dropbear.sh
 
 COPY linux-image.sh /
-RUN bash /linux-image.sh mipsel
+RUN /linux-image.sh mipsel
 
 COPY linux-runner /
 

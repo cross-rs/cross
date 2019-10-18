@@ -1,26 +1,12 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 RUN apt-get install -y --no-install-recommends python
 
 COPY emscripten.sh /
-RUN bash /emscripten.sh
+RUN /emscripten.sh
 
 COPY emscripten-entry.sh /
 ENTRYPOINT ["/emscripten-entry.sh"]

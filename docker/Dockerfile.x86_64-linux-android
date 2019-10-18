@@ -1,35 +1,21 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    cmake \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-    git \
-    automake \
-    libtool \
-    m4 \
-    autoconf \
-    make \
-    file \
-    binutils
+COPY common.sh /
+RUN /common.sh
 
 COPY xargo.sh /
-RUN bash /xargo.sh
+RUN /xargo.sh
 
 COPY android-ndk.sh /
-RUN bash /android-ndk.sh x86_64 21
+RUN /android-ndk.sh x86_64 21
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY android-system.sh /
-RUN bash /android-system.sh x86_64
+RUN /android-system.sh x86_64
 
 # Using qemu allows older host cpus (without sse4) to execute the target binaries
 COPY qemu.sh /
-RUN bash /qemu.sh x86_64 android
+RUN /qemu.sh x86_64 android
 
 RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 
