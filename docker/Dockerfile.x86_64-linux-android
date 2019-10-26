@@ -22,7 +22,7 @@ RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android-gcc \
-    CARGO_TARGET_X86_64_LINUX_ANDROID_RUNNER="qemu-x86_64 -cpu Penryn" \
+    CARGO_TARGET_X86_64_LINUX_ANDROID_RUNNER="qemu-x86_64 -cpu qemu64,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt" \
     CC_x86_64_linux_android=x86_64-linux-android-gcc \
     CXX_x86_64_linux_android=x86_64-linux-android-g++ \
     DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
