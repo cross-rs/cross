@@ -280,6 +280,7 @@ fn run() -> Result<ExitStatus> {
                 }
 
                 return docker::run(&target,
+                                   args.target_dir.as_ref().map(|s| &s[..]),
                                    &args.all,
                                    &root,
                                    toml.as_ref(),
