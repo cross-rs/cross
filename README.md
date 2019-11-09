@@ -77,6 +77,18 @@ $ cross rustc --target powerpc-unknown-linux-gnu --release -- -C lto
 You can place a `Cross.toml` file in the root of your Cargo project to tweak
 `cross`'s behavior:
 
+### Using an Alternative Container Engine
+
+`cross` allows the user to specify the container engine they would like to use.
+Currently, only Docker and Podman are supported. `cross` will default to using
+Docker. For other container engines, you can use the
+`target.{{TARGET}}.container_engine` field in `Cross.toml`:
+
+``` toml
+[target.aarch64-unknown-linux-gnu]
+container_engine = "podman"
+```
+
 ### Custom Docker images
 
 `cross` provides default Docker images for the targets listed below. However, it

@@ -276,7 +276,7 @@ fn run() -> Result<ExitStatus> {
                     needs_interpreter &&
                     target.needs_interpreter() &&
                     !interpreter::is_registered(&target)? {
-                        docker::register(&target, verbose)?
+                        docker::register(&target, toml.as_ref(), verbose)?
                 }
 
                 return docker::run(&target,
@@ -328,6 +328,27 @@ impl Toml {
             Ok(None)
         }
     }
+
+        /// Returns the `target.{}.container_engine` part of `Cross.toml`
+    pub fn container_engine(&self, target: &Target) -> Result<Option<String>> {
+        let triple = target.triple();
+
+        if let Some(value) = self
+            .table
+            .get("target")
+            .and_then(|t| t.get(triple))
+            .and_then(|t| t.get("container_engine"))
+        {
+            let value = value
+                .as_str()
+                .ok_or_else(|| format!("target.{}.container_engine must be a string", triple))?
+                .to_string();
+            Ok(Some(value))
+        } else {
+            Ok(None)
+        }
+    }
+
 
     /// Returns the `build.image` or the `target.{}.xargo` part of `Cross.toml`
     pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
