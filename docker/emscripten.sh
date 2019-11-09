@@ -21,13 +21,11 @@ main() {
     done
 
     cd /
-    curl -L https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz | \
-        tar -xz
+    git clone https://github.com/emscripten-core/emsdk.git /emsdk-portable
     cd /emsdk-portable
 
     export HOME=/emsdk-portable/
 
-    ./emsdk update
     ./emsdk install sdk-1.38.15-64bit
     ./emsdk activate sdk-1.38.15-64bit
 
