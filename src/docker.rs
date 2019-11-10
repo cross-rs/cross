@@ -146,15 +146,9 @@ pub fn run(target: &Target,
     docker
         .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(|| String::new()))])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
-        .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())]);
-
-    // Prevent `bin` from being mounted inside the Docker container. This is
-    // not required for Podman.
-    if container_engine == DOCKER {
-        docker.args(&["-v", "/cargo/bin"]);
-    }
-
-    docker
+        .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
+        // Prevent `bin` from being mounted inside the Docker container.
+        .args(&["-v", "/cargo/bin"])
         .args(&["-v", &format!("{}:/project:Z,ro", root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
