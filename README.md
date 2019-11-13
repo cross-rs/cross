@@ -40,7 +40,8 @@ This project is developed and maintained by the [Tools team][team].
 
 [binfmt_misc]: https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
 
-One of these container engines is required:
+One of these container engines is required. If both are installed, `cross` will
+default to `docker`.
 
 - [Docker](https://www.docker.com/). Note that on Linux non-sudo users need to be in the
   `docker` group. Read the official [post-installation steps][post]. Requires version
@@ -81,18 +82,6 @@ $ cross rustc --target powerpc-unknown-linux-gnu --release -- -C lto
 
 You can place a `Cross.toml` file in the root of your Cargo project to tweak
 `cross`'s behavior:
-
-### Using an Alternative Container Engine
-
-`cross` allows the user to specify the container engine they would like to use.
-Currently, only Docker and Podman are supported. `cross` will default to using
-Docker. For other container engines, you can use the
-`target.{{TARGET}}.container_engine` field in `Cross.toml`:
-
-``` toml
-[target.aarch64-unknown-linux-gnu]
-container_engine = "podman"
-```
 
 ### Custom Docker images
 

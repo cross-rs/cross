@@ -13,16 +13,31 @@ use crate::id;
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 const DOCKER: &str = "docker";
+const PODMAN: &str = "podman";
 
-pub fn docker_command(container_engine: &str, subcommand: &str) -> Command {
-    let mut docker = Command::new(container_engine);
-    docker.arg(subcommand);
-    docker.args(&["--userns", "host"]);
-    docker
+fn get_container_engine() -> Option<&'static str> {
+    if which::which(DOCKER).is_ok() {
+        Some(DOCKER)
+    } else if which::which(PODMAN).is_ok() {
+        Some(PODMAN)
+    } else {
+        None
+    }
+}
+
+pub fn docker_command(subcommand: &str) -> Result<Command> {
+    if let Some(ce) = get_container_engine() {
+        let mut command = Command::new(ce);
+        command.arg(subcommand);
+        command.args(&["--userns", "host"]);
+        Ok(command)
+    } else {
+        Err("no container engine found; install docker or podman".into())
+    }
 }
 
 /// Register binfmt interpreters
-pub fn register(target: &Target, toml: Option<&Toml>, verbose: bool) -> Result<()> {
+pub fn register(target: &Target, verbose: bool) -> Result<()> {
     let cmd = if target.is_windows() {
         // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
         "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
@@ -32,14 +47,7 @@ pub fn register(target: &Target, toml: Option<&Toml>, verbose: bool) -> Result<(
             binfmt-support qemu-user-static"
     };
 
-    let mut container_engine = DOCKER.to_string();
-    if let Some(toml) = toml {
-        if let Some(engine) = toml.container_engine(target)? {
-            container_engine = engine;
-        }
-    }
-
-    docker_command(&container_engine, "run")
+    docker_command("run")?
         .arg("--privileged")
         .arg("--rm")
         .arg("ubuntu:16.04")
@@ -80,8 +88,7 @@ pub fn run(target: &Target,
     // container doesn't have write access to the root of the Cargo project
     let cargo_toml = root.join("Cargo.toml");
 
-    let mut runner = None;
-    let mut container_engine = DOCKER.to_string();
+    let runner = None;
 
     Command::new("cargo").args(&["fetch",
                 "--manifest-path",
@@ -89,13 +96,7 @@ pub fn run(target: &Target,
         .run(verbose)
         .chain_err(|| "couldn't generate Cargo.lock")?;
 
-    if let Some(toml) = toml {
-        runner = toml.runner(target)?;
-        if let Some(engine) = toml.container_engine(target)? {
-            container_engine = engine;
-        }
-    }
-    let mut docker = docker_command(&container_engine, "run");
+    let mut docker = docker_command("run")?;
 
     if let Some(toml) = toml {
         for var in toml.env_passthrough(target)? {
@@ -118,7 +119,7 @@ pub fn run(target: &Target,
     docker.arg("--rm");
 
     // We need to specify the user for Docker, but not for Podman.
-    if container_engine == DOCKER {
+    if let Some(DOCKER) = get_container_engine() {
         docker.args(&["--user", &format!("{}:{}", id::user(), id::group())]);
     }
 
