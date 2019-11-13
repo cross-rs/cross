@@ -43,7 +43,8 @@ This project is developed and maintained by the [Tools team][team].
 One of these container engines is required:
 
 - [Docker](https://www.docker.com/). Note that on Linux non-sudo users need to be in the
-  `docker` group. Read the official [post-installation steps][post].
+  `docker` group. Read the official [post-installation steps][post]. Requires version
+  1.24 or later.
 
 [post]: https://docs.docker.com/install/linux/linux-postinstall/
 

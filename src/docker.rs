@@ -17,8 +17,6 @@ const DOCKER: &str = "docker";
 pub fn docker_command(container_engine: &str, subcommand: &str) -> Command {
     let mut docker = Command::new(container_engine);
     docker.arg(subcommand);
-
-    // We always add the `---userns host` flag for compatibility with Podman.
     docker.args(&["--userns", "host"]);
     docker
 }

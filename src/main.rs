@@ -329,7 +329,7 @@ impl Toml {
         }
     }
 
-        /// Returns the `target.{}.container_engine` part of `Cross.toml`
+    /// Returns the `target.{}.container_engine` part of `Cross.toml`
     pub fn container_engine(&self, target: &Target) -> Result<Option<String>> {
         let triple = target.triple();
 
