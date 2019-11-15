@@ -15,18 +15,12 @@ const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-image
 const DOCKER: &str = "docker";
 const PODMAN: &str = "podman";
 
-fn get_container_engine() -> Option<&'static str> {
-    if which::which(DOCKER).is_ok() {
-        Some(DOCKER)
-    } else if which::which(PODMAN).is_ok() {
-        Some(PODMAN)
-    } else {
-        None
-    }
+fn get_container_engine() -> Result<std::path::PathBuf> {
+    which::which(DOCKER).or_else(|_| which::which(PODMAN)).map_err(|e| e.into())
 }
 
 pub fn docker_command(subcommand: &str) -> Result<Command> {
-    if let Some(ce) = get_container_engine() {
+    if let Ok(ce) = get_container_engine() {
         let mut command = Command::new(ce);
         command.arg(subcommand);
         command.args(&["--userns", "host"]);
@@ -119,8 +113,10 @@ pub fn run(target: &Target,
     docker.arg("--rm");
 
     // We need to specify the user for Docker, but not for Podman.
-    if let Some(DOCKER) = get_container_engine() {
-        docker.args(&["--user", &format!("{}:{}", id::user(), id::group())]);
+    if let Ok(ce) = get_container_engine() {
+        if ce.ends_with(DOCKER) {
+            docker.args(&["--user", &format!("{}:{}", id::user(), id::group())]);
+        }
     }
 
     docker
