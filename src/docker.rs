@@ -4,8 +4,6 @@ use std::{env, fs};
 
 use atty::Stream;
 use error_chain::bail;
-use lazy_static::lazy_static;
-use semver::{Version, VersionReq};
 
 use crate::{Target, Toml};
 use crate::cargo::Root;
@@ -14,41 +12,22 @@ use crate::extensions::CommandExt;
 use crate::id;
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
+const DOCKER: &str = "docker";
+const PODMAN: &str = "podman";
 
-lazy_static! {
-    /// Retrieve the Docker Daemon version.
-    ///
-    /// # Panics
-    /// Panics if the version cannot be retrieved or parsed
-    static ref DOCKER_VERSION: Version = {
-        let version_string = Command::new("docker")
-                                .arg("version")
-                                .arg("--format={{.Server.APIVersion}}")
-                                .run_and_get_stdout(false)
-                                .expect("Unable to obtain Docker version");
-        // API versions don't have "patch" version
-        Version::parse(&format!("{}.0", version_string.trim()))
-            .expect("Cannot parse Docker engine version")
-    };
-
-    /// Version requirements for user namespace.
-    ///
-    /// # Panics
-    /// Panics if the parsing fails
-    static ref USERNS_REQUIREMENT: VersionReq = {
-        VersionReq::parse(">= 1.24")
-            .expect("Unable to parse version requirements")
-    };
+fn get_container_engine() -> Result<std::path::PathBuf> {
+    which::which(DOCKER).or_else(|_| which::which(PODMAN)).map_err(|e| e.into())
 }
 
-/// Add the `userns` flag, if needed
-pub fn docker_command(subcommand: &str) -> Command {
-    let mut docker = Command::new("docker");
-    docker.arg(subcommand);
-    if USERNS_REQUIREMENT.matches(&DOCKER_VERSION) {
-        docker.args(&["--userns", "host"]);
+pub fn docker_command(subcommand: &str) -> Result<Command> {
+    if let Ok(ce) = get_container_engine() {
+        let mut command = Command::new(ce);
+        command.arg(subcommand);
+        command.args(&["--userns", "host"]);
+        Ok(command)
+    } else {
+        Err("no container engine found; install docker or podman".into())
     }
-    docker
 }
 
 /// Register binfmt interpreters
@@ -61,7 +40,8 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         "apt-get update && apt-get install --no-install-recommends -y \
             binfmt-support qemu-user-static"
     };
-    docker_command("run")
+
+    docker_command("run")?
         .arg("--privileged")
         .arg("--rm")
         .arg("ubuntu:16.04")
@@ -101,17 +81,45 @@ pub fn run(target: &Target,
     // We create/regenerate the lockfile on the host system because the Docker
     // container doesn't have write access to the root of the Cargo project
     let cargo_toml = root.join("Cargo.toml");
+
+    let runner = None;
+
     Command::new("cargo").args(&["fetch",
                 "--manifest-path",
                 &cargo_toml.display().to_string()])
         .run(verbose)
         .chain_err(|| "couldn't generate Cargo.lock")?;
 
-    let mut docker = docker_command("run");
+    let mut docker = docker_command("run")?;
+
+    if let Some(toml) = toml {
+        for var in toml.env_passthrough(target)? {
+            if var.contains('=') {
+                bail!("environment variable names must not contain the '=' character");
+            }
+
+            if var == "CROSS_RUNNER" {
+                bail!(
+                    "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
+                );
+            }
+
+            // Only specifying the environment variable name in the "-e"
+            // flag forwards the value from the parent shell
+            docker.args(&["-e", var]);
+        }
+    }
+
+    docker.arg("--rm");
+
+    // We need to specify the user for Docker, but not for Podman.
+    if let Ok(ce) = get_container_engine() {
+        if ce.ends_with(DOCKER) {
+            docker.args(&["--user", &format!("{}:{}", id::user(), id::group())]);
+        }
+    }
 
     docker
-        .arg("--rm")
-        .args(&["--user", &format!("{}:{}", id::user(), id::group())])
         .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-e", "CARGO_HOME=/cargo"])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
@@ -130,31 +138,12 @@ pub fn run(target: &Target,
         docker.args(&opts);
     }
 
-    let mut runner = None;
-
-    if let Some(toml) = toml {
-        for var in toml.env_passthrough(target)? {
-            if var.contains("=") {
-                bail!("environment variable names must not contain the '=' character");
-            }
-
-            if var == "CROSS_RUNNER" {
-                bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
-            }
-
-            // Only specifying the environment variable name in the "-e"
-            // flag forwards the value from the parent shell
-            docker.args(&["-e", var]);
-        }
-
-        runner = toml.runner(target)?;
-    }
-
     docker
         .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(|| String::new()))])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
-        .args(&["-v", "/cargo/bin"]) // Prevent `bin` from being mounted inside the Docker container.
+        // Prevent `bin` from being mounted inside the Docker container.
+        .args(&["-v", "/cargo/bin"])
         .args(&["-v", &format!("{}:/project:Z,ro", root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])

@@ -36,14 +36,20 @@ This project is developed and maintained by the [Tools team][team].
 
 - [rustup](https://rustup.rs/)
 
-- [Docker](https://www.docker.com/). Note that on Linux non-sudo users need to be in the
-  `docker` group. Read the official [post-installation steps][post].
-
-[post]: https://docs.docker.com/install/linux/linux-postinstall/
-
 - A Linux kernel with [binfmt_misc] support is required for cross testing.
 
 [binfmt_misc]: https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
+
+One of these container engines is required. If both are installed, `cross` will
+default to `docker`.
+
+- [Docker](https://www.docker.com/). Note that on Linux non-sudo users need to be in the
+  `docker` group. Read the official [post-installation steps][post]. Requires version
+  1.24 or later.
+
+[post]: https://docs.docker.com/install/linux/linux-postinstall/
+
+- [Podman](https://podman.io). Requires version 1.6.3 or later.
 
 ## Installation
 
