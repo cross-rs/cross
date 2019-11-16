@@ -36,8 +36,8 @@ pub fn parse(target_list: &TargetList) -> Args {
     }
 
     Args {
-        all: all,
+        all,
         subcommand: sc,
-        target: target,
+        target,
     }
 }
