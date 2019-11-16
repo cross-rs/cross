@@ -134,12 +134,12 @@ pub fn run(target: &Target,
     }
 
     if let Ok(value) = env::var("DOCKER_OPTS") {
-        let opts: Vec<&str> = value.split(" ").collect();
+        let opts: Vec<&str> = value.split(' ').collect();
         docker.args(&opts);
     }
 
     docker
-        .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(|| String::new()))])
+        .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(String::new))])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.

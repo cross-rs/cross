@@ -225,7 +225,7 @@ fn run() -> Result<ExitStatus> {
 
         if host.is_supported(args.target.as_ref()) {
             let target = args.target
-                .unwrap_or(Target::from(host.triple(), &target_list));
+                .unwrap_or_else(|| Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
 
             let sysroot = rustc::sysroot(&host, &target, verbose)?;
@@ -254,10 +254,9 @@ fn run() -> Result<ExitStatus> {
                 rustup::install_component("rust-src", toolchain, verbose)?;
             }
 
-            if args.subcommand.map(|sc| sc == Subcommand::Clippy).unwrap_or(false) {
-                if !rustup::component_is_installed("clippy", toolchain, verbose)? {
-                    rustup::install_component("clippy", toolchain, verbose)?;
-                }
+            if args.subcommand.map(|sc| sc == Subcommand::Clippy).unwrap_or(false) &&
+                !rustup::component_is_installed("clippy", toolchain, verbose)? {
+                rustup::install_component("clippy", toolchain, verbose)?;
             }
 
             let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
