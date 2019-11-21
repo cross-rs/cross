@@ -284,10 +284,6 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
   work because `cross` use docker containers only mounts the Cargo project so
   the container doesn't have access to the rest of the filesystem.
 
-- `cross` will mount the Cargo project as READ ONLY. Thus, if any crate attempts
-  to modify its “source”, the build will fail. Well behaved crates should only
-  ever write to `$OUT_DIR` and never modify `$CARGO_MANIFEST_DIR` though.
-
 ## License
 
 Licensed under either of

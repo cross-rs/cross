@@ -78,17 +78,7 @@ pub fn run(target: &Target,
     };
     cmd.args(args);
 
-    // We create/regenerate the lockfile on the host system because the Docker
-    // container doesn't have write access to the root of the Cargo project
-    let cargo_toml = root.join("Cargo.toml");
-
     let runner = None;
-
-    Command::new("cargo").args(&["fetch",
-                "--manifest-path",
-                &cargo_toml.display().to_string()])
-        .run(verbose)
-        .chain_err(|| "couldn't generate Cargo.lock")?;
 
     let mut docker = docker_command("run")?;
 
@@ -144,7 +134,7 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"])
-        .args(&["-v", &format!("{}:/project:Z,ro", root.display())])
+        .args(&["-v", &format!("{}:/project:Z", root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
         .args(&["-w", "/project"]);
