@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -ex
+set -x
+set -euo pipefail
 
 main() {
     # arch in the rust target

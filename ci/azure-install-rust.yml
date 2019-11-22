@@ -2,7 +2,8 @@
 
 steps:
   - bash: |
-      set -e
+      set -euo pipefail
+
       if command -v rustup; then
         echo `command -v rustup` `rustup -V` already installed
         rustup self update
@@ -17,13 +18,16 @@ steps:
     displayName: Install rustup
 
   - bash: |
-      set -e
+      set -euo pipefail
+
       rustup update $TOOLCHAIN
       rustup default $TOOLCHAIN
     displayName: Install rust
 
   - bash: |
-      set -ex
+      set -x
+      set -euo pipefail
+
       rustup -V
       rustc -Vv
       cargo -V
