@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -ex
+set -x
+set -euo pipefail
 
 function retry {
   local tries=${TRIES-5}
@@ -41,7 +42,7 @@ main() {
     export QEMU_STRACE=1
 
     # test `cross check`
-    if [ ! -z $STD ]; then
+    if [[ ! -z ${STD:-} ]]; then
         td=$(mktemp -d)
         cargo init --lib --name foo $td
         pushd $td
@@ -52,7 +53,7 @@ main() {
     fi
 
     # `cross build` test for targets where `std` is not available
-    if [ -z "$STD" ]; then
+    if [[ -z "${STD:-}" ]]; then
         td=$(mktemp -d)
 
         git clone \
@@ -98,9 +99,9 @@ EOF
         rm -rf $td
     fi
 
-    if [ $RUN ]; then
+    if [[ ${RUN:-} ]]; then
         # `cross test` test
-        if [ $DYLIB ]; then
+        if [[ ${DYLIB:-} ]]; then
             td=$(mktemp -d)
 
             pushd $td
@@ -150,7 +151,7 @@ EOF
     fi
 
     # Test C++ support
-    if [ $CPP ]; then
+    if [[ ${CPP:-} ]]; then
         td=$(mktemp -d)
 
         git clone --depth 1 https://github.com/japaric/hellopp $td
@@ -158,7 +159,7 @@ EOF
         pushd $td
         cargo update -p gcc
         retry cargo fetch
-        if [ $RUN ]; then
+        if [[ ${RUN:-} ]]; then
             cross_run --target $TARGET
         else
             cross build --target $TARGET
@@ -170,7 +171,7 @@ EOF
 }
 
 cross_run() {
-    if [ -z "$RUNNERS" ]; then
+    if [[ -z "${RUNNERS:-}" ]]; then
         cross run "$@"
     else
         for runner in $RUNNERS; do
@@ -181,7 +182,7 @@ cross_run() {
 }
 
 cross_test() {
-    if [ -z "$RUNNERS" ]; then
+    if [[ -z "${RUNNERS:-}" ]]; then
         cross test "$@"
     else
         for runner in $RUNNERS; do
@@ -192,7 +193,7 @@ cross_test() {
 }
 
 cross_bench() {
-    if [ -z "$RUNNERS" ]; then
+    if [[ -z "${RUNNERS:-}" ]]; then
         cross bench "$@"
     else
         for runner in $RUNNERS; do

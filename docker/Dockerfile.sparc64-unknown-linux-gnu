@@ -11,7 +11,7 @@ RUN apt-get install -y --no-install-recommends \
     libc6-dev-sparc64-cross
 
 COPY qemu.sh /
-RUN /qemu.sh sparc64 linux softmmu
+RUN /qemu.sh sparc64 softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh

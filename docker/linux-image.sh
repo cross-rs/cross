@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -ex
+set -x
+set -euo pipefail
 
 main() {
     # arch in the rust target
@@ -11,6 +12,9 @@ main() {
     debsource="$debsource\ndeb http://security.debian.org/ stretch/updates main"
 
     local dropbear="dropbear-bin"
+
+    local deps=
+    local kernel=
 
     # select debian arch and kernel version
     case $arch in
@@ -50,7 +54,7 @@ main() {
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kernel=5.3.0-1-powerpc64
+            kernel=5.3.0-2-powerpc64
             debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
             # sid version of dropbear requires these dependencies
@@ -67,7 +71,7 @@ main() {
         sparc64)
             # there is no stable port
             # https://packages.debian.org/en/sid/linux-image-sparc64
-            kernel=5.3.0-1-sparc64
+            kernel=5.3.0-2-sparc64
             debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
             # sid version of dropbear requires these dependencies

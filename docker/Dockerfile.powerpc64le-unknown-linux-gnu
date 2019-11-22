@@ -11,7 +11,7 @@ RUN apt-get install -y --no-install-recommends \
     libc6-dev-ppc64el-cross
 
 COPY qemu.sh /
-RUN /qemu.sh ppc64le linux softmmu
+RUN /qemu.sh ppc64le softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh

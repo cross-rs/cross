@@ -15,7 +15,7 @@ RUN apt-get install -y --no-install-recommends \
     zlib1g-dev
 
 COPY qemu.sh /
-RUN /qemu.sh x86_64 linux softmmu
+RUN /qemu.sh x86_64 softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh

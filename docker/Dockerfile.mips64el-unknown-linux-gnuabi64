@@ -11,7 +11,7 @@ RUN apt-get install -y --no-install-recommends \
     libc6-dev-mips64el-cross
 
 COPY qemu.sh /
-RUN /qemu.sh mips64el linux softmmu
+RUN /qemu.sh mips64el softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh

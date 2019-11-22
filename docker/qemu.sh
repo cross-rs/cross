@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -ex
+set -x
+set -euo pipefail
 
 main() {
     local version=4.1.0
@@ -15,8 +16,7 @@ main() {
     fi
 
     local arch=$1 \
-          os=$2 \
-          softmmu=$3 \
+          softmmu=${2:-} \
           td=$(mktemp -d)
 
     local dependencies=(

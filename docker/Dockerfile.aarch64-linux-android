@@ -14,7 +14,7 @@ COPY android-system.sh /
 RUN /android-system.sh arm64
 
 COPY qemu.sh /
-RUN /qemu.sh aarch64 android
+RUN /qemu.sh aarch64
 
 RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
 

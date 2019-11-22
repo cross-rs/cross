@@ -14,7 +14,7 @@ RUN apt-get install -y --no-install-recommends \
     g++-multilib
 
 COPY qemu.sh /
-RUN /qemu.sh i386 linux softmmu
+RUN /qemu.sh i386 softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh
