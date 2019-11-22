@@ -15,7 +15,7 @@ RUN apt-get install -y --no-install-recommends \
     libc6-dev-powerpc-cross
 
 COPY qemu.sh /
-RUN /qemu.sh ppc linux softmmu
+RUN /qemu.sh ppc softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh

@@ -16,8 +16,7 @@ main() {
     fi
 
     local arch=$1 \
-          os=$2 \
-          softmmu=$3 \
+          softmmu=${2:-} \
           td=$(mktemp -d)
 
     local dependencies=(

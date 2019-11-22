@@ -11,7 +11,7 @@ RUN apt-get install -y --no-install-recommends \
     libc6-dev-s390x-cross
 
 COPY qemu.sh /
-RUN /qemu.sh s390x linux softmmu
+RUN /qemu.sh s390x softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh

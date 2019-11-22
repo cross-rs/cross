@@ -15,7 +15,7 @@ RUN apt-get install -y --no-install-recommends \
     libc6-dev-arm64-cross
 
 COPY qemu.sh /
-RUN /qemu.sh aarch64 linux softmmu
+RUN /qemu.sh aarch64 softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh
