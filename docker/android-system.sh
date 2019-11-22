@@ -90,11 +90,13 @@ EOF
     # FATAL: kernel did not supply AT_SECURE
     sed -i -e 's/if (!kernel_supplied_AT_SECURE)/if (false)/g' bionic/linker/linker_environ.cpp
 
+    set +u
     source build/envsetup.sh
     lunch aosp_$arch-user
     mmma bionic/
     mmma external/mksh/
     mmma system/core/toolbox/
+    set -u
 
     if [ $arch = "arm" ]; then
         mv out/target/product/generic/system/ /

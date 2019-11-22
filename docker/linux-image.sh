@@ -13,6 +13,9 @@ main() {
 
     local dropbear="dropbear-bin"
 
+    local deps=
+    local kernel=
+
     # select debian arch and kernel version
     case $arch in
         aarch64)
