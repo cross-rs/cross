@@ -3,9 +3,6 @@
 set -ex
 
 main() {
-    local tag=v0.3.5
-    local target=x86_64-unknown-linux-gnu
-
     local dependencies=(
         ca-certificates
         curl
@@ -20,8 +17,16 @@ main() {
         fi
     done
 
-    curl -LSfs http://japaric.github.io/trust/install.sh | \
-    sh -s -- --git japaric/xargo --tag $tag --target $target --to /usr/bin && \
+    export RUSTUP_HOME=/tmp/rustup
+    export CARGO_HOME=/tmp/cargo
+
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+    sh rustup-init.sh -y --no-modify-path
+    rm rustup-init.sh
+
+    PATH="${CARGO_HOME}/bin:${PATH}" cargo install xargo --root /usr
+
+    rm -r "${RUSTUP_HOME}" "${CARGO_HOME}"
 
     apt-get purge --auto-remove -y ${purge_list[@]}
     rm $0
