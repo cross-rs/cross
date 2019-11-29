@@ -9,6 +9,7 @@ use crate::extensions::CommandExt;
 pub enum Subcommand {
     Build,
     Check,
+    Doc,
     Other,
     Run,
     Rustc,
@@ -39,6 +40,7 @@ impl<'a> From<&'a str> for Subcommand {
         match s {
             "build" => Subcommand::Build,
             "check" => Subcommand::Check,
+            "doc" => Subcommand::Doc,
             "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,
             "test" => Subcommand::Test,
