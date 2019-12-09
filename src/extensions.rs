@@ -1,4 +1,6 @@
+use std::borrow::Cow;
 use std::process::{Command, ExitStatus};
+use std::fmt;
 
 use crate::errors::*;
 
@@ -48,5 +50,58 @@ impl CommandExt for Command {
 
         Ok(String::from_utf8(out.stdout)
             .chain_err(|| format!("`{:?}` output was not UTF-8", self))?)
+    }
+}
+
+pub struct SafeCommand {
+    program: String,
+    args: Vec<String>,
+}
+
+impl SafeCommand {
+    pub fn new<S: ToString>(program: S) -> Self {
+        let program = program.to_string();
+        SafeCommand {
+            program,
+            args: Vec::new(),
+        }
+    }
+
+    pub fn arg<'b, S>(&mut self, arg: &S) -> &mut Self
+        where
+            S: ToString,
+    {
+        self.args.push(arg.to_string());
+        self
+    }
+
+    pub fn args<I, S>(&mut self, args: I) -> &mut Self
+        where
+            I: IntoIterator<Item = S>,
+            S: ToString,
+    {
+        for arg in args {
+            self.arg(&arg);
+        }
+        self
+    }
+}
+
+impl fmt::Debug for SafeCommand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&shell_escape::escape(Cow::from(&self.program)))?;
+        for arg in &self.args {
+            f.write_str(" ")?;
+            f.write_str(&shell_escape::escape(Cow::from(arg)))?;
+        }
+        Ok(())
+    }
+}
+
+impl From<SafeCommand> for Command {
+    fn from(s: SafeCommand) -> Self {
+        let mut cmd = Command::new(&s.program);
+        cmd.args(&s.args);
+        cmd
     }
 }

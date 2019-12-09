@@ -8,7 +8,7 @@ use error_chain::bail;
 use crate::{Target, Toml};
 use crate::cargo::Root;
 use crate::errors::*;
-use crate::extensions::CommandExt;
+use crate::extensions::{CommandExt, SafeCommand};
 use crate::id;
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
@@ -72,9 +72,9 @@ pub fn run(target: &Target,
     fs::create_dir(&xargo_dir).ok();
 
     let mut cmd = if uses_xargo {
-        Command::new("xargo")
+        SafeCommand::new("xargo")
     } else {
-        Command::new("cargo")
+        SafeCommand::new("cargo")
     };
     cmd.args(args);
 
