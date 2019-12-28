@@ -248,7 +248,11 @@ EOF
     # can fail if arch is used (amd64 and/or i386)
     dpkg --remove-architecture $arch || true
     apt-get update
-    apt-get purge --auto-remove -y ${purge_list[@]}
+
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
+
     ls -lh /qemu
 }
 

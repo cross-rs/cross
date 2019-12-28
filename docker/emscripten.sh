@@ -43,8 +43,9 @@ main() {
     chmod a+rw -R /emsdk-portable/
     find /emsdk-portable/ -executable -print0 | xargs -0 chmod a+x
 
-    # Clean up
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
 
     rm $0
 }

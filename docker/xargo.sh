@@ -29,7 +29,10 @@ main() {
 
     rm -r "${RUSTUP_HOME}" "${CARGO_HOME}"
 
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
+
     rm $0
 }
 

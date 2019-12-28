@@ -18,15 +18,14 @@ main() {
         $(apt-cache showsrc gcc-mingw-w64-i686 | grep Build | cut -d: -f2 | tr , '\n' | cut -d' ' -f2 | sort | uniq)
     )
 
+    apt-get update
     local purge_list=()
     for dep in ${dependencies[@]}; do
         if ! dpkg -L $dep > /dev/null; then
+            apt-get install -y --no-install-recommends $dep
             purge_list+=( $dep )
         fi
     done
-
-    apt-get update
-    apt-get install -y --no-install-recommends ${purge_list[@]}
 
     pushd $td
 
@@ -118,8 +117,9 @@ EOF
     # Replace installed mingw packages with the new ones
     dpkg -i ../g*-mingw-w64-i686*.deb ../gcc-mingw-w64-base*.deb
 
-    # Clean up
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
 
     popd
 

@@ -116,8 +116,9 @@ EOF
 
     echo "127.0.0.1 localhost" > /system/etc/hosts
 
-    # clean up
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
 
     popd
 

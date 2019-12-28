@@ -133,7 +133,9 @@ EOF
     # clean up
     popd
 
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
 
     rm -rf $td
     rm $0

@@ -88,8 +88,9 @@ main() {
     # in /usr/bin. Create an appropriate symlink
     ln -s /usr/local/bin/qemu-$arch /usr/bin/qemu-$arch-static
 
-    # Clean up
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
 
     popd
 
