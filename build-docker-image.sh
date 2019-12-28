@@ -23,7 +23,7 @@ run() {
   fi
 }
 
-if [ -z "${1}" ]; then
+if [ -z "${1:-}" ]; then
   for t in Dockerfile.*; do
     run "${t##Dockerfile.}"
   done
