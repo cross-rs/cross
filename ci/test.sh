@@ -28,10 +28,6 @@ function retry {
 main() {
     local td=
 
-    if [ "${OS}" = linux ]; then
-        ./build-docker-image.sh $TARGET
-    fi
-
     if [ "${BRANCH-}" = master ] || [[ "${TAG-}" =~ ^v.* ]]; then
         return
     fi

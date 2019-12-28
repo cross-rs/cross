@@ -8,8 +8,7 @@ cd docker
 run() {
   local dockerfile="Dockerfile.${1}"
   local image_name="rustembedded/cross:${1}"
-
-  local cache_from_args=()
+  local cache_from_args=
 
   if docker pull "${image_name}"; then
     cache_from_args=(--cache-from "${image_name}")
