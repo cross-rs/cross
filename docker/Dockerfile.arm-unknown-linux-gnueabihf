@@ -3,12 +3,11 @@ FROM ubuntu:16.04
 COPY common.sh /
 RUN /common.sh
 
+COPY cmake.sh /
+RUN /cmake.sh
+
 COPY xargo.sh /
 RUN /xargo.sh
-
-COPY cmake.sh /
-RUN apt-get purge --auto-remove -y cmake && \
-    /cmake.sh
 
 RUN mkdir /usr/arm-linux-gnueabihf && \
     apt-get install -y --no-install-recommends curl xz-utils && \

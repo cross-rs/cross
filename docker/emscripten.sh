@@ -6,7 +6,6 @@ set -euo pipefail
 main() {
     local dependencies=(
         ca-certificates
-        cmake
         curl
         git
         python

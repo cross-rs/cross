@@ -3,6 +3,9 @@ FROM ubuntu:16.04
 COPY common.sh /
 RUN /common.sh
 
+COPY cmake.sh /
+RUN /cmake.sh
+
 RUN apt-get install -y --no-install-recommends python
 
 COPY emscripten.sh /
