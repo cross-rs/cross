@@ -23,10 +23,12 @@ run() {
   fi
 }
 
-if [ -z "${1:-}" ]; then
+if [ -z "${@:-}" ]; then
   for t in Dockerfile.*; do
     run "${t##Dockerfile.}"
   done
 else
-  run "${1}"
+  for image in "${@}"; do
+    run "${image}"
+  done
 fi
