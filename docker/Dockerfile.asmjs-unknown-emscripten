@@ -6,12 +6,28 @@ RUN /common.sh
 COPY cmake.sh /
 RUN /cmake.sh
 
-RUN apt-get install -y --no-install-recommends python
+COPY xargo.sh /
+RUN /xargo.sh
 
-COPY emscripten.sh /
-RUN /emscripten.sh
+COPY --from=trzeci/emscripten:1.38.46-upstream /emsdk_portable /emsdk_portable
 
-COPY emscripten-entry.sh /
-ENTRYPOINT ["/emscripten-entry.sh"]
+ENV EMSDK /emsdk_portable
+ENV EMSCRIPTEN=${EMSDK}/emscripten/sdk
+
+ENV EM_DATA ${EMSDK}/.data
+ENV EM_CONFIG ${EMSDK}/.emscripten
+ENV EM_CACHE ${EM_DATA}/cache
+ENV EM_PORTS ${EM_DATA}/ports
+
+ENV PATH="${EMSDK}:${EMSDK}/emscripten/sdk:${EMSDK}/llvm/clang/bin:${EMSDK}/node/current/bin:${EMSDK}/binaryen/bin:${PATH}"
+
+ENTRYPOINT ["/emsdk_portable/entrypoint"]
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  libxml2 \
+  python
 
 ENV CARGO_TARGET_ASMJS_UNKNOWN_EMSCRIPTEN_RUNNER=node
+
+# Prevent 'wasm2js does not support source maps yet' error.
+ENV RUSTFLAGS='-C debuginfo=0'
