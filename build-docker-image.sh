@@ -9,8 +9,10 @@ run() {
   local dockerfile="Dockerfile.${1}"
   local image_name="rustembedded/cross:${1}"
 
+  local cache_from_args=()
+
   if docker pull "${image_name}"; then
-    local cache_from_args=(--cache-from "${image_name}")
+    cache_from_args=(--cache-from "${image_name}")
   fi
 
   docker build ${cache_from_args[@]} --pull -t "${image_name}" -f "${dockerfile}" .
