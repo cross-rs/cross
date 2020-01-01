@@ -3,17 +3,16 @@ FROM ubuntu:16.04
 COPY common.sh /
 RUN /common.sh
 
+COPY cmake.sh /
+RUN /cmake.sh
+
 COPY xargo.sh /
 RUN /xargo.sh
-
-COPY cmake.sh /
-RUN apt-get purge --auto-remove -y cmake && \
-    /cmake.sh
 
 RUN mkdir /usr/arm-linux-gnueabihf && \
     apt-get install -y --no-install-recommends curl xz-utils && \
     cd /usr/arm-linux-gnueabihf && \
-    curl -L https://releases.linaro.org/components/toolchain/binaries/latest-7/arm-linux-gnueabihf/gcc-linaro-7.4.1-2019.02-x86_64_arm-linux-gnueabihf.tar.xz | \
+    curl -L https://releases.linaro.org/components/toolchain/binaries/7.5-2019.12/arm-linux-gnueabihf/gcc-linaro-7.5.0-2019.12-x86_64_arm-linux-gnueabihf.tar.xz | \
     tar --strip-components 1 -xJ && \
     apt-get purge --auto-remove -y curl xz-utils
 

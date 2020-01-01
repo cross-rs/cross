@@ -22,9 +22,9 @@ strategy:
     aarch64-unknown-linux-gnu:       { TARGET: aarch64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
     arm-unknown-linux-gnueabi:       { TARGET: arm-unknown-linux-gnueabi,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
     arm-unknown-linux-gnueabihf:     { TARGET: arm-unknown-linux-gnueabihf,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
-    armv7-unknown-linux-gnueabihf:   { TARGET: armv7-unknown-linux-gnueabihf,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system                                                                     }
+    armv7-unknown-linux-gnueabihf:   { TARGET: armv7-unknown-linux-gnueabihf,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
     i586-unknown-linux-gnu:          { TARGET: i586-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
-    i686-unknown-linux-gnu:          { TARGET: i686-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: native qemu-user qemu-system                                                              }
+    i686-unknown-linux-gnu:          { TARGET: i686-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: native qemu-user qemu-system }
     mips-unknown-linux-gnu:          { TARGET: mips-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
     mipsel-unknown-linux-gnu:        { TARGET: mipsel-unknown-linux-gnu,        CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
     mips64-unknown-linux-gnuabi64:   { TARGET: mips64-unknown-linux-gnuabi64,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
@@ -61,9 +61,9 @@ strategy:
     x86_64-unknown-netbsd:           { TARGET: x86_64-unknown-netbsd,           CPP: 1, DYLIB: 1, STD: 1 }
     sparcv9-sun-solaris:             { TARGET: sparcv9-sun-solaris,             CPP: 1, DYLIB: 1, STD: 1 }
     x86_64-sun-solaris:              { TARGET: x86_64-sun-solaris,              CPP: 1, DYLIB: 1, STD: 1 }
-    asmjs-unknown-emscripten:        { TARGET: asmjs-unknown-emscripten,        CPP: 1,           STD: 1,                   RUN: 1 }
+    asmjs-unknown-emscripten:        { TARGET: asmjs-unknown-emscripten,                          STD: 1,                   RUN: 1 }
     # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
-    wasm32-unknown-emscripten:       { TARGET: wasm32-unknown-emscripten,       CPP: 1,           STD: 1 }
+    wasm32-unknown-emscripten:       { TARGET: wasm32-unknown-emscripten,                         STD: 1 }
     thumbv6m-none-eabi:              { TARGET: thumbv6m-none-eabi,                                STD: 1 }
     thumbv7em-none-eabi:             { TARGET: thumbv7em-none-eabi,                               STD: 1 }
     thumbv7em-none-eabihf:           { TARGET: thumbv7em-none-eabihf,                             STD: 1 }

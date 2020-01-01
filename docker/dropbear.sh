@@ -48,8 +48,9 @@ main() {
     make -j$(nproc) PROGRAMS=dbclient
     cp dbclient /usr/local/bin/
 
-    # Clean up
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
 
     popd
 

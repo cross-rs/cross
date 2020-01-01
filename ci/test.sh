@@ -41,8 +41,8 @@ main() {
 
     export QEMU_STRACE=1
 
-    # test `cross check`
-    if [[ ! -z ${STD:-} ]]; then
+    if (( ${STD:-0} )); then
+        # test `cross check`
         td=$(mktemp -d)
         cargo init --lib --name foo $td
         pushd $td
@@ -50,10 +50,8 @@ main() {
         cross check --target $TARGET
         popd
         rm -rf $td
-    fi
-
-    # `cross build` test for targets where `std` is not available
-    if [[ -z "${STD:-}" ]]; then
+    else
+        # `cross build` test for targets where `std` is not available
         td=$(mktemp -d)
 
         git clone \
@@ -99,9 +97,9 @@ EOF
         rm -rf $td
     fi
 
-    if [[ ${RUN:-} ]]; then
+    if (( ${RUN:-0} )); then
         # `cross test` test
-        if [[ ${DYLIB:-} ]]; then
+        if (( ${DYLIB:-0} )); then
             td=$(mktemp -d)
 
             pushd $td
@@ -151,7 +149,7 @@ EOF
     fi
 
     # Test C++ support
-    if [[ ${CPP:-} ]]; then
+    if (( ${CPP:-0} )); then
         td=$(mktemp -d)
 
         git clone --depth 1 https://github.com/japaric/hellopp $td
@@ -159,7 +157,7 @@ EOF
         pushd $td
         cargo update -p gcc
         retry cargo fetch
-        if [[ ${RUN:-} ]]; then
+        if (( ${RUN:-0} )); then
             cross_run --target $TARGET
         else
             cross build --target $TARGET

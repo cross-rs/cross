@@ -3,13 +3,29 @@ FROM ubuntu:16.04
 COPY common.sh /
 RUN /common.sh
 
-RUN apt-get install -y --no-install-recommends python
+COPY cmake.sh /
+RUN /cmake.sh
 
-COPY emscripten.sh /
-RUN /emscripten.sh
+COPY xargo.sh /
+RUN /xargo.sh
 
-COPY emscripten-entry.sh /
-ENTRYPOINT ["/emscripten-entry.sh"]
+COPY --from=trzeci/emscripten:1.38.46-upstream /emsdk_portable /emsdk_portable
+
+ENV EMSDK /emsdk_portable
+ENV EMSCRIPTEN=${EMSDK}/emscripten/sdk
+
+ENV EM_DATA ${EMSDK}/.data
+ENV EM_CONFIG ${EMSDK}/.emscripten
+ENV EM_CACHE ${EM_DATA}/cache
+ENV EM_PORTS ${EM_DATA}/ports
+
+ENV PATH="${EMSDK}:${EMSDK}/emscripten/sdk:${EMSDK}/llvm/clang/bin:${EMSDK}/node/current/bin:${EMSDK}/binaryen/bin:${PATH}"
+
+ENTRYPOINT ["/emsdk_portable/entrypoint"]
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  libxml2 \
+  python
 
 COPY node-wasm /usr/local/bin/
 ENV CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUNNER=node-wasm

@@ -6,9 +6,9 @@ set -euo pipefail
 main() {
     local dependencies=(
         ca-certificates
-        cmake
         curl
         git
+        libxml2
         python
     )
 
@@ -25,14 +25,11 @@ main() {
     git clone https://github.com/emscripten-core/emsdk.git /emsdk-portable
     cd /emsdk-portable
 
-    export HOME=/emsdk-portable/
-
-    ./emsdk install sdk-1.38.15-64bit
-    ./emsdk activate sdk-1.38.15-64bit
+    ./emsdk install 1.38.46-upstream
+    ./emsdk activate 1.38.46-upstream
 
     # Compile and cache libc
-    source ./emsdk_env.sh
-    echo "main(){}" > a.c
+    echo 'int main() {}' > a.c
     emcc a.c
     emcc -s BINARYEN=1 a.c
     echo -e "#include <iostream>\n void hello(){ std::cout << std::endl; }" > a.cpp
@@ -41,11 +38,11 @@ main() {
     rm -f a.*
 
     # Make emsdk usable by any user
-    chmod a+rw -R /emsdk-portable/
-    find /emsdk-portable/ -executable -print0 | xargs -0 chmod a+x
+    chmod a+rwX -R "${EMSDK}"
 
-    # Clean up
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
 
     rm $0
 }

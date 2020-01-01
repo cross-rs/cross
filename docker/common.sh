@@ -10,9 +10,10 @@ apt-get install -y --no-install-recommends \
   automake \
   binutils \
   ca-certificates \
-  cmake \
+  curl \
   file \
   gcc \
+  g++ \
   git \
   libc6-dev \
   libtool \

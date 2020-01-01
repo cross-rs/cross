@@ -4,12 +4,14 @@ set -x
 set -euo pipefail
 
 main() {
-    local version=3.5.1
+    local version=3.16.2
 
     local dependencies=(
         curl
         g++
+        libssl-dev
         make
+        zlib1g-dev
     )
 
     apt-get update
@@ -27,6 +29,7 @@ main() {
 
     curl https://cmake.org/files/v${version%.*}/cmake-$version.tar.gz | \
         tar --strip-components 1 -xz
+
     ./bootstrap
     make -j$(nproc)
     make install
@@ -34,7 +37,9 @@ main() {
     # clean up
     popd
 
-    apt-get purge --auto-remove -y ${purge_list[@]}
+    if (( ${#purge_list[@]} )); then
+      apt-get purge --auto-remove -y ${purge_list[@]}
+    fi
 
     rm -rf $td
     rm $0
