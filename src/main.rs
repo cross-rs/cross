@@ -280,6 +280,7 @@ fn run() -> Result<ExitStatus> {
 
                 return docker::run(&target,
                                    &args.all,
+                                   &args.target_dir,
                                    &root,
                                    toml.as_ref(),
                                    uses_xargo,
