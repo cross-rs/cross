@@ -51,6 +51,7 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
 
 pub fn run(target: &Target,
            args: &[String],
+           target_dir: &Option<PathBuf>,
            root: &Root,
            toml: Option<&Toml>,
            uses_xargo: bool,
@@ -63,7 +64,7 @@ pub fn run(target: &Target,
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".xargo"));
-    let target_dir = root.join("target");
+    let target_dir = target_dir.clone().unwrap_or_else(|| root.join("target"));
 
     // create the directories we are going to mount before we mount them,
     // otherwise `docker` will create them but they will be owned by `root`
