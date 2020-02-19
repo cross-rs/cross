@@ -4,9 +4,9 @@ set -x
 set -euo pipefail
 
 main() {
-    local version=4.1.0
+    local version=4.2.0
 
-    # Qemu versions 3.10.0 and above break 32-bit float conversions
+    # Qemu versions 3.1.0 and above break 32-bit float conversions
     # on powerpc, powerpc64, and powerpc64le. Last known working version
     # is 3.0.1.
     # Upstream Issue:
@@ -32,7 +32,7 @@ main() {
         make
         patch
         pkg-config
-        python
+        python3
         zlib1g-dev
         libcap-dev
         libattr1-dev
