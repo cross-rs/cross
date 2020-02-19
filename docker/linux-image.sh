@@ -42,8 +42,8 @@ main() {
             kernel=4.9.0-0.bpo.6-powerpc
             debsource="deb http://archive.debian.org/debian jessie main"
             debsource="$debsource\ndeb http://archive.debian.org/debian jessie-backports main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
 
             # archive.debian.org Release files are expired.
             echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
@@ -54,9 +54,9 @@ main() {
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kernel=5.4.0-1-powerpc64
-            debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
+            kernel=5.4.0-4-powerpc64
+            debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
             deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
             ;;
@@ -71,9 +71,9 @@ main() {
         sparc64)
             # there is no stable port
             # https://packages.debian.org/en/sid/linux-image-sparc64
-            kernel=5.4.0-1-sparc64
-            debsource="deb http://ftp.ports.debian.org/debian-ports unreleased main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
+            kernel=5.4.0-4-sparc64
+            debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
+            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
             deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
             ;;
@@ -116,9 +116,9 @@ main() {
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 9D6D8F6BC857C906
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8B48AD6246925553
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com 7638D0442B90D010
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com DA1B2CEA81DCBC61 # debian-ports
     apt-key adv --recv-key --keyserver keyserver.ubuntu.com CBF8D6FD518E17E1
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 06AED62430CB581C
+    curl -sL https://www.ports.debian.org/archive_2020.key | apt-key add -
+    curl -sL https://www.ports.debian.org/archive_2021.key | apt-key add -
     apt-get update
 
     mkdir -p -m 777 /qemu/$arch

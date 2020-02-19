@@ -8,112 +8,115 @@ trigger:
    include:
      - v*.*.*
 
-variables:
-  VM_IMAGE: ubuntu-latest
-  TOOLCHAIN: stable
-  CARGO_NET_RETRY: 3
-  CARGO_HTTP_CHECK_REVOKE: false
-
-pool:
-  vmImage: $(VM_IMAGE)
-
-strategy:
-  matrix:
-    aarch64-unknown-linux-gnu:       { TARGET: aarch64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-    arm-unknown-linux-gnueabi:       { TARGET: arm-unknown-linux-gnueabi,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
-    arm-unknown-linux-gnueabihf:     { TARGET: arm-unknown-linux-gnueabihf,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
-    armv7-unknown-linux-gnueabihf:   { TARGET: armv7-unknown-linux-gnueabihf,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-    i586-unknown-linux-gnu:          { TARGET: i586-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
-    i686-unknown-linux-gnu:          { TARGET: i686-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: native qemu-user qemu-system }
-    mips-unknown-linux-gnu:          { TARGET: mips-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-    mipsel-unknown-linux-gnu:        { TARGET: mipsel-unknown-linux-gnu,        CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-    mips64-unknown-linux-gnuabi64:   { TARGET: mips64-unknown-linux-gnuabi64,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
-    mips64el-unknown-linux-gnuabi64: { TARGET: mips64el-unknown-linux-gnuabi64, CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-    powerpc-unknown-linux-gnu:       { TARGET: powerpc-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-    powerpc64-unknown-linux-gnu:     { TARGET: powerpc64-unknown-linux-gnu,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-    powerpc64le-unknown-linux-gnu:   { TARGET: powerpc64le-unknown-linux-gnu,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-    s390x-unknown-linux-gnu:         { TARGET: s390x-unknown-linux-gnu,         CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
-    sparc64-unknown-linux-gnu:       { TARGET: sparc64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
-    x86_64-unknown-linux-gnu:        { TARGET: x86_64-unknown-linux-gnu,        CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: native qemu-user qemu-system, DEPLOY: 1, CRATES_IO_PUBLISH: 1 }
-    aarch64-unknown-linux-musl:      { TARGET: aarch64-unknown-linux-musl,                        STD: 1, RUN: 1 }
-    arm-unknown-linux-musleabihf:    { TARGET: arm-unknown-linux-musleabihf,                      STD: 1, RUN: 1 }
-    arm-unknown-linux-musleabi:      { TARGET: arm-unknown-linux-musleabi,                        STD: 1, RUN: 1 }
-    armv5te-unknown-linux-musleabi:  { TARGET: armv5te-unknown-linux-musleabi,                    STD: 1,                   RUN: 1 }
-    armv7-unknown-linux-musleabihf:  { TARGET: armv7-unknown-linux-musleabihf,                    STD: 1, RUN: 1 }
-    i586-unknown-linux-musl:         { TARGET: i586-unknown-linux-musl,                           STD: 1, RUN: 1 }
-    i686-unknown-linux-musl:         { TARGET: i686-unknown-linux-musl,                           STD: 1, RUN: 1 }
-    mips-unknown-linux-musl:         { TARGET: mips-unknown-linux-musl,         CPP: 1,           STD: 1, RUN: 1 }
-    mipsel-unknown-linux-musl:       { TARGET: mipsel-unknown-linux-musl,       CPP: 1,           STD: 1, RUN: 1 }
-    x86_64-unknown-linux-musl:       { TARGET: x86_64-unknown-linux-musl,                         STD: 1, RUN: 1, DEPLOY: 1 }
-    aarch64-linux-android:           { TARGET: aarch64-linux-android,           CPP: 1,           STD: 1, RUN: 1 }
-    arm-linux-androideabi:           { TARGET: arm-linux-androideabi,           CPP: 1,           STD: 1, RUN: 1 }
-    armv7-linux-androideabi:         { TARGET: armv7-linux-androideabi,         CPP: 1,           STD: 1, RUN: 1 }
-    i686-linux-android:              { TARGET: i686-linux-android,              CPP: 1,           STD: 1, RUN: 1 }
-    x86_64-linux-android:            { TARGET: x86_64-linux-android,            CPP: 1,           STD: 1, RUN: 1 }
-    i686-apple-darwin:               { TARGET: i686-apple-darwin,               CPP: 1, DYLIB: 1, STD: 1,                   RUN: 1, VM_IMAGE: macOS-10.13 }
-    x86_64-apple-darwin:             { TARGET: x86_64-apple-darwin,             CPP: 1, DYLIB: 1, STD: 1,                   RUN: 1, VM_IMAGE: macOS-latest, DEPLOY: 1 }
-    x86_64-pc-windows-gnu:           { TARGET: x86_64-pc-windows-gnu,           CPP: 1,           STD: 1,                   RUN: 1 }
-    # `cargo build` fails with undefined symbols (https://github.com/rust-lang/rust/issues/32859) on `i686-pc-windows-gnu`.
-  # i686-pc-windows-gnu:             { TARGET: i686-pc-windows-gnu,             CPP: 1,           STD: 1,                   RUN: 1 }
-    x86_64-unknown-dragonfly:        { TARGET: x86_64-unknown-dragonfly,        CPP: 1, DYLIB: 1,         TOOLCHAIN: nightly }
-  # i686-unknown-freebsd:            { TARGET: i686-unknown-freebsd,                    DYLIB: 1, STD: 1 }
-  # x86_64-unknown-freebsd:          { TARGET: x86_64-unknown-freebsd,                  DYLIB: 1, STD: 1 }
-    x86_64-unknown-netbsd:           { TARGET: x86_64-unknown-netbsd,           CPP: 1, DYLIB: 1, STD: 1 }
-    sparcv9-sun-solaris:             { TARGET: sparcv9-sun-solaris,             CPP: 1, DYLIB: 1, STD: 1 }
-    x86_64-sun-solaris:              { TARGET: x86_64-sun-solaris,              CPP: 1, DYLIB: 1, STD: 1 }
-    asmjs-unknown-emscripten:        { TARGET: asmjs-unknown-emscripten,                          STD: 1,                   RUN: 1 }
-    # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
-    wasm32-unknown-emscripten:       { TARGET: wasm32-unknown-emscripten,                         STD: 1 }
-    thumbv6m-none-eabi:              { TARGET: thumbv6m-none-eabi,                                STD: 1 }
-    thumbv7em-none-eabi:             { TARGET: thumbv7em-none-eabi,                               STD: 1 }
-    thumbv7em-none-eabihf:           { TARGET: thumbv7em-none-eabihf,                             STD: 1 }
-    thumbv7m-none-eabi:              { TARGET: thumbv7m-none-eabi,                                STD: 1 }
-    x86_64-pc-windows-msvc:          { TARGET: x86_64-pc-windows-msvc,          CPP: 1,           STD: 1,                   RUN: 1, VM_IMAGE: vs2017-win2016, DEPLOY: 1 }
-
-steps:
-  - template: ci/azure-install-rust.yml
-  - bash: echo "##vso[task.setvariable variable=OS]$(echo "${AGENT_OS}" | tr '[:upper:]' '[:lower:]')"
-    displayName: Set OS variable
-  - bash: echo "##vso[task.setvariable variable=BRANCH]${BUILD_SOURCEBRANCH##refs/heads/}"
-    displayName: Set BRANCH variable
-    condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/')
-  - bash: echo "##vso[task.setvariable variable=TAG]${BUILD_SOURCEBRANCH##refs/tags/}"
-    displayName: Set TAG variable
-    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
-  - bash: ci/test.sh
-    displayName: Test
+jobs:
+  - job:
+    pool:
+      vmImage: $(VM_IMAGE)
+    variables:
+      VM_IMAGE: ubuntu-latest
+      TOOLCHAIN: stable
+      CARGO_NET_RETRY: 3
+      CARGO_HTTP_CHECK_REVOKE: false
+    strategy:
+      matrix:
+        aarch64-unknown-linux-gnu:       { TARGET: aarch64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
+        arm-unknown-linux-gnueabi:       { TARGET: arm-unknown-linux-gnueabi,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
+        arm-unknown-linux-gnueabihf:     { TARGET: arm-unknown-linux-gnueabihf,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
+        armv7-unknown-linux-gnueabihf:   { TARGET: armv7-unknown-linux-gnueabihf,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system                                                                     }
+        i586-unknown-linux-gnu:          { TARGET: i586-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
+        i686-unknown-linux-gnu:          { TARGET: i686-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: native qemu-user qemu-system                                                              }
+        mips-unknown-linux-gnu:          { TARGET: mips-unknown-linux-gnu,          CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
+        mipsel-unknown-linux-gnu:        { TARGET: mipsel-unknown-linux-gnu,        CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
+        mips64-unknown-linux-gnuabi64:   { TARGET: mips64-unknown-linux-gnuabi64,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
+        mips64el-unknown-linux-gnuabi64: { TARGET: mips64el-unknown-linux-gnuabi64, CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
+        powerpc-unknown-linux-gnu:       { TARGET: powerpc-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
+        powerpc64-unknown-linux-gnu:     { TARGET: powerpc64-unknown-linux-gnu,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
+        powerpc64le-unknown-linux-gnu:   { TARGET: powerpc64le-unknown-linux-gnu,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
+        s390x-unknown-linux-gnu:         { TARGET: s390x-unknown-linux-gnu,         CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
+        sparc64-unknown-linux-gnu:       { TARGET: sparc64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
+        x86_64-unknown-linux-gnu:        { TARGET: x86_64-unknown-linux-gnu,        CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: native qemu-user qemu-system, DEPLOY: 1, CRATES_IO_PUBLISH: 1 }
+        aarch64-unknown-linux-musl:      { TARGET: aarch64-unknown-linux-musl,                        STD: 1, RUN: 1 }
+        arm-unknown-linux-musleabihf:    { TARGET: arm-unknown-linux-musleabihf,                      STD: 1, RUN: 1 }
+        arm-unknown-linux-musleabi:      { TARGET: arm-unknown-linux-musleabi,                        STD: 1, RUN: 1 }
+        armv5te-unknown-linux-musleabi:  { TARGET: armv5te-unknown-linux-musleabi,                    STD: 1,                   RUN: 1 }
+        armv7-unknown-linux-musleabihf:  { TARGET: armv7-unknown-linux-musleabihf,                    STD: 1, RUN: 1 }
+        i586-unknown-linux-musl:         { TARGET: i586-unknown-linux-musl,                           STD: 1, RUN: 1 }
+        i686-unknown-linux-musl:         { TARGET: i686-unknown-linux-musl,                           STD: 1, RUN: 1 }
+        mips-unknown-linux-musl:         { TARGET: mips-unknown-linux-musl,         CPP: 1,           STD: 1, RUN: 1 }
+        mipsel-unknown-linux-musl:       { TARGET: mipsel-unknown-linux-musl,       CPP: 1,           STD: 1, RUN: 1 }
+        x86_64-unknown-linux-musl:       { TARGET: x86_64-unknown-linux-musl,                         STD: 1, RUN: 1, DEPLOY: 1 }
+        aarch64-linux-android:           { TARGET: aarch64-linux-android,           CPP: 1,           STD: 1, RUN: 1 }
+        arm-linux-androideabi:           { TARGET: arm-linux-androideabi,           CPP: 1,           STD: 1, RUN: 1 }
+        armv7-linux-androideabi:         { TARGET: armv7-linux-androideabi,         CPP: 1,           STD: 1, RUN: 1 }
+        i686-linux-android:              { TARGET: i686-linux-android,              CPP: 1,           STD: 1, RUN: 1 }
+        x86_64-linux-android:            { TARGET: x86_64-linux-android,            CPP: 1,           STD: 1, RUN: 1 }
+        i686-apple-darwin:               { TARGET: i686-apple-darwin,               CPP: 1, DYLIB: 1, STD: 1,                   RUN: 1, VM_IMAGE: macOS-10.13 }
+        x86_64-apple-darwin:             { TARGET: x86_64-apple-darwin,             CPP: 1, DYLIB: 1, STD: 1,                   RUN: 1, VM_IMAGE: macOS-latest, DEPLOY: 1 }
+        x86_64-pc-windows-gnu:           { TARGET: x86_64-pc-windows-gnu,           CPP: 1,           STD: 1,                   RUN: 1 }
+        # `cargo build` fails with undefined symbols (https://github.com/rust-lang/rust/issues/32859) on `i686-pc-windows-gnu`.
+      # i686-pc-windows-gnu:             { TARGET: i686-pc-windows-gnu,             CPP: 1,           STD: 1,                   RUN: 1 }
+        x86_64-unknown-dragonfly:        { TARGET: x86_64-unknown-dragonfly,        CPP: 1, DYLIB: 1,         TOOLCHAIN: nightly }
+      # i686-unknown-freebsd:            { TARGET: i686-unknown-freebsd,                    DYLIB: 1, STD: 1 }
+      # x86_64-unknown-freebsd:          { TARGET: x86_64-unknown-freebsd,                  DYLIB: 1, STD: 1 }
+        x86_64-unknown-netbsd:           { TARGET: x86_64-unknown-netbsd,           CPP: 1, DYLIB: 1, STD: 1 }
+        sparcv9-sun-solaris:             { TARGET: sparcv9-sun-solaris,             CPP: 1, DYLIB: 1, STD: 1 }
+        x86_64-sun-solaris:              { TARGET: x86_64-sun-solaris,              CPP: 1, DYLIB: 1, STD: 1 }
+        asmjs-unknown-emscripten:        { TARGET: asmjs-unknown-emscripten,                          STD: 1,                   RUN: 1 }
+        # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
+        wasm32-unknown-emscripten:       { TARGET: wasm32-unknown-emscripten,                         STD: 1 }
+        thumbv6m-none-eabi:              { TARGET: thumbv6m-none-eabi,                                STD: 1 }
+        thumbv7em-none-eabi:             { TARGET: thumbv7em-none-eabi,                               STD: 1 }
+        thumbv7em-none-eabihf:           { TARGET: thumbv7em-none-eabihf,                             STD: 1 }
+        thumbv7m-none-eabi:              { TARGET: thumbv7m-none-eabi,                                STD: 1 }
+        x86_64-pc-windows-msvc:          { TARGET: x86_64-pc-windows-msvc,          CPP: 1,           STD: 1,                   RUN: 1, VM_IMAGE: vs2017-win2016, DEPLOY: 1 }
     timeoutInMinutes: 360
-  - bash: cargo publish
-    displayName: Publish on crates.io
-    env:
-      CARGO_REGISTRY_TOKEN: $(CARGO_REGISTRY_TOKEN)
-    condition: and(startsWith(variables['TAG'], 'v'), eq(variables['CRATES_IO_PUBLISH'], '1'))
-  - bash: ci/build_release.sh
-    displayName: Build Release
-    condition: eq(variables['DEPLOY'], '1')
-  - task: ArchiveFiles@2
-    inputs:
-      includeRootFolder: false
-      archiveType: tar
-      tarCompression: gz
-      archiveFile: $(Build.ArtifactStagingDirectory)/cross-$(TAG)-$(TARGET).tar.gz
-      verbose: true
-    condition: eq(variables['DEPLOY'], '1')
-  - task: GithubRelease@0
-    displayName: Create GitHub Release
-    inputs:
-      githubConnection: github
-      assets: $(Build.ArtifactStagingDirectory)/cross-$(TAG)-$(TARGET).tar.gz
-      assetUploadMode: replace
-      action: edit
-      tag: $(TAG)
-    condition: and(startsWith(variables['TAG'], 'v'), eq(variables['DEPLOY'], '1'))
-  - task: Docker@2
-    displayName: Log into Docker Hub
-    inputs:
-      containerRegistry: docker
-      command: login
-    condition: and(or(eq(variables['BRANCH'], 'master'), startsWith(variables['TAG'], 'v')), eq(variables['OS'], 'linux'))
-  - bash: ci/docker_push.sh
-    displayName: Push Image to Docker Hub
-    condition: and(or(eq(variables['BRANCH'], 'master'), startsWith(variables['TAG'], 'v')), eq(variables['OS'], 'linux'))
+    steps:
+      - template: ci/azure-install-rust.yml
+      - bash: echo "##vso[task.setvariable variable=OS]$(echo "${AGENT_OS}" | tr '[:upper:]' '[:lower:]')"
+        displayName: Set OS Variable
+      - bash: echo "##vso[task.setvariable variable=BRANCH]${BUILD_SOURCEBRANCH##refs/heads/}"
+        displayName: Set BRANCH Variable
+        condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/')
+      - bash: echo "##vso[task.setvariable variable=TAG]${BUILD_SOURCEBRANCH##refs/tags/}"
+        displayName: Set TAG Variable
+        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      - bash: ./build-docker-image.sh "${TARGET}"
+        displayName: Build Docker Image
+        timeoutInMinutes: 360
+        condition: eq(variables['OS'], 'linux')
+      - bash: ci/test.sh
+        displayName: Test
+      - bash: cargo publish
+        displayName: Publish on crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: $(CARGO_REGISTRY_TOKEN)
+        condition: and(startsWith(variables['TAG'], 'v'), eq(variables['CRATES_IO_PUBLISH'], '1'))
+      - bash: ci/build_release.sh
+        displayName: Build Release
+        condition: eq(variables['DEPLOY'], '1')
+      - task: ArchiveFiles@2
+        inputs:
+          includeRootFolder: false
+          archiveType: tar
+          tarCompression: gz
+          archiveFile: $(Build.ArtifactStagingDirectory)/cross-$(TAG)-$(TARGET).tar.gz
+          verbose: true
+        condition: eq(variables['DEPLOY'], '1')
+      - task: GithubRelease@0
+        displayName: Create GitHub Release
+        inputs:
+          githubConnection: github
+          assets: $(Build.ArtifactStagingDirectory)/cross-$(TAG)-$(TARGET).tar.gz
+          assetUploadMode: replace
+          action: edit
+          tag: $(TAG)
+        condition: and(startsWith(variables['TAG'], 'v'), eq(variables['DEPLOY'], '1'))
+      - task: Docker@2
+        displayName: Log into Docker Hub
+        inputs:
+          containerRegistry: docker
+          command: login
+        condition: and(or(eq(variables['BRANCH'], 'master'), startsWith(variables['TAG'], 'v')), eq(variables['OS'], 'linux'))
+      - bash: ci/docker_push.sh
+        displayName: Push Image to Docker Hub
+        condition: and(or(eq(variables['BRANCH'], 'master'), startsWith(variables['TAG'], 'v')), eq(variables['OS'], 'linux'))
