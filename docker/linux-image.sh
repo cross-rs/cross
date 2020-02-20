@@ -54,7 +54,7 @@ main() {
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kernel=5.4.0-4-powerpc64
+            kernel='*-powerpc64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
@@ -71,7 +71,7 @@ main() {
         sparc64)
             # there is no stable port
             # https://packages.debian.org/en/sid/linux-image-sparc64
-            kernel=5.4.0-4-sparc64
+            kernel='*-sparc64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
@@ -111,14 +111,11 @@ main() {
     fi
     dpkg --add-architecture $arch || echo "foreign-architecture $arch" > /etc/dpkg/dpkg.cfg.d/multiarch
 
-    # Add debian keys
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com EF0F382A1A7B6500
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 9D6D8F6BC857C906
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 8B48AD6246925553
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com 7638D0442B90D010
-    apt-key adv --recv-key --keyserver keyserver.ubuntu.com CBF8D6FD518E17E1
-    curl -sL https://www.ports.debian.org/archive_2020.key | apt-key add -
-    curl -sL https://www.ports.debian.org/archive_2021.key | apt-key add -
+    # Add Debian keys.
+    curl -sL https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10}.asc      | apt-key add -
+    curl -sL https://ftp-master.debian.org/keys/archive-key-{8,9,10}-security.asc | apt-key add -
+    curl -sL https://ftp-master.debian.org/keys/release-{7,8,9,10}.asc            | apt-key add -
+    curl -sL https://www.ports.debian.org/archive_{2020,2021}.key                 | apt-key add -
     apt-get update
 
     mkdir -p -m 777 /qemu/$arch

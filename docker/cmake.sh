@@ -4,7 +4,7 @@ set -x
 set -euo pipefail
 
 main() {
-    local version=3.16.2
+    local version=3.16.4
 
     local dependencies=(
         curl
