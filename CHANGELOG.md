@@ -5,7 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.2.0] - 2020-02-22
+
 - Removed OpenSSL from all images.
+- Added support for Podman.
+- Bumped all images to at least Ubuntu 16.04.
 
 ## [v0.1.16] - 2019-09-17
 
