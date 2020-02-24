@@ -7,11 +7,4 @@ error_chain! {
     Io(std::io::Error);
     Which(which::Error);
   }
-
-  errors {
-    InvalidChannelName(channel: String) {
-      description("invalid channel name")
-      display("invalid channel name: '{}'", channel)
-    }
-  }
 }

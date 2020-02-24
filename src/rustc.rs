@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-use rustc_version::{Channel, Version, VersionMeta};
+use rustc_version::{Version, VersionMeta};
 
 use crate::{Host, Target};
 use crate::errors::*;
@@ -35,33 +35,6 @@ impl VersionMetaExt for VersionMeta {
             pre: vec![],
             build: vec![],
         }
-    }
-}
-
-pub(crate) trait ChannelExt {
-    fn from_str(chan: &str) -> Result<Channel>;
-    fn to_string(&self) -> String;
-}
-
-impl ChannelExt for Channel {
-    fn from_str(chan: &str) -> Result<Channel> {
-        Ok(match chan {
-            "stable" => Channel::Stable,
-            "nightly" => Channel::Nightly,
-            "dev" => Channel::Dev,
-            "beta" => Channel::Beta,
-            _ => return Err(
-                ErrorKind::InvalidChannelName(chan.to_string()).into()
-            ),
-        })
-    }
-    fn to_string(&self) -> String {
-        match self {
-            Channel::Stable => "stable",
-            Channel::Nightly => "nightly",
-            Channel::Dev => "dev",
-            Channel::Beta => "beta",
-        }.to_string()
     }
 }
 

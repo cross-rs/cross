@@ -20,7 +20,7 @@ use toml::{Value, value::Table};
 
 use self::cargo::{Root, Subcommand};
 use self::errors::*;
-use self::rustc::{ChannelExt, TargetList, VersionMetaExt};
+use self::rustc::{TargetList, VersionMetaExt};
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
@@ -232,7 +232,7 @@ fn run() -> Result<ExitStatus> {
             let default_toolchain = sysroot.file_name().and_then(|file_name| file_name.to_str())
                 .ok_or("couldn't get toolchain name")?;
             let toolchain = if let Some(channel) = args.channel {
-                [channel.to_string()].iter().map(|c| c.as_str()).chain(
+                [channel].iter().map(|c| c.as_str()).chain(
                     default_toolchain.splitn(2, '-').skip(1)
                 )
                     .collect::<Vec<_>>()

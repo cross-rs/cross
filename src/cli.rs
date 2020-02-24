@@ -1,17 +1,15 @@
 use std::{env, path::PathBuf};
 
-use rustc_version::Channel;
-
 use crate::Target;
 use crate::cargo::Subcommand;
 use crate::errors::Result;
-use crate::rustc::{ChannelExt, TargetList};
+use crate::rustc::TargetList;
 
 #[derive(Debug)]
 pub struct Args {
     pub all: Vec<String>,
     pub subcommand: Option<Subcommand>,
-    pub channel: Option<Channel>,
+    pub channel: Option<String>,
     pub target: Option<Target>,
     pub target_dir: Option<PathBuf>,
 }
@@ -26,8 +24,8 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     {
         let mut args = env::args().skip(1);
         while let Some(arg) = args.next() {
-            if arg.starts_with("+") {
-                channel = Some(Channel::from_str(&arg[1..])?);
+            if let ("+", ch) = arg.split_at(1) {
+                channel = Some(ch.to_string());
             } else if arg == "--target" {
                 all.push(arg);
                 if let Some(t) = args.next() {
