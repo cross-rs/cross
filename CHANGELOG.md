@@ -221,7 +221,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/rust-embedded/cross/compare/v0.1.15...HEAD
+[Unreleased]: https://github.com/rust-embedded/cross/compare/v0.2.0...HEAD
+[v0.2.0]: https://github.com/rust-embedded/cross/compare/v0.1.16...v0.2.0
 [v0.1.16]: https://github.com/rust-embedded/cross/compare/v0.1.15...v0.1.16
 [v0.1.15]: https://github.com/rust-embedded/cross/compare/v0.1.14...v0.1.15
 [v0.1.14]: https://github.com/rust-embedded/cross/compare/v0.1.13...v0.1.14
