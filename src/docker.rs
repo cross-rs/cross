@@ -101,6 +101,8 @@ pub fn run(target: &Target,
         }
     }
 
+    docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
+
     docker.arg("--rm");
 
     // We need to specify the user for Docker, but not for Podman.
