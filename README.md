@@ -123,6 +123,49 @@ RUN dpkg --add-architecture arm64 && \
 $ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
 ```
 
+### Docker in Docker
+
+When running `cross` from inside a docker container, `cross` needs access to
+the hosts docker daemon itself. This is normally achieved by mounting the
+docker daemons socket `/var/run/docker.sock`. For example:
+
+```
+$ docker run -v /var/run/docker.sock:/var/run/docker.sock -v .:/project \
+  -w /project my/development-image:tag cross build --target mips64-unknown-linux-gnuabi64
+```
+
+The image running `cross` requires the rust development tools to be installed.
+
+With this setup `cross` must find and mount the correct host paths into the
+container used for cross compilation. This includes the original project directory as
+well as the root path of the parent container to give access to the rust build
+tools.
+
+To inform `cross` that it is running inside a container set `CROSS_DOCKER_IN_DOCKER=true`.
+
+A development or CI container can be created like this:
+
+```
+FROM rust:1
+
+# set CROSS_DOCKER_IN_DOCKER to inform `cross` that it is executed from within a container
+ENV CROSS_DOCKER_IN_DOCKER=true
+
+# install `cross`
+RUN cargo install cross
+
+...
+
+```
+
+**Limitations**: Finding the mount point for the containers root directory is
+currently only available for the overlayfs2 storage driver. In order to access
+the parent containers rust setup, the child container mounts the parents
+overlayfs. The parent must not be stopped before the child container, as the
+overlayfs can not be unmounted correctly by Docker if the child container still
+accesses it.
+
+
 ### Passing environment variables into the build environment
 
 By default, `cross` does not pass any environment variables into the build
