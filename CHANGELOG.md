@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Disabled `x86_64-unknown-dragonfly` image.
+
 ## [v0.2.0] - 2020-02-22
 
 - Removed OpenSSL from all images.
