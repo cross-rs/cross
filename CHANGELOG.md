@@ -6,6 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - Disabled `x86_64-unknown-dragonfly` image.
+- Removed CI testing for `i686-apple-darwin`.
 
 ## [v0.2.0] - 2020-02-22
 
