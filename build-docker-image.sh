@@ -10,7 +10,7 @@ run() {
   local image_name="rustembedded/cross:${1}"
   local cache_from_args=
 
-  if docker pull "${image_name}"; then
+  if docker image inspect "${image_name}" &>/dev/null || docker pull "${image_name}"; then
     cache_from_args=(--cache-from "${image_name}")
   fi
 
