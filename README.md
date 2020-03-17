@@ -205,6 +205,7 @@ terminate.
 | `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 4.1.0 |   ✓    |
 | `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
 | `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `armv5te-unknown-linux-gnueabi`      | ???    | ???     | ??? | ???   |   ?    |
 | `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
 | `armv7-linux-androideabi` [2]        | N/A    | 4.9     | ✓   | N/A   |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 4.1.0 |   ✓    |
