@@ -2,7 +2,6 @@ use std::{env, path::PathBuf};
 
 use crate::Target;
 use crate::cargo::Subcommand;
-use crate::errors::Result;
 use crate::rustc::TargetList;
 
 #[derive(Debug)]
@@ -14,7 +13,7 @@ pub struct Args {
     pub target_dir: Option<PathBuf>,
 }
 
-pub fn parse(target_list: &TargetList) -> Result<Args> {
+pub fn parse(target_list: &TargetList) -> Args {
     let mut channel = None;
     let mut target = None;
     let mut target_dir = None;
@@ -56,11 +55,11 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         }
     }
 
-    Ok(Args {
+    Args {
         all,
         subcommand: sc,
         channel,
         target,
         target_dir,
-    })
+    }
 }
