@@ -5,15 +5,18 @@ use crate::cargo::Subcommand;
 use crate::rustc::TargetList;
 use crate::Target;
 
+#[derive(Debug)]
 pub struct Args {
     pub all: Vec<String>,
     pub subcommand: Option<Subcommand>,
+    pub channel: Option<String>,
     pub target: Option<Target>,
     pub target_dir: Option<PathBuf>,
     pub docker_in_docker: bool,
 }
 
 pub fn parse(target_list: &TargetList) -> Args {
+    let mut channel = None;
     let mut target = None;
     let mut target_dir = None;
     let mut sc = None;
@@ -22,7 +25,9 @@ pub fn parse(target_list: &TargetList) -> Args {
     {
         let mut args = env::args().skip(1);
         while let Some(arg) = args.next() {
-            if arg == "--target" {
+            if let ("+", ch) = arg.split_at(1) {
+                channel = Some(ch.to_string());
+            } else if arg == "--target" {
                 all.push(arg);
                 if let Some(t) = args.next() {
                     target = Some(Target::from(&t, target_list));
@@ -62,6 +67,7 @@ pub fn parse(target_list: &TargetList) -> Args {
     Args {
         all,
         subcommand: sc,
+        channel,
         target,
         target_dir,
         docker_in_docker,

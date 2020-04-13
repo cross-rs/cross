@@ -228,9 +228,19 @@ fn run() -> Result<ExitStatus> {
                 .unwrap_or_else(|| Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
 
-            let sysroot = rustc::sysroot(&host, &target, verbose)?;
-            let toolchain = sysroot.file_name().and_then(|file_name| file_name.to_str())
+            let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
+            let default_toolchain = sysroot.file_name().and_then(|file_name| file_name.to_str())
                 .ok_or("couldn't get toolchain name")?;
+            let toolchain = if let Some(channel) = args.channel {
+                [channel].iter().map(|c| c.as_str()).chain(
+                    default_toolchain.splitn(2, '-').skip(1)
+                )
+                    .collect::<Vec<_>>()
+                    .join("-")
+            } else {
+                default_toolchain.to_string()
+            };
+            sysroot.set_file_name(&toolchain);
 
             let installed_toolchains = rustup::installed_toolchains(verbose)?;
 
@@ -250,13 +260,13 @@ fn run() -> Result<ExitStatus> {
 
             if !uses_xargo && !available_targets.is_installed(&target) {
                 rustup::install(&target, &toolchain, verbose)?;
-            } else if !rustup::component_is_installed("rust-src", toolchain, verbose)? {
-                rustup::install_component("rust-src", toolchain, verbose)?;
+            } else if !rustup::component_is_installed("rust-src", &toolchain, verbose)? {
+                rustup::install_component("rust-src", &toolchain, verbose)?;
             }
 
             if args.subcommand.map(|sc| sc == Subcommand::Clippy).unwrap_or(false) &&
-                !rustup::component_is_installed("clippy", toolchain, verbose)? {
-                rustup::install_component("clippy", toolchain, verbose)?;
+                !rustup::component_is_installed("clippy", &toolchain, verbose)? {
+                rustup::install_component("clippy", &toolchain, verbose)?;
             }
 
             let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
