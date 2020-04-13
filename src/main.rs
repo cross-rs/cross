@@ -285,7 +285,8 @@ fn run() -> Result<ExitStatus> {
                                    toml.as_ref(),
                                    uses_xargo,
                                    &sysroot,
-                                   verbose);
+                                   verbose,
+                                   args.docker_in_docker);
             }
         }
     }

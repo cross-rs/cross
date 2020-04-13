@@ -1,14 +1,16 @@
+use std::str::FromStr;
 use std::{env, path::PathBuf};
 
-use crate::Target;
 use crate::cargo::Subcommand;
 use crate::rustc::TargetList;
+use crate::Target;
 
 pub struct Args {
     pub all: Vec<String>,
     pub subcommand: Option<Subcommand>,
     pub target: Option<Target>,
     pub target_dir: Option<PathBuf>,
+    pub docker_in_docker: bool,
 }
 
 pub fn parse(target_list: &TargetList) -> Args {
@@ -27,7 +29,10 @@ pub fn parse(target_list: &TargetList) -> Args {
                     all.push(t);
                 }
             } else if arg.starts_with("--target=") {
-                target = arg.splitn(2, '=').nth(1).map(|s| Target::from(&*s, target_list));
+                target = arg
+                    .splitn(2, '=')
+                    .nth(1)
+                    .map(|s| Target::from(&*s, target_list));
                 all.push(arg);
             } else if arg == "--target-dir" {
                 all.push(arg);
@@ -41,19 +46,24 @@ pub fn parse(target_list: &TargetList) -> Args {
                     all.push(format!("--target-dir=/target"));
                 }
             } else {
-              if !arg.starts_with('-') && sc.is_none() {
-                  sc = Some(Subcommand::from(arg.as_ref()));
-              }
+                if !arg.starts_with('-') && sc.is_none() {
+                    sc = Some(Subcommand::from(arg.as_ref()));
+                }
 
-              all.push(arg.to_string());
+                all.push(arg.to_string());
             }
         }
     }
+
+    let docker_in_docker = env::var("CROSS_DOCKER_IN_DOCKER")
+        .map(|s| bool::from_str(&s).unwrap_or_default())
+        .unwrap_or_default();
 
     Args {
         all,
         subcommand: sc,
         target,
         target_dir,
+        docker_in_docker,
     }
 }

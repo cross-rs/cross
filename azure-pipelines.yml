@@ -79,6 +79,9 @@ jobs:
       - bash: echo "##vso[task.setvariable variable=TAG]${BUILD_SOURCEBRANCH##refs/tags/}"
         displayName: Set TAG Variable
         condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      - bash: cargo test 
+        displayName: Run unit tests
+        timeoutInMinutes: 5
       - bash: ./build-docker-image.sh "${TARGET}"
         displayName: Build Docker Image
         timeoutInMinutes: 360

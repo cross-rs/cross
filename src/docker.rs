@@ -1,15 +1,16 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
 use atty::Stream;
 use error_chain::bail;
+use serde_json;
 
-use crate::{Target, Toml};
 use crate::cargo::Root;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::id;
+use crate::{Target, Toml};
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 const DOCKER: &str = "docker";
@@ -56,8 +57,15 @@ pub fn run(target: &Target,
            toml: Option<&Toml>,
            uses_xargo: bool,
            sysroot: &PathBuf,
-           verbose: bool)
+           verbose: bool,
+           docker_in_docker: bool)
            -> Result<ExitStatus> {
+    let mount_finder = if docker_in_docker {
+        MountFinder::new(docker_read_mount_paths()?)
+    } else {
+        MountFinder::default()
+    };
+
     let root = root.path();
     let home_dir = home::home_dir().ok_or_else(|| "could not find home directory")?;
     let cargo_dir = home::cargo_home()?;
@@ -71,6 +79,13 @@ pub fn run(target: &Target,
     fs::create_dir(&target_dir).ok();
     fs::create_dir(&cargo_dir).ok();
     fs::create_dir(&xargo_dir).ok();
+
+    // update paths to the host mounts path.
+    let cargo_dir = mount_finder.find_mount_path(&cargo_dir);
+    let xargo_dir = mount_finder.find_mount_path(&xargo_dir);
+    let target_dir = mount_finder.find_mount_path(&target_dir);
+    let mount_root = mount_finder.find_mount_path(&root);
+    let sysroot = mount_finder.find_mount_path(&sysroot);
 
     let mut cmd = if uses_xargo {
         SafeCommand::new("xargo")
@@ -137,7 +152,7 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"])
-        .args(&["-v", &format!("{}:/project:Z", root.display())])
+        .args(&["-v", &format!("{}:/project:Z", mount_root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
         .args(&["-w", "/project"]);
@@ -178,4 +193,233 @@ pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
     };
 
     Ok(image)
+}
+
+fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
+    let hostname = if let Ok(v) = env::var("HOSTNAME") {
+        Ok(v)
+    } else {
+        Err("HOSTNAME environment variable not found")
+    }?;
+
+    let docker_path = which::which(DOCKER)?;
+    let mut docker: Command = {
+        let mut command = Command::new(docker_path);
+        command.arg("inspect");
+        command.arg(hostname);
+        command
+    };
+
+    let output = docker.run_and_get_stdout(false)?;
+    let info = if let Ok(val) = serde_json::from_str(&output) {
+        Ok(val)
+    } else {
+        Err("failed to parse docker inspect output")
+    }?;
+
+    dockerinfo_parse_mounts(&info)
+}
+
+fn dockerinfo_parse_mounts(info: &serde_json::Value) -> Result<Vec<MountDetail>> {
+    let mut mounts = dockerinfo_parse_user_mounts(info);
+    let root_info = dockerinfo_parse_root_mount_path(info)?;
+    mounts.push(root_info);
+    Ok(mounts)
+}
+
+fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDetail> {
+    let driver_name = info
+        .pointer("/0/GraphDriver/Name")
+        .and_then(|v| v.as_str())
+        .ok_or("No driver name found")?;
+
+    if driver_name == "overlay2" {
+        let path = info
+            .pointer("/0/GraphDriver/Data/MergedDir")
+            .and_then(|v| v.as_str())
+            .ok_or("No merge directory found")?;
+
+        Ok(MountDetail {
+            source: PathBuf::from(&path),
+            destination: PathBuf::from("/"),
+        })
+    } else {
+        Err(format!("want driver overlay2, got {}", driver_name).into())
+    }
+}
+
+fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
+    info.pointer("/0/Mounts")
+        .and_then(|v| v.as_array())
+        .map(|v| {
+            let make_path = |v: &serde_json::Value| PathBuf::from(&v.as_str().unwrap());
+            let mut mounts = vec![];
+            for details in v {
+                let source = make_path(&details["Source"]);
+                let destination = make_path(&details["Destination"]);
+                if source != destination {
+                    mounts.push(MountDetail {
+                        source,
+                        destination,
+                    });
+                }
+            }
+            mounts
+        })
+        .unwrap_or_else(|| Vec::new())
+}
+
+#[derive(Debug, Default)]
+struct MountFinder {
+    mounts: Vec<MountDetail>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct MountDetail {
+    source: PathBuf,
+    destination: PathBuf,
+}
+
+impl MountFinder {
+    fn new(mounts: Vec<MountDetail>) -> MountFinder {
+        // sort by length (reverse), to give mounts with more path components a higher priority;
+        let mut mounts = mounts;
+        mounts.sort_by(|a, b| {
+            let la = a.destination.as_os_str().len();
+            let lb = b.destination.as_os_str().len();
+            la.cmp(&lb).reverse()
+        });
+        MountFinder { mounts }
+    }
+
+    fn find_mount_path(&self, path: &Path) -> PathBuf {
+        for info in &self.mounts {
+            if let Ok(stripped) = path.strip_prefix(&info.destination) {
+                return info.source.join(stripped);
+            }
+        }
+        return path.to_path_buf();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod mount_finder {
+        use super::*;
+
+        #[test]
+        fn test_default_finder_returns_original() {
+            let finder = MountFinder::default();
+            assert_eq!(
+                PathBuf::from("/test/path"),
+                finder.find_mount_path(&PathBuf::from("/test/path")),
+            );
+        }
+
+        #[test]
+        fn test_longest_destination_path_wins() {
+            let finder = MountFinder::new(vec![
+                MountDetail {
+                    source: PathBuf::from("/project/path"),
+                    destination: PathBuf::from("/project"),
+                },
+                MountDetail {
+                    source: PathBuf::from("/target/path"),
+                    destination: PathBuf::from("/project/target"),
+                },
+            ]);
+            assert_eq!(
+                PathBuf::from("/target/path/test"),
+                finder.find_mount_path(&PathBuf::from("/project/target/test"))
+            )
+        }
+
+        #[test]
+        fn test_adjust_multiple_paths() {
+            let finder = MountFinder::new(vec![
+                MountDetail {
+                    source: PathBuf::from("/var/lib/docker/overlay2/container-id/merged"),
+                    destination: PathBuf::from("/"),
+                },
+                MountDetail {
+                    source: PathBuf::from("/home/project/path"),
+                    destination: PathBuf::from("/project"),
+                },
+            ]);
+            assert_eq!(
+                PathBuf::from("/var/lib/docker/overlay2/container-id/merged/container/path"),
+                finder.find_mount_path(&PathBuf::from("/container/path"))
+            );
+            assert_eq!(
+                PathBuf::from("/home/project/path"),
+                finder.find_mount_path(&PathBuf::from("/project"))
+            );
+            assert_eq!(
+                PathBuf::from("/home/project/path/target"),
+                finder.find_mount_path(&PathBuf::from("/project/target"))
+            );
+        }
+    }
+
+    mod parse_docker_inspect {
+        use super::*;
+        use serde_json::json;
+
+        #[test]
+        fn test_parse_container_root() {
+            let actual = dockerinfo_parse_root_mount_path(&json!([{
+                "GraphDriver": {
+                    "Data": {
+                        "LowerDir": "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4-init/diff:/var/lib/docker/overlay2/dfe81d459bbefada7aa897a9d05107a77145b0d4f918855f171ee85789ab04a0/diff:/var/lib/docker/overlay2/1f704696915c75cd081a33797ecc66513f9a7a3ffab42d01a3f17c12c8e2dc4c/diff:/var/lib/docker/overlay2/0a4f6cb88f4ace1471442f9053487a6392c90d2c6e206283d20976ba79b38a46/diff:/var/lib/docker/overlay2/1ee3464056f9cdc968fac8427b04e37ec96b108c5050812997fa83498f2499d1/diff:/var/lib/docker/overlay2/0ec5a47f1854c0f5cfe0e3f395b355b5a8bb10f6e622710ce95b96752625f874/diff:/var/lib/docker/overlay2/f24c8ad76303838b49043d17bf2423fe640836fd9562d387143e68004f8afba0/diff:/var/lib/docker/overlay2/462f89d5a0906805a6f2eec48880ed1e48256193ed506da95414448d435db2b7/diff",
+                        "MergedDir": "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/merged",
+                        "UpperDir": "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/diff",
+                        "WorkDir": "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/work"
+                    },
+                    "Name": "overlay2"
+                },
+            }])).unwrap();
+            let want = MountDetail {
+                source: PathBuf::from("/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/merged"),
+                destination: PathBuf::from("/"),
+            };
+            assert_eq!(want, actual);
+        }
+
+        #[test]
+        fn test_parse_user_mounts_remove_if_source_dest_eq() {
+            let actual = dockerinfo_parse_user_mounts(&json!([{
+                "Mounts": [
+                    {
+                        "Type": "bind",
+                        "Source": "/var/run/docker.sock",
+                        "Destination": "/var/run/docker.sock",
+                    },
+                    {
+                        "Type": "bind",
+                        "Source": "/mounted/path",
+                        "Destination": "/mounted/path",
+                    }
+                ],
+            }]));
+            assert_eq!(Vec::<MountDetail>::new(), actual);
+        }
+
+        #[test]
+        fn test_parse_empty_user_mounts() {
+            let actual = dockerinfo_parse_user_mounts(&json!([{
+                "Mounts": [],
+            }]));
+            assert_eq!(Vec::<MountDetail>::new(), actual);
+        }
+
+        #[test]
+        fn test_parse_missing_user_moutns() {
+            let actual = dockerinfo_parse_user_mounts(&json!([{
+                "Id": "test",
+            }]));
+            assert_eq!(Vec::<MountDetail>::new(), actual);
+        }
+    }
 }
