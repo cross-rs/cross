@@ -257,12 +257,10 @@ fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
             for details in v {
                 let source = make_path(&details["Source"]);
                 let destination = make_path(&details["Destination"]);
-                if source != destination {
-                    mounts.push(MountDetail {
-                        source,
-                        destination,
-                    });
-                }
+                mounts.push(MountDetail {
+                    source,
+                    destination,
+                });
             }
             mounts
         })
@@ -385,25 +383,6 @@ mod tests {
                 destination: PathBuf::from("/"),
             };
             assert_eq!(want, actual);
-        }
-
-        #[test]
-        fn test_parse_user_mounts_remove_if_source_dest_eq() {
-            let actual = dockerinfo_parse_user_mounts(&json!([{
-                "Mounts": [
-                    {
-                        "Type": "bind",
-                        "Source": "/var/run/docker.sock",
-                        "Destination": "/var/run/docker.sock",
-                    },
-                    {
-                        "Type": "bind",
-                        "Source": "/mounted/path",
-                        "Destination": "/mounted/path",
-                    }
-                ],
-            }]));
-            assert_eq!(Vec::<MountDetail>::new(), actual);
         }
 
         #[test]
