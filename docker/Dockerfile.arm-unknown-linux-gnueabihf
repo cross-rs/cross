@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 COPY common.sh /
 RUN /common.sh
@@ -12,23 +12,19 @@ RUN /xargo.sh
 RUN mkdir /usr/arm-linux-gnueabihf && \
     apt-get install -y --no-install-recommends curl xz-utils && \
     cd /usr/arm-linux-gnueabihf && \
-    curl -L https://releases.linaro.org/components/toolchain/binaries/7.5-2019.12/arm-linux-gnueabihf/gcc-linaro-7.5.0-2019.12-x86_64_arm-linux-gnueabihf.tar.xz | \
+    curl -L https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz | \
     tar --strip-components 1 -xJ && \
     apt-get purge --auto-remove -y curl xz-utils
 
 ENV PATH /usr/arm-linux-gnueabihf/bin:$PATH
 
 COPY qemu.sh /
-
 RUN /qemu.sh arm
-
-RUN apt-get install -y --no-install-recommends \
-    libc6-dev-armhf-cross
 
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER=qemu-arm \
     CC_arm_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc \
     CXX_arm_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++ \
-    QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf \
-    LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/lib:/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/lib \
+    QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/libc \
+    LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/libc/lib:/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/lib:/usr/arm-linux-gnueabihf/lib \
     RUST_TEST_THREADS=1
