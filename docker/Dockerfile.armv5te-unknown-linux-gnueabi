@@ -1,0 +1,24 @@
+FROM ubuntu:18.04
+
+COPY common.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+COPY qemu.sh /
+RUN apt-get install -y --no-install-recommends \
+    g++-arm-linux-gnueabi \
+    crossbuild-essential-armel \
+    libc6-dev-armel-cross && \
+    /qemu.sh arm
+
+ENV CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
+    CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_GNUEABI_RUNNER=qemu-arm \
+    CC_armv5te_unknown_linux_gnueabi=arm-linux-gnueabi-gcc \
+    CXX_armv5te_unknown_linux_gnueabi=arm-linux-gnueabi-g++ \
+    QEMU_LD_PREFIX=/usr/arm-linux-gnueabi \
+    RUST_TEST_THREADS=1

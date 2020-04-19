@@ -38,6 +38,7 @@ jobs:
         aarch64-unknown-linux-musl:      { TARGET: aarch64-unknown-linux-musl,                        STD: 1, RUN: 1 }
         arm-unknown-linux-musleabihf:    { TARGET: arm-unknown-linux-musleabihf,                      STD: 1, RUN: 1 }
         arm-unknown-linux-musleabi:      { TARGET: arm-unknown-linux-musleabi,                        STD: 1, RUN: 1 }
+        armv5te-unknown-linux-gnueabi:  { TARGET: armv5te-unknown-linux-gnueabi,                    STD: 1,                   RUN: 1 }
         armv5te-unknown-linux-musleabi:  { TARGET: armv5te-unknown-linux-musleabi,                    STD: 1,                   RUN: 1 }
         armv7-unknown-linux-musleabihf:  { TARGET: armv7-unknown-linux-musleabihf,                    STD: 1, RUN: 1 }
         i586-unknown-linux-musl:         { TARGET: i586-unknown-linux-musl,                           STD: 1, RUN: 1 }
