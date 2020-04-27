@@ -256,7 +256,10 @@ fn run() -> Result<ExitStatus> {
             }
             .unwrap_or_else(|| !target.is_builtin() || !available_targets.contains(&target));
 
-            if !uses_xargo && !available_targets.is_installed(&target) {
+            if !uses_xargo
+                && !available_targets.is_installed(&target)
+                && available_targets.contains(&target)
+            {
                 rustup::install(&target, &toolchain, verbose)?;
             } else if !rustup::component_is_installed("rust-src", &toolchain, verbose)? {
                 rustup::install_component("rust-src", &toolchain, verbose)?;
