@@ -267,6 +267,7 @@ terminate.
 | `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
 | `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
 | `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
+| `riscv64gc-unknown-linux-gnu`        | 2.27   | 7.5.0   | ✓   | 4.2.0 |   ✓    |
 | `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | ✓   | 4.1.0 |        |
 | `sparc64-unknown-linux-gnu` [3]      | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
 | `sparcv9-sun-solaris` [4]            | 2.11   | 5.3.0   | ✓   | N/A   |        |

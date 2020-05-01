@@ -47,6 +47,7 @@ main() {
 
             # archive.debian.org Release files are expired.
             echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
+            echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
 
             dropbear="dropbear"
             ;;
