@@ -7,7 +7,7 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 RUN dpkg --add-architecture i386 && apt-get update && \
-    apt-get install -y --no-install-recommends \
+    apt-get install --assume-yes --no-install-recommends \
         wine-stable \
         wine64 \
         wine32 \

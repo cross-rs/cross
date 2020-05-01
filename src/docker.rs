@@ -38,7 +38,7 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
             echo ':wine:M::MZ::/usr/bin/run-detectors:' > /proc/sys/fs/binfmt_misc/register"
     } else {
-        "apt-get update && apt-get install --no-install-recommends -y \
+        "apt-get update && apt-get install --no-install-recommends --assume-yes \
             binfmt-support qemu-user-static"
     };
 

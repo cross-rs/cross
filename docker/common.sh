@@ -11,7 +11,7 @@ sed -i 's/http:\/\/\(.*\).ubuntu.com\/ubuntu\//[arch=amd64,i386] http:\/\/\1.arc
 
 apt-get update
 
-apt-get install -y --no-install-recommends \
+apt-get install --assume-yes --no-install-recommends \
   autoconf \
   automake \
   binutils \

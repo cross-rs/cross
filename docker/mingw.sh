@@ -9,7 +9,7 @@ main() {
 
     # Install mingw (with sjlj exceptions) to get the dependencies right
     # Later we replace these packages with the new ones
-    apt-get install -y --no-install-recommends g++-mingw-w64-i686
+    apt-get install --assume-yes --no-install-recommends g++-mingw-w64-i686
 
     local td=$(mktemp -d)
 
@@ -22,7 +22,7 @@ main() {
     local purge_list=()
     for dep in ${dependencies[@]}; do
         if ! dpkg -L $dep > /dev/null; then
-            apt-get install -y --no-install-recommends $dep
+            apt-get install --assume-yes --no-install-recommends $dep
             purge_list+=( $dep )
         fi
     done
