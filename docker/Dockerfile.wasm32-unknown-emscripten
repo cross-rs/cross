@@ -23,7 +23,7 @@ ENV PATH="${EMSDK}:${EMSDK}/emscripten/sdk:${EMSDK}/llvm/clang/bin:${EMSDK}/node
 
 ENTRYPOINT ["/emsdk_portable/entrypoint"]
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
   libxml2 \
   python
 

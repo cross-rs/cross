@@ -44,7 +44,7 @@ EOF
     local purge_list=(default-jre)
     for dep in ${dependencies[@]}; do
         if ! dpkg -L $dep; then
-            apt-get install --no-install-recommends -y $dep
+            apt-get install --no-install-recommends --assume-yes $dep
             purge_list+=( $dep )
         fi
     done

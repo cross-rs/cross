@@ -9,7 +9,7 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get install --assume-yes --no-install-recommends \
     g++-powerpc-linux-gnu \
     libc6-dev-powerpc-cross
 
