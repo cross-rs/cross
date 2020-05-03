@@ -5,45 +5,45 @@ set -euo pipefail
 
 main() {
     # arch in the rust target
-    local arch=$1 \
+    local arch="${1}" \
           kversion=4.9.0-11
 
     local debsource="deb http://http.debian.net/debian/ stretch main"
-    debsource="$debsource\ndeb http://security.debian.org/ stretch/updates main"
+    debsource="${debsource}\ndeb http://security.debian.org/ stretch/updates main"
 
     local dropbear="dropbear-bin"
 
-    local deps=
+    local -a deps
     local kernel=
 
     # select debian arch and kernel version
-    case $arch in
+    case "${arch}" in
         aarch64)
             arch=arm64
-            kernel=$kversion-arm64
+            kernel="${kversion}-arm64"
             ;;
         armv7)
             arch=armhf
-            kernel=$kversion-armmp
+            kernel="${kversion}-armmp"
             ;;
         i686)
             arch=i386
-            kernel=$kversion-686
+            kernel="${kversion}-686"
             ;;
         mips|mipsel)
-            kernel=$kversion-4kc-malta
+            kernel="${kversion}-4kc-malta"
             ;;
         mips64el)
-            kernel=$kversion-5kc-malta
+            kernel="${kversion}-5kc-malta"
             ;;
         powerpc)
             # there is no stretch powerpc port, so we use jessie
             # use a more recent kernel from backports
             kernel=4.9.0-0.bpo.6-powerpc
             debsource="deb http://archive.debian.org/debian jessie main"
-            debsource="$debsource\ndeb http://archive.debian.org/debian jessie-backports main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+            debsource="${debsource}\ndeb http://archive.debian.org/debian jessie-backports main"
+            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
+            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
 
             # archive.debian.org Release files are expired.
             echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
@@ -57,33 +57,33 @@ main() {
             # https://packages.debian.org/en/sid/linux-image-powerpc64
             kernel='*-powerpc64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
-            deps="libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64"
+            deps=(libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64)
             ;;
         powerpc64le)
             arch=ppc64el
-            kernel=$kversion-powerpc64le
+            kernel="${kversion}-powerpc64le"
             ;;
         s390x)
             arch=s390x
-            kernel=$kversion-s390x
+            kernel="${kversion}-s390x"
             ;;
         sparc64)
             # there is no stable port
             # https://packages.debian.org/en/sid/linux-image-sparc64
             kernel='*-sparc64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-            debsource="$debsource\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
-            deps="libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64"
+            deps=(libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64)
             ;;
         x86_64)
             arch=amd64
-            kernel=$kversion-amd64
+            kernel="${kversion}-amd64"
             ;;
         *)
-            echo "Invalid arch: $arch"
+            echo "Invalid arch: ${arch}"
             exit 1
             ;;
     esac
@@ -96,22 +96,22 @@ main() {
 
     local purge_list=()
     apt-get update
-    for dep in ${dependencies[@]}; do
-        if ! dpkg -L $dep; then
-            apt-get install --no-install-recommends --assume-yes $dep
-            purge_list+=( $dep )
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -L "${dep}"; then
+            apt-get install --assume-yes --no-install-recommends "${dep}"
+            purge_list+=( "${dep}" )
         fi
     done
 
     # Download packages
     mv /etc/apt/sources.list /etc/apt/sources.list.bak
-    echo -e "$debsource" > /etc/apt/sources.list
+    echo -e "${debsource}" > /etc/apt/sources.list
 
     # Old ubuntu does not support --add-architecture, so we directly change multiarch file
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch ]; then
         cp /etc/dpkg/dpkg.cfg.d/multiarch /etc/dpkg/dpkg.cfg.d/multiarch.bak
     fi
-    dpkg --add-architecture $arch || echo "foreign-architecture $arch" > /etc/dpkg/dpkg.cfg.d/multiarch
+    dpkg --add-architecture "${arch}" || echo "foreign-architecture ${arch}" > /etc/dpkg/dpkg.cfg.d/multiarch
 
     # Add Debian keys.
     curl -sL https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10}.asc      | apt-key add -
@@ -120,45 +120,47 @@ main() {
     curl -sL https://www.ports.debian.org/archive_{2020,2021}.key                 | apt-key add -
     apt-get update
 
-    mkdir -p -m 777 /qemu/$arch
-    cd /qemu/$arch
+    mkdir -p "/qemu/${arch}"
+    chmod 777 /qemu "/qemu/${arch}"
+
+    cd "/qemu/${arch}"
     apt-get -d --no-install-recommends download \
-        $deps \
-        busybox:$arch \
-        $dropbear:$arch \
-        libc6:$arch \
-        libgcc1:$arch \
-        libstdc++6:$arch \
-        linux-image-$kernel:$arch \
+        ${deps[@]+"${deps[@]}"} \
+        "busybox:${arch}" \
+        "${dropbear}:${arch}" \
+        "libc6:${arch}" \
+        "libgcc1:${arch}" \
+        "libstdc++6:${arch}" \
+        "linux-image-${kernel}:${arch}" \
         ncurses-base \
-        zlib1g:$arch
+        "zlib1g:${arch}"
     cd /qemu
 
     # Install packages
-    root=root-$arch
-    mkdir -p $root/{bin,etc/dropbear,root,sys,dev,proc,sbin,tmp,usr/{bin,sbin},var/log}
-    for deb in $arch/*deb; do
-        dpkg -x $deb $root/
+    root="root-${arch}"
+    mkdir -p "${root}"/{bin,etc/dropbear,root,sys,dev,proc,sbin,tmp,usr/{bin,sbin},var/log}
+    for deb in "${arch}"/*deb; do
+        dpkg -x "${deb}" "${root}"/
     done
 
-    cp $root/boot/vmlinu* kernel
+    cp "${root}/boot/vmlinu"* kernel
 
     # initrd
-    mkdir -p $root/modules
+    mkdir -p "${root}/modules"
     cp \
-        $root/lib/modules/*/kernel/drivers/net/net_failover.ko \
-        $root/lib/modules/*/kernel/drivers/net/virtio_net.ko \
-        $root/lib/modules/*/kernel/drivers/virtio/* \
-        $root/lib/modules/*/kernel/fs/9p/9p.ko \
-        $root/lib/modules/*/kernel/fs/fscache/fscache.ko \
-        $root/lib/modules/*/kernel/net/9p/9pnet.ko \
-        $root/lib/modules/*/kernel/net/9p/9pnet_virtio.ko \
-        $root/lib/modules/*/kernel/net/core/failover.ko \
-        $root/modules || true # some file may not exist
-    rm -rf $root/boot
-    rm -rf $root/lib/modules
+        "${root}/lib/modules"/*/kernel/drivers/net/net_failover.ko \
+        "${root}/lib/modules"/*/kernel/drivers/net/virtio_net.ko \
+        "${root}/lib/modules"/*/kernel/drivers/virtio/* \
+        "${root}/lib/modules"/*/kernel/fs/9p/9p.ko \
+        "${root}/lib/modules"/*/kernel/fs/fscache/fscache.ko \
+        "${root}/lib/modules"/*/kernel/net/9p/9pnet.ko \
+        "${root}/lib/modules"/*/kernel/net/9p/9pnet_virtio.ko \
+        "${root}/lib/modules"/*/kernel/net/core/failover.ko \
+        "${root}/modules" || true # some file may not exist
+    rm -rf "${root:?}/boot"
+    rm -rf "${root:?}/lib/modules"
 
-    cat << 'EOF' > $root/etc/hosts
+    cat << 'EOF' > "${root}/etc/hosts"
 127.0.0.1 localhost qemu
 EOF
 
@@ -195,7 +197,7 @@ end
 EOF
 
     # dropbear complains when this file is missing
-    touch $root/var/log/lastlog
+    touch "${root}/var/log/lastlog"
 
     cat << 'EOF' > $root/init
 #!/bin/busybox sh
@@ -233,23 +235,23 @@ mount -t 9p -o trans=virtio target /target -oversion=9p2000.u || true
 exec dropbear -F -E -B
 EOF
 
-    chmod +x $root/init
-    cd $root
+    chmod +x "${root}/init"
+    cd "${root}"
     find . | cpio --create --format='newc' --quiet | gzip > ../initrd.gz
     cd -
 
     # Clean up
-    rm -rf /qemu/$root /qemu/$arch
+    rm -rf "/qemu/${root}" "/qemu/${arch}"
     mv -f /etc/apt/sources.list.bak /etc/apt/sources.list
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch.bak ]; then
         mv /etc/dpkg/dpkg.cfg.d/multiarch.bak /etc/dpkg/dpkg.cfg.d/multiarch
     fi
     # can fail if arch is used (amd64 and/or i386)
-    dpkg --remove-architecture $arch || true
+    dpkg --remove-architecture "${arch}" || true
     apt-get update
 
     if (( ${#purge_list[@]} )); then
-      apt-get purge --auto-remove -y ${purge_list[@]}
+      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
     fi
 
     ls -lh /qemu

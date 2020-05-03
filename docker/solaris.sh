@@ -4,11 +4,11 @@ set -x
 set -euo pipefail
 
 main() {
-    local arch=$1
+    local arch="${1}"
 
     local binutils=2.28.1 \
           gcc=6.4.0 \
-          target=$arch-sun-solaris2.10
+          target="${arch}-sun-solaris2.10"
 
     local dependencies=(
         bzip2
@@ -24,24 +24,25 @@ main() {
 
     apt-get update
     local purge_list=()
-    for dep in ${dependencies[@]}; do
-        if ! dpkg -L $dep; then
-            apt-get install --no-install-recommends --assume-yes $dep
-            purge_list+=( $dep )
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -L "${dep}"; then
+            apt-get install --assume-yes --no-install-recommends "${dep}"
+            purge_list+=( "${dep}" )
         fi
     done
 
-    local td=$(mktemp -d)
+    local td
+    td="$(mktemp -d)"
 
-    mkdir $td/{binutils,gcc}{,-build} $td/solaris
+    mkdir "${td}"/{binutils,gcc}{,-build} "${td}/solaris"
 
-    curl https://ftp.gnu.org/gnu/binutils/binutils-$binutils.tar.xz | \
-        tar -C $td/binutils --strip-components=1 -xJ
+    curl "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.xz" | \
+        tar -C "${td}/binutils" --strip-components=1 -xJ
 
-    curl https://ftp.gnu.org/gnu/gcc/gcc-$gcc/gcc-$gcc.tar.xz | \
-        tar -C $td/gcc --strip-components=1 -xJ
+    curl "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.xz" | \
+        tar -C "${td}/gcc" --strip-components=1 -xJ
 
-    pushd $td
+    pushd "${td}"
 
     cd gcc
     sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites
@@ -50,7 +51,7 @@ main() {
 
     local apt_arch=
     local lib_arch=
-    case $arch in
+    case "${arch}" in
         x86_64)
             apt_arch=solaris-i386
             lib_arch=amd64
@@ -63,29 +64,29 @@ main() {
 
     apt-key adv --batch --yes --keyserver keyserver.ubuntu.com --recv-keys 74DA7924C5513486
     add-apt-repository -y 'deb http://apt.dilos.org/dilos dilos2-testing main'
-    dpkg --add-architecture $apt_arch
+    dpkg --add-architecture "${apt_arch}"
     apt-get update
-    apt-get download $(apt-cache depends --recurse --no-replaces \
-      libc-dev:$apt_arch       \
-      libdl-dev:$apt_arch      \
-      libm-dev:$apt_arch       \
-      libnsl-dev:$apt_arch     \
-      libpthread-dev:$apt_arch \
-      libresolv-dev:$apt_arch  \
-      librt-dev:$apt_arch      \
-      libsocket-dev:$apt_arch  \
-      system-crt:$apt_arch     \
-      system-header:$apt_arch  \
-      | grep "^\w")
+    apt-cache depends --recurse --no-replaces \
+      "libc-dev:${apt_arch}"       \
+      "libdl-dev:${apt_arch}"      \
+      "libm-dev:${apt_arch}"       \
+      "libnsl-dev:${apt_arch}"     \
+      "libpthread-dev:${apt_arch}" \
+      "libresolv-dev:${apt_arch}"  \
+      "librt-dev:${apt_arch}"      \
+      "libsocket-dev:${apt_arch}"  \
+      "system-crt:${apt_arch}"     \
+      "system-header:${apt_arch}"  \
+      | grep "^\w" | xargs apt-get download
 
-    for deb in *$apt_arch.deb; do
-      dpkg -x $deb $td/solaris
+    for deb in *"${apt_arch}.deb"; do
+      dpkg -x "${deb}" "${td}/solaris"
     done
 
     cd binutils-build
     ../binutils/configure \
-        --target=$target
-    make -j$(nproc)
+        --target="${target}"
+    make "-j$(nproc)"
     make install
     cd ..
 
@@ -100,14 +101,14 @@ main() {
 -extern size_t strnlen(const char *, size_t);
 EOF
 
-    local destdir=/usr/local/$target
-    mkdir $destdir/usr
-    cp -r $td/solaris/usr/include $destdir/usr
-    mv $td/solaris/usr/lib/$lib_arch/* $destdir/lib
-    mv $td/solaris/lib/$lib_arch/* $destdir/lib
+    local destdir="/usr/local/${target}"
+    mkdir "${destdir}/usr"
+    cp -r "${td}/solaris/usr/include" "${destdir}/usr"
+    mv "${td}/solaris/usr/lib/${lib_arch}"/* "${destdir}/lib"
+    mv "${td}/solaris/lib/${lib_arch}"/* "${destdir}/lib"
 
-    ln -s usr/include $destdir/sys-include
-    ln -s usr/include $destdir/include
+    ln -s usr/include "${destdir}/sys-include"
+    ln -s usr/include "${destdir}/include"
 
     cd gcc-build
     ../gcc/configure \
@@ -125,8 +126,8 @@ EOF
         --enable-languages=c,c++ \
         --with-gnu-as \
         --with-gnu-ld \
-        --target=$target
-    make -j$(nproc)
+        --target="${target}"
+    make "-j$(nproc)"
     make install
     cd ..
 
@@ -134,11 +135,11 @@ EOF
     popd
 
     if (( ${#purge_list[@]} )); then
-      apt-get purge --auto-remove -y ${purge_list[@]}
+      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
     fi
 
-    rm -rf $td
-    rm $0
+    rm -rf "${td}"
+    rm "${0}"
 }
 
 main "${@}"

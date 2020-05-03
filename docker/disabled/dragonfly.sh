@@ -23,24 +23,25 @@ main() {
 
     apt-get update
     local purge_list=()
-    for dep in ${dependencies[@]}; do
-        if ! dpkg -L $dep; then
-            apt-get install --no-install-recommends --assume-yes $dep
-            purge_list+=( $dep )
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -L "${dep}"; then
+            apt-get install --no-install-recommends --assume-yes "${dep}"
+            purge_list+=( "${dep}" )
         fi
     done
 
-    local td=$(mktemp -d)
+    local td
+    td="$(mktemp -d)"
 
-    mkdir $td/{binutils,gcc}{,-build} $td/dragonfly
+    mkdir "${td}"/{binutils,gcc}{,-build} "${td}/dragonfly"
 
-    curl https://ftp.gnu.org/gnu/binutils/binutils-$binutils.tar.bz2 | \
-        tar -C $td/binutils --strip-components=1 -xj
+    curl "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" | \
+        tar -C "${td}/binutils" --strip-components=1 -xj
 
-    curl https://ftp.gnu.org/gnu/gcc/gcc-$gcc/gcc-$gcc.tar.bz2 | \
-        tar -C $td/gcc --strip-components=1 -xj
+    curl "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.bz2" | \
+        tar -C "${td}/gcc" --strip-components=1 -xj
 
-    pushd $td
+    pushd "${td}"
 
     cd gcc
     sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites
@@ -89,34 +90,34 @@ EOF
 EOF
     cd ..
 
-    curl https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-$dragonfly.iso.bz2 | \
+    curl "https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-${dragonfly}.iso.bz2" | \
         bzcat | \
-        bsdtar xf - -C $td/dragonfly ./usr/include ./usr/lib ./lib
+        bsdtar xf - -C "${td}/dragonfly" ./usr/include ./usr/lib ./lib
 
     cd binutils-build
     ../binutils/configure \
-        --target=$target
-    make -j$(nproc)
+        --target="${target}"
+    make "-j$(nproc)"
     make install
     cd ..
 
-    local destdir=/usr/local/$target
-    cp -r $td/dragonfly/usr/include $destdir/
-    cp $td/dragonfly/lib/libc.so.8 $destdir/lib
-    cp $td/dragonfly/lib/libm.so.4 $destdir/lib
-    cp $td/dragonfly/lib/libutil.so.4 $destdir/lib
-    cp $td/dragonfly/usr/lib/libexecinfo.so.1 $destdir/lib
-    cp $td/dragonfly/usr/lib/libpthread.so $destdir/lib/libpthread.so
-    cp $td/dragonfly/usr/lib/librt.so.0 $destdir/lib
-    cp $td/dragonfly/usr/lib/lib{c,m,util}.a $destdir/lib
-    cp $td/dragonfly/usr/lib/thread/libthread_xu.so.2 $destdir/lib/libpthread.so.0
-    cp $td/dragonfly/usr/lib/{crt1,Scrt1,crti,crtn}.o $destdir/lib
+    local destdir="/usr/local/${target}"
+    cp -r "${td}/dragonfly/usr/include" "${destdir}"/
+    cp "${td}/dragonfly/lib/libc.so.8" "${destdir}/lib"
+    cp "${td}/dragonfly/lib/libm.so.4" "${destdir}/lib"
+    cp "${td}/dragonfly/lib/libutil.so.4" "${destdir}/lib"
+    cp "${td}/dragonfly/usr/lib/libexecinfo.so.1" "${destdir}/lib"
+    cp "${td}/dragonfly/usr/lib/libpthread.so" "${destdir}/lib/libpthread.so"
+    cp "${td}/dragonfly/usr/lib/librt.so.0" "${destdir}/lib"
+    cp "${td}/dragonfly/usr/lib/lib{c,m,util}.a" "${destdir}/lib"
+    cp "${td}/dragonfly/usr/lib/thread/libthread_xu.so.2" "${destdir}/lib/libpthread.so.0"
+    cp "${td}/dragonfly/usr/lib/{crt1,Scrt1,crti,crtn}.o" "${destdir}/lib"
 
-    ln -s libc.so.8 $destdir/lib/libc.so
-    ln -s libexecinfo.so.1 $destdir/lib/libexecinfo.so
-    ln -s libm.so.4 $destdir/lib/libm.so
-    ln -s librt.so.0 $destdir/lib/librt.so
-    ln -s libutil.so.4 $destdir/lib/libutil.so
+    ln -s libc.so.8 "${destdir}/lib/libc.so"
+    ln -s libexecinfo.so.1 "${destdir}/lib/libexecinfo.so"
+    ln -s libm.so.4 "${destdir}/lib/libm.so"
+    ln -s librt.so.0 "${destdir}/lib/librt.so"
+    ln -s libutil.so.4 "${destdir}/lib/libutil.so"
 
     cd gcc-build
     ../gcc/configure \
@@ -132,8 +133,8 @@ EOF
         --disable-multilib \
         --disable-nls \
         --enable-languages=c,c++ \
-        --target=$target
-    make -j$(nproc)
+        --target="${target}"
+    make "-j$(nproc)"
     make install
     cd ..
 
@@ -141,11 +142,11 @@ EOF
     popd
 
     if (( ${#purge_list[@]} )); then
-      apt-get purge --auto-remove -y ${purge_list[@]}
+      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
     fi
 
-    rm -rf $td
-    rm $0
+    rm -rf "${td}"
+    rm "${0}"
 }
 
 main "${@}"
