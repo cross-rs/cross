@@ -22,10 +22,10 @@ main() {
     export CARGO_HOME=/tmp/cargo
 
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
-    sh rustup-init.sh -y --no-modify-path
+    sh rustup-init.sh -y --no-modify-path --profile minimal
     rm rustup-init.sh
 
-    PATH="${CARGO_HOME}/bin:${PATH}" cargo install xargo --root /usr
+    PATH="${CARGO_HOME}/bin:${PATH}" cargo install xargo --root /usr/local
 
     rm -r "${RUSTUP_HOME}" "${CARGO_HOME}"
 
