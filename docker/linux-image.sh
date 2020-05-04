@@ -91,6 +91,7 @@ main() {
     local dependencies=(
         cpio
         sharutils
+        gnupg
     )
 
     local purge_list=()
