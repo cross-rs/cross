@@ -114,10 +114,16 @@ main() {
     dpkg --add-architecture "${arch}" || echo "foreign-architecture ${arch}" > /etc/dpkg/dpkg.cfg.d/multiarch
 
     # Add Debian keys.
-    curl -sL https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10}.asc      | apt-key add -
-    curl -sL https://ftp-master.debian.org/keys/archive-key-{8,9,10}-security.asc | apt-key add -
-    curl -sL https://ftp-master.debian.org/keys/release-{7,8,9,10}.asc            | apt-key add -
-    curl -sL https://www.ports.debian.org/archive_{2020,2021}.key                 | apt-key add -
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10}.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10}-security.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10}.asc' -O
+    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021}.key' -O
+
+    for key in *.asc *.key; do
+      apt-key add "${key}"
+      rm "${key}"
+    done
+
     apt-get update
 
     mkdir -p "/qemu/${arch}"
