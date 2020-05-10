@@ -4,11 +4,11 @@ set -x
 set -euo pipefail
 
 main() {
-    local arch=$1
+    local arch="${1}"
 
     local binutils=2.25.1 \
           gcc=5.3.0 \
-          target=$arch-unknown-freebsd10
+          target="${arch}-unknown-freebsd10"
 
     local dependencies=(
         bzip2
@@ -22,24 +22,25 @@ main() {
 
     apt-get update
     local purge_list=()
-    for dep in ${dependencies[@]}; do
-        if ! dpkg -L $dep; then
-            apt-get install --no-install-recommends --assume-yes $dep
-            purge_list+=( $dep )
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -L "${dep}"; then
+            apt-get install --no-install-recommends --assume-yes "${dep}"
+            purge_list+=( "${dep}" )
         fi
     done
 
-    local td=$(mktemp -d)
+    local td
+    td="$(mktemp -d)"
 
-    mkdir $td/{binutils,gcc}{,-build} $td/freebsd
+    mkdir "${td}"/{binutils,gcc}{,-build} "${td}/freebsd"
 
-    curl https://ftp.gnu.org/gnu/binutils/binutils-$binutils.tar.bz2 | \
-        tar -C $td/binutils --strip-components=1 -xj
+    curl "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" | \
+        tar -C "${td}/binutils" --strip-components=1 -xj
 
-    curl https://ftp.gnu.org/gnu/gcc/gcc-$gcc/gcc-$gcc.tar.bz2 | \
-        tar -C $td/gcc --strip-components=1 -xj
+    curl "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.bz2" | \
+        tar -C "${td}/gcc" --strip-components=1 -xj
 
-    pushd $td
+    pushd "${td}"
 
     cd gcc
     sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites
@@ -47,7 +48,7 @@ main() {
     cd ..
 
     local bsd_arch=
-    case $arch in
+    case "${arch}" in
         x86_64)
             bsd_arch=amd64
             ;;
@@ -56,34 +57,34 @@ main() {
             ;;
     esac
 
-    curl http://ftp.freebsd.org/pub/FreeBSD/releases/$bsd_arch/10.2-RELEASE/base.txz | \
-        tar -C $td/freebsd -xJ ./usr/include ./usr/lib ./lib
+    curl "http://ftp.freebsd.org/pub/FreeBSD/releases/${bsd_arch}/10.2-RELEASE/base.txz" | \
+        tar -C "${td}/freebsd" -xJ ./usr/include ./usr/lib ./lib
 
     cd binutils-build
     ../binutils/configure \
-        --target=$target
-    make -j$(nproc)
+        --target="${target}"
+    make "-j$(nproc)"
     make install
     cd ..
 
-    local destdir=/usr/local/$target
-    cp -r $td/freebsd/usr/include $destdir
-    cp $td/freebsd/lib/libc.so.7 $destdir/lib
-    cp $td/freebsd/lib/libm.so.5 $destdir/lib
-    cp $td/freebsd/lib/libthr.so.3 $destdir/lib/libpthread.so
-    cp $td/freebsd/lib/libutil.so.9 $destdir/lib
-    cp $td/freebsd/usr/lib/libc++.so.1 $destdir/lib
-    cp $td/freebsd/usr/lib/libc++.a $destdir/lib
-    cp $td/freebsd/usr/lib/lib{c,util,m}.a $destdir/lib
-    cp $td/freebsd/usr/lib/lib{rt,execinfo}.so.1 $destdir/lib
-    cp $td/freebsd/usr/lib/{crt1,Scrt1,crti,crtn}.o $destdir/lib
+    local destdir="/usr/local/${target}"
+    cp -r "${td}/freebsd/usr/include" "${destdir}"
+    cp "${td}/freebsd/lib/libc.so.7" "${destdir}/lib"
+    cp "${td}/freebsd/lib/libm.so.5" "${destdir}/lib"
+    cp "${td}/freebsd/lib/libthr.so.3" "${destdir}/lib/libpthread.so"
+    cp "${td}/freebsd/lib/libutil.so.9" "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib/libc++.so.1" "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib/libc++.a" "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/lib{c,util,m}.a "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/lib{rt,execinfo}.so.1 "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib"
 
-    ln -s libc.so.7 $destdir/lib/libc.so
-    ln -s libc++.so.1 $destdir/lib/libc++.so
-    ln -s libexecinfo.so.1 $destdir/lib/libexecinfo.so
-    ln -s libm.so.5 $destdir/lib/libm.so
-    ln -s librt.so.1 $destdir/lib/librt.so
-    ln -s libutil.so.9 $destdir/lib/libutil.so
+    ln -s libc.so.7 "${destdir}/lib/libc.so"
+    ln -s libc++.so.1 "${destdir}/lib/libc++.so"
+    ln -s libexecinfo.so.1 "${destdir}/lib/libexecinfo.so"
+    ln -s libm.so.5 "${destdir}/lib/libm.so"
+    ln -s librt.so.1 "${destdir}/lib/librt.so"
+    ln -s libutil.so.9 "${destdir}/lib/libutil.so"
 
     cd gcc-build
     ../gcc/configure \
@@ -99,8 +100,8 @@ main() {
         --disable-multilib \
         --disable-nls \
         --enable-languages=c,c++ \
-        --target=$target
-    make -j$(nproc)
+        --target="${target}"
+    make "-j$(nproc)"
     make install
     cd ..
 
@@ -108,11 +109,11 @@ main() {
     popd
 
     if (( ${#purge_list[@]} )); then
-      apt-get purge --auto-remove -y ${purge_list[@]}
+      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
     fi
 
-    rm -rf $td
-    rm $0
+    rm -rf "${td}"
+    rm "${0}"
 }
 
 main "${@}"

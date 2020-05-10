@@ -11,26 +11,26 @@ main() {
     # Later we replace these packages with the new ones
     apt-get install --assume-yes --no-install-recommends g++-mingw-w64-i686
 
-    local td=$(mktemp -d)
-
-    local dependencies=(
-        build-essential
-        $(apt-cache showsrc gcc-mingw-w64-i686 | grep Build | cut -d: -f2 | tr , '\n' | cut -d' ' -f2 | sort | uniq)
-    )
+    local dependencies=(build-essential)
+    while IFS='' read -r dep; do dependencies+=("${dep}"); done < \
+      <(apt-cache showsrc gcc-mingw-w64-i686 | grep Build | cut -d: -f2 | tr , '\n' | cut -d' ' -f2 | sort | uniq)
 
     apt-get update
     local purge_list=()
-    for dep in ${dependencies[@]}; do
-        if ! dpkg -L $dep > /dev/null; then
-            apt-get install --assume-yes --no-install-recommends $dep
-            purge_list+=( $dep )
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -L "${dep}" > /dev/null; then
+            apt-get install --assume-yes --no-install-recommends "${dep}"
+            purge_list+=( "${dep}" )
         fi
     done
 
-    pushd $td
+    local td
+    td="$(mktemp -d)"
+
+    pushd "${td}" || exit 1
 
     apt-get source gcc-mingw-w64-i686
-    cd gcc-mingw-w64-*
+    pushd gcc-mingw-w64-* || exit 1
 
     # We are using dwarf exceptions instead of sjlj
     sed -i -e 's/libgcc_s_sjlj-1/libgcc_s_dw2-1/g' debian/gcc-mingw-w64-i686.install
@@ -91,12 +91,12 @@ EOF
 @@ -85,7 +85,7 @@
  	sed -i 's/@@VERSION@@/$(target_version)/g' debian/control
  	touch $@
- 
+
 -targets := i686-w64-mingw32 x86_64-w64-mingw32
 +targets := i686-w64-mingw32
 -threads := posix win32
 +threads := posix
- 
+
  # Hardening on the host, none on the target
 @@ -216,6 +216,10 @@
  # Enable libatomic
@@ -118,13 +118,14 @@ EOF
     dpkg -i ../g*-mingw-w64-i686*.deb ../gcc-mingw-w64-base*.deb
 
     if (( ${#purge_list[@]} )); then
-      apt-get purge --auto-remove -y ${purge_list[@]}
+      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
     fi
 
-    popd
+    popd || exit 1
+    popd || exit 1
 
-    rm -rf $td
-    rm $0
+    rm -rf "${td}"
+    rm "${0}"
 }
 
 main "${@}"

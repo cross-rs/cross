@@ -5,15 +5,15 @@ set -e
 LOG=/tmp/qemu.log
 LOCK=/tmp/qemu.lock
 
-if [ -n "$CROSS_DEBUG" ]; then
+if [ -n "${CROSS_DEBUG}" ]; then
     set -x
 fi
 
 # arch in the rust target
-arch=$1
+arch="${1}"
 shift
 
-if [ "$CROSS_RUNNER" = "" ]; then
+if [ "${CROSS_RUNNER}" = "" ]; then
     if [[ "${arch}" == i?86 ]] || [[ "${arch}" == x86_64 ]]; then
         CROSS_RUNNER=native
     else
@@ -22,8 +22,8 @@ if [ "$CROSS_RUNNER" = "" ]; then
 fi
 
 # select qemu arch
-qarch=$arch
-case "$arch" in
+qarch="${arch}"
+case "${arch}" in
     armv7)
         qarch="arm"
         ;;
@@ -37,7 +37,7 @@ case "$arch" in
         qarch="ppc64"
         ;;
     powerpc64le)
-        if [ "$CROSS_RUNNER" = "qemu-user" ]; then
+        if [ "${CROSS_RUNNER}" = "qemu-user" ]; then
             qarch="ppc64le"
         else
             qarch="ppc64"
@@ -45,30 +45,30 @@ case "$arch" in
         ;;
 esac
 
-case "$CROSS_RUNNER" in
+case "${CROSS_RUNNER}" in
     native)
         exec "${@}"
         ;;
     qemu-user)
-        exec qemu-$qarch "${@}"
+        exec "qemu-${qarch}" "${@}"
         ;;
     qemu-system)
         true
         ;;
     *)
-        echo "Invalid runner: \"$CROSS_RUNNER\"";
+        echo "Invalid runner: \"${CROSS_RUNNER}\"";
         echo "Valid runners are: native, qemu-user and qemu-system"
         exit 1
         ;;
 esac
 
-n=$(nproc)
+n="$(nproc)"
 memory=1G
 driver9p="virtio-9p-pci"
 drivernet="virtio-net-pci"
 
 # select qemu parameters
-case "$arch" in
+case "${arch}" in
     aarch64)
         # 8 is the max number of cpu supported by qemu-aarch64
         n=$(( n > 8 ? 8 : n ))
@@ -121,37 +121,37 @@ esac
 
     echo Booting QEMU virtual machine with $n cpus...
 
-    QEMU_CMD="qemu-system-$qarch \
-        -m $memory \
-        -smp $n \
+    QEMU_CMD="qemu-system-${qarch} \
+        -m ${memory} \
+        -smp ${n} \
         -nographic \
         -monitor none \
         -netdev user,id=net0,hostfwd=tcp::10022-:22 \
-        -device $drivernet,netdev=net0 \
+        -device ${drivernet},netdev=net0 \
         -kernel /qemu/kernel \
         -initrd /qemu/initrd.gz \
-        $opt \
+        ${opt} \
         -fsdev local,id=fs0,path=/target,security_model=mapped \
-        -device $driver9p,fsdev=fs0,mount_tag=target"
+        -device ${driver9p},fsdev=fs0,mount_tag=target"
 
-    touch $LOG
-    if [ -n "$CROSS_DEBUG" ]; then
-        ($QEMU_CMD 2>&1 | tee -a $LOG) &
+    touch "${LOG}"
+    if [[ -n "${CROSS_DEBUG}" ]]; then
+        (${QEMU_CMD} 2>&1 | tee -a "${LOG}") &
     else
-        $QEMU_CMD 2>&1 >> $LOG &
+        ${QEMU_CMD} >> "${LOG}" 2>&1 &
     fi
 
     # wait for dropbear
-    for i in $(seq 240); do
-        if grep -q "Not backgrounding" $LOG; then
+    for _ in $(seq 240); do
+        if grep -q "Not backgrounding" "${LOG}"; then
             READY=1
             break
         fi
         sleep 0.5s
     done
 
-    if [ -z "$READY" ]; then
-        if [ -n "$CROSS_DEBUG" ]; then
+    if [ -z "${READY}" ]; then
+        if [ -n "${CROSS_DEBUG}" ]; then
             echo "Not ready but continuing because CROSS_DEBUG is set"
         else
             echo "Qemu is not ready..."
@@ -160,11 +160,11 @@ esac
         fi
     fi
 
-    echo Booted in $SECONDS seconds
+    echo "Booted in ${SECONDS} seconds"
 
-) 200>$LOCK
+) 200>"${LOCK}"
 
-if [ -t 1 ] && [ -t 2]; then
+if [[ -t 1 ]] && [[ -t 2 ]]; then
   tty_flag='-t'
 fi
 

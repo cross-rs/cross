@@ -4,9 +4,10 @@ set -x
 set -euo pipefail
 
 main() {
-    local arch=$1
-    local td=$(mktemp -d)
-    pushd $td
+    local arch="${1}"
+    local td
+    td="$(mktemp -d)"
+    pushd "${td}"
 
     local dependencies=(
         ca-certificates
@@ -42,10 +43,10 @@ EOF
 
     apt-get update
     local purge_list=(default-jre)
-    for dep in ${dependencies[@]}; do
-        if ! dpkg -L $dep; then
-            apt-get install --no-install-recommends --assume-yes $dep
-            purge_list+=( $dep )
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -L "${dep}"; then
+            apt-get install --assume-yes --no-install-recommends "${dep}"
+            purge_list+=( "${dep}" )
         fi
     done
 
@@ -67,7 +68,7 @@ EOF
     ./repo sync -c external/stlport
     ./repo sync -c prebuilts/clang/linux-x86/host/3.5
     ./repo sync -c system/core
-    case $arch in
+    case "${arch}" in
         arm)
             ./repo sync prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8
         ;;
@@ -91,17 +92,18 @@ EOF
     sed -i -e 's/if (!kernel_supplied_AT_SECURE)/if (false)/g' bionic/linker/linker_environ.cpp
 
     set +u
+    # shellcheck disable=SC1091
     source build/envsetup.sh
-    lunch aosp_$arch-user
+    lunch "aosp_${arch}-user"
     mmma bionic/
     mmma external/mksh/
     mmma system/core/toolbox/
     set -u
 
-    if [ $arch = "arm" ]; then
+    if [[ "${arch}" = "arm" ]]; then
         mv out/target/product/generic/system/ /
     else
-        mv out/target/product/generic_$arch/system/ /
+        mv "out/target/product/generic_${arch}/system"/ /
     fi
 
     # list from https://elinux.org/Android_toolbox
@@ -111,19 +113,19 @@ EOF
         printenv ps reboot renice rm rmdir rmmod route schedtop sendevent \
         setconsole setprop sleep smd start stop sync top touch umount \
         uptime vmstat watchprops wipe; do
-        ln -s /system/bin/toolbox /system/bin/$tool
+        ln -s /system/bin/toolbox "/system/bin/${tool}"
     done
 
     echo "127.0.0.1 localhost" > /system/etc/hosts
 
     if (( ${#purge_list[@]} )); then
-      apt-get purge --auto-remove -y ${purge_list[@]}
+      apt-get purge --auto-remove -y "${purge_list[@]}"
     fi
 
     popd
 
-    rm -rf $td
-    rm $0
+    rm -rf "${td}"
+    rm "${0}"
 }
 
 main "${@}"

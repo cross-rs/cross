@@ -11,13 +11,12 @@ main() {
     # is 3.0.1.
     # Upstream Issue:
     #   https://bugs.launchpad.net/qemu/+bug/1821444
-    if [[ $1 == ppc* ]]; then
+    if [[ "${1}" == ppc* ]]; then
         version=3.0.1
     fi
 
-    local arch=$1 \
-          softmmu=${2:-} \
-          td=$(mktemp -d)
+    local arch="${1}" \
+          softmmu="${2:-}"
 
     local dependencies=(
         autoconf
@@ -42,26 +41,29 @@ main() {
 
     apt-get update
     local purge_list=()
-    for dep in ${dependencies[@]}; do
-        if ! dpkg -L $dep; then
-            apt-get install --no-install-recommends --assume-yes $dep
-            purge_list+=( $dep )
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -L "${dep}"; then
+            apt-get install --assume-yes --no-install-recommends "${dep}"
+            purge_list+=( "${dep}" )
         fi
     done
 
-    pushd $td
+    local td
+    td="$(mktemp -d)"
 
-    curl -L https://download.qemu.org/qemu-$version.tar.xz | \
+    pushd "${td}"
+
+    curl -L "https://download.qemu.org/qemu-${version}.tar.xz" | \
         tar --strip-components=1 -xJ
 
-   local targets="$arch-linux-user"
+   local targets="${arch}-linux-user"
    local virtfs=""
-   case "$softmmu" in
+   case "${softmmu}" in
       softmmu)
-         if [ "$arch" = "ppc64le" ]; then
-            targets="$targets,ppc64-softmmu"
+         if [ "${arch}" = "ppc64le" ]; then
+            targets="${targets},ppc64-softmmu"
          else
-            targets="$targets,$arch-softmmu"
+            targets="${targets},${arch}-softmmu"
          fi
          virtfs="--enable-virtfs"
          ;;
@@ -69,7 +71,7 @@ main() {
          true
          ;;
       *)
-         echo "Invalid softmmu option: $softmmu"
+         echo "Invalid softmmu option: ${softmmu}"
          exit 1
          ;;
    esac
@@ -79,23 +81,23 @@ main() {
         --disable-vnc \
         --enable-user \
         --static \
-        $virtfs \
-        --target-list=$targets
-    make -j$(nproc)
+        ${virtfs} \
+        --target-list="${targets}"
+    make "-j$(nproc)"
     make install
 
     # HACK the binfmt_misc interpreter we'll use expects the QEMU binary to be
     # in /usr/bin. Create an appropriate symlink
-    ln -s /usr/local/bin/qemu-$arch /usr/bin/qemu-$arch-static
+    ln -s "/usr/local/bin/qemu-${arch}" "/usr/bin/qemu-${arch}-static"
 
     if (( ${#purge_list[@]} )); then
-      apt-get purge --auto-remove -y ${purge_list[@]}
+      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
     fi
 
     popd
 
-    rm -rf $td
-    rm $0
+    rm -rf "${td}"
+    rm "${0}"
 }
 
 main "${@}"

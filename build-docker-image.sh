@@ -3,12 +3,14 @@
 set -x
 set -euo pipefail
 
+version="$(cargo metadata --format-version 1 | jq --raw-output '.packages[] | select(.name == "cross") | .version')"
+
 cd docker
 
 run() {
   local dockerfile="Dockerfile.${1}"
   local image_name="rustembedded/cross:${1}"
-  local cache_from_args=
+  local cache_from_args=()
 
   if ! docker image inspect "${image_name}" &>/dev/null; then
     if docker pull "${image_name}"; then
@@ -16,9 +18,7 @@ run() {
     fi
   fi
 
-  docker build ${cache_from_args[@]} --pull -t "${image_name}" -f "${dockerfile}" .
-
-  local version="$(cargo metadata --format-version 1 | jq --raw-output '.packages[] | select(.name == "cross") | .version')"
+  docker build ${cache_from_args[@]+"${cache_from_args[@]}"} --pull -t "${image_name}" -f "${dockerfile}" .
 
   if ! [[ "${version}" =~ alpha ]] && ! [[ "${version}" =~ dev ]]; then
     local versioned_image_name="${image_name}-${version}"
@@ -26,7 +26,7 @@ run() {
   fi
 }
 
-if [ -z "${@:-}" ]; then
+if [[ -z "${*}" ]]; then
   for t in Dockerfile.*; do
     run "${t##Dockerfile.}"
   done
