@@ -10,11 +10,9 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 RUN mkdir /usr/arm-linux-gnueabihf && \
-    apt-get install --assume-yes --no-install-recommends curl xz-utils && \
     cd /usr/arm-linux-gnueabihf && \
     curl -L https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz | \
-    tar --strip-components 1 -xJ && \
-    apt-get purge --auto-remove -y curl xz-utils
+    tar --strip-components 1 -xJ
 
 ENV PATH /usr/arm-linux-gnueabihf/bin:$PATH
 
