@@ -329,6 +329,11 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
   work because `cross` use docker containers only mounts the Cargo project so
   the container doesn't have access to the rest of the filesystem.
 
+## Minimum Supported Rust Version (MSRV)
+
+This crate is guaranteed to compile on stable Rust 1.32.0 and up. It *might*
+compile with older versions but that may change in any new patch release.
+
 ## License
 
 Licensed under either of
