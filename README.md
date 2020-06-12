@@ -197,10 +197,10 @@ passthrough = [
 
 ### Use Xargo instead of Cargo
 
-By default, `cross` uses `cargo` to build your Cargo project *unless* you are
-building for one of the `thumbv*-none-eabi*` targets; in that case, it uses
-`xargo`. However, you can use the `build.xargo` or `target.{{TARGET}}.xargo` field
-in `Cross.toml` to force the use of `xargo`:
+By default, `cross` uses `xargo` to build your Cargo project only for all
+non-standard targets (i.e. something not reported by rustc/rustup). However,
+you can use the `build.xargo` or `target.{{TARGET}}.xargo` field in
+`Cross.toml` to force the use of `xargo`:
 
 ``` toml
 # all the targets will use `xargo`
@@ -216,8 +216,8 @@ Or,
 xargo = true
 ```
 
-Note that `xargo = false` has no effect as you can't use `cargo` with targets
-that only support `xargo`.
+`xargo = false` will work the opposite way (pick cargo always) and is useful
+when building for custom targets that you know to work with cargo.
 
 ## Supported targets
 

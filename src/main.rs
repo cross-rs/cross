@@ -249,16 +249,17 @@ fn run() -> Result<ExitStatus> {
             }
 
             let available_targets = rustup::available_targets(&toolchain, verbose)?;
-            let uses_xargo = !target.is_builtin() ||
-                !available_targets.contains(&target) ||
-                if let Some(toml) = toml.as_ref() {
-                    toml.xargo(&target)?
-                } else {
-                    None
-                }
-                .unwrap_or(false);
+            let uses_xargo = if let Some(toml) = toml.as_ref() {
+                toml.xargo(&target)?
+            } else {
+                None
+            }
+            .unwrap_or_else(|| !target.is_builtin() || !available_targets.contains(&target));
 
-            if !uses_xargo && !available_targets.is_installed(&target) {
+            if !uses_xargo
+                && !available_targets.is_installed(&target)
+                && available_targets.contains(&target)
+            {
                 rustup::install(&target, &toolchain, verbose)?;
             } else if !rustup::component_is_installed("rust-src", &toolchain, verbose)? {
                 rustup::install_component("rust-src", &toolchain, verbose)?;
