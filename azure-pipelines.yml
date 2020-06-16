@@ -32,7 +32,7 @@ jobs:
         powerpc-unknown-linux-gnu:       { TARGET: powerpc-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
         powerpc64-unknown-linux-gnu:     { TARGET: powerpc64-unknown-linux-gnu,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
         powerpc64le-unknown-linux-gnu:   { TARGET: powerpc64le-unknown-linux-gnu,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-        riscv64gc-unknown-linux-gnu:     { TARGET: riscv64gc-unknown-linux-gnu,     CPP: 1,           STD: 1, RUN: 1, TOOLCHAIN: 1.34.0 }
+        riscv64gc-unknown-linux-gnu:     { TARGET: riscv64gc-unknown-linux-gnu,     CPP: 1,           STD: 1, RUN: 1, TOOLCHAIN: 1.42.0 }
         s390x-unknown-linux-gnu:         { TARGET: s390x-unknown-linux-gnu,         CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
         sparc64-unknown-linux-gnu:       { TARGET: sparc64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
         x86_64-unknown-linux-gnu:        { TARGET: x86_64-unknown-linux-gnu,        CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: native qemu-user qemu-system, DEPLOY: 1, CRATES_IO_PUBLISH: 1 }
@@ -62,7 +62,7 @@ jobs:
         x86_64-unknown-netbsd:           { TARGET: x86_64-unknown-netbsd,           CPP: 1, DYLIB: 1, STD: 1 }
         sparcv9-sun-solaris:             { TARGET: sparcv9-sun-solaris,             CPP: 1, DYLIB: 1, STD: 1 }
         x86_64-sun-solaris:              { TARGET: x86_64-sun-solaris,              CPP: 1, DYLIB: 1, STD: 1 }
-        asmjs-unknown-emscripten:        { TARGET: asmjs-unknown-emscripten,                          STD: 1,                   RUN: 1, TOOLCHAIN: 1.38.0 }
+        asmjs-unknown-emscripten:        { TARGET: asmjs-unknown-emscripten,                          STD: 1,                   RUN: 1, TOOLCHAIN: 1.40.0 }
         # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
         wasm32-unknown-emscripten:       { TARGET: wasm32-unknown-emscripten,                         STD: 1 }
         thumbv6m-none-eabi:              { TARGET: thumbv6m-none-eabi,                                STD: 1 }
