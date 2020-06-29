@@ -53,8 +53,8 @@ main() {
 
     pushd "${td}"
 
-    curl -L "https://download.qemu.org/qemu-${version}.tar.xz" | \
-        tar --strip-components=1 -xJ
+    curl --retry 3 -sSfL "https://download.qemu.org/qemu-${version}.tar.xz" -O
+    tar --strip-components=1 -xJf "qemu-${version}.tar.xz"
 
    local targets="${arch}-linux-user"
    local virtfs=""

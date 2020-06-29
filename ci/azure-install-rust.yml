@@ -13,7 +13,9 @@ steps:
           rustup self update
         fi
       else
-        curl -sSL https://sh.rustup.rs | sh -s -- -y --default-toolchain="$TOOLCHAIN" --profile=minimal
+        curl --retry 3 -sSfL https://sh.rustup.rs -o rustup-init.sh
+        sh rustup-init.sh -y --default-toolchain="$TOOLCHAIN" --profile=minimal
+        rm rustup-init.sh
         echo "##vso[task.prependpath]$HOME/.cargo/bin"
       fi
     displayName: Install rustup

@@ -36,11 +36,11 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/solaris"
 
-    curl "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.xz" | \
-        tar -C "${td}/binutils" --strip-components=1 -xJ
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.xz" -O
+    tar -C "${td}/binutils" --strip-components=1 -xJf "binutils-${binutils}.tar.xz"
 
-    curl "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.xz" | \
-        tar -C "${td}/gcc" --strip-components=1 -xJ
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.xz" -O
+    tar -C "${td}/gcc" --strip-components=1 -xJf "gcc-${gcc}.tar.xz"
 
     pushd "${td}"
 

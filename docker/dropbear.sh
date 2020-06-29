@@ -29,8 +29,8 @@ main() {
 
     pushd "${td}"
 
-    curl -L "https://matt.ucc.asn.au/dropbear/dropbear-${version}.tar.bz2" | \
-        tar --strip-components=1 -xj
+    curl --retry 3 -sSfL "https://matt.ucc.asn.au/dropbear/dropbear-${version}.tar.bz2" -O
+    tar --strip-components=1 -xjf "dropbear-${version}.tar.bz2"
 
     # Remove some unwanted message
     sed -i '/skipping hostkey/d' cli-kex.c
