@@ -30,11 +30,11 @@ jobs:
         mips64-unknown-linux-gnuabi64:   { TARGET: mips64-unknown-linux-gnuabi64,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
         mips64el-unknown-linux-gnuabi64: { TARGET: mips64el-unknown-linux-gnuabi64, CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
         powerpc-unknown-linux-gnu:       { TARGET: powerpc-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
-        powerpc64-unknown-linux-gnu:     { TARGET: powerpc64-unknown-linux-gnu,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
+      # powerpc64-unknown-linux-gnu:     { TARGET: powerpc64-unknown-linux-gnu,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
         powerpc64le-unknown-linux-gnu:   { TARGET: powerpc64le-unknown-linux-gnu,   CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
         riscv64gc-unknown-linux-gnu:     { TARGET: riscv64gc-unknown-linux-gnu,     CPP: 1,           STD: 1, RUN: 1 }
         s390x-unknown-linux-gnu:         { TARGET: s390x-unknown-linux-gnu,         CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
-        sparc64-unknown-linux-gnu:       { TARGET: sparc64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
+      # sparc64-unknown-linux-gnu:       { TARGET: sparc64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-system }
         x86_64-unknown-linux-gnu:        { TARGET: x86_64-unknown-linux-gnu,        CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: native qemu-user qemu-system, DEPLOY: 1, CRATES_IO_PUBLISH: 1 }
         aarch64-unknown-linux-musl:      { TARGET: aarch64-unknown-linux-musl,                        STD: 1, RUN: 1 }
         arm-unknown-linux-musleabihf:    { TARGET: arm-unknown-linux-musleabihf,                      STD: 1, RUN: 1 }
@@ -81,7 +81,7 @@ jobs:
       - bash: echo "##vso[task.setvariable variable=TAG]${BUILD_SOURCEBRANCH##refs/tags/}"
         displayName: Set TAG Variable
         condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
-      - bash: cargo test 
+      - bash: cargo test
         displayName: Run unit tests
         timeoutInMinutes: 5
       - bash: ./build-docker-image.sh "${TARGET}"

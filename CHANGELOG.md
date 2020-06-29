@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Disabled `powerpc64-unknown-linux-gnu` image.
+- Disabled `sparc64-unknown-linux-gnu` image.
 - Disabled `x86_64-unknown-dragonfly` image.
 - Removed CI testing for `i686-apple-darwin`.
 
