@@ -4,7 +4,7 @@ set -x
 set -euo pipefail
 
 main() {
-    local version=2019.78
+    local version=2020.80
 
     local dependencies=(
         autoconf
