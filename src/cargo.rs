@@ -64,9 +64,14 @@ impl Root {
 }
 
 /// Cargo project root
-pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
-
+pub fn root(project_dir: Option<String>) -> Result<Option<Root>> {
+    let cd = match project_dir {
+        Some(dir) => PathBuf::from(dir),
+        None => {
+            env::current_dir().chain_err(|| "couldn't get project directory")?
+        }
+    };
+    
     let mut dir = &*cd;
     loop {
         let toml = dir.join("Cargo.toml");

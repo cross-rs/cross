@@ -13,11 +13,13 @@ pub struct Args {
     pub target: Option<Target>,
     pub target_dir: Option<PathBuf>,
     pub docker_in_docker: bool,
+    pub project_dir: Option<String>,
 }
 
 pub fn parse(target_list: &TargetList) -> Args {
     let mut channel = None;
     let mut target = None;
+    let mut project_dir: Option<String> = None;
     let mut target_dir = None;
     let mut sc = None;
     let mut all: Vec<String> = Vec::new();
@@ -25,6 +27,10 @@ pub fn parse(target_list: &TargetList) -> Args {
     {
         let mut args = env::args().skip(1);
         while let Some(arg) = args.next() {
+            if all.last().unwrap_or(&"".to_string()) == "--manifest-path" {
+                project_dir = Option::Some(format!("{}/{}", env::current_dir().expect("").to_str().unwrap(), arg.to_string()));
+            }
+            
             if let ("+", ch) = arg.split_at(1) {
                 channel = Some(ch.to_string());
             } else if arg == "--target" {
@@ -71,5 +77,6 @@ pub fn parse(target_list: &TargetList) -> Args {
         target,
         target_dir,
         docker_in_docker,
+        project_dir,
     }
 }
