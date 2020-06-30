@@ -306,7 +306,6 @@ fn run() -> Result<ExitStatus> {
     cargo::run(&args.all, verbose)
 }
 
-
 /// Parsed `Cross.toml`
 #[derive(Debug)]
 pub struct Toml {

@@ -30,7 +30,7 @@ pub fn parse(target_list: &TargetList) -> Args {
             if arg == "--manifest-path" {
                 all.push(arg);
                 let path = args.next().expect("Missing argument in --manifest-path");
-                project_dir = Option::Some(env::current_dir().expect("").join(PathBuf::from(&path)));
+                project_dir = Option::Some(env::current_dir().expect("couldn't get current directory").join(PathBuf::from(&path)));
                 all.push(path);
             } else if let ("+", ch) = arg.split_at(1) {
                 channel = Some(ch.to_string());
