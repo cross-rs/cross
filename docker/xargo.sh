@@ -21,7 +21,7 @@ main() {
     export RUSTUP_HOME=/tmp/rustup
     export CARGO_HOME=/tmp/cargo
 
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+    curl --retry 3 -sSfL https://sh.rustup.rs -o rustup-init.sh
     sh rustup-init.sh -y --no-modify-path --profile minimal
     rm rustup-init.sh
 

@@ -50,7 +50,7 @@ EOF
         fi
     done
 
-    curl -O https://storage.googleapis.com/git-repo-downloads/repo
+    curl --retry 3 -sSfL https://storage.googleapis.com/git-repo-downloads/repo -O
     chmod +x repo
 
     # this is the minimum set of modules that are need to build bionic

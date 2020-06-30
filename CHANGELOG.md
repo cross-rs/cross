@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.2.1] - 2020-06-30
+
+- Disabled `powerpc64-unknown-linux-gnu` image.
+- Disabled `sparc64-unknown-linux-gnu` image.
 - Disabled `x86_64-unknown-dragonfly` image.
 - Removed CI testing for `i686-apple-darwin`.
 
@@ -224,7 +228,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/rust-embedded/cross/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/rust-embedded/cross/compare/v0.2.1...HEAD
+[v0.2.1]: https://github.com/rust-embedded/cross/compare/v0.2.0...v0.2.1
 [v0.2.0]: https://github.com/rust-embedded/cross/compare/v0.1.16...v0.2.0
 [v0.1.16]: https://github.com/rust-embedded/cross/compare/v0.1.15...v0.1.16
 [v0.1.15]: https://github.com/rust-embedded/cross/compare/v0.1.14...v0.1.15

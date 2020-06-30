@@ -33,11 +33,11 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/netbsd"
 
-    curl "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" | \
-        tar -C "${td}/binutils" --strip-components=1 -xj
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" -O
+    tar -C "${td}/binutils" --strip-components=1 -xjf "binutils-${binutils}.tar.bz2"
 
-    curl "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.bz2" | \
-        tar -C "${td}/gcc" --strip-components=1 -xj
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.bz2" -O
+    tar -C "${td}/gcc" --strip-components=1 -xjf "gcc-${gcc}.tar.bz2"
 
     pushd "${td}"
 
@@ -51,16 +51,19 @@ main() {
 
     local patch
     for patch in "${patches[@]}"; do
-        patch="$(curl "${patch}")"
-        echo "${patch}" | patch -Np0
+        local patch_file
+        patch_file="$(mktemp)"
+        curl --retry 3 -sSfL "${patch}" -o "${patch_file}"
+        patch -Np0 < "${patch_file}"
+        rm "${patch_file}"
     done
     cd ..
 
-    curl ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.0/amd64/binary/sets/base.tgz | \
-        tar -C "${td}/netbsd" -xz ./usr/include ./usr/lib ./lib
+    curl --retry 3 -sSfL ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.0/amd64/binary/sets/base.tgz -O
+    tar -C "${td}/netbsd" -xzf base.tgz ./usr/include ./usr/lib ./lib
 
-    curl ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.0/amd64/binary/sets/comp.tgz | \
-        tar -C "${td}/netbsd" -xz ./usr/include ./usr/lib
+    curl --retry 3 -sSfL ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-7.0/amd64/binary/sets/comp.tgz -O
+    tar -C "${td}/netbsd" -xzf comp.tgz ./usr/include ./usr/lib
 
     cd binutils-build
     ../binutils/configure \

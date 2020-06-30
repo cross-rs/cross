@@ -28,7 +28,7 @@ main() {
     td="$(mktemp -d)"
 
     pushd "${td}"
-    curl -O "${NDK_URL}"
+    curl --retry 3 -sSfL "${NDK_URL}" -O
     unzip -q android-ndk-*.zip
     pushd android-ndk-*
     ./build/tools/make_standalone_toolchain.py \

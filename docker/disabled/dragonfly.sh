@@ -35,11 +35,11 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/dragonfly"
 
-    curl "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" | \
-        tar -C "${td}/binutils" --strip-components=1 -xj
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" -O
+    tar -C "${td}/binutils" --strip-components=1 -xjf "binutils-${binutils}.tar.bz2"
 
-    curl "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.bz2" | \
-        tar -C "${td}/gcc" --strip-components=1 -xj
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.bz2" -O
+    tar -C "${td}/gcc" --strip-components=1 -xjf "gcc-${gcc}.tar.bz2"
 
     pushd "${td}"
 
@@ -90,9 +90,8 @@ EOF
 EOF
     cd ..
 
-    curl "https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-${dragonfly}.iso.bz2" | \
-        bzcat | \
-        bsdtar xf - -C "${td}/dragonfly" ./usr/include ./usr/lib ./lib
+    curl --retry 3 -sSfL "https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-${dragonfly}.iso.bz2" -O
+    bzcat "dfly-x86_64-${dragonfly}.iso.bz2" | bsdtar xf - -C "${td}/dragonfly" ./usr/include ./usr/lib ./lib
 
     cd binutils-build
     ../binutils/configure \

@@ -4,7 +4,7 @@ set -x
 set -euo pipefail
 
 main() {
-    local version=2019.78
+    local version=2020.80
 
     local dependencies=(
         autoconf
@@ -29,8 +29,8 @@ main() {
 
     pushd "${td}"
 
-    curl -L "https://matt.ucc.asn.au/dropbear/dropbear-${version}.tar.bz2" | \
-        tar --strip-components=1 -xj
+    curl --retry 3 -sSfL "https://matt.ucc.asn.au/dropbear/dropbear-${version}.tar.bz2" -O
+    tar --strip-components=1 -xjf "dropbear-${version}.tar.bz2"
 
     # Remove some unwanted message
     sed -i '/skipping hostkey/d' cli-kex.c

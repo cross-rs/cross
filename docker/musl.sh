@@ -19,6 +19,8 @@ hide_output() {
 }
 
 main() {
+    local version=0.9.8
+
     local dependencies=(
         ca-certificates
         curl
@@ -38,13 +40,13 @@ main() {
     td="$(mktemp -d)"
 
     pushd "${td}"
-    curl -L https://github.com/richfelker/musl-cross-make/archive/v0.9.8.tar.gz | \
-        tar --strip-components=1 -xz
+    curl --retry 3 -sSfL "https://github.com/richfelker/musl-cross-make/archive/v${version}.tar.gz" -O
+    tar --strip-components=1 -xzf "v${version}.tar.gz"
 
     hide_output make install "-j$(nproc)" \
         GCC_VER=6.4.0 \
         MUSL_VER=1.1.22 \
-        DL_CMD='curl -C - -L -o' \
+        DL_CMD='curl --retry 3 -sSfL -C - -o' \
         OUTPUT=/usr/local/ \
         "${@}"
 
