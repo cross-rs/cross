@@ -195,6 +195,18 @@ passthrough = [
 ]
 ```
 
+### Mounting volumes into the build environment
+
+In addition to passing environment variables, you can also specify environment
+variables pointing to paths which should be mounted into the container:
+
+```toml
+[target.aarch64-unknown-linux-gnu.env]
+volumes = [
+    "BUILD_DIR",
+]
+```
+
 ### Use Xargo instead of Cargo
 
 By default, `cross` uses `xargo` to build your Cargo project only for all
