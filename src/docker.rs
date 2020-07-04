@@ -92,6 +92,7 @@ pub fn run(target: &Target,
     } else {
         SafeCommand::new("cargo")
     };
+
     cmd.args(args);
 
     let runner = None;
@@ -99,7 +100,7 @@ pub fn run(target: &Target,
     let mut docker = docker_command("run")?;
 
     if let Some(toml) = toml {
-        for var in toml.env_passthrough(target)? {
+        let validate_env_var = |var: &str| -> Result<()> {
             if var.contains('=') {
                 bail!("environment variable names must not contain the '=' character");
             }
@@ -110,9 +111,26 @@ pub fn run(target: &Target,
                 );
             }
 
+            Ok(())
+        };
+
+        for var in toml.env_passthrough(target)? {
+            validate_env_var(var)?;
+
             // Only specifying the environment variable name in the "-e"
             // flag forwards the value from the parent shell
             docker.args(&["-e", var]);
+        }
+
+        for var in toml.env_volumes(target)? {
+            validate_env_var(var)?;
+
+            if let Ok(val) = env::var(var) {
+                let host_path = Path::new(&val).canonicalize()?;
+                let mount_path = &host_path;
+                docker.args(&["-v", &format!("{}:{}", host_path.display(), mount_path.display())]);
+                docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
+            }
         }
     }
 
@@ -152,10 +170,10 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"])
-        .args(&["-v", &format!("{}:/project:Z", mount_root.display())])
+        .args(&["-v", &format!("{}:/{}:Z", mount_root.display(), mount_root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
-        .args(&["-w", "/project"]);
+        .args(&["-w", &mount_root.display().to_string()]);
 
     if atty::is(Stream::Stdin) {
         docker.arg("-i");

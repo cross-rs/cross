@@ -15,7 +15,6 @@ use std::io::Write;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
-use error_chain::bail;
 use toml::{Value, value::Table};
 
 use self::cargo::{Root, Subcommand};
@@ -363,38 +362,44 @@ impl Toml {
     /// Returns the list of environment variables to pass through for `target`,
     /// including variables specified under `build` and under `target`.
     pub fn env_passthrough(&self, target: &Target) -> Result<Vec<&str>> {
-        let mut bwl = self.build_env_passthrough()?;
-        let mut twl = self.target_env_passthrough(target)?;
+        let mut bwl = self.build_env("passthrough")?;
+        let mut twl = self.target_env(target, "passthrough")?;
         bwl.extend(twl.drain(..));
 
         Ok(bwl)
     }
 
-    /// Returns the `build.env.passthrough` part of `Cross.toml`
-    fn build_env_passthrough(&self) -> Result<Vec<&str>> {
-        match self.table.get("build").and_then(|b| b.get("env")).and_then(|e| e.get("passthrough")) {
+    /// Returns the list of volumes to pass through for `target`,
+    /// including volumes specified under `build` and under `target`.
+    pub fn env_volumes(&self, target: &Target) -> Result<Vec<&str>> {
+        let mut bwl = self.build_env("volumes")?;
+        let mut twl = self.target_env(target, "volumes")?;
+        bwl.extend(twl.drain(..));
+
+        Ok(bwl)
+    }
+
+    fn target_env(&self, target: &Target, key: &str) -> Result<Vec<&str>> {
+        let triple = target.triple();
+
+        match self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("env")).and_then(|e| e.get(key)) {
             Some(&Value::Array(ref vec)) => {
-                if vec.iter().any(|val| val.as_str().is_none()) {
-                    bail!("every build.env.passthrough element must be a string");
-                }
-                Ok(vec.iter().map(|val| val.as_str().unwrap()).collect())
+                vec.iter().map(|val| {
+                    val.as_str().ok_or_else(|| {
+                        format!("every target.{}.env.{} element must be a string",  triple, key).into()
+                    })
+                }).collect()
             },
             _ => Ok(Vec::new()),
         }
     }
 
-    /// Returns the `target.<triple>.env.passthrough` part of `Cross.toml` for `target`.
-    fn target_env_passthrough(&self, target: &Target) -> Result<Vec<&str>> {
-        let triple = target.triple();
-
-        let key = format!("target.{}.env.passthrough", triple);
-
-        match self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("env")).and_then(|e| e.get("passthrough")) {
+    fn build_env(&self, key: &str) -> Result<Vec<&str>> {
+        match self.table.get("build").and_then(|b| b.get("env")).and_then(|e| e.get(key)) {
             Some(&Value::Array(ref vec)) => {
-                if vec.iter().any(|val| val.as_str().is_none()) {
-                    bail!("every {} element must be a string", key);
-                }
-                Ok(vec.iter().map(|val| val.as_str().unwrap()).collect())
+                vec.iter().map(|val| {
+                    val.as_str().ok_or_else(|| format!("every build.env.{} element must be a string", key).into())
+                }).collect()
             },
             _ => Ok(Vec::new()),
         }

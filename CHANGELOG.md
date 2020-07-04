@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Added support for mounting volumes.
+
 ## [v0.2.1] - 2020-06-30
 
 - Disabled `powerpc64-unknown-linux-gnu` image.
