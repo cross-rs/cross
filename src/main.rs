@@ -271,7 +271,7 @@ fn run() -> Result<ExitStatus> {
 
             let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
 
-            let image_exists = match docker::image(toml.as_ref(), &target) {
+            let image_exists = match docker::image(toml.as_ref(), &target, verbose) {
                 Ok(_) => true,
                 Err(err) => {
                     eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
@@ -331,12 +331,26 @@ pub struct Toml {
 impl Toml {
     /// Returns the `target.{}.image` part of `Cross.toml`
     pub fn image(&self, target: &Target) -> Result<Option<&str>> {
+        self.get_value(target, "image")
+    }
+
+    /// Returns the `target.{}.context` part of `Cross.toml`
+    pub fn context(&self, target: &Target) -> Result<Option<&str>> {
+        self.get_value(target, "context")
+    }
+
+    /// Returns the `target.{}.dockerfile` part of `Cross.toml`
+    pub fn dockerfile(&self, target: &Target) -> Result<Option<&str>> {
+        self.get_value(target, "dockerfile")
+    }
+
+    fn get_value(&self, target: &Target, key: &str) -> Result<Option<&str>> {
         let triple = target.triple();
 
-        if let Some(value) = self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("image")) {
+        if let Some(value) = self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get(key)) {
             Ok(Some(value.as_str()
                 .ok_or_else(|| {
-                    format!("target.{}.image must be a string", triple)
+                    format!("target.{}.{} must be a string", triple, key)
                 })?))
         } else {
             Ok(None)

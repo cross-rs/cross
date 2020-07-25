@@ -32,7 +32,9 @@ pub fn docker_command(subcommand: &str) -> Result<Command> {
     if let Ok(ce) = get_container_engine() {
         let mut command = Command::new(ce);
         command.arg(subcommand);
-        command.args(&["--userns", "host"]);
+        if subcommand != "build" {
+            command.args(&["--userns", "host"]);
+        }
         Ok(command)
     } else {
         Err("no container engine found; install docker or podman".into())
@@ -193,15 +195,36 @@ pub fn run(target: &Target,
     }
 
     docker
-        .arg(&image(toml, target)?)
+        .arg(&image(toml, target, verbose)?)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
 
-pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
+fn build_docker_image(toml: &Toml, target: &Target, verbose: bool) -> Result<String> {
+    let mut docker = docker_command("build")?;
+    let context = toml.context(target)?.map(|s| s.to_owned()).unwrap();
+    docker.arg(context);
+    if let Some(dockerfile) = toml.dockerfile(target)? {
+        docker.args(&["-f", dockerfile]);
+    }
+    if verbose {
+        // Running `docker build` twice in quick succession is cheap
+        // (~0.1s extra) because of docker's layer cache.
+        // Here, we run it once without --quiet, to get the verbose output,
+        // then run it again with --quiet to get the image sha.
+        docker.run(verbose)?
+    }
+    let mut image_id = docker.arg("--quiet").run_and_get_stdout(verbose)?;
+    image_id.retain(|c| c != '\n');
+    Ok(image_id)
+}
+
+pub fn image(toml: Option<&Toml>, target: &Target, verbose: bool) -> Result<String> {
     if let Some(toml) = toml {
         if let Some(image) = toml.image(target)?.map(|s| s.to_owned()) {
             return Ok(image)
+        } else if let Some(_) = toml.context(target)? {
+            return build_docker_image(toml, target, verbose)
         }
     }
 
