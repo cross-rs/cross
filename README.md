@@ -122,6 +122,18 @@ RUN dpkg --add-architecture arm64 && \
 $ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
 ```
 
+or make `cross` build your docker image by putting this in your `Cross.toml`:
+
+``` toml
+[target.aarch64-unknown-linux-gnu]
+context = "path/to/where/the/Dockerfile/resides"
+dockerfile = "path/to/where/the/Dockerfile/resides/Dockerfile"
+args = { SOME_DOCKER_ARG = "value" }
+```
+
+These 3 options are inspired by [docker-compose](https://docs.docker.com/compose/compose-file/#build).
+Only `context` is required.
+
 ### Docker in Docker
 
 When running `cross` from inside a docker container, `cross` needs access to
