@@ -201,21 +201,27 @@ pub fn run(target: &Target,
 }
 
 fn build_docker_image(toml: &Toml, target: &Target, verbose: bool) -> Result<String> {
+    let mut image_id_filename = std::env::temp_dir();
+    image_id_filename.push(format!("{}.iid", std::process::id()));
+
     let mut docker = docker_command("build")?;
-    let context = toml.context(target)?.map(|s| s.to_owned()).unwrap();
-    docker.arg(context);
+    docker
+        .arg(toml.context(target)?.map(|s| s.to_owned()).unwrap())
+        .args(&["--iidfile", &image_id_filename.clone().into_os_string().into_string().unwrap()]);
     if let Some(dockerfile) = toml.dockerfile(target)? {
         docker.args(&["-f", dockerfile]);
     }
     if verbose {
-        // Running `docker build` twice in quick succession is cheap
-        // (~0.1s extra) because of docker's layer cache.
-        // Here, we run it once without --quiet, to get the verbose output,
-        // then run it again with --quiet to get the image sha.
-        docker.run(verbose)?
+        docker.run(verbose)?;
+    } else {
+        docker.run_and_get_stdout(verbose)?;
     }
-    let mut image_id = docker.arg("--quiet").run_and_get_stdout(verbose)?;
+    let mut image_id = std::fs::read_to_string(&image_id_filename)?;
     image_id.retain(|c| c != '\n');
+    std::fs::remove_file(&image_id_filename).unwrap_or_else(
+        |e| println!(
+            "Error removing tempfile {:?}: {:?}. Ignoring.",
+            image_id_filename, e));
     Ok(image_id)
 }
 
