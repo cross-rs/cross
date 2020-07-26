@@ -211,6 +211,19 @@ fn build_docker_image(toml: &Toml, target: &Target, verbose: bool) -> Result<Str
     if let Some(dockerfile) = toml.dockerfile(target)? {
         docker.args(&["-f", dockerfile]);
     }
+    if let Some(args) = toml.args(target)? {
+        for (key, value) in args.iter() {
+            match value {
+                toml::Value::String(val) => {
+                    docker.args(&["--build-arg", &format!("{}={}", key, val)]);
+                },
+                toml::Value::Integer(val) => {
+                    docker.args(&["--build-arg", &format!("{}={}", key, val)]);
+                },
+                _ => Err(format!("target.{}.args.{} must be a string or number", target.triple(), key))?
+            }
+        }
+    }
     if verbose {
         docker.run(verbose)?;
     } else {
