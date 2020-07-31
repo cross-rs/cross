@@ -45,14 +45,12 @@ pub fn parse(target_list: &TargetList) -> Args {
                     .map(|s| Target::from(&*s, target_list));
                 all.push(arg);
             } else if arg == "--sub-targets" {
-                all.push(arg);
                 if let Some(s) = args.next() {
                     sub_targets = Some(
                         s.split(',')
                             .map(|s| Target::from(s.trim(), target_list))
                             .collect(),
                     );
-                    all.push(s);
                 }
             } else if arg.starts_with("--sub-targets=") {
                 sub_targets = arg.splitn(2, '=').nth(1).map(|s| {
@@ -60,7 +58,6 @@ pub fn parse(target_list: &TargetList) -> Args {
                         .map(|s| Target::from(s.trim(), target_list))
                         .collect()
                 });
-                all.push(arg);
             } else if arg == "--target-dir" {
                 all.push(arg);
                 if let Some(td) = args.next() {
