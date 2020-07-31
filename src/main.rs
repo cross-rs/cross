@@ -15,7 +15,7 @@ use std::io::Write;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
-use toml::{Value, value::Table};
+use toml::{value::Table, Value};
 
 use self::cargo::{Root, Subcommand};
 use self::errors::*;
@@ -33,7 +33,7 @@ pub enum Host {
     X86_64UnknownLinuxGnu,
 
     // Windows MSVC
-    X86_64PcWindowsMsvc
+    X86_64PcWindowsMsvc,
 }
 
 impl Host {
@@ -42,11 +42,15 @@ impl Host {
     /// `target == None` means `target == host`
     fn is_supported(&self, target: Option<&Target>) -> bool {
         if *self == Host::X86_64AppleDarwin {
-            target.map(|t| t.is_apple() || t.needs_docker()).unwrap_or(false)
+            target
+                .map(|t| t.is_apple() || t.needs_docker())
+                .unwrap_or(false)
         } else if *self == Host::X86_64UnknownLinuxGnu {
             target.map(|t| t.needs_docker()).unwrap_or(true)
         } else if *self == Host::X86_64PcWindowsMsvc {
-            target.map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()).unwrap_or(false)
+            target
+                .map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker())
+                .unwrap_or(false)
         } else {
             false
         }
@@ -57,7 +61,7 @@ impl Host {
             Host::X86_64AppleDarwin => "x86_64-apple-darwin",
             Host::X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
             Host::X86_64PcWindowsMsvc => "x86_64-pc-windows-msvc",
-            Host::Other => unimplemented!()
+            Host::Other => unimplemented!(),
         }
     }
 }
@@ -81,17 +85,21 @@ pub enum Target {
 
 impl Target {
     fn new_built_in(triple: &str) -> Self {
-        Target::BuiltIn { triple: triple.to_owned() }
+        Target::BuiltIn {
+            triple: triple.to_owned(),
+        }
     }
 
     fn new_custom(triple: &str) -> Self {
-        Target::Custom { triple: triple.to_owned() }
+        Target::Custom {
+            triple: triple.to_owned(),
+        }
     }
 
     fn triple(&self) -> &str {
         match *self {
-            Target::BuiltIn{ref triple} => triple,
-            Target::Custom{ref triple} => triple,
+            Target::BuiltIn { ref triple } => triple,
+            Target::Custom { ref triple } => triple,
         }
     }
 
@@ -105,8 +113,8 @@ impl Target {
 
     fn is_builtin(&self) -> bool {
         match *self {
-            Target::BuiltIn{ .. } => true,
-            Target::Custom{ .. } => false,
+            Target::BuiltIn { .. } => true,
+            Target::Custom { .. } => false,
         }
     }
 
@@ -135,14 +143,20 @@ impl Target {
     }
 
     fn needs_docker(&self) -> bool {
-        self.is_linux() || self.is_android() || self.is_bare_metal() || self.is_bsd() ||
-        self.is_solaris() || !self.is_builtin() || self.is_windows() || self.is_emscripten()
+        self.is_linux()
+            || self.is_android()
+            || self.is_bare_metal()
+            || self.is_bsd()
+            || self.is_solaris()
+            || !self.is_builtin()
+            || self.is_windows()
+            || self.is_emscripten()
     }
 
     fn needs_interpreter(&self) -> bool {
-        let native = self.triple().starts_with("x86_64") ||
-            self.triple().starts_with("i586") ||
-            self.triple().starts_with("i686");
+        let native = self.triple().starts_with("x86_64")
+            || self.triple().starts_with("i586")
+            || self.triple().starts_with("i686");
 
         !native && (self.is_linux() || self.is_windows() || self.is_bare_metal())
     }
@@ -190,9 +204,7 @@ pub fn main() {
                     writeln!(stderr, "{:?}", backtrace).ok();
                 }
             } else {
-                writeln!(stderr,
-                         "note: run with `RUST_BACKTRACE=1` for a backtrace")
-                    .ok();
+                writeln!(stderr, "note: run with `RUST_BACKTRACE=1` for a backtrace").ok();
             }
 
             process::exit(1)
@@ -209,31 +221,39 @@ fn run() -> Result<ExitStatus> {
     let target_list = rustc::target_list(false)?;
     let args = cli::parse(&target_list);
 
-    if args.all.iter().any(|a| a == "--version" || a == "-V") &&
-       args.subcommand.is_none() {
-        println!(concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
-                 include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")));
+    if args.all.iter().any(|a| a == "--version" || a == "-V") && args.subcommand.is_none() {
+        println!(
+            concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
+            include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt"))
+        );
     }
 
-    let verbose =
-        args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
+    let verbose = args
+        .all
+        .iter()
+        .any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
-    let version_meta = rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version")?;
+    let version_meta =
+        rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version")?;
     if let Some(root) = cargo::root()? {
         let host = version_meta.host();
 
         if host.is_supported(args.target.as_ref()) {
-            let target = args.target
+            let target = args
+                .target
                 .unwrap_or_else(|| Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
 
             let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
-            let default_toolchain = sysroot.file_name().and_then(|file_name| file_name.to_str())
+            let default_toolchain = sysroot
+                .file_name()
+                .and_then(|file_name| file_name.to_str())
                 .ok_or("couldn't get toolchain name")?;
             let toolchain = if let Some(channel) = args.channel {
-                [channel].iter().map(|c| c.as_str()).chain(
-                    default_toolchain.splitn(2, '-').skip(1)
-                )
+                [channel]
+                    .iter()
+                    .map(|c| c.as_str())
+                    .chain(default_toolchain.splitn(2, '-').skip(1))
                     .collect::<Vec<_>>()
                     .join("-")
             } else {
@@ -244,7 +264,7 @@ fn run() -> Result<ExitStatus> {
             let installed_toolchains = rustup::installed_toolchains(verbose)?;
 
             if !installed_toolchains.into_iter().any(|t| t == toolchain) {
-              rustup::install_toolchain(&toolchain, verbose)?;
+                rustup::install_toolchain(&toolchain, verbose)?;
             }
 
             let available_targets = rustup::available_targets(&toolchain, verbose)?;
@@ -264,46 +284,57 @@ fn run() -> Result<ExitStatus> {
                 rustup::install_component("rust-src", &toolchain, verbose)?;
             }
 
-            if args.subcommand.map(|sc| sc == Subcommand::Clippy).unwrap_or(false) &&
-                !rustup::component_is_installed("clippy", &toolchain, verbose)? {
+            if args
+                .subcommand
+                .map(|sc| sc == Subcommand::Clippy)
+                .unwrap_or(false)
+                && !rustup::component_is_installed("clippy", &toolchain, verbose)?
+            {
                 rustup::install_component("clippy", &toolchain, verbose)?;
             }
 
-            let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
+            let needs_interpreter = args
+                .subcommand
+                .map(|sc| sc.needs_interpreter())
+                .unwrap_or(false);
 
             let image_exists = match docker::image(toml.as_ref(), &target) {
                 Ok(_) => true,
                 Err(err) => {
                     eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
                     false
-                },
+                }
             };
 
-            if image_exists && target.needs_docker() &&
-               args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
-                if version_meta.needs_interpreter() &&
-                    needs_interpreter &&
-                    target.needs_interpreter() &&
-                    !interpreter::is_registered(&target)? {
-                        docker::register(&target, verbose)?
+            if image_exists
+                && target.needs_docker()
+                && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
+            {
+                if version_meta.needs_interpreter()
+                    && needs_interpreter
+                    && target.needs_interpreter()
+                    && !interpreter::is_registered(&target)?
+                {
+                    docker::register(&target, verbose)?
                 }
 
-                return docker::run(&target,
-                                   &args.all,
-                                   &args.target_dir,
-                                   &root,
-                                   toml.as_ref(),
-                                   uses_xargo,
-                                   &sysroot,
-                                   verbose,
-                                   args.docker_in_docker);
+                return docker::run(
+                    &target,
+                    &args.all,
+                    &args.target_dir,
+                    &root,
+                    toml.as_ref(),
+                    uses_xargo,
+                    &sysroot,
+                    verbose,
+                    args.docker_in_docker,
+                );
             }
         }
     }
 
     cargo::run(&args.all, verbose)
 }
-
 
 /// Parsed `Cross.toml`
 #[derive(Debug)]
@@ -316,11 +347,15 @@ impl Toml {
     pub fn image(&self, target: &Target) -> Result<Option<&str>> {
         let triple = target.triple();
 
-        if let Some(value) = self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("image")) {
-            Ok(Some(value.as_str()
-                .ok_or_else(|| {
-                    format!("target.{}.image must be a string", triple)
-                })?))
+        if let Some(value) = self
+            .table
+            .get("target")
+            .and_then(|t| t.get(triple))
+            .and_then(|t| t.get("image"))
+        {
+            Ok(Some(value.as_str().ok_or_else(|| {
+                format!("target.{}.image must be a string", triple)
+            })?))
         } else {
             Ok(None)
         }
@@ -330,8 +365,14 @@ impl Toml {
     pub fn runner(&self, target: &Target) -> Result<Option<String>> {
         let triple = target.triple();
 
-        if let Some(value) = self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("runner")) {
-            let value = value.as_str()
+        if let Some(value) = self
+            .table
+            .get("target")
+            .and_then(|t| t.get(triple))
+            .and_then(|t| t.get("runner"))
+        {
+            let value = value
+                .as_str()
                 .ok_or_else(|| format!("target.{}.runner must be a string", triple))?
                 .to_string();
             Ok(Some(value))
@@ -345,15 +386,22 @@ impl Toml {
         let triple = target.triple();
 
         if let Some(value) = self.table.get("build").and_then(|b| b.get("xargo")) {
-            return Ok(Some(value.as_bool()
-                .ok_or_else(|| "build.xargo must be a boolean")?));
+            return Ok(Some(
+                value
+                    .as_bool()
+                    .ok_or_else(|| "build.xargo must be a boolean")?,
+            ));
         }
 
-        if let Some(value) = self.table.get("target").and_then(|b| b.get(triple)).and_then(|t| t.get("xargo")) {
-            Ok(Some(value.as_bool()
-                .ok_or_else(|| {
-                    format!("target.{}.xargo must be a boolean", triple)
-                })?))
+        if let Some(value) = self
+            .table
+            .get("target")
+            .and_then(|b| b.get(triple))
+            .and_then(|t| t.get("xargo"))
+        {
+            Ok(Some(value.as_bool().ok_or_else(|| {
+                format!("target.{}.xargo must be a boolean", triple)
+            })?))
         } else {
             Ok(None)
         }
@@ -382,25 +430,44 @@ impl Toml {
     fn target_env(&self, target: &Target, key: &str) -> Result<Vec<&str>> {
         let triple = target.triple();
 
-        match self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("env")).and_then(|e| e.get(key)) {
-            Some(&Value::Array(ref vec)) => {
-                vec.iter().map(|val| {
+        match self
+            .table
+            .get("target")
+            .and_then(|t| t.get(triple))
+            .and_then(|t| t.get("env"))
+            .and_then(|e| e.get(key))
+        {
+            Some(&Value::Array(ref vec)) => vec
+                .iter()
+                .map(|val| {
                     val.as_str().ok_or_else(|| {
-                        format!("every target.{}.env.{} element must be a string",  triple, key).into()
+                        format!(
+                            "every target.{}.env.{} element must be a string",
+                            triple, key
+                        )
+                        .into()
                     })
-                }).collect()
-            },
+                })
+                .collect(),
             _ => Ok(Vec::new()),
         }
     }
 
     fn build_env(&self, key: &str) -> Result<Vec<&str>> {
-        match self.table.get("build").and_then(|b| b.get("env")).and_then(|e| e.get(key)) {
-            Some(&Value::Array(ref vec)) => {
-                vec.iter().map(|val| {
-                    val.as_str().ok_or_else(|| format!("every build.env.{} element must be a string", key).into())
-                }).collect()
-            },
+        match self
+            .table
+            .get("build")
+            .and_then(|b| b.get("env"))
+            .and_then(|e| e.get(key))
+        {
+            Some(&Value::Array(ref vec)) => vec
+                .iter()
+                .map(|val| {
+                    val.as_str().ok_or_else(|| {
+                        format!("every build.env.{} element must be a string", key).into()
+                    })
+                })
+                .collect(),
             _ => Ok(Vec::new()),
         }
     }
@@ -415,7 +482,7 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
             table: if let Ok(Value::Table(table)) = file::read(&path)?.parse() {
                 table
             } else {
-                return Err(format!("couldn't parse {} as TOML table", path.display()).into())
+                return Err(format!("couldn't parse {} as TOML table", path.display()).into());
             },
         }))
     } else {
