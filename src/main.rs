@@ -284,6 +284,18 @@ fn run() -> Result<ExitStatus> {
                 rustup::install_component("rust-src", &toolchain, verbose)?;
             }
 
+            if !uses_xargo {
+                if let Some(targets) = args.sub_targets {
+                    for target in targets {
+                        if !available_targets.is_installed(&target)
+                            && available_targets.contains(&target)
+                        {
+                            rustup::install(&target, &toolchain, verbose)?;
+                        }
+                    }
+                }
+            }
+
             if args
                 .subcommand
                 .map(|sc| sc == Subcommand::Clippy)
