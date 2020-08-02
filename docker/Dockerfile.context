@@ -1,0 +1,9 @@
+FROM scratch
+
+COPY common.sh /
+COPY cmake.sh /
+COPY xargo.sh /
+COPY qemu.sh /
+COPY dropbear.sh /
+COPY linux-image.sh /
+COPY linux-runner /
