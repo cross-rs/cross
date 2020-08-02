@@ -24,11 +24,16 @@ pub fn docker_command(subcommand: &str) -> Result<Command> {
     if let Ok(ce) = get_container_engine() {
         let mut command = Command::new(ce);
         command.arg(subcommand);
-        command.args(&["--userns", "host"]);
         Ok(command)
     } else {
         Err("no container engine found; install docker or podman".into())
     }
+}
+
+pub fn docker_run_command() -> Result<Command> {
+    let mut command = docker_command("run")?;
+    command.args(&["--userns", "host"]);
+    Ok(command)
 }
 
 /// Register binfmt interpreters
@@ -42,12 +47,20 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
             binfmt-support qemu-user-static"
     };
 
-    docker_command("run")?
+    docker_run_command()?
         .arg("--privileged")
         .arg("--rm")
         .arg("ubuntu:16.04")
         .args(&["sh", "-c", cmd])
         .run(verbose)
+}
+
+fn copy_files(dir: &PathBuf, target: &str, verbose: bool) -> Result<()> {
+    docker_command("cp")?
+        .args(&[format!("{}", dir.display()), format!("helper:{}", target)])
+        .run_and_get_status(verbose)?;
+
+    Ok(())
 }
 
 pub fn run(target: &Target,
@@ -87,6 +100,22 @@ pub fn run(target: &Target,
     let mount_root = mount_finder.find_mount_path(&root);
     let sysroot = mount_finder.find_mount_path(&sysroot);
 
+    docker_command("volume")?
+        .args(&["create", "data-volume"])
+        .run_and_get_status(verbose)?;
+
+    docker_command("create")?
+        .args(&["-v", "data-volume:/cross"])
+        .args(&["--name", "helper", "busybox", "sh", "-c", &format!("mkdir /cross/target && chown {user}:{grp} /cross/target && chown -R {user}:{grp} /cross/*", user = id::user(), grp = id::group())])
+        .run_and_get_status(verbose)?;
+
+    copy_files(&cargo_dir, "/cross", verbose)?;
+    copy_files(&xargo_dir, "/cross", verbose)?;
+    copy_files(&sysroot, "/cross", verbose)?;
+    copy_files(&mount_root, "/cross", verbose)?;
+
+    docker_command("start")?.arg("helper").run_and_get_status(verbose)?;
+    
     let mut cmd = if uses_xargo {
         SafeCommand::new("xargo")
     } else {
@@ -97,7 +126,7 @@ pub fn run(target: &Target,
 
     let runner = None;
 
-    let mut docker = docker_command("run")?;
+    let mut docker = docker_run_command()?;
 
     if let Some(toml) = toml {
         let validate_env_var = |var: &str| -> Result<()> {
@@ -146,9 +175,9 @@ pub fn run(target: &Target,
     }
 
     docker
-        .args(&["-e", "XARGO_HOME=/xargo"])
-        .args(&["-e", "CARGO_HOME=/cargo"])
-        .args(&["-e", "CARGO_TARGET_DIR=/target"])
+        .args(&["-e", &format!("XARGO_HOME=/cross/{}", xargo_dir.file_name().unwrap().to_str().unwrap())])
+        .args(&["-e", &format!("CARGO_HOME=/cross/{}", cargo_dir.file_name().unwrap().to_str().unwrap())])
+        .args(&["-e", "CARGO_TARGET_DIR=/cross/target"])
         .args(&["-e", &format!("USER={}", id::username().unwrap().unwrap())]);
 
     if let Ok(value) = env::var("QEMU_STRACE") {
@@ -166,14 +195,8 @@ pub fn run(target: &Target,
 
     docker
         .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(String::new))])
-        .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
-        .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
-        // Prevent `bin` from being mounted inside the Docker container.
-        .args(&["-v", "/cargo/bin"])
-        .args(&["-v", &format!("{}:/{}:Z", mount_root.display(), mount_root.display())])
-        .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
-        .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
-        .args(&["-w", &mount_root.display().to_string()]);
+        .args(&["-v", "data-volume:/cross"])
+        .args(&["-w", &format!("/cross/{}", mount_root.file_name().unwrap().to_str().unwrap())]);
 
     if atty::is(Stream::Stdin) {
         docker.arg("-i");
@@ -184,7 +207,18 @@ pub fn run(target: &Target,
 
     docker
         .arg(&image(toml, target)?)
-        .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
+        .args(&["sh", "-c", &format!("PATH=$PATH:/cross/{}/bin {:?}", sysroot.file_name().unwrap().to_str().unwrap(), cmd)])
+        .run_and_get_status(verbose)?;
+
+    docker_command("cp")?
+        .args(&["helper:/cross/target", &format!("{}", target_dir.parent().unwrap().display())])
+        .run_and_get_status(verbose)?;
+
+    docker_command("rm")?
+        .arg("helper")
+        .run_and_get_status(verbose)?;
+    docker_command("volume")?
+        .args(&["rm", "data-volume"])
         .run_and_get_status(verbose)
 }
 
