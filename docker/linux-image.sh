@@ -8,8 +8,8 @@ main() {
     local arch="${1}" \
           kversion=4.9.0-11
 
-    local debsource="deb http://http.debian.net/debian/ stretch main"
-    debsource="${debsource}\ndeb http://security.debian.org/ stretch/updates main"
+    local debsource="deb http://http.debian.net/debian/ buster main"
+    debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
 
     local dropbear="dropbear-bin"
 
@@ -37,7 +37,7 @@ main() {
             kernel="${kversion}-5kc-malta"
             ;;
         powerpc)
-            # there is no stretch powerpc port, so we use jessie
+            # there is no buster powerpc port, so we use jessie
             # use a more recent kernel from backports
             kernel=4.9.0-0.bpo.6-powerpc
             debsource="deb http://archive.debian.org/debian jessie main"
