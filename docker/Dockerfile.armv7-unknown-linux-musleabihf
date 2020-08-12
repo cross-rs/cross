@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 COPY common.sh /
 RUN /common.sh
@@ -17,7 +17,8 @@ RUN /musl.sh \
     TARGET=arm-linux-musleabihf \
     "COMMON_CONFIG += --with-arch=armv7-a \
                       --with-float=hard \
-                      --with-mode=thumb"
+                      --with-mode=thumb \
+                      --with-fpu=vfp"
 
 # Allows qemu run dynamic linked binaries
 RUN ln -sf \
