@@ -19,7 +19,7 @@ hide_output() {
 }
 
 main() {
-    local version=0.9.8
+    local version=0.9.9
 
     local dependencies=(
         ca-certificates
@@ -44,8 +44,9 @@ main() {
     tar --strip-components=1 -xzf "v${version}.tar.gz"
 
     hide_output make install "-j$(nproc)" \
-        GCC_VER=6.4.0 \
-        MUSL_VER=1.1.22 \
+        GCC_VER=9.2.0 \
+        MUSL_VER=1.2.0 \
+        BINUTILS_VER=2.33.1 \
         DL_CMD='curl --retry 3 -sSfL -C - -o' \
         OUTPUT=/usr/local/ \
         "${@}"
