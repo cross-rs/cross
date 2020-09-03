@@ -28,7 +28,7 @@ pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
         .args(&["toolchain", "list"])
         .run_and_get_stdout(verbose)?;
 
-    Ok(out.lines().map(|l| l.replace(" (default)", "").trim().to_owned()).collect())
+    Ok(out.lines().map(|l| l.replace(" (default)", "").replace(" (override)", "").trim().to_owned()).collect())
 }
 
 pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTargets> {
