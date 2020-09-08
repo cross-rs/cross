@@ -112,7 +112,7 @@ This way you won't have to figure out how to install a cross C toolchain in your
 custom image. Example below:
 
 ``` Dockerfile
-FROM rustembedded/cross:aarch64-unknown-linux-gnu-0.1.16
+FROM rustembedded/cross:aarch64-unknown-linux-gnu-0.2.1
 
 RUN dpkg --add-architecture arm64 && \
     apt-get update && \
