@@ -50,16 +50,18 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         .run(verbose)
 }
 
-pub fn run(target: &Target,
-           args: &[String],
-           target_dir: &Option<PathBuf>,
-           root: &Root,
-           toml: Option<&Toml>,
-           uses_xargo: bool,
-           sysroot: &PathBuf,
-           verbose: bool,
-           docker_in_docker: bool)
-           -> Result<ExitStatus> {
+pub fn run(
+    target: &Target,
+    docker_image: Option<&str>,
+    args: &[String],
+    target_dir: &Option<PathBuf>,
+    root: &Root,
+    toml: Option<&Toml>,
+    uses_xargo: bool,
+    sysroot: &PathBuf,
+    verbose: bool,
+    docker_in_docker: bool,
+) -> Result<ExitStatus> {
     let mount_finder = if docker_in_docker {
         MountFinder::new(docker_read_mount_paths()?)
     } else {
@@ -182,8 +184,13 @@ pub fn run(target: &Target,
         }
     }
 
+    let docker_image = docker_image
+        .map(str::to_string)
+        .ok_or(())
+        .or_else(|_| image(toml, target))?;
+
     docker
-        .arg(&image(toml, target)?)
+        .arg(docker_image)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }

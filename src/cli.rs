@@ -12,6 +12,7 @@ pub struct Args {
     pub channel: Option<String>,
     pub target: Option<Target>,
     pub target_dir: Option<PathBuf>,
+    pub docker_image: Option<String>,
     pub docker_in_docker: bool,
 }
 
@@ -20,6 +21,7 @@ pub fn parse(target_list: &TargetList) -> Args {
     let mut target = None;
     let mut target_dir = None;
     let mut sc = None;
+    let mut docker_image = None;
     let mut all: Vec<String> = Vec::new();
 
     {
@@ -50,6 +52,12 @@ pub fn parse(target_list: &TargetList) -> Args {
                     target_dir = Some(PathBuf::from(&td));
                     all.push(format!("--target-dir=/target"));
                 }
+            } else if arg == "--docker-image" {
+                if let Some(di) = args.next() {
+                    docker_image = Some(di);
+                }
+            } else if arg.starts_with("--docker-image=") {
+                docker_image = arg.splitn(2, '=').nth(1).map(String::from);
             } else {
                 if !arg.starts_with('-') && sc.is_none() {
                     sc = Some(Subcommand::from(arg.as_ref()));
@@ -70,6 +78,7 @@ pub fn parse(target_list: &TargetList) -> Args {
         channel,
         target,
         target_dir,
+        docker_image,
         docker_in_docker,
     }
 }

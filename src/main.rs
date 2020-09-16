@@ -271,32 +271,39 @@ fn run() -> Result<ExitStatus> {
 
             let needs_interpreter = args.subcommand.map(|sc| sc.needs_interpreter()).unwrap_or(false);
 
-            let image_exists = match docker::image(toml.as_ref(), &target) {
-                Ok(_) => true,
-                Err(err) => {
-                    eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
-                    false
-                },
-            };
+            let image_exists = args.docker_image.is_some()
+                || match docker::image(toml.as_ref(), &target) {
+                    Ok(_) => true,
+                    Err(err) => {
+                        eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
+                        false
+                    }
+                };
 
-            if image_exists && target.needs_docker() &&
-               args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
-                if version_meta.needs_interpreter() &&
-                    needs_interpreter &&
-                    target.needs_interpreter() &&
-                    !interpreter::is_registered(&target)? {
-                        docker::register(&target, verbose)?
+            if image_exists
+                && target.needs_docker()
+                && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
+            {
+                if version_meta.needs_interpreter()
+                    && needs_interpreter
+                    && target.needs_interpreter()
+                    && !interpreter::is_registered(&target)?
+                {
+                    docker::register(&target, verbose)?
                 }
 
-                return docker::run(&target,
-                                   &args.all,
-                                   &args.target_dir,
-                                   &root,
-                                   toml.as_ref(),
-                                   uses_xargo,
-                                   &sysroot,
-                                   verbose,
-                                   args.docker_in_docker);
+                return docker::run(
+                    &target,
+                    args.docker_image.as_ref().map(String::as_str),
+                    &args.all,
+                    &args.target_dir,
+                    &root,
+                    toml.as_ref(),
+                    uses_xargo,
+                    &sysroot,
+                    verbose,
+                    args.docker_in_docker,
+                );
             }
         }
     }
