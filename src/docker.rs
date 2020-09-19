@@ -187,10 +187,10 @@ pub fn run(target: &Target,
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"])
-        .args(&["-v", &format!("{}:/{}:Z", mount_root.display(), mount_root.display())])
+        .args(&["-v", &format!("{}:/project:Z", mount_root.display())])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
-        .args(&["-w", &mount_root.display().to_string()]);
+        .args(&["-w", "/project"]);
 
     if atty::is(Stream::Stdin) {
         docker.arg("-i");
