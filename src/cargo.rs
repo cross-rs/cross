@@ -34,6 +34,13 @@ impl Subcommand {
             _ => false,
         }
     }
+
+    pub fn needs_target_in_command(self) -> bool {
+        match self {
+            Subcommand::Metadata => false,
+            _ => true,
+        }
+    }
 }
 
 impl<'a> From<&'a str> for Subcommand {

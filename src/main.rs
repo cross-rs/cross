@@ -278,6 +278,23 @@ fn run() -> Result<ExitStatus> {
                     false
                 },
             };
+            
+            let filtered_args = if args.subcommand.map_or(false, |s| !s.needs_target_in_command()) {
+                let mut filtered_args = Vec::new();
+                let mut args_iter = args.all.clone().into_iter();
+                while let Some(arg) = args_iter.next() {
+                    if arg == "--target" {
+                        args_iter.next();
+                    } else if arg.starts_with("--target=") {
+                        // NOOP
+                    } else {
+                        filtered_args.push(arg)
+                    }
+                }
+                filtered_args
+            } else {
+                args.all.clone()
+            };
 
             if image_exists && target.needs_docker() &&
                args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
@@ -289,7 +306,7 @@ fn run() -> Result<ExitStatus> {
                 }
 
                 return docker::run(&target,
-                                   &args.all,
+                                   &filtered_args,
                                    &args.target_dir,
                                    &root,
                                    toml.as_ref(),
