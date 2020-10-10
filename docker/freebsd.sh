@@ -6,12 +6,12 @@ set -euo pipefail
 main() {
     local arch="${1}"
 
-    local binutils=2.25.1 \
-          gcc=5.3.0 \
-          target="${arch}-unknown-freebsd10"
+    local base_release=12.1 \
+          binutils=2.32 \
+          gcc=6.4.0 \
+          target="${arch}-unknown-freebsd12"
 
     local dependencies=(
-        bzip2
         ca-certificates
         curl
         g++
@@ -34,11 +34,11 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/freebsd"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" -O
-    tar -C "${td}/binutils" --strip-components=1 -xjf "binutils-${binutils}.tar.bz2"
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.gz" -O
+    tar -C "${td}/binutils" --strip-components=1 -xf "binutils-${binutils}.tar.gz"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.bz2" -O
-    tar -C "${td}/gcc" --strip-components=1 -xjf "gcc-${gcc}.tar.bz2"
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.gz" -O
+    tar -C "${td}/gcc" --strip-components=1 -xf "gcc-${gcc}.tar.gz"
 
     pushd "${td}"
 
@@ -57,7 +57,7 @@ main() {
             ;;
     esac
 
-    curl --retry 3 -sSfL "http://ftp.freebsd.org/pub/FreeBSD/releases/${bsd_arch}/10.2-RELEASE/base.txz" -O
+    curl --retry 3 -sSfL "http://ftp.freebsd.org/pub/FreeBSD/releases/${bsd_arch}/${base_release}-RELEASE/base.txz" -O
     tar -C "${td}/freebsd" -xJf base.txz ./usr/include ./usr/lib ./lib
 
     cd binutils-build
@@ -71,7 +71,7 @@ main() {
     cp -r "${td}/freebsd/usr/include" "${destdir}"
     cp "${td}/freebsd/lib/libc.so.7" "${destdir}/lib"
     cp "${td}/freebsd/lib/libm.so.5" "${destdir}/lib"
-    cp "${td}/freebsd/lib/libthr.so.3" "${destdir}/lib/libpthread.so"
+    cp "${td}/freebsd/lib/libthr.so.3" "${destdir}/lib"
     cp "${td}/freebsd/lib/libutil.so.9" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.so.1" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.a" "${destdir}/lib"
@@ -85,10 +85,12 @@ main() {
     ln -s libm.so.5 "${destdir}/lib/libm.so"
     ln -s librt.so.1 "${destdir}/lib/librt.so"
     ln -s libutil.so.9 "${destdir}/lib/libutil.so"
+    ln -s libthr.so.3 "${destdir}/lib/libpthread.so"
 
     cd gcc-build
     ../gcc/configure \
         --disable-libada \
+        --disable-libcilkrt \
         --disable-libcilkrts \
         --disable-libgomp \
         --disable-libquadmath \
@@ -97,7 +99,6 @@ main() {
         --disable-libssp \
         --disable-libvtv \
         --disable-lto \
-        --disable-multilib \
         --disable-nls \
         --enable-languages=c,c++ \
         --target="${target}"

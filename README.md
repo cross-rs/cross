@@ -275,6 +275,7 @@ terminate.
 | `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `i686-unknown-freebsd` [4]           | 12.1   | 6.4.0   |     | N/A   |   ✓    |
 | `i686-linux-android` [2]             | N/A    | 4.9     | ✓   | N/A   |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
@@ -300,6 +301,7 @@ terminate.
 | `x86_64-linux-android` [2]           | N/A    | 4.9     | ✓   | N/A   |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
 | `x86_64-sun-solaris` [4]             | 2.11   | 5.3.0   | ✓   | N/A   |        |
+| `x86_64-unknown-freebsd` [4]         | 12.1   | 6.4.0   |     | N/A   |   ✓    |
 | `x86_64-unknown-dragonfly` [4] [3]   | 4.6.0  | 5.3.0   | ✓   | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |

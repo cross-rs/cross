@@ -56,8 +56,8 @@ jobs:
         x86_64-pc-windows-gnu:           { TARGET: x86_64-pc-windows-gnu,           CPP: 1,           STD: 1,                   RUN: 1 }
         i686-pc-windows-gnu:             { TARGET: i686-pc-windows-gnu,             CPP: 1,           STD: 1,                   RUN: 1 }
       # x86_64-unknown-dragonfly:        { TARGET: x86_64-unknown-dragonfly,        CPP: 1, DYLIB: 1,         TOOLCHAIN: nightly }
-      # i686-unknown-freebsd:            { TARGET: i686-unknown-freebsd,                    DYLIB: 1, STD: 1 }
-      # x86_64-unknown-freebsd:          { TARGET: x86_64-unknown-freebsd,                  DYLIB: 1, STD: 1 }
+        i686-unknown-freebsd:            { TARGET: i686-unknown-freebsd,                    DYLIB: 1, STD: 1 }
+        x86_64-unknown-freebsd:          { TARGET: x86_64-unknown-freebsd,                  DYLIB: 1, STD: 1 }
         x86_64-unknown-netbsd:           { TARGET: x86_64-unknown-netbsd,           CPP: 1, DYLIB: 1, STD: 1 }
         sparcv9-sun-solaris:             { TARGET: sparcv9-sun-solaris,             CPP: 1, DYLIB: 1, STD: 1 }
         x86_64-sun-solaris:              { TARGET: x86_64-sun-solaris,              CPP: 1, DYLIB: 1, STD: 1 }
