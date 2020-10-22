@@ -67,13 +67,13 @@ main() {
     dpkg --add-architecture "${apt_arch}"
     apt-get update
     apt-cache depends --recurse --no-replaces \
-      "libc-dev:${apt_arch}"       \
+      "libc:${apt_arch}"           \
       "libdl-dev:${apt_arch}"      \
       "libm-dev:${apt_arch}"       \
       "libnsl-dev:${apt_arch}"     \
       "libpthread-dev:${apt_arch}" \
       "libresolv-dev:${apt_arch}"  \
-      "librt-dev:${apt_arch}"      \
+      "librt:${apt_arch}"          \
       "libsocket-dev:${apt_arch}"  \
       "system-crt:${apt_arch}"     \
       "system-header:${apt_arch}"  \
