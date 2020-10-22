@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -xe
+set -x
+set -euo pipefail
 
 main() {
     # Ubuntu mingw packages for i686 uses sjlj exceptions, but rust target
