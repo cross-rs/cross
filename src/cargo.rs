@@ -17,6 +17,7 @@ pub enum Subcommand {
     Bench,
     Deb,
     Clippy,
+    Metadata,
 }
 
 impl Subcommand {
@@ -33,6 +34,13 @@ impl Subcommand {
             _ => false,
         }
     }
+
+    pub fn needs_target_in_command(self) -> bool {
+        match self {
+            Subcommand::Metadata => false,
+            _ => true,
+        }
+    }
 }
 
 impl<'a> From<&'a str> for Subcommand {
@@ -47,6 +55,7 @@ impl<'a> From<&'a str> for Subcommand {
             "bench" => Subcommand::Bench,
             "deb" => Subcommand::Deb,
             "clippy" => Subcommand::Clippy,
+            "metadata" => Subcommand::Metadata,
             _ => Subcommand::Other,
         }
     }
