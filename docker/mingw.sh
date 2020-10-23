@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 
 set -x
+set -euo pipefail
 
 main() {
     # Ubuntu mingw packages for i686 uses sjlj exceptions, but rust target
     # i686-pc-windows-gnu uses dwarf exceptions. So we build mingw packages
     # that are compatible with rust.
+
+    # Enable source
+    sed -i 's/# deb-src/deb-src/g' /etc/apt/sources.list
+    apt-get update
 
     # Install mingw (with sjlj exceptions) to get the dependencies right
     # Later we replace these packages with the new ones
@@ -15,7 +20,6 @@ main() {
     while IFS='' read -r dep; do dependencies+=("${dep}"); done < \
       <(apt-cache showsrc gcc-mingw-w64-i686 | grep Build | cut -d: -f2 | tr , '\n' | cut -d' ' -f2 | sort | uniq)
 
-    apt-get update
     local purge_list=()
     for dep in "${dependencies[@]}"; do
         if ! dpkg -L "${dep}" > /dev/null; then
@@ -27,15 +31,13 @@ main() {
     local td
     td="$(mktemp -d)"
 
-    pushd "${td}" || exit 1
+    pushd "${td}"
 
     apt-get source gcc-mingw-w64-i686
-    pushd gcc-mingw-w64-* || exit 1
+    pushd gcc-mingw-w64-*
 
     # We are using dwarf exceptions instead of sjlj
     sed -i -e 's/libgcc_s_sjlj-1/libgcc_s_dw2-1/g' debian/gcc-mingw-w64-i686.install
-    # Do not install gcc with win32 thread model
-    sed -i -e '/i686-w64-mingw32-gcc-win32/d' debian/gcc-mingw-w64-i686.install
 
     # Only build i686 packages (disable x86_64)
     patch -p0 <<'EOF'
@@ -94,8 +96,7 @@ EOF
 
 -targets := i686-w64-mingw32 x86_64-w64-mingw32
 +targets := i686-w64-mingw32
--threads := posix win32
-+threads := posix
+ threads := posix win32
 
  # Hardening on the host, none on the target
 @@ -216,6 +216,10 @@
@@ -121,8 +122,8 @@ EOF
       apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
     fi
 
-    popd || exit 1
-    popd || exit 1
+    popd
+    popd
 
     rm -rf "${td}"
     rm "${0}"
