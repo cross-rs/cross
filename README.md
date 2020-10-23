@@ -166,6 +166,15 @@ overlayfs can not be unmounted correctly by Docker if the child container still
 accesses it.
 
 
+### Explicitly choose the container engine
+
+By default, `cross` tries to use [Docker] or [Podman], in that order.
+If you want to choose a container engine explicitly, you can set the
+binary name (or path) using the `CROSS_CONTAINER_ENGINE`
+environment variable.
+
+For example in case you want use [Podman], you can set `CROSS_CONTAINER_ENGINE=podman`.
+
 ### Passing environment variables into the build environment
 
 By default, `cross` does not pass any environment variables into the build
