@@ -17,7 +17,15 @@ const DOCKER: &str = "docker";
 const PODMAN: &str = "podman";
 
 fn get_container_engine() -> Result<std::path::PathBuf> {
-    which::which(DOCKER).or_else(|_| which::which(PODMAN)).map_err(|e| e.into())
+    let container_engine = env::var("CROSS_CONTAINER_ENGINE").unwrap_or_default();
+
+    if container_engine.is_empty() {
+        which::which(DOCKER)
+            .or_else(|_| which::which(PODMAN))
+            .map_err(|e| e.into())
+    } else {
+        which::which(container_engine).map_err(|e| e.into())
+    }
 }
 
 pub fn docker_command(subcommand: &str) -> Result<Command> {
