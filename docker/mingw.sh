@@ -96,8 +96,7 @@ EOF
 
 -targets := i686-w64-mingw32 x86_64-w64-mingw32
 +targets := i686-w64-mingw32
--threads := posix win32
-+threads := posix win32
+ threads := posix win32
 
  # Hardening on the host, none on the target
 @@ -216,6 +216,10 @@
