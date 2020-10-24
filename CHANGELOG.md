@@ -6,6 +6,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - Added support for mounting volumes.
+- Re-enabled `powerpc64-unknown-linux-gnu` image
+- Re-enabled `sparc64-unknown-linux-gnu` image
 
 ## [v0.2.1] - 2020-06-30
 
