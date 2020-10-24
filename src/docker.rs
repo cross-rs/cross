@@ -240,6 +240,18 @@ fn build_docker_image(toml: &Toml, target: &Target, verbose: bool) -> Result<Str
 
 pub fn image(toml: Option<&Toml>, target: &Target, verbose: bool) -> Result<String> {
     if let Some(toml) = toml {
+        match (toml.image(target)?.map(|s| s.to_owned()), toml.context(target)?) {
+            (Some(image), Some(_context)) => {
+                // https://docs.docker.com/compose/compose-file/#build says:
+                // If you specify image as well as build, then Compose names the
+                // built image with the webapp and optional tag specified in image.
+                // This is not supported yet, so the best thing to do is to explode.
+                bail!("Specifying `image` and `context` in Cross.toml is not yet supported.")
+            },
+            (Some(image), None) => return Ok(image),
+            (None, Some(_context)) => return build_docker_image(toml, target, verbose),
+            (None, None) => (),
+        }
         if let Some(image) = toml.image(target)?.map(|s| s.to_owned()) {
             return Ok(image)
         } else if let Some(_) = toml.context(target)? {
