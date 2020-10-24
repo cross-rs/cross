@@ -1,3 +1,43 @@
+# This dockerfile creates a thin docker image that can be used for making custom
+# cross Dockerfiles that live in other git repositories.
+# It has been uploaded to `alsuren/cross-context` so it can be used like so:
+
+## Fetch this image and use it as `context`:
+# FROM alsuren/cross-context:latest as context
+#
+## Continue as normal, but copying `--from=context` rather than from your filesystem.
+# FROM ubuntu:16.04
+#
+# COPY --from=context common.sh /
+# RUN /common.sh
+#
+# COPY --from=context cmake.sh /
+# RUN /cmake.sh
+#
+# COPY --from=context xargo.sh /
+# RUN /xargo.sh
+#
+# RUN apt-get install --assume-yes --no-install-recommends \
+#     g++-arm-linux-gnueabihf \
+#     libc6-dev-armhf-cross
+#
+# COPY --from=context qemu.sh /
+# RUN /qemu.sh arm softmmu
+#
+# COPY --from=context dropbear.sh /
+# RUN /dropbear.sh
+#
+# COPY --from=context linux-image.sh /
+# RUN /linux-image.sh armv7
+#
+# COPY --from=context linux-runner /
+#
+# ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
+#     CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_RUNNER="/linux-runner armv7" \
+#     CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc \
+#     CXX_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++ \
+#     QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf \
+#     RUST_TEST_THREADS=1
 FROM scratch
 
 COPY common.sh /
