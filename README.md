@@ -43,13 +43,12 @@ This project is developed and maintained by the [Tools team][team].
 One of these container engines is required. If both are installed, `cross` will
 default to `docker`.
 
-- [Docker](https://www.docker.com/). Note that on Linux non-sudo users need to be in the
-  `docker` group. Read the official [post-installation steps][post]. Requires version
-  1.24 or later.
+- [Docker]. Note that on Linux non-sudo users need to be in the `docker` group.
+  Read the official [post-installation steps][post]. Requires version 1.24 or later.
 
 [post]: https://docs.docker.com/install/linux/linux-postinstall/
 
-- [Podman](https://podman.io). Requires version 1.6.3 or later.
+- [Podman]. Requires version 1.6.3 or later.
 
 ## Installation
 
@@ -383,3 +382,5 @@ to intervene to uphold that code of conduct.
 
 [CoC]: CODE_OF_CONDUCT.md
 [team]: https://github.com/rust-embedded/wg#the-tools-team
+[Docker]: https://www.docker.com
+[Podman]: https://podman.io
