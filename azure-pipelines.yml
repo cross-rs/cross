@@ -14,7 +14,7 @@ jobs:
       vmImage: $(VM_IMAGE)
     variables:
       VM_IMAGE: ubuntu-latest
-      TOOLCHAIN: 1.47.0
+      TOOLCHAIN: beta
       CARGO_NET_RETRY: 3
       CARGO_HTTP_CHECK_REVOKE: false
     strategy:
