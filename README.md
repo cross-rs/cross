@@ -261,18 +261,18 @@ terminate.
 |--------------------------------------|-------:|--------:|:---:|------:|:------:|
 | `*-apple-ios` [1]                    | N/A    | N/A     | N/A | N/A   |   ✓    |
 | `aarch64-linux-android` [2]          | N/A    | 4.9     | ✓   | N/A   |   ✓    |
-| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 4.1.0 |   ✓    |
-| `aarch64-unknown-linux-musl`         | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
+| `aarch64-unknown-linux-musl`         | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `arm-linux-androideabi` [2]          | N/A    | 4.9     | ✓   | N/A   |   ✓    |
-| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | ✓   | 4.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 4.1.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
-| `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 4.2.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 5.1.0 |   ✓    |
+| `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `armv7-linux-androideabi` [2]        | N/A    | 4.9     | ✓   | N/A   |   ✓    |
-| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 4.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
 | `i686-unknown-freebsd` [4]           | 12.1   | 6.4.0   |     | N/A   |   ✓    |
@@ -280,18 +280,18 @@ terminate.
 | `i686-pc-windows-gnu`                | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
-| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mips-unknown-linux-musl`            | 1.1.20 | 6.3.0   | ✓   | 4.1.0 |   ✓    |
-| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mipsel-unknown-linux-musl`          | 1.1.20 | 6.3.0   | ✓   | 4.1.0 |   ✓    |
-| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
-| `powerpc64-unknown-linux-gnu`        | 2.31   | 10.2.0  | ✓   | 3.0.1 |   ✓    |
-| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
-| `riscv64gc-unknown-linux-gnu`        | 2.27   | 7.5.0   | ✓   | 4.2.0 |   ✓    |
-| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | ✓   | 4.1.0 |        |
-| `sparc64-unknown-linux-gnu`          | 2.31   | 10.2.0  | ✓   | 4.2.0 |   ✓    |
+| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
+| `mips-unknown-linux-musl`            | 1.1.20 | 6.3.0   | ✓   | 5.1.0 |   ✓    |
+| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
+| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
+| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
+| `mipsel-unknown-linux-musl`          | 1.1.20 | 6.3.0   | ✓   | 5.1.0 |   ✓    |
+| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
+| `powerpc64-unknown-linux-gnu`        | 2.31   | 10.2.0  | ✓   | 5.1.0 |   ✓    |
+| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
+| `riscv64gc-unknown-linux-gnu`        | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
+| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | ✓   | 5.1.0 |        |
+| `sparc64-unknown-linux-gnu`          | 2.31   | 10.2.0  | ✓   | 5.1.0 |   ✓    |
 | `sparcv9-sun-solaris` [4]            | 2.11   | 5.3.0   | ✓   | N/A   |        |
 | `thumbv6m-none-eabi` [5]             | 2.2.0  | 5.3.1   |     | N/A   |        |
 | `thumbv7em-none-eabi` [5]            | 2.2.0  | 5.3.1   |     | N/A   |        |

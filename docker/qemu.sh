@@ -67,16 +67,7 @@ build_static_pixman() {
 }
 
 main() {
-    local version=4.2.0
-
-    # Qemu versions 3.1.0 and above break 32-bit float conversions
-    # on powerpc, powerpc64, and powerpc64le. Last known working version
-    # is 3.0.1.
-    # Upstream Issue:
-    #   https://bugs.launchpad.net/qemu/+bug/1821444
-    if [[ "${1}" == ppc* ]]; then
-        version=3.0.1
-    fi
+    local version=5.1.0
 
     local arch="${1}" \
           softmmu="${2:-}"
@@ -95,17 +86,17 @@ main() {
 
     if_centos install_packages \
         gcc-c++ \
-        glib2-devel \
         pkgconfig \
-        zlib-devel \
-        libcap-devel \
-        libattr-devel \
-        pixman-devel \
         xz \
-        libfdt-devel \
-        glibc-static \
+        glib2-devel \
         glib2-static \
+        glibc-static \
+        libattr-devel \
+        libcap-ng-devel \
+        libfdt-devel \
         pcre-static \
+        pixman-devel \
+        zlib-devel \
         zlib-static
 
     # these are not packaged as static libraries in centos; build them manually
@@ -115,13 +106,15 @@ main() {
 
     if_ubuntu install_packages \
         g++ \
-        libglib2.0-dev \
         pkg-config \
-        zlib1g-dev \
-        libcap-dev \
+        xz-utils \
         libattr1-dev \
+        libcap-ng-dev \
+        libffi-dev \
+        libglib2.0-dev \
         libpixman-1-dev \
-        xz-utils
+        libselinux1-dev \
+        zlib1g-dev
 
     local td
     td="$(mktemp -d)"
@@ -131,30 +124,31 @@ main() {
     curl --retry 3 -sSfL "https://download.qemu.org/qemu-${version}.tar.xz" -O
     tar --strip-components=1 -xJf "qemu-${version}.tar.xz"
 
-   local targets="${arch}-linux-user"
-   local virtfs=""
-   case "${softmmu}" in
-      softmmu)
-         if [ "${arch}" = "ppc64le" ]; then
-            targets="${targets},ppc64-softmmu"
-         else
-            targets="${targets},${arch}-softmmu"
-         fi
-         virtfs="--enable-virtfs"
-         ;;
-      "")
-         true
-         ;;
-      *)
-         echo "Invalid softmmu option: ${softmmu}"
-         exit 1
-         ;;
-   esac
+    local targets="${arch}-linux-user"
+    local virtfs=""
+    case "${softmmu}" in
+        softmmu)
+            if [ "${arch}" = "ppc64le" ]; then
+                targets="${targets},ppc64-softmmu"
+            else
+                targets="${targets},${arch}-softmmu"
+            fi
+            virtfs="--enable-virtfs"
+            ;;
+        "")
+            true
+            ;;
+        *)
+            echo "Invalid softmmu option: ${softmmu}"
+            exit 1
+            ;;
+    esac
 
     ./configure \
         --disable-kvm \
         --disable-vnc \
-        --enable-user \
+        --disable-guest-agent \
+        --enable-linux-user \
         --static \
         ${virtfs} \
         --target-list="${targets}"
