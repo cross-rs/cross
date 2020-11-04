@@ -1,0 +1,18 @@
+FROM ubuntu:20.04
+
+COPY common.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+COPY darwin.sh /
+RUN /darwin.sh
+
+ENV CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER=x86_64-apple-darwin14-clang \
+    CARGO_TARGET_X86_64_APPLE_DARWIN_AR=x86_64-apple-darwin14-ar \
+    CC_x86_64_apple_darwin=o64-clang \
+    CXX_x86_64_apple_darwin=o64-clang++

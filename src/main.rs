@@ -44,7 +44,7 @@ impl Host {
         if *self == Host::X86_64AppleDarwin {
             target.map(|t| t.is_apple() || t.needs_docker()).unwrap_or(false)
         } else if *self == Host::X86_64UnknownLinuxGnu {
-            target.map(|t| t.needs_docker()).unwrap_or(true)
+            target.map(|t| t.is_apple() || t.needs_docker()).unwrap_or(true)
         } else if *self == Host::X86_64PcWindowsMsvc {
             target.map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()).unwrap_or(false)
         } else {
@@ -296,7 +296,12 @@ fn run() -> Result<ExitStatus> {
                 args.all.clone()
             };
 
-            if image_exists && target.needs_docker() &&
+            let needs_docker = match host {
+                Host::X86_64UnknownLinuxGnu => target.needs_docker() || target.is_apple(),
+                _ => target.needs_docker(),
+            };
+
+            if image_exists && needs_docker &&
                args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false) {
                 if version_meta.needs_interpreter() &&
                     needs_interpreter &&
