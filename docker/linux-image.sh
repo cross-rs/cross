@@ -83,7 +83,12 @@ main() {
             ;;
         x86_64)
             arch=amd64
-            kernel="${kversion}-amd64"
+            #kernel="${kversion}-amd64"
+            kernel="5.4.0-52-generic"
+            debsource="deb http://no.archive.ubuntu.com/ubuntu/ focal main restricted"
+            debsource="${debsource}\ndeb http://no.archive.ubuntu.com/ubuntu/ focal-updates main restricted"
+            debsource="${debsource}\ndeb http://no.archive.ubuntu.com/ubuntu/ focal universe"
+            debsource="${debsource}\ndeb http://no.archive.ubuntu.com/ubuntu/ focal-updates universe"
             ;;
         *)
             echo "Invalid arch: ${arch}"
