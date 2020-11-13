@@ -262,30 +262,30 @@ terminate.
 | `*-apple-ios` [1]                    | N/A    | N/A     | N/A | N/A   |   ✓    |
 | `aarch64-linux-android` [2]          | N/A    | 4.9     | ✓   | N/A   |   ✓    |
 | `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 4.1.0 |   ✓    |
-| `aarch64-unknown-linux-musl`         | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `aarch64-unknown-linux-musl`         | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
 | `arm-linux-androideabi` [2]          | N/A    | 4.9     | ✓   | N/A   |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | ✓   | 4.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 4.1.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `arm-unknown-linux-musleabi`         | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`       | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
 | `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 4.2.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`     | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
 | `armv7-linux-androideabi` [2]        | N/A    | 4.9     | ✓   | N/A   |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 4.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`     | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | N/A   |   ✓    |
-| `i586-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `i586-unknown-linux-musl`            | 1.1.24 | 6.3.0   |     | N/A   |   ✓    |
 | `i686-unknown-freebsd` [4]           | 12.1   | 6.4.0   |     | N/A   |   ✓    |
 | `i686-linux-android` [2]             | N/A    | 4.9     | ✓   | N/A   |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `i686-unknown-linux-musl`            | 1.1.24 | 6.3.0   |     | N/A   |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mips-unknown-linux-musl`            | 1.1.20 | 6.3.0   | ✓   | 4.1.0 |   ✓    |
+| `mips-unknown-linux-musl`            | 1.1.24 | 6.3.0   | ✓   | 4.1.0 |   ✓    |
 | `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
 | `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
 | `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mipsel-unknown-linux-musl`          | 1.1.20 | 6.3.0   | ✓   | 4.1.0 |   ✓    |
+| `mipsel-unknown-linux-musl`          | 1.1.24 | 6.3.0   | ✓   | 4.1.0 |   ✓    |
 | `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
 | `powerpc64-unknown-linux-gnu`        | 2.31   | 10.2.0  | ✓   | 3.0.1 |   ✓    |
 | `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
@@ -304,7 +304,7 @@ terminate.
 | `x86_64-unknown-freebsd` [4]         | 12.1   | 6.4.0   |     | N/A   |   ✓    |
 | `x86_64-unknown-dragonfly` [4] [3]   | 4.6.0  | 5.3.0   | ✓   | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
-| `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `x86_64-unknown-linux-musl`          | 1.1.24 | 6.3.0   |     | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [4]          | 7.0    | 5.3.0   | ✓   | N/A   |        |
 
 [1] iOS cross compilation is supported on macOS hosts.
