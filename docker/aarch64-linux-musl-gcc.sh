@@ -7,11 +7,13 @@
 set -euo pipefail
 
 main() {
-    local release=$(rustc -Vv | grep '^release:' | cut -d ':' -f2)
+    local release=
+    release=$(rustc -Vv | grep '^release:' | cut -d ':' -f2)
     # NOTE we assume `major` is always "1"
-    local minor=$(echo $release | cut -d '.' -f2)
+    local minor=
+    minor=$(echo "$release" | cut -d '.' -f2)
 
-    if (( $minor >= 48 )); then
+    if (( minor >= 48 )); then
         # no workaround
         aarch64-linux-musl-gcc "${@}"
     else
