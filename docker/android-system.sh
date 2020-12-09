@@ -17,6 +17,7 @@ main() {
         g++-multilib
         make
         python
+        python3
     )
 
     # fake java and javac, it is not necessary for what we build, but the build
@@ -53,6 +54,9 @@ EOF
     curl --retry 3 -sSfL https://storage.googleapis.com/git-repo-downloads/repo -O
     chmod +x repo
 
+    # the `repo` tool requires python3 so change the default python interpreter
+    ln -sf python3 /usr/bin/python
+
     # this is the minimum set of modules that are need to build bionic
     # this was created by trial and error
     ./repo init -u https://android.googlesource.com/platform/manifest -b android-5.0.0_r1
@@ -83,6 +87,10 @@ EOF
             ./repo sync prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.8
         ;;
     esac
+
+    # revert default python interpreter; the code we are going to build expects
+    # `/usr/bin/python` to be a python2 interpreter
+    ln -sf python2 /usr/bin/python
 
     # avoid build tests
     rm bionic/linker/tests/Android.mk bionic/tests/Android.mk bionic/benchmarks/Android.mk
