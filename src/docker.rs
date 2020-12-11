@@ -103,7 +103,7 @@ pub fn run(target: &Target,
 
     cmd.args(args);
 
-    let runner = None;
+    let mut runner = None;
 
     let mut docker = docker_command("run")?;
 
@@ -140,6 +140,8 @@ pub fn run(target: &Target,
                 docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
             }
         }
+
+        runner = toml.runner(target)?;
     }
 
     docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
