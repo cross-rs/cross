@@ -17,6 +17,7 @@ main() {
         g++-multilib
         make
         python
+        python3
     )
 
     # fake java and javac, it is not necessary for what we build, but the build
@@ -55,32 +56,32 @@ EOF
 
     # this is the minimum set of modules that are need to build bionic
     # this was created by trial and error
-    ./repo init -u https://android.googlesource.com/platform/manifest -b android-5.0.0_r1
-    ./repo sync -c bionic
-    ./repo sync -c build
-    ./repo sync -c external/compiler-rt
-    ./repo sync -c external/jemalloc
-    ./repo sync -c external/libcxx
-    ./repo sync -c external/libcxxabi
-    ./repo sync -c external/libselinux
-    ./repo sync -c external/mksh
-    ./repo sync -c external/openssl
-    ./repo sync -c external/stlport
-    ./repo sync -c prebuilts/clang/linux-x86/host/3.5
-    ./repo sync -c system/core
+    python3 ./repo init -u https://android.googlesource.com/platform/manifest -b android-5.0.0_r1
+    python3 ./repo sync -c bionic
+    python3 ./repo sync -c build
+    python3 ./repo sync -c external/compiler-rt
+    python3 ./repo sync -c external/jemalloc
+    python3 ./repo sync -c external/libcxx
+    python3 ./repo sync -c external/libcxxabi
+    python3 ./repo sync -c external/libselinux
+    python3 ./repo sync -c external/mksh
+    python3 ./repo sync -c external/openssl
+    python3 ./repo sync -c external/stlport
+    python3 ./repo sync -c prebuilts/clang/linux-x86/host/3.5
+    python3 ./repo sync -c system/core
     case "${arch}" in
         arm)
-            ./repo sync prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8
+            python3 ./repo sync prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8
         ;;
         arm64)
-            ./repo sync prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8
-            ./repo sync prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
+            python3 ./repo sync prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8
+            python3 ./repo sync prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
         ;;
         x86)
-            ./repo sync prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.8
+            python3 ./repo sync prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.8
         ;;
         x86_64)
-            ./repo sync prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.8
+            python3 ./repo sync prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.8
         ;;
     esac
 
