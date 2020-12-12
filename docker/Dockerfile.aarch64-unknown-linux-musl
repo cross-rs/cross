@@ -21,10 +21,9 @@ RUN ln -sf \
     /usr/local/aarch64-linux-musl/lib/ld-musl-aarch64.so.1
 ENV QEMU_LD_PREFIX=/usr/local/aarch64-linux-musl
 
-# Workaround for https://github.com/rust-lang/rust/issues/46651
-ENV RUSTFLAGS="-C link-arg=-lgcc"
+COPY aarch64-linux-musl-gcc.sh /usr/bin/
 
-ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc \
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc.sh \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUNNER=qemu-aarch64 \
     CC_aarch64_unknown_linux_musl=aarch64-linux-musl-gcc \
     CXX_aarch64_unknown_linux_musl=aarch64-linux-musl-g++ \
