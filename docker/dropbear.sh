@@ -3,6 +3,7 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
 . lib.sh
 
 main() {
