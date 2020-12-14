@@ -22,25 +22,20 @@ main() {
         aarch64)
             arch=arm64
             kernel="${kversion}-arm64"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch)
             ;;
         armv7)
             arch=armhf
             kernel="${kversion}-armmp"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch)
             ;;
         i686)
             arch=i386
             kernel="${kversion}-686"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch)
             ;;
         mips|mipsel)
             kernel="${kversion}-4kc-malta"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch)
             ;;
         mips64el)
             kernel="${kversion}-5kc-malta"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch)
             ;;
         powerpc)
             # there is no buster powerpc port, so we use jessie
@@ -56,7 +51,7 @@ main() {
             echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
 
             dropbear="dropbear"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch libcrypt1:$arch)
+            deps=(libcrypt1:$arch)
             ;;
         powerpc64)
             # there is no stable port
@@ -67,17 +62,15 @@ main() {
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
-            deps=(libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64 libcrypt1:ppc64)
+            deps=(libcrypt1:$arch)
             ;;
         powerpc64le)
             arch=ppc64el
             kernel="${kversion}-powerpc64le"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch)
             ;;
         s390x)
             arch=s390x
             kernel="${kversion}-s390x"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch)
             ;;
         sparc64)
             # there is no stable port
@@ -87,12 +80,11 @@ main() {
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
-            deps=(libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64 libcrypt1:sparc64)
+            deps=(libcrypt1:$arch)
             ;;
         x86_64)
             arch=amd64
             kernel="${kversion}-amd64"
-            deps=(libtommath1:$arch libtomcrypt1:$arch libgmp10:$arch)
             ;;
         *)
             echo "Invalid arch: ${arch}"
@@ -146,6 +138,9 @@ main() {
         ${deps[@]+"${deps[@]}"} \
         "busybox:${arch}" \
         "${dropbear}:${arch}" \
+        "libtommath1:$arch" \
+        "libtomcrypt1:$arch" \
+        "libgmp10:$arch" \
         "libc6:${arch}" \
         "${libgcc}:${arch}" \
         "libstdc++6:${arch}" \
