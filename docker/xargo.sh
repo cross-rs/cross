@@ -3,20 +3,10 @@
 set -x
 set -euo pipefail
 
-main() {
-    local dependencies=(
-        ca-certificates
-        curl
-    )
+. lib.sh
 
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+main() {
+    install_packages ca-certificates curl
 
     export RUSTUP_HOME=/tmp/rustup
     export CARGO_HOME=/tmp/cargo
@@ -29,9 +19,7 @@ main() {
 
     rm -r "${RUSTUP_HOME}" "${CARGO_HOME}"
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     rm "${0}"
 }
