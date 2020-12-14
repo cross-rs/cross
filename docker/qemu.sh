@@ -3,7 +3,7 @@
 set -x
 set -euo pipefail
 
-# shellcheck source=lib.sh
+# shellcheck disable=SC1091
 . lib.sh
 
 build_static_libattr() {
