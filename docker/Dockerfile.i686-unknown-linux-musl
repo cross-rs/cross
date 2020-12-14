@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-COPY common.sh /
+COPY common.sh lib.sh /
 RUN /common.sh
 
 COPY cmake.sh /
