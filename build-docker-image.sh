@@ -18,6 +18,21 @@ run() {
     fi
   fi
 
+  if grep -i centos "${dockerfile}" >/dev/null 2>/dev/null; then
+      # build debian sysroot in a separate ubuntu container
+      # (only done for x86-linux-gnu ATM)
+      rm -rf qemu
+      mkdir qemu
+      cp linux-image.sh qemu/
+      docker run \
+        --rm \
+        -v "$(pwd)/qemu:/qemu:z" \
+        -w /qemu \
+        -i \
+        -t "ubuntu:16.04" \
+        sh -c "./linux-image.sh x86_64; chown -R $(id -u):$(id -g) /qemu"
+  fi
+
   docker build ${cache_from_args[@]+"${cache_from_args[@]}"} --pull -t "${image_name}" -f "${dockerfile}" .
 
   if ! [[ "${version}" =~ alpha ]] && ! [[ "${version}" =~ dev ]]; then

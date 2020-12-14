@@ -92,6 +92,8 @@ main() {
     esac
 
     local dependencies=(
+        ca-certificates
+        curl
         cpio
         sharutils
         gnupg
@@ -100,7 +102,7 @@ main() {
     local purge_list=()
     apt-get update
     for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
+        if ! dpkg -L "${dep}" >/dev/null 2>/dev/null; then
             apt-get install --assume-yes --no-install-recommends "${dep}"
             purge_list+=( "${dep}" )
         fi
