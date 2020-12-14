@@ -51,6 +51,7 @@ main() {
             echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
 
             dropbear="dropbear"
+            deps=(libcrypt1:"${arch}")
             ;;
         powerpc64)
             # there is no stable port
@@ -61,7 +62,7 @@ main() {
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
-            deps=(libtommath1:ppc64 libtomcrypt1:ppc64 libgmp10:ppc64 libcrypt1:ppc64)
+            deps=(libcrypt1:"${arch}")
             ;;
         powerpc64le)
             arch=ppc64el
@@ -79,7 +80,7 @@ main() {
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
-            deps=(libtommath1:sparc64 libtomcrypt1:sparc64 libgmp10:sparc64 libcrypt1:sparc64)
+            deps=(libcrypt1:"${arch}")
             ;;
         x86_64)
             arch=amd64
@@ -137,6 +138,9 @@ main() {
         ${deps[@]+"${deps[@]}"} \
         "busybox:${arch}" \
         "${dropbear}:${arch}" \
+        "libtommath1:${arch}" \
+        "libtomcrypt1:${arch}" \
+        "libgmp10:${arch}" \
         "libc6:${arch}" \
         "${libgcc}:${arch}" \
         "libstdc++6:${arch}" \
