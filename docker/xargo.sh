@@ -3,6 +3,7 @@
 set -x
 set -euo pipefail
 
+# shellcheck source=lib.sh
 . lib.sh
 
 main() {

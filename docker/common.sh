@@ -3,6 +3,7 @@
 set -x
 set -euo pipefail
 
+# shellcheck source=lib.sh
 . lib.sh
 
 # For architectures except amd64 and i386, look for packages on ports.ubuntu.com instead.
