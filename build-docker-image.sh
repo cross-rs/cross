@@ -28,7 +28,6 @@ run() {
         --rm \
         -v "$(pwd)/qemu:/qemu:z" \
         -w /qemu \
-        -i \
         -t "ubuntu:16.04" \
         sh -c "./linux-image.sh x86_64; chown -R $(id -u):$(id -g) /qemu"
   fi
