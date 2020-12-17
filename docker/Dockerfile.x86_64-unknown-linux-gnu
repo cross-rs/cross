@@ -1,3 +1,8 @@
+FROM ubuntu:16.04
+
+COPY linux-image.sh /
+RUN /linux-image.sh x86_64
+
 FROM centos:7
 
 COPY common.sh lib.sh /
@@ -15,8 +20,7 @@ RUN /qemu.sh x86_64 softmmu
 COPY dropbear.sh /
 RUN /dropbear.sh
 
-# this folder is built by `build-docker-image.sh`
-COPY qemu /qemu
+COPY --from=0 /qemu /qemu
 
 COPY linux-runner /
 
