@@ -18,7 +18,7 @@ run() {
     fi
   fi
 
-  if grep -i centos "${dockerfile}" >/dev/null 2>/dev/null; then
+  if grep -q -i centos "${dockerfile}"; then
       # build debian sysroot in a separate ubuntu container
       # (only done for x86-linux-gnu ATM)
       rm -rf qemu

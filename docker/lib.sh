@@ -33,13 +33,13 @@ purge_packages() {
 }
 
 if_centos() {
-    if grep -i centos /etc/os-release >/dev/null; then
+    if grep -q -i centos /etc/os-release; then
         eval "${@}"
     fi
 }
 
 if_ubuntu() {
-    if grep -i ubuntu /etc/os-release >/dev/null; then
+    if grep -q -i ubuntu /etc/os-release; then
         eval "${@}"
     fi
 }
