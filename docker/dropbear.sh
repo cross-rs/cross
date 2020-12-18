@@ -3,26 +3,21 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 main() {
     local version=2020.80
 
-    local dependencies=(
-        autoconf
-        automake
-        bzip2
-        curl
+    install_packages \
+        autoconf \
+        automake \
+        bzip2 \
+        curl \
         make
-        zlib1g-dev
-    )
 
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+    if_centos install_packages zlib-devel
+    if_ubuntu install_packages zlib1g-dev
 
     local td
     td="$(mktemp -d)"
@@ -50,9 +45,7 @@ main() {
     make "-j$(nproc)" PROGRAMS=dbclient
     cp dbclient /usr/local/bin/
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     popd
 

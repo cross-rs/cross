@@ -3,6 +3,69 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
+build_static_libattr() {
+    local version=2.4.46
+
+    local td
+    td="$(mktemp -d)"
+
+    pushd "${td}"
+
+    yum install -y gettext
+
+    curl --retry 3 -sSfL "https://download.savannah.nongnu.org/releases/attr/attr-${version}.src.tar.gz" -O
+    tar --strip-components=1 -xzf "attr-${version}.src.tar.gz"
+    ./configure
+    make "-j$(nproc)"
+    install -m 644 ./libattr/.libs/libattr.a /usr/lib64/
+
+    yum remove -y gettext
+
+    popd
+
+    rm -rf "${td}"
+}
+
+build_static_libcap() {
+    local version=2.22
+
+    local td
+    td="$(mktemp -d)"
+
+    pushd "${td}"
+
+    curl --retry 3 -sSfL "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-${version}.tar.xz" -O
+    tar --strip-components=1 -xJf "libcap-${version}.tar.xz"
+    make "-j$(nproc)"
+    install -m 644 libcap/libcap.a /usr/lib64/
+
+    popd
+
+    rm -rf "${td}"
+}
+
+build_static_pixman() {
+    local version=0.34.0
+
+    local td
+    td="$(mktemp -d)"
+
+    pushd "${td}"
+
+    curl --retry 3 -sSfL "https://www.cairographics.org/releases/pixman-${version}.tar.gz" -O
+    tar --strip-components=1 -xzf "pixman-${version}.tar.gz"
+    ./configure
+    make "-j$(nproc)"
+    install -m 644 ./pixman/.libs/libpixman-1.a /usr/lib64/
+
+    popd
+
+    rm -rf "${td}"
+}
+
 main() {
     local version=4.2.0
 
@@ -18,35 +81,47 @@ main() {
     local arch="${1}" \
           softmmu="${2:-}"
 
-    local dependencies=(
-        autoconf
-        automake
-        bison
-        bzip2
-        curl
-        flex
-        g++
-        libglib2.0-dev
-        libtool
-        make
-        patch
-        pkg-config
-        python3
-        zlib1g-dev
-        libcap-dev
-        libattr1-dev
-        libpixman-1-dev
-        xz-utils
-    )
+    install_packages \
+        autoconf \
+        automake \
+        bison \
+        bzip2 \
+        curl \
+        flex \
+        libtool \
+        make \
+        patch \
+        python3 \
 
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+    if_centos install_packages \
+        gcc-c++ \
+        glib2-devel \
+        pkgconfig \
+        zlib-devel \
+        libcap-devel \
+        libattr-devel \
+        pixman-devel \
+        xz \
+        libfdt-devel \
+        glibc-static \
+        glib2-static \
+        pcre-static \
+        zlib-static
+
+    # these are not packaged as static libraries in centos; build them manually
+    if_centos build_static_libattr
+    if_centos build_static_libcap
+    if_centos build_static_pixman
+
+    if_ubuntu install_packages \
+        g++ \
+        libglib2.0-dev \
+        pkg-config \
+        zlib1g-dev \
+        libcap-dev \
+        libattr1-dev \
+        libpixman-1-dev \
+        xz-utils
 
     local td
     td="$(mktemp -d)"
@@ -90,9 +165,7 @@ main() {
     # in /usr/bin. Create an appropriate symlink
     ln -s "/usr/local/bin/qemu-${arch}" "/usr/bin/qemu-${arch}-static"
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     popd
 
