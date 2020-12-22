@@ -25,6 +25,15 @@ function retry {
   return ${exit_code}
 }
 
+function setup_image() {
+    if [[ "${IMAGE:-}" != "" ]]; then
+        cat >> Cross.toml <<EOF
+[target.arm-unknown-linux-gnueabihf]
+image = "$IMAGE"
+EOF
+    fi
+}
+
 main() {
     local td=
 
@@ -32,8 +41,14 @@ main() {
         return
     fi
 
+    if [[ "${TARGET}" == context ]]; then
+        IMAGE="rustembedded/cross:context.doctest"
+        TARGET="arm-unknown-linux-gnueabihf"
+    fi
+
     retry cargo fetch
     cargo install --force --path .
+
 
     export QEMU_STRACE=1
 
@@ -43,6 +58,7 @@ main() {
         cargo init --lib --name foo "${td}"
         pushd "${td}"
         echo '#![no_std]' > src/lib.rs
+        setup_image
         cross check --target "${TARGET}"
         popd
         rm -rf "${td}"
@@ -76,6 +92,7 @@ EOF
         pushd "${td}"
         cargo init --lib --name foo .
         retry cargo fetch
+        setup_image
         cross build --target "${TARGET}"
         popd
 
@@ -87,6 +104,7 @@ EOF
         # test that linking works
         cargo init --bin --name hello .
         retry cargo fetch
+        setup_image
         cross build --target "${TARGET}"
         popd
 
@@ -100,6 +118,7 @@ EOF
 
             pushd "${td}"
             cargo init --lib --name foo .
+            setup_image
             cross_test --target "${TARGET}"
             cross_bench --target "${TARGET}"
             popd
@@ -132,6 +151,7 @@ EOF
                 mkdir examples tests
                 echo "fn main() { println!(\"Example!\"); }" > examples/e.rs
                 echo "#[test] fn t() {}" > tests/t.rs
+                setup_image
                 cross_run --target "${TARGET}"
                 cross_run --target "${TARGET}" --example e
                 cross_test --target "${TARGET}"
@@ -153,6 +173,7 @@ EOF
         pushd "${td}"
         cargo update -p gcc
         retry cargo fetch
+        setup_image
         if (( ${RUN:-0} )); then
             cross_run --target "${TARGET}"
         else
