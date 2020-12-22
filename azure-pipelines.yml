@@ -93,6 +93,7 @@ jobs:
         condition: eq(variables['OS'], 'linux')
       - bash: ci/test.sh
         displayName: Test
+        condition: ne(variables['TARGET'], 'context')
       - bash: cargo publish
         displayName: Publish on crates.io
         env:

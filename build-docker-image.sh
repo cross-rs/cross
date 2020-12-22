@@ -18,25 +18,11 @@ run() {
     fi
   fi
 
-  if [[ "${PULL:-1}" = "1" ]]; then
-    docker build ${cache_from_args[@]+"${cache_from_args[@]}"} --pull -t "${image_name}" -f "${dockerfile}" .
-  else
-    docker build ${cache_from_args[@]+"${cache_from_args[@]}"} -t "${image_name}" -f "${dockerfile}" .
-  fi
+  docker build ${cache_from_args[@]+"${cache_from_args[@]}"} --pull -t "${image_name}" -f "${dockerfile}" .
 
   if ! [[ "${version}" =~ alpha ]] && ! [[ "${version}" =~ dev ]]; then
     local versioned_image_name="${image_name}-${version}"
     docker tag "${image_name}" "${versioned_image_name}"
-  fi
-
-  if [[ "${1}" = "context" ]]; then
-    # complex pipelines read better top to bottom
-    # shellcheck disable=SC2002
-    cat Dockerfile.context \
-      | sed -nE "s/^## ?//p" \
-      | sed "s@rustembedded/cross:context@${versioned_image_name}@" \
-      > Dockerfile.context.doctest
-    PULL=0 run context.doctest
   fi
 }
 
