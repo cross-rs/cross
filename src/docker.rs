@@ -241,7 +241,7 @@ fn build_docker_image(toml: &Toml, target: &Target, verbose: bool) -> Result<Str
 pub fn image(toml: Option<&Toml>, target: &Target, verbose: bool) -> Result<String> {
     if let Some(toml) = toml {
         match (toml.image(target)?.map(|s| s.to_owned()), toml.context(target)?) {
-            (Some(image), Some(_context)) => {
+            (Some(_image), Some(_context)) => {
                 // https://docs.docker.com/compose/compose-file/#build says:
                 // If you specify image as well as build, then Compose names the
                 // built image with the webapp and optional tag specified in image.
