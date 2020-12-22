@@ -8,7 +8,7 @@
 ## Continue as normal, but copying `--from=context` rather than from your filesystem.
 # FROM ubuntu:16.04
 #
-# COPY --from=context common.sh /
+# COPY --from=context common.sh lib.sh /
 # RUN /common.sh
 #
 # COPY --from=context cmake.sh /
@@ -40,7 +40,7 @@
 #     RUST_TEST_THREADS=1
 FROM scratch
 
-COPY common.sh /
+COPY common.sh lib.sh /
 COPY cmake.sh /
 COPY xargo.sh /
 COPY qemu.sh /
