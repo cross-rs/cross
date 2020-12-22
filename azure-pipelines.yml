@@ -19,10 +19,6 @@ jobs:
       CARGO_HTTP_CHECK_REVOKE: false
     strategy:
       matrix:
-        # This first TARGET is `FROM scratch`. It is intended for use with out-of-tree Dockerfiles,
-        # and only contains the build scripts. It is not capable of compiling anything on its own.
-        context:                         { TARGET: context }
-        # All other TARGETs should be capable of building.
         aarch64-unknown-linux-gnu:       { TARGET: aarch64-unknown-linux-gnu,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1, RUNNERS: qemu-user qemu-system }
         arm-unknown-linux-gnueabi:       { TARGET: arm-unknown-linux-gnueabi,       CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
         arm-unknown-linux-gnueabihf:     { TARGET: arm-unknown-linux-gnueabihf,     CPP: 1, DYLIB: 1, STD: 1, RUN: 1 }
