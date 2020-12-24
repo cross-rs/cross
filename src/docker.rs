@@ -232,7 +232,7 @@ fn build_docker_image(toml: &Toml, target: &Target, verbose: bool) -> Result<Str
     let mut image_id = std::fs::read_to_string(&image_id_filename)?;
     image_id.retain(|c| c != '\n');
     std::fs::remove_file(&image_id_filename).unwrap_or_else(
-        |e| println!(
+        |e| eprintln!(
             "Error removing tempfile {:?}: {:?}. Ignoring.",
             image_id_filename, e));
     Ok(image_id)
