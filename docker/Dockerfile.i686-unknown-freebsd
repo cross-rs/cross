@@ -3,6 +3,9 @@ FROM ubuntu:16.04
 COPY common.sh lib.sh /
 RUN /common.sh
 
+COPY cmake.sh /
+RUN /cmake.sh
+
 COPY xargo.sh /
 RUN /xargo.sh
 
