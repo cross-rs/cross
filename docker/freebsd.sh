@@ -73,9 +73,10 @@ main() {
     cp "${td}/freebsd/lib/libm.so.5" "${destdir}/lib"
     cp "${td}/freebsd/lib/libthr.so.3" "${destdir}/lib"
     cp "${td}/freebsd/lib/libutil.so.9" "${destdir}/lib"
+    cp "${td}/freebsd/lib/libssp.so.0" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.so.1" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.a" "${destdir}/lib"
-    cp "${td}/freebsd/usr/lib"/lib{c,util,m}.a "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp,ssp_nonshared}.a "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{rt,execinfo}.so.1 "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib"
 
@@ -86,6 +87,7 @@ main() {
     ln -s librt.so.1 "${destdir}/lib/librt.so"
     ln -s libutil.so.9 "${destdir}/lib/libutil.so"
     ln -s libthr.so.3 "${destdir}/lib/libpthread.so"
+    ln -s libssp.so.0 "${destdir}/lib/libssp.so"
 
     cd gcc-build
     ../gcc/configure \

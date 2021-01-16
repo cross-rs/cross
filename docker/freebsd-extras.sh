@@ -6,7 +6,7 @@ set -euo pipefail
 main() {
     local arch="${1}"
 
-    local sqlite_ver=3.33.0,1 \
+    local sqlite_ver=3.34.0,1 \
           openssl_ver=1.1.1i,1 \
           target="${arch}-unknown-freebsd12"
 
