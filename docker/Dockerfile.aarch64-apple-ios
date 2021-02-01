@@ -1,0 +1,25 @@
+FROM ubuntu:20.04
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+COPY apple-sdk.sh /
+RUN /apple-sdk.sh
+
+COPY apple-cctools.sh /
+RUN /apple-cctools.sh
+
+COPY apple-llvm.sh /
+RUN /apple-llvm.sh
+
+
+ENV CARGO_TARGET_AARCH64_APPLE_IOS_LINKER=aarch64-apple-darwin-clang \
+	CC_aarch64_unknown_linux_gnu=aarch64-apple-darwin-clang \
+	CXX_aarch64_unknown_linux_gnu=aarch64-apple-darwin-clang++ \
+	SDKROOT=/opt/iPhoneOS.sdk

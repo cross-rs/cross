@@ -53,6 +53,7 @@ jobs:
         i686-linux-android:              { TARGET: i686-linux-android,              CPP: 1,           STD: 1, RUN: 1 }
         x86_64-linux-android:            { TARGET: x86_64-linux-android,            CPP: 1,           STD: 1, RUN: 1 }
         x86_64-apple-darwin:             { TARGET: x86_64-apple-darwin,             CPP: 1, DYLIB: 1, STD: 1,                   RUN: 1, VM_IMAGE: macOS-latest, DEPLOY: 1 }
+        aarch64-apple-ios:               { TARGET: aarch64-apple-ios,               CPP: 1,           STD: 1 }
         x86_64-pc-windows-gnu:           { TARGET: x86_64-pc-windows-gnu,           CPP: 1,           STD: 1,                   RUN: 1 }
         i686-pc-windows-gnu:             { TARGET: i686-pc-windows-gnu,             CPP: 1,           STD: 1,                   RUN: 1 }
       # x86_64-unknown-dragonfly:        { TARGET: x86_64-unknown-dragonfly,        CPP: 1, DYLIB: 1,         TOOLCHAIN: nightly }
