@@ -20,6 +20,6 @@ RUN /apple-llvm.sh
 
 
 ENV CARGO_TARGET_AARCH64_APPLE_IOS_LINKER=aarch64-apple-darwin-clang \
-	CC_aarch64_unknown_linux_gnu=aarch64-apple-darwin-clang \
-	CXX_aarch64_unknown_linux_gnu=aarch64-apple-darwin-clang++ \
+	CC_aarch64_apple_ios=aarch64-apple-darwin-clang \
+	CXX_aarch64_apple_ios=aarch64-apple-darwin-clang++ \
 	SDKROOT=/opt/iPhoneOS.sdk
