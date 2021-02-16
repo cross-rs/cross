@@ -10,7 +10,7 @@ use crate::cargo::Root;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::id;
-use crate::{Target, Toml};
+use crate::{Config, Target};
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 const DOCKER: &str = "docker";
@@ -58,16 +58,17 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         .run(verbose)
 }
 
-pub fn run(target: &Target,
-           args: &[String],
-           target_dir: &Option<PathBuf>,
-           root: &Root,
-           toml: Option<&Toml>,
-           uses_xargo: bool,
-           sysroot: &PathBuf,
-           verbose: bool,
-           docker_in_docker: bool)
-           -> Result<ExitStatus> {
+pub fn run(
+    target: &Target,
+    args: &[String],
+    target_dir: &Option<PathBuf>,
+    root: &Root,
+    toml: &Config,
+    uses_xargo: bool,
+    sysroot: &PathBuf,
+    verbose: bool,
+    docker_in_docker: bool,
+) -> Result<ExitStatus> {
     let mount_finder = if docker_in_docker {
         MountFinder::new(docker_read_mount_paths()?)
     } else {
@@ -107,42 +108,42 @@ pub fn run(target: &Target,
 
     let mut docker = docker_command("run")?;
 
-    if let Some(toml) = toml {
-        let validate_env_var = |var: &str| -> Result<()> {
-            if var.contains('=') {
-                bail!("environment variable names must not contain the '=' character");
-            }
+    // if let Some(toml) = toml {
+    //     let validate_env_var = |var: &str| -> Result<()> {
+    //         if var.contains('=') {
+    //             bail!("environment variable names must not contain the '=' character");
+    //         }
 
-            if var == "CROSS_RUNNER" {
-                bail!(
-                    "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
-                );
-            }
+    //         if var == "CROSS_RUNNER" {
+    //             bail!(
+    //                 "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
+    //             );
+    //         }
 
-            Ok(())
-        };
+    //         Ok(())
+    //     };
 
-        for var in toml.env_passthrough(target)? {
-            validate_env_var(var)?;
+    //     for var in toml.env_passthrough(target)? {
+    //         validate_env_var(var)?;
 
-            // Only specifying the environment variable name in the "-e"
-            // flag forwards the value from the parent shell
-            docker.args(&["-e", var]);
-        }
+    //         // Only specifying the environment variable name in the "-e"
+    //         // flag forwards the value from the parent shell
+    //         docker.args(&["-e", var]);
+    //     }
 
-        for var in toml.env_volumes(target)? {
-            validate_env_var(var)?;
+    //     for var in toml.env_volumes(target)? {
+    //         validate_env_var(var)?;
 
-            if let Ok(val) = env::var(var) {
-                let host_path = Path::new(&val).canonicalize()?;
-                let mount_path = &host_path;
-                docker.args(&["-v", &format!("{}:{}", host_path.display(), mount_path.display())]);
-                docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
-            }
-        }
+    //         if let Ok(val) = env::var(var) {
+    //             let host_path = Path::new(&val).canonicalize()?;
+    //             let mount_path = &host_path;
+    //             docker.args(&["-v", &format!("{}:{}", host_path.display(), mount_path.display())]);
+    //             docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
+    //         }
+    //     }
 
-        runner = toml.runner(target)?;
-    }
+    //     runner = toml.runner(target)?;
+    // }
 
     docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
 
@@ -175,12 +176,18 @@ pub fn run(target: &Target,
     }
 
     docker
-        .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(String::new))])
+        .args(&[
+            "-e",
+            &format!("CROSS_RUNNER={}", runner.unwrap_or_else(String::new)),
+        ])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"])
-        .args(&["-v", &format!("{}:/{}:Z", mount_root.display(), mount_root.display())])
+        .args(&[
+            "-v",
+            &format!("{}:/{}:Z", mount_root.display(), mount_root.display()),
+        ])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
         .args(&["-w", &mount_root.display().to_string()]);
@@ -198,18 +205,19 @@ pub fn run(target: &Target,
         .run_and_get_status(verbose)
 }
 
-pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
-    if let Some(toml) = toml {
-        if let Some(image) = toml.image(target)?.map(|s| s.to_owned()) {
-            return Ok(image)
-        }
+pub fn image(config: &Config, target: &Target) -> Result<String> {
+    if let Some(image) = config.image(target)?.map(|s| s.to_owned()) {
+        return Ok(image);
     }
 
     let triple = target.triple();
 
     if !DOCKER_IMAGES.contains(&triple) {
-        bail!("`cross` does not provide a Docker image for target {}, \
-               specify a custom image in `Cross.toml`.", triple);
+        bail!(
+            "`cross` does not provide a Docker image for target {}, \
+               specify a custom image in `Cross.toml`.",
+            triple
+        );
     }
 
     let version = env!("CARGO_PKG_VERSION");
