@@ -29,25 +29,37 @@ impl Environment {
         var_name
 
     }
+
+    fn get_var(name: &str) -> Option<(&str, String)> {
+        var(name)
+        .map_or(None, |v| Some((name, v)))
+    } 
+
     fn xargo(&mut self, target: &Target) -> Option<&str> {
         let var_name_target = self.build_var_name(&format!("target_{}",target.triple()), Some("XARGO"));
         let var_name_build = self.build_var_name("build", Some("XARGO"));
-        if let Some(value) = var(&var_name_target)
-        .map_or(None, |v| Some(v))
-        {
-            self.cache.insert(var_name_target.to_string(), value);
-            Some(&self.cache.get(&var_name_target).unwrap())
-        }
-        else if let Some(value) = var(&var_name_build).map_or(None, |v| Some(v)) {
-            self.cache.insert(var_name_build.to_string(), value);
-            Some(&self.cache.get(&var_name_build).unwrap())
+        let value = Environment::get_var(&var_name_target)
+        .or_else(|| Environment::get_var(&var_name_build));
+       
+        if let Some((name, value)) = value {
+            self.cache.insert(name.to_string(), value);
+            Some(self.cache.get(name).unwrap())
         }
         else {None}
     }
-    fn image(&self, target: &Target) -> Option<String> {
-        var(self.build_var_name(&format!("target_{}",target.triple()), Some("IMAGE")))
-        .map_or(None, |v| Some(v))
-        
+    fn image(&mut self, target: &Target) -> Option<&str> {
+        let var_name_target = self.build_var_name(&format!("target_{}",target.triple()), Some("IMAGE"));
+        let var_name_build = self.build_var_name("build", Some("IMAGE"));
+        let value = Environment::get_var(&var_name_target)
+        .or_else(|| Environment::get_var(&var_name_build));
+       
+        if let Some((name, value)) = value {
+            self.cache.insert(name.to_string(), value);
+            Some(self.cache.get(name).unwrap())
+        }
+        else {None}
+
+
     }
     fn runner(&self, target: &Target) -> Option<String> {
         var(self.build_var_name(&format!("target_{}",target.triple()), Some("RUNNER")))
@@ -78,14 +90,13 @@ impl Config {
         }
         self.toml.as_ref().map_or(Ok(None), |t| t.xargo(target))
     }
-    // TODO change to Option<&str> by caching
-    pub fn image(&self, target: &Target) -> Result<Option<String>> {
+    pub fn image(&mut self, target: &Target) -> Result<Option<&str>> {
         let env_value = self.env.image(target);
         if let Some(env_value) = env_value {
             return Ok(Some(env_value));
         }
-        // self.toml.as_ref().map_or(Ok(None), |t| t.image(target))
-        Ok(None)
+        self.toml.as_ref().map_or(Ok(None), |t| t.image(target))
+    
         
     }
    
@@ -130,6 +141,13 @@ mod test_config {
         assert_eq!(env.build_var_name("build_xargo", None), "CROSS_BUILD_XARGO");
         assert_eq!(env.build_var_name("target_aarch64-unknown-linux-gnu", Some("xargo")), "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO");
         assert_eq!(env.build_var_name(target, Some("image")), "CROSS_AARCH64_UNKNOWN_LINUX_GNU_IMAGE")
+
+    }
+    #[test]
+    pub fn test() {
+        let test = Some("test");
+        let res = test.and_then(|s| {None}).or_else(|| Some(1));
+        println!("{:?}", res);
 
     }
 

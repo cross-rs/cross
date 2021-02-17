@@ -63,7 +63,7 @@ pub fn run(
     args: &[String],
     target_dir: &Option<PathBuf>,
     root: &Root,
-    toml: &Config,
+    config: &mut Config,
     uses_xargo: bool,
     sysroot: &PathBuf,
     verbose: bool,
@@ -200,12 +200,12 @@ pub fn run(
     }
 
     docker
-        .arg(&image(toml, target)?)
+        .arg(&image(config, target)?)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
 
-pub fn image(config: &Config, target: &Target) -> Result<String> {
+pub fn image(config: &mut Config, target: &Target) -> Result<String> {
     if let Some(image) = config.image(target)?.map(|s| s.to_owned()) {
         return Ok(image);
     }

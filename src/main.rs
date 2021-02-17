@@ -1,5 +1,6 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
+mod config;
 mod cargo;
 mod cli;
 mod docker;
@@ -15,6 +16,7 @@ use std::io::Write;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
+use config::Config;
 use toml::{value::Table, Value};
 
 use self::cargo::{Root, Subcommand};
@@ -243,9 +245,7 @@ fn run() -> Result<ExitStatus> {
                 .target
                 .unwrap_or_else(|| Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
-            let mut env = std::collections::HashMap::new();
-            env.insert("CROSS_BUILD_IMAGE", std::env::var("CROSS_BUILD_IMAGE").map_or(None, |v| Some(v)));
-            let config = Config {toml, env: Environment("CROSS_BUILD_")};
+            let mut config = Config::new(toml);
 
             let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
             let default_toolchain = sysroot
@@ -297,7 +297,7 @@ fn run() -> Result<ExitStatus> {
                 .map(|sc| sc.needs_interpreter())
                 .unwrap_or(false);
 
-            let image_exists = match docker::image(&config, &target) {
+            let image_exists = match docker::image(&mut config, &target) {
                 Ok(_) => true,
                 Err(err) => {
                     eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
@@ -342,7 +342,7 @@ fn run() -> Result<ExitStatus> {
                     &filtered_args,
                     &args.target_dir,
                     &root,
-                    &config,
+                    &mut config,
                     uses_xargo,
                     &sysroot,
                     verbose,
@@ -355,58 +355,6 @@ fn run() -> Result<ExitStatus> {
     cargo::run(&args.all, verbose)
 }
 
-use std::collections::HashMap;
-#[derive(Debug)]
-struct Environment(&'static str);
-// get variables on request
-    //env: HashMap<&'static str, Option<String>>,
-
-
-
-use std::env::var;
-impl Environment {
-
-
-    fn new() -> Self {
-        Environment("CROSS_BUILD")
-    }
-
-    fn build_var_name(&self, name : &str, key: Option<&str>) -> String {
-        let mut var_name = format!("{}_{}", self.0, name.to_ascii_uppercase().replace("-", "_"));
-        if let Some(key) = key {
-            var_name = format!("{}_{}", var_name, key.to_ascii_uppercase().replace("-", "_"));
-        }
-        var_name
-
-    }
-    pub fn xargo(&self, target: &Target) -> Option<String> {
-        var(std::format!("{}{}", self.0, "XARGO")).map_or(None, |v| Some(v))
-    }
-    pub fn image(&self, target: &Target) -> Option<String> {
-        var(std::format!("{}{}", self.0, if let Target::BuiltIn{triple} = target {triple} else {"custom"})).map_or(None, |v| Some(v))
-
-    }
-
-}
-
-#[derive(Debug)]
-pub struct Config {
-    toml: Option<Toml>,
-    env: Environment,
-}
-
-impl Config {
-    pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
-        Ok(None)
-        // self.env.xargo(target).map(|x|Ok(x)).or( self.toml.as_ref().map_or(Ok(None), |t| t.xargo(target)))
-    }
-    pub fn image(&self, target: &Target) -> Result<Option<&str>> {
-        Ok(None)
-        // self.env.image(target).or(   self.toml.as_ref().map_or(Ok(None), |t| t.image(target)) )
-    }
-   
-   
-}
 
 /// Parsed `Cross.toml`
 #[derive(Debug)]
@@ -578,26 +526,3 @@ mod test {
 
 }
 
-mod test_config {
-    use crate::Environment;
-
-
-    #[test]
-    pub fn var_not_set__none() {
-        let target_list = super::TargetList {triples: vec!["aarch64-unknown-linux-gnu".to_string()]};
-        let target = super::Target::from("aarch64-unknown-linux-gnu", &target_list);
-        let env = Environment("TEST_");
-        println!("{:?}", env.image(&target));
-    }
-
-    #[test]
-    pub fn target_build_var_name() {
-        let target = "aarch64-unknown-linux-gnu";
-        let env = Environment("TEST");
-        assert_eq!(env.build_var_name("xargo", None), "TEST_XARGO");
-        assert_eq!(env.build_var_name(target, Some("image")), "TEST_AARCH64_UNKNOWN_LINUX_GNU_IMAGE")
-
-    }
-
-
-}
