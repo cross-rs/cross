@@ -61,9 +61,20 @@ impl Environment {
 
 
     }
-    fn runner(&self, target: &Target) -> Option<String> {
-        var(self.build_var_name(&format!("target_{}",target.triple()), Some("RUNNER")))
-        .map_or(None, |v| Some(v))
+    // Runner can now be defined in CROSS_BUILD_RUNNER as well
+    fn runner(&mut self, target: &Target) -> Option<&str> {
+
+        let var_name_target = self.build_var_name(&format!("target_{}",target.triple()), Some("RUNNER"));
+        let var_name_build = self.build_var_name("build", Some("RUNNER"));
+        let value = Environment::get_var(&var_name_target)
+        .or_else(|| Environment::get_var(&var_name_build));
+       
+        if let Some((name, value)) = value {
+            self.cache.insert(name.to_string(), value);
+            Some(self.cache.get(name).unwrap())
+        }
+        else {None}
+
         
     }
 
@@ -99,6 +110,16 @@ impl Config {
     
         
     }
+    pub fn runner(&mut self, target: &Target) -> Result<Option<&str>> {
+        let env_value = self.env.runner(target);
+        if let Some(env_value) = env_value {
+            return Ok(Some(env_value));
+        }
+        self.toml.as_ref().map_or(Ok(None), |t| t.runner(target))
+
+
+    }
+   
    
    
 }

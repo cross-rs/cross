@@ -382,7 +382,7 @@ impl Toml {
     }
 
     /// Returns the `target.{}.runner` part of `Cross.toml`
-    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
+    pub fn runner(&self, target: &Target) -> Result<Option<&str>> {
         let triple = target.triple();
 
         if let Some(value) = self
@@ -393,8 +393,7 @@ impl Toml {
         {
             let value = value
                 .as_str()
-                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?
-                .to_string();
+                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?;
             Ok(Some(value))
         } else {
             Ok(None)

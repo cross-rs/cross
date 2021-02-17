@@ -104,10 +104,10 @@ pub fn run(
 
     cmd.args(args);
 
-    let mut runner = None;
-
+    let runner = config.runner(target)?;
+    
     let mut docker = docker_command("run")?;
-
+    
     // if let Some(toml) = toml {
     //     let validate_env_var = |var: &str| -> Result<()> {
     //         if var.contains('=') {
@@ -142,9 +142,8 @@ pub fn run(
     //         }
     //     }
 
-    //     runner = toml.runner(target)?;
     // }
-
+    
     docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
 
     docker.arg("--rm");
@@ -178,7 +177,7 @@ pub fn run(
     docker
         .args(&[
             "-e",
-            &format!("CROSS_RUNNER={}", runner.unwrap_or_else(String::new)),
+            &format!("CROSS_RUNNER={}", runner.unwrap_or("")),
         ])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
