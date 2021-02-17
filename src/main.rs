@@ -510,19 +510,4 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
     }
 }
 
-#[cfg(test)]
-mod test {
-
-    pub fn env_multivalues_parses_to_vec() {
-
-
-
-
-    }
-
-    
-
-
-
-}
 
