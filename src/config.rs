@@ -112,6 +112,7 @@ impl Config {
     }
 }
 
+#[cfg(test)]
 mod test_config {
 
     use super::Environment;
@@ -167,11 +168,5 @@ mod test_config {
             env.build_var_name("target-aarch64-unknown-linux-gnu_image"),
             "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_IMAGE"
         )
-    }
-    #[test]
-    pub fn test() {
-        let test = Some("test");
-        let res = test.and_then(|s| None).or_else(|| Some(1));
-        // println!("{:?}", res);
     }
 }
