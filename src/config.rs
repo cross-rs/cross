@@ -34,36 +34,40 @@ impl Environment {
         format!("BUILD_{}", key)
     }
 
-    fn xargo(&mut self, target: &Target) -> Result<Option<bool>> {
+    fn get_build_var(&self, key: &str) -> Option<String> {
+        Environment::get_var(&self.build_var_name(&Environment::build_path(key)))
+    }
+
+    fn get_target_var(&self, target: &Target, key: &str) -> Option<String> {
+        Environment::get_var(&self.build_var_name(&Environment::target_path(target, key)))
+    }
+
+    fn xargo(&self, target: &Target) -> Result<Option<bool>> {
         let value =
-            Environment::get_var(&self.build_var_name(&Environment::target_path(target, "XARGO")))
+            self.get_target_var(target, "XARGO")
                 .or_else(|| {
-                    Environment::get_var(&self.build_var_name(&Environment::build_path("XARGO")))
+                    self.get_build_var("XARGO")
                 });
 
         if let Some(value) = value {
             Ok(Some(
                 value
                     .parse::<bool>()
-                    .or_else(|e| Err(format!("error parsing {} from XARGO environment variable", value)))?,
+                    .or_else(|_| Err(format!("error parsing {} from XARGO environment variable", value)))?,
             ))
-            // .and_then(|v|Ok(Some(v)))
         } else {
             Ok(None)
         }
     }
     fn image(&mut self, target: &Target) -> Option<String> {
-        Environment::get_var(&self.build_var_name(&Environment::target_path(target, "IMAGE")))
+        self.get_target_var(target, "IMAGE")
             .or_else(|| {
-                Environment::get_var(&self.build_var_name(&Environment::build_path("IMAGE")))
+                self.get_build_var("IMAGE")
             })
     }
-    // Runner can now be defined in CROSS_BUILD_RUNNER as well
     fn runner(&mut self, target: &Target) -> Option<String> {
-        Environment::get_var(&self.build_var_name(&Environment::target_path(target, "RUNNER")))
-            .or_else(|| {
-                Environment::get_var(&self.build_var_name(&Environment::build_path("RUNNER")))
-            })
+        self.get_target_var(target, "RUNNER")
+        
     }
 }
 
@@ -120,7 +124,7 @@ mod test_config {
             triples: vec!["aarch64-unknown-linux-gnu".to_string()],
         };
         let target = Target::from("aarch64-unknown-linux-gnu", &target_list);
-        let mut env = Environment::new("CROSS");
+        let env = Environment::new("CROSS");
         std::env::set_var("CROSS_BUILD_XARGO", "tru");
 
         let res = env.xargo(&target);
@@ -133,7 +137,7 @@ mod test_config {
 
     #[test]
     pub fn var_priority_target_before_build() -> Result<(), Box<dyn std::error::Error>> {
-        let mut env = Environment::new("CROSS");
+        let env = Environment::new("CROSS");
         std::env::set_var("CROSS_BUILD_XARGO", "true");
         std::env::set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
 
