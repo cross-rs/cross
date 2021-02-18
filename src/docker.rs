@@ -177,7 +177,7 @@ pub fn run(
     docker
         .args(&[
             "-e",
-            &format!("CROSS_RUNNER={}", runner.unwrap_or("")),
+            &format!("CROSS_RUNNER={}", runner.unwrap_or(String::new())),
         ])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])

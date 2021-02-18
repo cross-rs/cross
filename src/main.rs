@@ -364,7 +364,7 @@ pub struct Toml {
 
 impl Toml {
     /// Returns the `target.{}.image` part of `Cross.toml`
-    pub fn image(&self, target: &Target) -> Result<Option<&str>> {
+    pub fn image(&self, target: &Target) -> Result<Option<String>> {
         let triple = target.triple();
 
         if let Some(value) = self
@@ -375,14 +375,14 @@ impl Toml {
         {
             Ok(Some(value.as_str().ok_or_else(|| {
                 format!("target.{}.image must be a string", triple)
-            })?))
+            })?.to_string()))
         } else {
             Ok(None)
         }
     }
 
     /// Returns the `target.{}.runner` part of `Cross.toml`
-    pub fn runner(&self, target: &Target) -> Result<Option<&str>> {
+    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
         let triple = target.triple();
 
         if let Some(value) = self
@@ -393,7 +393,7 @@ impl Toml {
         {
             let value = value
                 .as_str()
-                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?;
+                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?.to_string();
             Ok(Some(value))
         } else {
             Ok(None)
