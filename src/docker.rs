@@ -105,45 +105,43 @@ pub fn run(
     cmd.args(args);
 
     let runner = config.runner(target)?;
-    
+
     let mut docker = docker_command("run")?;
-    
-    // if let Some(toml) = toml {
-        let validate_env_var = |var: &str| -> Result<()> {
-            if var.contains('=') {
-                bail!("environment variable names must not contain the '=' character");
-            }
 
-            if var == "CROSS_RUNNER" {
-                bail!(
-                    "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
-                );
-            }
-
-            Ok(())
-        };
-
-        for ref var in config.env_passthrough(target)? {
-            validate_env_var(var)?;
-
-            // Only specifying the environment variable name in the "-e"
-            // flag forwards the value from the parent shell
-            docker.args(&["-e", var]);
+    let validate_env_var = |var: &str| -> Result<()> {
+        if var.contains('=') {
+            bail!("environment variable names must not contain the '=' character");
         }
 
-    //     for var in toml.env_volumes(target)? {
-    //         validate_env_var(var)?;
+        if var == "CROSS_RUNNER" {
+            bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
+        }
 
-    //         if let Ok(val) = env::var(var) {
-    //             let host_path = Path::new(&val).canonicalize()?;
-    //             let mount_path = &host_path;
-    //             docker.args(&["-v", &format!("{}:{}", host_path.display(), mount_path.display())]);
-    //             docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
-    //         }
-    //     }
+        Ok(())
+    };
 
-    // }
-    
+    for ref var in config.env_passthrough(target)? {
+        validate_env_var(var)?;
+
+        // Only specifying the environment variable name in the "-e"
+        // flag forwards the value from the parent shell
+        docker.args(&["-e", var]);
+    }
+
+    for ref var in config.env_volumes(target)? {
+        validate_env_var(var)?;
+
+        if let Ok(val) = env::var(var) {
+            let host_path = Path::new(&val).canonicalize()?;
+            let mount_path = &host_path;
+            docker.args(&[
+                "-v",
+                &format!("{}:{}", host_path.display(), mount_path.display()),
+            ]);
+            docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
+        }
+    }
+
     docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
 
     docker.arg("--rm");

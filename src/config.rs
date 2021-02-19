@@ -85,6 +85,27 @@ impl Environment {
 
         (passthrough_build, passthrough_target)
     }
+    
+    fn volumes(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
+        let target_envs = self.get_target_var(target, "ENV_VOLUMES");
+        let mut volumes_target = None;
+        if let Some(envs) = target_envs {
+            volumes_target = Some(vec![]);
+            volumes_target.as_mut().map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
+        }
+        let build_envs = self.get_build_var("ENV_VOLUMES");
+        let mut volumes_build = None;
+        if let Some(envs) = build_envs {
+            volumes_build = Some(vec![]);
+            volumes_build.as_mut().map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
+
+        }
+        // validate no =
+
+        (volumes_build, volumes_target)
+    }
+
+    
 }
 
 #[derive(Debug)]
@@ -148,8 +169,33 @@ impl Config {
         }
         println!("{:?}", collect);
         Ok(collect)
-
+        
     }
+    
+    pub fn env_volumes(&self, target: &Target) -> Result<Vec<String>> {
+        let mut collect = vec![];
+        let (build_env, target_env) = self.env.volumes(target);
+        if let Some(mut vars) = build_env {
+            collect.extend(vars.drain(..));
+
+        } else {
+            if let Some(ref toml) = self.toml {
+                collect.extend(toml.env_volumes_build()?.drain(..).map(|v| v.to_string()));
+            }
+        }
+        if let Some(mut vars) = target_env {
+            collect.extend(vars.drain(..));
+
+        } else {
+            if let Some(ref toml) = self.toml {
+                collect.extend(toml.env_volumes_target(target)?.drain(..).map(|v| v.to_string()));
+            }
+        }
+        println!("env volumes {:?}", collect);
+        Ok(collect)
+    
+    }
+    
 
     
 }

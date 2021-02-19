@@ -426,31 +426,40 @@ impl Toml {
         }
     }
 
-    /// Returns the list of environment variables to pass through for `target`,
     /// including variables specified under `build` and under `target`.
     fn env_passthrough(&self, target: &Target) -> Result<Vec<&str>> {
         let mut bwl = self.build_env("passthrough")?;
         let mut twl = self.target_env(target, "passthrough")?;
         bwl.extend(twl.drain(..));
-
+        
         Ok(bwl)
     }
-
+    
+    /// Returns the list of environment variables to pass through for `build`,
     pub fn env_passthrough_build(&self) -> Result<Vec<&str>> {
         self.build_env("passthrough")
     }
+    /// Returns the list of environment variables to pass through for `target`,
     pub fn env_passthrough_target(&self, target: &Target) -> Result<Vec<&str>> {
         self.target_env(target, "passthrough")
     }
-
+    
     /// Returns the list of volumes to pass through for `target`,
     /// including volumes specified under `build` and under `target`.
-    pub fn env_volumes(&self, target: &Target) -> Result<Vec<&str>> {
+    fn env_volumes(&self, target: &Target) -> Result<Vec<&str>> {
         let mut bwl = self.build_env("volumes")?;
         let mut twl = self.target_env(target, "volumes")?;
         bwl.extend(twl.drain(..));
-
+        
         Ok(bwl)
+    }
+    /// Returns the list of environment variables to pass through for `build`,
+    pub fn env_volumes_build(&self) -> Result<Vec<&str>> {
+        self.build_env("volumes")
+    }
+    /// Returns the list of environment variables to pass through for `target`,
+    pub fn env_volumes_target(&self, target: &Target) -> Result<Vec<&str>> {
+        self.target_env(target, "volumes")
     }
 
     fn target_env(&self, target: &Target, key: &str) -> Result<Vec<&str>> {
