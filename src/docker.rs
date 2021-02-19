@@ -63,7 +63,7 @@ pub fn run(
     args: &[String],
     target_dir: &Option<PathBuf>,
     root: &Root,
-    config: &mut Config,
+    config: &Config,
     uses_xargo: bool,
     sysroot: &PathBuf,
     verbose: bool,
@@ -202,7 +202,7 @@ pub fn run(
         .run_and_get_status(verbose)
 }
 
-pub fn image(config: &mut Config, target: &Target) -> Result<String> {
+pub fn image(config: &Config, target: &Target) -> Result<String> {
     if let Some(image) = config.image(target)?.map(|s| s.to_owned()) {
         return Ok(image);
     }

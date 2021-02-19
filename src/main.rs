@@ -245,7 +245,7 @@ fn run() -> Result<ExitStatus> {
                 .target
                 .unwrap_or_else(|| Target::from(host.triple(), &target_list));
             let toml = toml(&root)?;
-            let mut config = Config::new(toml);
+            let config = Config::new(toml);
 
             let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
             let default_toolchain = sysroot
@@ -297,7 +297,7 @@ fn run() -> Result<ExitStatus> {
                 .map(|sc| sc.needs_interpreter())
                 .unwrap_or(false);
 
-            let image_exists = match docker::image(&mut config, &target) {
+            let image_exists = match docker::image(&config, &target) {
                 Ok(_) => true,
                 Err(err) => {
                     eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
@@ -342,7 +342,7 @@ fn run() -> Result<ExitStatus> {
                     &filtered_args,
                     &args.target_dir,
                     &root,
-                    &mut config,
+                    &config,
                     uses_xargo,
                     &sysroot,
                     verbose,

@@ -1,31 +1,21 @@
 use crate::{Result, Target, Toml};
 
-use std::collections::HashMap;
 use std::env::var;
 #[derive(Debug)]
-struct Environment {
-    prefix: &'static str,
-    cache: HashMap<String, String>,
-}
+struct Environment(&'static str);
 
 impl Environment {
-    fn new(prefix: &'static str) -> Self {
-        Environment {
-            prefix,
-            cache: HashMap::new(),
-        }
-    }
-
+    
     fn build_var_name(&self, path: &str) -> String {
         format!(
             "{}_{}",
-            self.prefix,
+            self.0,
             path.to_ascii_uppercase().replace("-", "_")
         )
     }
 
     fn get_var(name: &str) -> Option<String> {
-        var(name).map_or(None, |v| Some(v))
+        var(name).ok().and_then(|v| Some(v))
     }
     fn target_path(target: &Target, key: &str) -> String {
         format!("TARGET_{}_{}", target.triple(), key)
@@ -59,10 +49,10 @@ impl Environment {
             Ok(None)
         }
     }
-    fn image(&mut self, target: &Target) -> Option<String> {
+    fn image(&self, target: &Target) -> Option<String> {
         self.get_target_var(target, "IMAGE")
     }
-    fn runner(&mut self, target: &Target) -> Option<String> {
+    fn runner(&self, target: &Target) -> Option<String> {
         self.get_target_var(target, "RUNNER")
         
     }
@@ -118,10 +108,10 @@ impl Config {
     pub fn new(toml: Option<Toml>) -> Self {
         Config {
             toml,
-            env: Environment::new("CROSS"),
+            env: Environment("CROSS"),
         }
     }
-    pub fn xargo(&mut self, target: &Target) -> Result<Option<bool>> {
+    pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
 
         if let v @ Some(_) = self.env.xargo(target)? {
             return Ok(v);
@@ -133,14 +123,14 @@ impl Config {
             Ok(None)
         }
     }
-    pub fn image(&mut self, target: &Target) -> Result<Option<String>> {
+    pub fn image(&self, target: &Target) -> Result<Option<String>> {
         let env_value = self.env.image(target);
         if let Some(env_value) = env_value {
             return Ok(Some(env_value));
         }
         self.toml.as_ref().map_or(Ok(None), |t| t.image(target))
     }
-    pub fn runner(&mut self, target: &Target) -> Result<Option<String>> {
+    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
         let env_value = self.env.runner(target);
         if let Some(env_value) = env_value {
             return Ok(Some(env_value));
@@ -207,6 +197,11 @@ mod test_environment {
     use crate::{Target, TargetList};
     use std::env::{set_var, remove_var};
 
+    #[test]
+    pub fn var_not_set_returns_none() {
+        assert_eq!(Environment::get_var("__not_set__"), None);
+
+    }
   
     #[test]
     pub fn parse_error_in_env() {
@@ -214,7 +209,7 @@ mod test_environment {
             triples: vec!["aarch64-unknown-linux-gnu".to_string()],
         };
         let target = Target::from("aarch64-unknown-linux-gnu", &target_list);
-        let env = Environment::new("CROSS");
+        let env = Environment("CROSS");
         set_var("CROSS_BUILD_XARGO", "tru");
 
         let res = env.xargo(&target);
@@ -227,7 +222,7 @@ mod test_environment {
 
     #[test]
     pub fn var_priority_target_before_build() -> Result<(), Box<dyn std::error::Error>> {
-        let env = Environment::new("CROSS");
+        let env = Environment("CROSS");
         set_var("CROSS_BUILD_XARGO", "true");
         set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
 
@@ -247,7 +242,7 @@ mod test_environment {
 
     #[test]
     pub fn target_build_var_name() {
-        let env = Environment::new("CROSS");
+        let env = Environment("CROSS");
         assert_eq!(env.build_var_name("build_xargo"), "CROSS_BUILD_XARGO");
         assert_eq!(
             env.build_var_name("target_aarch64-unknown-linux-gnu_XARGO"),
@@ -268,7 +263,7 @@ mod test_environment {
 
         set_var("CROSS_BUILD_ENV_PASSTHROUGH", "TEST1 TEST2");
         set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_ENV_PASSTHROUGH", "PASS1 PASS2");
-        let env = Environment::new("CROSS");
+        let env = Environment("CROSS");
        
         let (build, target) = env.passthrough(&target);
         println!("{:?}, {:?}", build, target);
