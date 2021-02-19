@@ -109,27 +109,27 @@ pub fn run(
     let mut docker = docker_command("run")?;
     
     // if let Some(toml) = toml {
-    //     let validate_env_var = |var: &str| -> Result<()> {
-    //         if var.contains('=') {
-    //             bail!("environment variable names must not contain the '=' character");
-    //         }
+        let validate_env_var = |var: &str| -> Result<()> {
+            if var.contains('=') {
+                bail!("environment variable names must not contain the '=' character");
+            }
 
-    //         if var == "CROSS_RUNNER" {
-    //             bail!(
-    //                 "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
-    //             );
-    //         }
+            if var == "CROSS_RUNNER" {
+                bail!(
+                    "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
+                );
+            }
 
-    //         Ok(())
-    //     };
+            Ok(())
+        };
 
-    //     for var in toml.env_passthrough(target)? {
-    //         validate_env_var(var)?;
+        for ref var in config.env_passthrough(target)? {
+            validate_env_var(var)?;
 
-    //         // Only specifying the environment variable name in the "-e"
-    //         // flag forwards the value from the parent shell
-    //         docker.args(&["-e", var]);
-    //     }
+            // Only specifying the environment variable name in the "-e"
+            // flag forwards the value from the parent shell
+            docker.args(&["-e", var]);
+        }
 
     //     for var in toml.env_volumes(target)? {
     //         validate_env_var(var)?;

@@ -61,13 +61,29 @@ impl Environment {
     }
     fn image(&mut self, target: &Target) -> Option<String> {
         self.get_target_var(target, "IMAGE")
-            .or_else(|| {
-                self.get_build_var("IMAGE")
-            })
     }
     fn runner(&mut self, target: &Target) -> Option<String> {
         self.get_target_var(target, "RUNNER")
         
+    }
+
+    fn passthrough(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
+        let target_envs = self.get_target_var(target, "env_passthrough");
+        let mut passthrough_target = None;
+        if let Some(envs) = target_envs {
+            passthrough_target = Some(vec![]);
+            passthrough_target.as_mut().map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
+        }
+        let build_envs = self.get_build_var("env_passthrough");
+        let mut passthrough_build = None;
+        if let Some(envs) = build_envs {
+            passthrough_build = Some(vec![]);
+            passthrough_build.as_mut().map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
+
+        }
+        // validate no =
+
+        (passthrough_build, passthrough_target)
     }
 }
 
@@ -110,13 +126,40 @@ impl Config {
         }
         self.toml.as_ref().map_or(Ok(None), |t| t.runner(target))
     }
+
+    pub fn env_passthrough(&self, target: &Target) -> Result<Vec<String>> {
+        let mut collect = vec![];
+        let (build_env, target_env) = self.env.passthrough(target);
+        if let Some(mut vars) = build_env {
+            collect.extend(vars.drain(..));
+
+        } else {
+            if let Some(ref toml) = self.toml {
+                collect.extend(toml.env_passthrough_build()?.drain(..).map(|v| v.to_string()));
+            }
+        }
+        if let Some(mut vars) = target_env {
+            collect.extend(vars.drain(..));
+
+        } else {
+            if let Some(ref toml) = self.toml {
+                collect.extend(toml.env_passthrough_target(target)?.drain(..).map(|v| v.to_string()));
+            }
+        }
+        println!("{:?}", collect);
+        Ok(collect)
+
+    }
+
+    
 }
 
 #[cfg(test)]
-mod test_config {
+mod test_environment {
 
     use super::Environment;
     use crate::{Target, TargetList};
+    use std::env::{set_var, remove_var};
 
   
     #[test]
@@ -126,7 +169,7 @@ mod test_config {
         };
         let target = Target::from("aarch64-unknown-linux-gnu", &target_list);
         let env = Environment::new("CROSS");
-        std::env::set_var("CROSS_BUILD_XARGO", "tru");
+        set_var("CROSS_BUILD_XARGO", "tru");
 
         let res = env.xargo(&target);
         if let Ok(_) = res {
@@ -139,10 +182,9 @@ mod test_config {
     #[test]
     pub fn var_priority_target_before_build() -> Result<(), Box<dyn std::error::Error>> {
         let env = Environment::new("CROSS");
-        std::env::set_var("CROSS_BUILD_XARGO", "true");
-        std::env::set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
+        set_var("CROSS_BUILD_XARGO", "true");
+        set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
 
-        // target used before build
         let target_list = TargetList {
             triples: vec!["aarch64-unknown-linux-gnu".to_string()],
         };
@@ -150,9 +192,10 @@ mod test_config {
         assert_eq!(env.xargo(&target)?, Some(false));
 
         // build used if no target
-        std::env::remove_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO");
+        remove_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO");
         assert_eq!(env.xargo(&target)?, Some(true));
 
+        remove_var("CROSS_BUILD_XARGO");
         Ok(())
     }
 
@@ -168,5 +211,25 @@ mod test_config {
             env.build_var_name("target-aarch64-unknown-linux-gnu_image"),
             "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_IMAGE"
         )
+    }
+
+    #[test]
+    pub fn collect_passthrough() {
+        let target_list = TargetList {
+            triples: vec!["aarch64-unknown-linux-gnu".to_string()],
+        };
+        let target = Target::from("aarch64-unknown-linux-gnu", &target_list);
+
+        set_var("CROSS_BUILD_ENV_PASSTHROUGH", "TEST1 TEST2");
+        set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_ENV_PASSTHROUGH", "PASS1 PASS2");
+        let env = Environment::new("CROSS");
+       
+        let (build, target) = env.passthrough(&target);
+        println!("{:?}, {:?}", build, target);
+        assert_eq!(build.as_ref().unwrap().contains(&"TEST1".to_string()), true);
+        assert_eq!(build.as_ref().unwrap().contains(&"TEST2".to_string()), true);
+        assert_eq!(target.as_ref().unwrap().contains(&"PASS1".to_string()), true);
+        assert_eq!(target.as_ref().unwrap().contains(&"PASS2".to_string()), true);
+
     }
 }

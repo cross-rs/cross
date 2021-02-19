@@ -428,12 +428,19 @@ impl Toml {
 
     /// Returns the list of environment variables to pass through for `target`,
     /// including variables specified under `build` and under `target`.
-    pub fn env_passthrough(&self, target: &Target) -> Result<Vec<&str>> {
+    fn env_passthrough(&self, target: &Target) -> Result<Vec<&str>> {
         let mut bwl = self.build_env("passthrough")?;
         let mut twl = self.target_env(target, "passthrough")?;
         bwl.extend(twl.drain(..));
 
         Ok(bwl)
+    }
+
+    pub fn env_passthrough_build(&self) -> Result<Vec<&str>> {
+        self.build_env("passthrough")
+    }
+    pub fn env_passthrough_target(&self, target: &Target) -> Result<Vec<&str>> {
+        self.target_env(target, "passthrough")
     }
 
     /// Returns the list of volumes to pass through for `target`,
