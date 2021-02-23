@@ -1,25 +1,22 @@
 use crate::{Result, Target, Toml};
 
 use std::{collections::HashMap, env::var};
-#[cfg(not(test))]
+// #[cfg(not(test))]
+// #[derive(Debug)]
+// struct Environment(&'static str);
 #[derive(Debug)]
-struct Environment(&'static str);
-#[cfg(test)]
-#[derive(Debug)]
-struct Environment(&'static str, HashMap<&'static str, &'static str>);
-
+struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
 
 impl Environment {
-
-    #[cfg(not(test))]
-    fn new()-> Self {
-        Environment("CROSS")
+    
+    fn new() -> Self {
+        Environment("CROSS", None)
     }
+
     #[cfg(test)]
-    fn new()-> Self {
-        Environment("CROSS", HashMap::new())
+    fn new_with(map: HashMap<&'static str, &'static str>) -> Self {
+        Environment("CROSS", Some(map))
     }
-
 
     fn build_var_name(&self, name: &str) -> String {
         format!("{}_{}", self.0, name.to_ascii_uppercase().replace("-", "_"))
@@ -31,7 +28,7 @@ impl Environment {
     }
     #[cfg(test)]
     fn get_var(&self, name: &str) -> Option<String> {
-        self.1.get(name).and_then(|v| Some(v.to_string()))
+        self.1.as_ref().and_then(|map| map.get(name).and_then(|v| Some(v.to_string())))
     }
     fn target_path(target: &Target, key: &str) -> String {
         format!("TARGET_{}_{}", target.triple(), key)
@@ -140,6 +137,14 @@ impl Config {
             env: Environment::new(),
         }
     }
+    
+    #[cfg(test)]
+    fn new_with(toml: Option<Toml>, env: Environment) -> Self {
+        Config {
+            toml,
+            env,
+        }
+    }
     pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
         let (build_xargo, target_xargo) = self.env.xargo(target)?;
         let (toml_build_xargo, toml_target_xargo) = if let Some(ref toml) = self.toml {
@@ -232,155 +237,151 @@ impl Config {
 }
 
 #[cfg(test)]
-mod test_environment {
+mod tests {
+    use crate::{Target, TargetList};
+    use super::*;
 
-    use super::Environment;
-    use crate::{errors, Target, TargetList};
-    use std::env::{remove_var, set_var};
-
-    
     fn target() -> Target {
         let target_list = TargetList {
             triples: vec!["aarch64-unknown-linux-gnu".to_string()],
         };
-     
+
         Target::from("aarch64-unknown-linux-gnu", &target_list)
     }
-    
-    #[test]
-    pub fn parse_error_in_env() {
+    mod test_environment {
+
+        use super::*;
+
         
-        let mut map = std::collections::HashMap::new();
-        map.insert("CROSS_BUILD_XARGO", "tru");
+        #[test]
+        pub fn parse_error_in_env() {
+            let mut map = std::collections::HashMap::new();
+            map.insert("CROSS_BUILD_XARGO", "tru");
 
-        let env = Environment("CROSS", map);
-        // set_var("CROSS_BUILD_XARGO", "tru");
+            let env = Environment::new_with(map);
 
-        let res = env.xargo(&target());
-        if let Ok(_) = res {
-            panic!("invalid bool string parsing should fail");
+            let res = env.xargo(&target());
+            if let Ok(_) = res {
+                panic!("invalid bool string parsing should fail");
+            }
+        }
+
+        #[test]
+        pub fn build_and_target_set_returns_tuple() -> Result<()> {
+            let mut map = std::collections::HashMap::new();
+            map.insert("CROSS_BUILD_XARGO", "true");
+            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
+
+            let env = Environment::new_with(map);
+
+            assert_eq!(env.xargo(&target())?, (Some(true), Some(false)));
+
+            assert_eq!(env.xargo(&target())?, (Some(true), None));
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn target_build_var_name() {
+            let map = std::collections::HashMap::new();
+
+            let env = Environment::new_with(map);
+            assert_eq!(env.build_var_name("build_xargo"), "CROSS_BUILD_XARGO");
+            assert_eq!(
+                env.build_var_name("target_aarch64-unknown-linux-gnu_XARGO"),
+                "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO"
+            );
+            assert_eq!(
+                env.build_var_name("target-aarch64-unknown-linux-gnu_image"),
+                "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_IMAGE"
+            )
+        }
+
+        #[test]
+        pub fn collect_passthrough() {
+            let mut map = std::collections::HashMap::new();
+            map.insert("CROSS_BUILD_ENV_PASSTHROUGH", "TEST1 TEST2");
+            map.insert(
+                "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_ENV_PASSTHROUGH",
+                "PASS1 PASS2",
+            );
+
+            let env = Environment::new_with(map);
+
+            let (build, target) = env.passthrough(&target());
+            assert_eq!(build.as_ref().unwrap().contains(&"TEST1".to_string()), true);
+            assert_eq!(build.as_ref().unwrap().contains(&"TEST2".to_string()), true);
+            assert_eq!(
+                target.as_ref().unwrap().contains(&"PASS1".to_string()),
+                true
+            );
+            assert_eq!(
+                target.as_ref().unwrap().contains(&"PASS2".to_string()),
+                true
+            );
         }
     }
 
-    #[test]
-    pub fn build_and_target_set_returns_tuple() -> Result<(), Box<dyn std::error::Error>> {
-        let mut map = std::collections::HashMap::new();
-        map.insert("CROSS_BUILD_XARGO", "true");
-        map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
+    mod test_config {
 
-        let env = Environment("CROSS", map);
-        // set_var("CROSS_BUILD_XARGO", "true");
-        // set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
+        use super::*;
+        use std::env::{remove_var, set_var, var};
+        use std::matches;
 
-        assert_eq!(env.xargo(&target())?, (Some(true), Some(false)));
+       
+        fn toml(content: &str) -> Result<crate::Toml> {
+            Ok(crate::Toml {
+                table: if let Ok(toml::Value::Table(table)) = content.parse() {
+                    table
+                } else {
+                    panic!("Could not parse toml");
+                    // return crate::errors::Error("couldn't parse toml as TOML table");
+                },
+            })
+        }
 
-        // build used if no target
-        // remove_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO");
-        assert_eq!(env.xargo(&target())?, (Some(true), None));
+        #[test]
+        pub fn env_and_toml_xargo_then_use_env() -> Result<()> {
+            let mut map = HashMap::new();
+            map.insert("CROSS_BUILD_XARGO", "true");
 
-        // remove_var("CROSS_BUILD_XARGO");
-        Ok(())
-    }
+            let env = Environment::new_with(map);
+            let config = Config::new_with(Some(toml(toml_build_xargo)?), env);
+            assert!(matches!(config.xargo(&target()), Ok(Some(true))));
 
-    #[test]
-    pub fn target_build_var_name() {
-        let map = std::collections::HashMap::new();
+            Ok(())
+        }
+        #[test]
+        pub fn env_and_toml_xargo_target_then_use_env() -> Result<()> {
+            let mut map = HashMap::new();
+            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
+            let env = Environment::new_with(map);
+            
+            
+            let config = Config::new_with(Some(toml(toml_target_xargo)?), env);
+            assert!(matches!(config.xargo(&target()), Ok(Some(true))));
+            
+            Ok(())
+        }
+        #[test]
+        pub fn env_target_and_toml_build_xargo_then_use_toml() -> Result<()> {
+            let mut map = HashMap::new();
+            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
+            let env = Environment::new_with(map);
+            let config = Config::new_with(Some(toml(toml_build_xargo)?), env);
+            assert!(matches!(config.xargo(&target()), Ok(Some(false))));
 
-        let env = Environment("CROSS", map);
-        assert_eq!(env.build_var_name("build_xargo"), "CROSS_BUILD_XARGO");
-        assert_eq!(
-            env.build_var_name("target_aarch64-unknown-linux-gnu_XARGO"),
-            "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO"
-        );
-        assert_eq!(
-            env.build_var_name("target-aarch64-unknown-linux-gnu_image"),
-            "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_IMAGE"
-        )
-    }
+            Ok(())
+        }
 
-    #[test]
-    pub fn collect_passthrough() {
-        let mut map = std::collections::HashMap::new();
-        map.insert("CROSS_BUILD_ENV_PASSTHROUGH", "TEST1 TEST2");
-        map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_ENV_PASSTHROUGH",
-        "PASS1 PASS2");
-
-        let env = Environment("CROSS", map);
-
-        let (build, target) = env.passthrough(&target());
-        println!("{:?}, {:?}", build, target);
-        assert_eq!(build.as_ref().unwrap().contains(&"TEST1".to_string()), true);
-        assert_eq!(build.as_ref().unwrap().contains(&"TEST2".to_string()), true);
-        assert_eq!(
-            target.as_ref().unwrap().contains(&"PASS1".to_string()),
-            true
-        );
-        assert_eq!(
-            target.as_ref().unwrap().contains(&"PASS2".to_string()),
-            true
-        );
-    }
-}
-
-mod test_config {
-
-    use super::Config;
-    use crate::{errors, Target, TargetList};
-    use std::env::{remove_var, set_var, var};
-    use std::matches;
-
-    fn target() -> Target {
-        let target_list = TargetList {
-            triples: vec!["aarch64-unknown-linux-gnu".to_string()],
-        };
-        Target::from("aarch64-unknown-linux-gnu", &target_list)
-    }
-
-    fn toml(content: &str) -> Result<crate::Toml, String> {
-        Ok(crate::Toml {
-            table: if let Ok(toml::Value::Table(table)) = content.parse() {
-                table
-            } else {
-                return Err("couldn't parse toml as TOML table".to_string());
-            },
-        })
-    }
-
-    #[test]
-    pub fn env_and_toml_xargo_then_use_env() -> Result<(), String> {
-        let config = Config::new(Some(toml(toml_build_xargo)?));
-        set_var("CROSS_BUILD_XARGO", "true");
-        assert!(matches!(config.xargo(&target()), Ok(Some(true))));
-        remove_var("CROSS_BUILD_XARGO");
-
-        Ok(())
-    }
-    #[test]
-    pub fn env_and_toml_xargo_target_then_use_env() -> Result<(), String> {
-        let config = Config::new(Some(toml(toml_target_xargo)?));
-        set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
-        assert!(matches!(config.xargo(&target()), Ok(Some(true))));
-        remove_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO");
-
-        Ok(())
-    }
-    #[test]
-    pub fn env_target_and_toml_build_xargo_then_use_toml() -> Result<(), String> {
-        let config = Config::new(Some(toml(toml_build_xargo)?));
-        set_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
-        assert!(matches!(config.xargo(&target()), Ok(Some(false))));
-        remove_var("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO");
-
-        Ok(())
-    }
-
-    static toml_build_xargo: &str = r#"
+        static toml_build_xargo: &str = r#"
     [build]
     xargo = false
     "#;
 
-    static toml_target_xargo: &str = r#"
+        static toml_target_xargo: &str = r#"
     [target.aarch64-unknown-linux-gnu]
     xargo = false
     "#;
+    }
 }
