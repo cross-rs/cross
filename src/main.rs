@@ -401,15 +401,15 @@ impl Toml {
     }
 
     /// Returns the `build.image` or the `target.{}.xargo` part of `Cross.toml`
-    pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
+    pub fn xargo(&self, target: &Target) -> Result<(Option<bool>, Option<bool>)> {
         let triple = target.triple();
 
         if let Some(value) = self.table.get("build").and_then(|b| b.get("xargo")) {
-            return Ok(Some(
+            return Ok((Some(
                 value
                     .as_bool()
                     .ok_or_else(|| "build.xargo must be a boolean")?,
-            ));
+            ), None));
         }
 
         if let Some(value) = self
@@ -418,11 +418,11 @@ impl Toml {
             .and_then(|b| b.get(triple))
             .and_then(|t| t.get("xargo"))
         {
-            Ok(Some(value.as_bool().ok_or_else(|| {
+            Ok((None, Some(value.as_bool().ok_or_else(|| {
                 format!("target.{}.xargo must be a boolean", triple)
-            })?))
+            })?)))
         } else {
-            Ok(None)
+            Ok((None, None))
         }
     }
 
