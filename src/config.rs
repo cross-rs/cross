@@ -323,7 +323,6 @@ mod tests {
     mod test_config {
 
         use super::*;
-        use std::env::{remove_var, set_var, var};
         use std::matches;
 
        
@@ -332,8 +331,7 @@ mod tests {
                 table: if let Ok(toml::Value::Table(table)) = content.parse() {
                     table
                 } else {
-                    panic!("Could not parse toml");
-                    // return crate::errors::Error("couldn't parse toml as TOML table");
+                    return Err("couldn't parse toml as TOML table".into());
                 },
             })
         }
@@ -344,7 +342,7 @@ mod tests {
             map.insert("CROSS_BUILD_XARGO", "true");
 
             let env = Environment::new_with(map);
-            let config = Config::new_with(Some(toml(toml_build_xargo_false)?), env);
+            let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(true))));
 
             Ok(())
@@ -356,7 +354,7 @@ mod tests {
             let env = Environment::new_with(map);
             
             
-            let config = Config::new_with(Some(toml(toml_target_xargo_false)?), env);
+            let config = Config::new_with(Some(toml(TOML_TARGET_XARGO_FALSE)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(true))));
             
             Ok(())
@@ -366,18 +364,18 @@ mod tests {
             let mut map = HashMap::new();
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
             let env = Environment::new_with(map);
-            let config = Config::new_with(Some(toml(toml_build_xargo_false)?), env);
+            let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(false))));
 
             Ok(())
         }
 
-        static toml_build_xargo_false: &str = r#"
+        static TOML_BUILD_XARGO_FALSE: &str = r#"
     [build]
     xargo = false
     "#;
 
-        static toml_target_xargo_false: &str = r#"
+        static TOML_TARGET_XARGO_FALSE: &str = r#"
     [target.aarch64-unknown-linux-gnu]
     xargo = false
     "#;
