@@ -276,8 +276,6 @@ mod tests {
 
             assert_eq!(env.xargo(&target())?, (Some(true), Some(false)));
 
-            assert_eq!(env.xargo(&target())?, (Some(true), None));
-
             Ok(())
         }
 
@@ -341,24 +339,24 @@ mod tests {
         }
 
         #[test]
-        pub fn env_and_toml_xargo_then_use_env() -> Result<()> {
+        pub fn env_and_toml_build_xargo_then_use_env() -> Result<()> {
             let mut map = HashMap::new();
             map.insert("CROSS_BUILD_XARGO", "true");
 
             let env = Environment::new_with(map);
-            let config = Config::new_with(Some(toml(toml_build_xargo)?), env);
+            let config = Config::new_with(Some(toml(toml_build_xargo_false)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(true))));
 
             Ok(())
         }
         #[test]
-        pub fn env_and_toml_xargo_target_then_use_env() -> Result<()> {
+        pub fn env_target_and_toml_target_xargo_target_then_use_env() -> Result<()> {
             let mut map = HashMap::new();
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
             let env = Environment::new_with(map);
             
             
-            let config = Config::new_with(Some(toml(toml_target_xargo)?), env);
+            let config = Config::new_with(Some(toml(toml_target_xargo_false)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(true))));
             
             Ok(())
@@ -368,18 +366,18 @@ mod tests {
             let mut map = HashMap::new();
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
             let env = Environment::new_with(map);
-            let config = Config::new_with(Some(toml(toml_build_xargo)?), env);
+            let config = Config::new_with(Some(toml(toml_build_xargo_false)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(false))));
 
             Ok(())
         }
 
-        static toml_build_xargo: &str = r#"
+        static toml_build_xargo_false: &str = r#"
     [build]
     xargo = false
     "#;
 
-        static toml_target_xargo: &str = r#"
+        static toml_target_xargo_false: &str = r#"
     [target.aarch64-unknown-linux-gnu]
     xargo = false
     "#;
