@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #552 - Added CHANGELOG.md automation
 - #543 - Added environment variables to control the UID and GID in the container
 - #534 - fix image builds with update of dependencies
+- #524 - docker: Add Nix Store volume support
 - #502 - fix ci: bump openssl version in freebsd
 - #501 - x86_64-linux: lower glibc version requirement to 2.17 (compatible with centos 7)
 - #500 - use runner setting specified in Cross.toml

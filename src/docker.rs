@@ -82,6 +82,7 @@ pub fn run(
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".xargo"));
+    let nix_store_dir = env::var_os("NIX_STORE").map(PathBuf::from);
     let target_dir = target_dir.clone().unwrap_or_else(|| root.join("target"));
 
     // create the directories we are going to mount before we mount them,
@@ -199,6 +200,15 @@ pub fn run(
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
         .args(&["-w", &mount_root.display().to_string()]);
+
+    // When running inside NixOS or using Nix packaging we need to add the Nix
+    // Store to the running container so it can load the needed binaries.
+    if let Some(nix_store) = nix_store_dir {
+        docker.args(&[
+            "-v",
+            &format!("{}:{}:Z", nix_store.display(), nix_store.display()),
+        ]);
+    }
 
     if atty::is(Stream::Stdin) {
         docker.arg("-i");
