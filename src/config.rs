@@ -1,9 +1,7 @@
 use crate::{Result, Target, Toml};
 
-use std::{collections::HashMap, env::var};
-// #[cfg(not(test))]
-// #[derive(Debug)]
-// struct Environment(&'static str);
+use std::collections::HashMap;
+use std::env::var;
 #[derive(Debug)]
 struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
 
@@ -14,6 +12,7 @@ impl Environment {
     }
 
     #[cfg(test)]
+    /// for test set a map with values to mock process env
     fn new_with(map: HashMap<&'static str, &'static str>) -> Self {
         Environment("CROSS", Some(map))
     }
@@ -23,10 +22,12 @@ impl Environment {
     }
 
     #[cfg(not(test))]
+    /// get value from process env
     fn get_var(&self, name: &str) -> Option<String> {
         var(name).ok().and_then(|v| Some(v))
     }
     #[cfg(test)]
+    /// for tests get value from internal map
     fn get_var(&self, name: &str) -> Option<String> {
         self.1.as_ref().and_then(|map| map.get(name).and_then(|v| Some(v.to_string())))
     }
@@ -81,47 +82,28 @@ impl Environment {
     }
 
     fn passthrough(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
-        let target_envs = self.get_target_var(target, "env_passthrough");
-        let mut passthrough_target = None;
-        if let Some(envs) = target_envs {
-            passthrough_target = Some(vec![]);
-            passthrough_target
-                .as_mut()
-                .map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
-        }
-        let build_envs = self.get_build_var("env_passthrough");
-        let mut passthrough_build = None;
-        if let Some(envs) = build_envs {
-            passthrough_build = Some(envs.split_whitespace().map(|v| v.to_string()).collect());
-            passthrough_build
-                .as_mut()
-                .map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
-        }
+        let passthrough_target = self.get_target_var(target, "env_passthrough")
+        .and_then(|ref s| Some(split_to_cloned_by_ws(s)));
+        
+        let passthrough_build = self.get_build_var("env_passthrough")
+        .and_then(|ref s| Some(split_to_cloned_by_ws(s)));
 
         (passthrough_build, passthrough_target)
     }
 
     fn volumes(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
-        let target_envs = self.get_target_var(target, "ENV_VOLUMES");
-        let mut volumes_target = None;
-        if let Some(envs) = target_envs {
-            volumes_target = Some(vec![]);
-            volumes_target
-                .as_mut()
-                .map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
-        }
-        let build_envs = self.get_build_var("ENV_VOLUMES");
-        let mut volumes_build = None;
-        if let Some(envs) = build_envs {
-            volumes_build = Some(vec![]);
-            volumes_build
-                .as_mut()
-                .map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
-        }
-        // validate no =
+        let volumes_target = self.get_target_var(target, "ENV_VOLUMES")
+        .and_then(|ref s| Some(split_to_cloned_by_ws(s)));
+        
+        let volumes_build = self.get_build_var("ENV_VOLUMES")
+        .and_then(|ref s| Some(split_to_cloned_by_ws(s)));
 
         (volumes_build, volumes_target)
     }
+}
+
+fn split_to_cloned_by_ws(string : &str) -> Vec<String> {
+    string.split_whitespace().map(|v| v.to_string()).collect()
 }
 
 #[derive(Debug)]
@@ -206,7 +188,6 @@ impl Config {
                 );
             }
         }
-        println!("{:?}", collect);
         Ok(collect)
     }
 
@@ -231,7 +212,6 @@ impl Config {
                 );
             }
         }
-        println!("env volumes {:?}", collect);
         Ok(collect)
     }
 }
@@ -319,6 +299,7 @@ mod tests {
             );
         }
     }
+       
 
     mod test_config {
 
