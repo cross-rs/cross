@@ -92,7 +92,7 @@ impl Environment {
         let build_envs = self.get_build_var("env_passthrough");
         let mut passthrough_build = None;
         if let Some(envs) = build_envs {
-            passthrough_build = Some(vec![]);
+            passthrough_build = Some(envs.split_whitespace().map(|v| v.to_string()).collect());
             passthrough_build
                 .as_mut()
                 .map(|vec| vec.extend(envs.split_whitespace().map(|v| v.to_string())));
