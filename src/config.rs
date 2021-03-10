@@ -31,7 +31,7 @@ impl Environment {
     fn get_var(&self, name: &str) -> Option<String> {
         self.1
             .as_ref()
-            .and_then(|map| map.get(name).and_then(|v| Some(v.to_string())))
+            .and_then(|map| map.get(name).map(|v| v.to_string()))
     }
 
     fn target_path(target: &Target, key: &str) -> String {
