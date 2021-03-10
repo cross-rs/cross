@@ -90,11 +90,11 @@ impl Environment {
     fn passthrough(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
         let passthrough_target = self
             .get_target_var(target, "env_passthrough")
-            .and_then(|ref s| Some(split_to_cloned_by_ws(s)));
+            .map(|ref s| split_to_cloned_by_ws(s));
 
         let passthrough_build = self
             .get_build_var("env_passthrough")
-            .and_then(|ref s| Some(split_to_cloned_by_ws(s)));
+            .map(|ref s| split_to_cloned_by_ws(s));
 
         (passthrough_build, passthrough_target)
     }
@@ -102,18 +102,18 @@ impl Environment {
     fn volumes(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
         let volumes_target = self
             .get_target_var(target, "ENV_VOLUMES")
-            .and_then(|ref s| Some(split_to_cloned_by_ws(s)));
+            .map(|ref s| split_to_cloned_by_ws(s));
 
         let volumes_build = self
             .get_build_var("ENV_VOLUMES")
-            .and_then(|ref s| Some(split_to_cloned_by_ws(s)));
+            .map(|ref s| split_to_cloned_by_ws(s));
 
         (volumes_build, volumes_target)
     }
 }
 
 fn split_to_cloned_by_ws(string: &str) -> Vec<String> {
-    string.split_whitespace().map(|v| v.to_string()).collect()
+    string.split_whitespace().map(String::from).collect()
 }
 
 #[derive(Debug)]
