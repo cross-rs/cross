@@ -23,7 +23,7 @@ impl Environment {
     #[cfg(not(test))]
     /// get value from process env
     fn get_var(&self, name: &str) -> Option<String> {
-        var(name).ok().and_then(|v| Some(v))
+        var(name).ok()
     }
 
     #[cfg(test)]
