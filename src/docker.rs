@@ -20,8 +20,8 @@ fn get_container_engine() -> Result<std::path::PathBuf> {
     let container_engine = env::var("CROSS_CONTAINER_ENGINE").unwrap_or_default();
 
     if container_engine.is_empty() {
-        which::which(DOCKER)
-            .or_else(|_| which::which(PODMAN))
+        which::which(PODMAN)
+            .or_else(|_| which::which(DOCKER))
             .map_err(|e| e.into())
     } else {
         which::which(container_engine).map_err(|e| e.into())
