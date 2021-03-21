@@ -134,8 +134,16 @@ pub fn run(target: &Target,
             validate_env_var(var)?;
 
             if let Ok(val) = env::var(var) {
-                let host_path = Path::new(&val).canonicalize()?;
-                let mount_path = &host_path;
+
+                let path_parts: Vec<&str>  = val.split(':').collect();
+                let host_path = Path::new(&path_parts[0]).canonicalize()?;
+
+                let mount_path = if path_parts.len() > 1 {
+                    PathBuf::from(&path_parts[1])
+                } else {
+                    host_path.clone()
+                };
+
                 docker.args(&["-v", &format!("{}:{}", host_path.display(), mount_path.display())]);
                 docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
             }
