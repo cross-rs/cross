@@ -6,32 +6,19 @@ use std::env::var;
 struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
 
 impl Environment {
-    fn new() -> Self {
-        Environment("CROSS", None)
-    }
 
-    #[cfg(test)]
-    /// for test set a map with values to mock process env
-    fn new_with(map: HashMap<&'static str, &'static str>) -> Self {
-        Environment("CROSS", Some(map))
+    fn new(map: Option<HashMap<&'static str, &'static str>>) -> Self {
+        Environment("CROSS", map)
     }
 
     fn build_var_name(&self, name: &str) -> String {
         format!("{}_{}", self.0, name.to_ascii_uppercase().replace("-", "_"))
     }
 
-    #[cfg(not(test))]
-    /// get value from process env
     fn get_var(&self, name: &str) -> Option<String> {
-        var(name).ok()
-    }
-
-    #[cfg(test)]
-    /// for tests get value from internal map
-    fn get_var(&self, name: &str) -> Option<String> {
-        self.1
-            .as_ref()
-            .and_then(|map| map.get(name).map(|v| v.to_string()))
+        self.1.as_ref().map(
+            |internal_map| internal_map.get(name).map(|v| v.to_string())).flatten()
+            .or_else(|| var(name).ok())
     }
 
     fn target_path(target: &Target, key: &str) -> String {
@@ -126,7 +113,7 @@ impl Config {
     pub fn new(toml: Option<Toml>) -> Self {
         Config {
             toml,
-            env: Environment::new(),
+            env: Environment::new(None),
         }
     }
 
@@ -238,7 +225,7 @@ mod tests {
 
         Target::from("aarch64-unknown-linux-gnu", &target_list)
     }
-    
+
     mod test_environment {
 
         use super::*;
@@ -248,7 +235,7 @@ mod tests {
             let mut map = std::collections::HashMap::new();
             map.insert("CROSS_BUILD_XARGO", "tru");
 
-            let env = Environment::new_with(map);
+            let env = Environment::new(Some(map));
 
             let res = env.xargo(&target());
             if let Ok(_) = res {
@@ -262,7 +249,7 @@ mod tests {
             map.insert("CROSS_BUILD_XARGO", "true");
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
 
-            let env = Environment::new_with(map);
+            let env = Environment::new(Some(map));
 
             assert_eq!(env.xargo(&target())?, (Some(true), Some(false)));
 
@@ -273,7 +260,7 @@ mod tests {
         pub fn target_build_var_name() {
             let map = std::collections::HashMap::new();
 
-            let env = Environment::new_with(map);
+            let env = Environment::new(Some(map));
             assert_eq!(env.build_var_name("build_xargo"), "CROSS_BUILD_XARGO");
             assert_eq!(
                 env.build_var_name("target_aarch64-unknown-linux-gnu_XARGO"),
@@ -294,7 +281,7 @@ mod tests {
                 "PASS1 PASS2",
             );
 
-            let env = Environment::new_with(map);
+            let env = Environment::new(Some(map));
 
             let (build, target) = env.passthrough(&target());
             assert_eq!(build.as_ref().unwrap().contains(&"TEST1".to_string()), true);
@@ -330,7 +317,7 @@ mod tests {
             let mut map = HashMap::new();
             map.insert("CROSS_BUILD_XARGO", "true");
 
-            let env = Environment::new_with(map);
+            let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(true))));
 
@@ -341,7 +328,7 @@ mod tests {
         pub fn env_target_and_toml_target_xargo_target_then_use_env() -> Result<()> {
             let mut map = HashMap::new();
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
-            let env = Environment::new_with(map);
+            let env = Environment::new(Some(map));
 
             let config = Config::new_with(Some(toml(TOML_TARGET_XARGO_FALSE)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(true))));
@@ -353,7 +340,7 @@ mod tests {
         pub fn env_target_and_toml_build_xargo_then_use_toml() -> Result<()> {
             let mut map = HashMap::new();
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
-            let env = Environment::new_with(map);
+            let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
             assert!(matches!(config.xargo(&target()), Ok(Some(false))));
 
