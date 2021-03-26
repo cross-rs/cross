@@ -12,7 +12,6 @@ pub struct TargetList {
 }
 
 impl TargetList {
-    // TODO remove pub
     pub fn contains(&self, triple: &str) -> bool {
         self.triples.iter().any(|t| t == triple)
     }
