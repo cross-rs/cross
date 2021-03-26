@@ -238,6 +238,7 @@ mod tests {
 
         Target::from("aarch64-unknown-linux-gnu", &target_list)
     }
+    
     mod test_environment {
 
         use super::*;
@@ -347,7 +348,7 @@ mod tests {
 
             Ok(())
         }
-        
+
         #[test]
         pub fn env_target_and_toml_build_xargo_then_use_toml() -> Result<()> {
             let mut map = HashMap::new();

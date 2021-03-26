@@ -1,8 +1,8 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
-mod config;
 mod cargo;
 mod cli;
+mod config;
 mod docker;
 mod errors;
 mod extensions;
@@ -355,7 +355,6 @@ fn run() -> Result<ExitStatus> {
     cargo::run(&args.all, verbose)
 }
 
-
 /// Parsed `Cross.toml`
 #[derive(Debug)]
 pub struct Toml {
@@ -524,5 +523,3 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
         Ok(None)
     }
 }
-
-
