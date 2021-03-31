@@ -6,7 +6,6 @@ use std::env;
 struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
 
 impl Environment {
-
     fn new(map: Option<HashMap<&'static str, &'static str>>) -> Self {
         Environment("CROSS", map)
     }
@@ -16,8 +15,10 @@ impl Environment {
     }
 
     fn get_var(&self, name: &str) -> Option<String> {
-        self.1.as_ref().map(
-            |internal_map| internal_map.get(name).map(|v| v.to_string())).flatten()
+        self.1
+            .as_ref()
+            .map(|internal_map| internal_map.get(name).map(|v| v.to_string()))
+            .flatten()
             .or_else(|| env::var(name).ok())
     }
 
@@ -42,26 +43,22 @@ impl Environment {
             self.get_build_var("XARGO"),
             self.get_target_var(target, "XARGO"),
         );
-        let build_env = if let Some(build) = build_xargo {
-            Some(build.parse::<bool>().or_else(|_| {
-                Err(format!(
-                    "error parsing {} from XARGO environment variable",
-                    build
-                ))
-            })?)
-        } else {
-            None
-        };
-        let target_env = if let Some(t) = target_xargo {
-            Some(t.parse::<bool>().or_else(|_| {
-                Err(format!(
-                    "error parsing {} from XARGO environment variable",
-                    t
-                ))
-            })?)
-        } else {
-            None
-        };
+        let build_env =
+            if let Some(value) = build_xargo {
+                Some(value.parse::<bool>().map_err(|_| {
+                    format!("error parsing {} from XARGO environment variable", value)
+                })?)
+            } else {
+                None
+            };
+        let target_env =
+            if let Some(value) = target_xargo {
+                Some(value.parse::<bool>().map_err(|_| {
+                    format!("error parsing {} from XARGO environment variable", value)
+                })?)
+            } else {
+                None
+            };
 
         Ok((build_env, target_env))
     }
@@ -82,7 +79,11 @@ impl Environment {
         self.get_values_for("ENV_VOLUMES", target)
     }
 
-    fn get_values_for(&self, var: &str, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
+    fn get_values_for(
+        &self,
+        var: &str,
+        target: &Target,
+    ) -> (Option<Vec<String>>, Option<Vec<String>>) {
         let target_values = self
             .get_target_var(target, var)
             .map(|ref s| split_to_cloned_by_ws(s));
@@ -92,8 +93,6 @@ impl Environment {
             .map(|ref s| split_to_cloned_by_ws(s));
 
         (build_values, target_values)
-
-
     }
 }
 
@@ -163,26 +162,24 @@ impl Config {
         let (build_env, target_env) = self.env.passthrough(target);
         if let Some(mut vars) = build_env {
             collect.extend(vars.drain(..));
-        } else {
-            if let Some(ref toml) = self.toml {
-                collect.extend(
-                    toml.env_passthrough_build()?
-                        .drain(..)
-                        .map(|v| v.to_string()),
-                );
-            }
+        } else if let Some(ref toml) = self.toml {
+            collect.extend(
+                toml.env_passthrough_build()?
+                    .drain(..)
+                    .map(|v| v.to_string()),
+            );
         }
+
         if let Some(mut vars) = target_env {
             collect.extend(vars.drain(..));
-        } else {
-            if let Some(ref toml) = self.toml {
-                collect.extend(
-                    toml.env_passthrough_target(target)?
-                        .drain(..)
-                        .map(|v| v.to_string()),
-                );
-            }
+        } else if let Some(ref toml) = self.toml {
+            collect.extend(
+                toml.env_passthrough_target(target)?
+                    .drain(..)
+                    .map(|v| v.to_string()),
+            );
         }
+
         Ok(collect)
     }
 
@@ -191,22 +188,20 @@ impl Config {
         let (build_env, target_env) = self.env.volumes(target);
         if let Some(mut vars) = build_env {
             collect.extend(vars.drain(..));
-        } else {
-            if let Some(ref toml) = self.toml {
-                collect.extend(toml.env_volumes_build()?.drain(..).map(|v| v.to_string()));
-            }
+        } else if let Some(ref toml) = self.toml {
+            collect.extend(toml.env_volumes_build()?.drain(..).map(|v| v.to_string()));
         }
+
         if let Some(mut vars) = target_env {
             collect.extend(vars.drain(..));
-        } else {
-            if let Some(ref toml) = self.toml {
-                collect.extend(
-                    toml.env_volumes_target(target)?
-                        .drain(..)
-                        .map(|v| v.to_string()),
-                );
-            }
+        } else if let Some(ref toml) = self.toml {
+            collect.extend(
+                toml.env_volumes_target(target)?
+                    .drain(..)
+                    .map(|v| v.to_string()),
+            );
         }
+
         Ok(collect)
     }
 }
