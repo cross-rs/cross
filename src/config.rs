@@ -1,7 +1,7 @@
 use crate::{Result, Target, Toml};
 
 use std::collections::HashMap;
-use std::env::var;
+use std::env;
 #[derive(Debug)]
 struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
 
@@ -18,7 +18,7 @@ impl Environment {
     fn get_var(&self, name: &str) -> Option<String> {
         self.1.as_ref().map(
             |internal_map| internal_map.get(name).map(|v| v.to_string())).flatten()
-            .or_else(|| var(name).ok())
+            .or_else(|| env::var(name).ok())
     }
 
     fn target_path(target: &Target, key: &str) -> String {
@@ -30,11 +30,11 @@ impl Environment {
     }
 
     fn get_build_var(&self, key: &str) -> Option<String> {
-        self.get_var(&self.build_var_name(&Environment::build_path(key)))
+        self.get_var(&self.build_var_name(&Self::build_path(key)))
     }
 
     fn get_target_var(&self, target: &Target, key: &str) -> Option<String> {
-        self.get_var(&self.build_var_name(&Environment::target_path(target, key)))
+        self.get_var(&self.build_var_name(&Self::target_path(target, key)))
     }
 
     fn xargo(&self, target: &Target) -> Result<(Option<bool>, Option<bool>)> {
@@ -75,27 +75,25 @@ impl Environment {
     }
 
     fn passthrough(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
-        let passthrough_target = self
-            .get_target_var(target, "env_passthrough")
-            .map(|ref s| split_to_cloned_by_ws(s));
-
-        let passthrough_build = self
-            .get_build_var("env_passthrough")
-            .map(|ref s| split_to_cloned_by_ws(s));
-
-        (passthrough_build, passthrough_target)
+        self.get_values_for("ENV_PASSTHROUGH", target)
     }
 
     fn volumes(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
-        let volumes_target = self
-            .get_target_var(target, "ENV_VOLUMES")
+        self.get_values_for("ENV_VOLUMES", target)
+    }
+
+    fn get_values_for(&self, var: &str, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
+        let target_values = self
+            .get_target_var(target, var)
             .map(|ref s| split_to_cloned_by_ws(s));
 
-        let volumes_build = self
-            .get_build_var("ENV_VOLUMES")
+        let build_values = self
+            .get_build_var(var)
             .map(|ref s| split_to_cloned_by_ws(s));
 
-        (volumes_build, volumes_target)
+        (build_values, target_values)
+
+
     }
 }
 
