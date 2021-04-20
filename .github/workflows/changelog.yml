@@ -1,0 +1,19 @@
+on:
+  pull_request_target:
+
+name: Changelog check
+
+jobs:
+  changelog:
+    name: Changelog check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Changelog updated
+        uses: Zomzog/changelog-checker@v1.1.0
+        with:
+          fileName: CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
