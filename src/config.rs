@@ -158,64 +158,38 @@ impl Config {
     }
 
     pub fn env_passthrough(&self, target: &Target) -> Result<Vec<String>> {
-        let mut collect = vec![];
-        let (build_env, target_env) = self.env.passthrough(target);
-        if let Some(mut vars) = build_env {
-            collect.extend(vars.drain(..));
-        } else if let Some(ref toml) = self.toml {
-            collect.extend(
-                toml.env_passthrough_build()?
-                    .drain(..)
-                    .map(|v| v.to_string()),
-            );
-        }
+        let (env_build, env_target) = self.env.passthrough(target);
 
-        if let Some(mut vars) = target_env {
-            collect.extend(vars.drain(..));
-        } else if let Some(ref toml) = self.toml {
-            collect.extend(
-                toml.env_passthrough_target(target)?
-                    .drain(..)
-                    .map(|v| v.to_string()),
-            );
-        }
+        let toml_getter = || self.toml.as_ref().map(|t| t.env_passthrough_build());
+        let mut collected = Self::sum_of_env_toml_values(toml_getter, env_build)?;
 
-        Ok(collect)
+        let toml_getter = || self.toml.as_ref().map(|t| t.env_passthrough_target(target));
+        collected.extend(Self::sum_of_env_toml_values(toml_getter, env_target)?);
+
+        Ok(collected)
     }
 
     pub fn env_volumes(&self, target: &Target) -> Result<Vec<String>> {
-        let mut collect = vec![];
-        let (build_env, target_env) = self.env.volumes(target);
-        println!("{:?}, {:?}", build_env, target_env);
+        let (env_build, env_target) = self.env.volumes(target);
         let toml_getter = || self.toml.as_ref().map(|t| t.env_volumes_build());
-        collect.extend(Self::sum_of_env_toml_values(toml_getter, build_env)?);
+        let mut collected = Self::sum_of_env_toml_values(toml_getter, env_build)?;
 
         let toml_getter = || self.toml.as_ref().map(|t| t.env_volumes_target(target));
-        collect.extend(Self::sum_of_env_toml_values(toml_getter, target_env)?);
+        collected.extend(Self::sum_of_env_toml_values(toml_getter, env_target)?);
 
-        Ok(collect)
+        Ok(collected)
     }
 
     fn sum_of_env_toml_values<'a>(
-        mut toml_getter: impl FnMut() -> Option<Result<Vec<&'a str>>>,
-        build_env: Option<Vec<String>>,
+        toml_getter: impl FnOnce() -> Option<Result<Vec<&'a str>>>,
+        env_values: Option<Vec<String>>,
     ) -> Result<Vec<String>> {
         let mut collect = vec![];
-        if let Some(mut vars) = build_env {
+        if let Some(mut vars) = env_values {
             collect.extend(vars.drain(..));
-        } else if let Some(toml) = toml_getter() {
-            collect.extend(toml?.drain(..).map(|v| v.to_string()));
+        } else if let Some(toml_values) = toml_getter() {
+            collect.extend(toml_values?.drain(..).map(|v| v.to_string()));
         }
-
-        // if let Some(mut vars) = target_env {
-        //     collect.extend(vars.drain(..));
-        // } else if let Some(ref toml) = self.toml {
-        //     collect.extend(
-        //         toml.env_passthrough_target(target)?
-        //             .drain(..)
-        //             .map(|v| v.to_string()),
-        //     );
-        // }
 
         Ok(collect)
     }
@@ -362,21 +336,26 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
             let expected = vec!["VOLUME1".to_string(), "VOLUME2".into()];
-            // assert!(config.env_volumes(&target()).unwrap().contains(x), Ok(expected));
-            println!("{:?}", config.env_volumes(&target()));
+
+            let result = config.env_volumes(&target()).unwrap();
+            assert!(result.len() == 2);
+            assert!(result.contains(&expected[0]));
+            assert!(result.contains(&expected[1]));
 
             Ok(())
         }
 
         #[test]
         pub fn volumes_use_toml_when_no_env() -> Result<()> {
-            let mut map = HashMap::new();
-            // map.insert("CROSS_BUILD_ENV_VOLUMES", "VOLUME1 VOLUME2");
+            let map = HashMap::new();
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
-            let expected = vec!["VOLUME1".to_string(), "VOLUME2".into()];
-            // assert!(matches!(config.env_volumes(&target()), Ok(expected));
-            println!("{:?}", config.env_volumes(&target()));
+            let expected = vec!["VOLUME3".to_string(), "VOLUME4".into()];
+           
+            let result = config.env_volumes(&target()).unwrap();
+            assert!(result.len() == 2);
+            assert!(result.contains(&expected[0]));
+            assert!(result.contains(&expected[1]));
 
             Ok(())
         }
