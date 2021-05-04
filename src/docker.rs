@@ -149,7 +149,14 @@ pub fn run(
     // We need to specify the user for Docker, but not for Podman.
     if let Ok(ce) = get_container_engine() {
         if ce.ends_with(DOCKER) {
-            docker.args(&["--user", &format!("{}:{}", id::user(), id::group())]);
+            docker.args(&[
+                "--user",
+                &format!(
+                    "{}:{}",
+                    env::var("CROSS_CONTAINER_UID").unwrap_or(id::user().to_string()),
+                    env::var("CROSS_CONTAINER_GID").unwrap_or(id::group().to_string()),
+                ),
+            ]);
         }
     }
 
