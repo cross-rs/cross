@@ -17,7 +17,6 @@ home = "0.5"
 lazy_static = "1.0"
 libc = "0.2.18"
 rustc_version = "0.2"
-semver = "0.9"
 toml = "0.5"
 which = { version = "3.1.0", default_features = false }
 shell-escape = "0.1.4"
