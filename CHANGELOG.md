@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #498 - bump linux-image version to fix CI
 - #497 - don't set RUSTFLAGS in aarch64-musl image 
 - #492 - Add cmake to FreeBSD images
-- #389 - Add support for more hosts and simplify/unify host support checks
+- #489 - Add support for more hosts and simplify/unify host support checks
 - #477 - Fix Docker/Podman links in README
 - #476 - Use Rustlang mirror for Sabotage linux tarbals
 - Added support for mounting volumes.
