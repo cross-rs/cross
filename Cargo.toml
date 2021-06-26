@@ -9,6 +9,7 @@ name = "cross"
 repository = "https://github.com/rust-embedded/cross"
 version = "0.2.1"
 edition = "2018"
+readme = "README.md"
 
 [dependencies]
 atty = "0.2"
