@@ -10,7 +10,7 @@ use crate::cargo::Root;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::id;
-use crate::{Target, Toml};
+use crate::{Arch, Target, Toml};
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 const DOCKER: &str = "docker";
@@ -228,6 +228,48 @@ pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
     };
 
     Ok(image)
+}
+
+/// Takes a Docker image string and returns a list of architectures which are supported by
+/// the image (at least the image(s) that are currently in the Docker image cache).
+pub fn image_archs(image: &str, verbose: bool) -> Result<Vec<Arch>> {
+    fn internal(image: &str, verbose: bool, try_pull: bool) -> Result<Vec<Arch>> {
+        let docker_path = which::which(DOCKER)?;
+
+        if try_pull {
+            let _ = Command::new(&docker_path)
+                .arg("pull")
+                .arg(&image)
+                .run(verbose);
+        }
+
+        let output = Command::new(&docker_path)
+            .arg("image")
+            .arg("inspect")
+            .arg(&image)
+            .run_and_get_stdout(verbose)?;
+
+        let inspect: serde_json::Value = serde_json::from_str(&output).map_err(|_| "unable to parse `docker image inspect` output.")?;
+        let images = inspect.as_array().ok_or("unable to parse `docker image inspect` output.")?;
+        let mut archs = vec![];
+
+        for i in images {
+            let arch = i.get("Architecture").ok_or("unable to read architecture from image.")?.as_str();
+
+            if let Some(arch) = arch {
+                archs.push(Arch::from(arch));
+            }
+        }
+
+        Ok(archs)
+    }
+
+    // Attempt to run `docker image inspect` first - if it fails, repeat the process but try
+    // pull the image first.
+    match internal(image, verbose, false) {
+        Ok(arch) => Ok(arch),
+        Err(_) => internal(image, verbose, true),
+    }
 }
 
 fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
