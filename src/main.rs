@@ -21,6 +21,23 @@ use self::cargo::{Root, Subcommand};
 use self::errors::*;
 use self::rustc::{TargetList, VersionMetaExt};
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Os {
+    Other(String),
+
+    Apple,
+    Linux,
+    Windows
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Arch {
+    Other(String),
+
+    X86_64,
+    Aarch64
+}
+
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Host {
@@ -56,17 +73,17 @@ impl Host {
             // Old behavior (up to cross version 0.2.1) can be activated on demand using environment
             // variable `CROSS_COMPATIBILITY_VERSION`.
             Ok("0.2.1") => {
-                match self {
-                    Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => {
+                match self.os() {
+                    Os::Apple => {
                         target.map(|t| t.needs_docker()).unwrap_or(false)
-                    }
-                    Host::X86_64UnknownLinuxGnu | Host::Aarch64UnknownLinuxGnu | Host::X86_64UnknownLinuxMusl | Host::Aarch64UnknownLinuxMusl => {
+                    },
+                    Os::Linux => {
                         target.map(|t| t.needs_docker()).unwrap_or(true)
-                    }
-                    Host::X86_64PcWindowsMsvc => {
+                    },
+                    Os::Windows => {
                         target.map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()).unwrap_or(false)
-                    }
-                    Host::Other(_) => false,
+                    },
+                    Os::Other(_) => false,
                 }
             },
             // New behaviour, if a target is provided (--target ...) then always run with docker
@@ -93,6 +110,23 @@ impl Host {
             Host::Aarch64UnknownLinuxMusl => "aarch64-unknown-linux-musl",
             Host::X86_64PcWindowsMsvc => "x86_64-pc-windows-msvc",
             Host::Other(s) => s.as_str(),
+        }
+    }
+
+    fn os(&self) -> Os {
+        match self {
+            Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => Os::Apple,
+            Host::X86_64UnknownLinuxGnu | Host::X86_64UnknownLinuxMusl | Host::Aarch64UnknownLinuxGnu | Host::Aarch64UnknownLinuxMusl => Os::Linux,
+            Host::X86_64PcWindowsMsvc => Os::Windows,
+            Host::Other(triple) => Os::Other(triple.clone()),
+        }
+    }
+
+    fn arch(&self) -> Arch {
+        match self {
+            Host::X86_64AppleDarwin | Host::X86_64PcWindowsMsvc | Host::X86_64UnknownLinuxGnu | Host::X86_64UnknownLinuxMusl => Arch::X86_64,
+            Host::Aarch64AppleDarwin | Host::Aarch64UnknownLinuxGnu | Host::Aarch64UnknownLinuxMusl => Arch::Aarch64,
+            Host::Other(triple) => Arch::Other(triple.clone()),
         }
     }
 }
