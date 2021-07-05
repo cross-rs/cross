@@ -15,7 +15,7 @@ main() {
         x86_64)
             arch="x86_64"
             ;;
-        arm64)
+        arm64|aarch64)
             arch="aarch64"
             ;;
         *)
