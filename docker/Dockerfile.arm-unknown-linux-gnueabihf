@@ -9,12 +9,8 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-RUN mkdir /usr/arm-linux-gnueabihf \
- && cd /usr/arm-linux-gnueabihf \
- && export TOOLCHAIN_VERSION=8.3-2019.03 \
- && curl --retry 3 -sSfL https://developer.arm.com/-/media/Files/downloads/gnu-a/${TOOLCHAIN_VERSION}/binrel/gcc-arm-${TOOLCHAIN_VERSION}-x86_64-arm-linux-gnueabihf.tar.xz -O \
- && tar --strip-components 1 -xJf gcc-arm-${TOOLCHAIN_VERSION}-x86_64-arm-linux-gnueabihf.tar.xz \
- && rm gcc-arm-${TOOLCHAIN_VERSION}-x86_64-arm-linux-gnueabihf.tar.xz
+COPY arm-unknown-linux-gnueabihf-toolchain.sh /
+RUN /arm-unknown-linux-gnueabihf-toolchain.sh
 
 ENV PATH /usr/arm-linux-gnueabihf/bin:$PATH
 

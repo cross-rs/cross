@@ -7,7 +7,22 @@ set -euo pipefail
 . lib.sh
 
 main() {
-    local version=3.17.2
+    local uname_arch=$(uname -m)
+    local version=3.20.5
+
+    local arch=
+    case "${uname_arch}" in
+        x86_64)
+            arch="x86_64"
+            ;;
+        arm64)
+            arch="aarch64"
+            ;;
+        *)
+            echo "unsupported architecture"
+            exit 1
+            ;;
+    esac
 
     install_packages curl
 
@@ -16,7 +31,7 @@ main() {
 
     pushd "${td}"
 
-    curl --retry 3 -sSfL "https://github.com/Kitware/CMake/releases/download/v${version}/cmake-${version}-Linux-x86_64.sh" -o cmake.sh
+    curl --retry 3 -sSfL "https://github.com/Kitware/CMake/releases/download/v${version}/cmake-${version}-Linux-${arch}.sh" -o cmake.sh
     sh cmake.sh --skip-license --prefix=/usr/local
 
     popd
