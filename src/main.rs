@@ -44,7 +44,7 @@ impl From<&str> for Arch {
         let lower = s.to_lowercase();
         match lower.as_str() {
             "aarch64" | "arm64" => Arch::Aarch64,
-            "x86" | "x86_64" => Arch::X86_64,
+            "x86" | "x86_64" | "amd64" => Arch::X86_64,
             _ => Arch::Other(lower)
         }
     }
