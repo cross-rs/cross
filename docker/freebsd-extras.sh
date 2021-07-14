@@ -6,7 +6,7 @@ set -euo pipefail
 main() {
     local arch="${1}"
 
-    local sqlite_ver=3.34.1,1 \
+    local sqlite_ver=3.35.5_3,1 \
           openssl_ver=1.1.1k_1,1 \
           target="${arch}-unknown-freebsd12"
 
@@ -41,7 +41,6 @@ main() {
     cp "${td}/openssl/usr/local/lib"/lib{crypto,ssl}.a "${destdir}/lib"
     cp "${td}/openssl/usr/local/lib"/lib{crypto,ssl}.so.11 "${destdir}/lib"
     cp "${td}/openssl/usr/local/lib"/lib{crypto,ssl}.so "${destdir}/lib"
-    cp "${td}/sqlite/usr/local/lib/libsqlite3.a" "${destdir}/lib"
     cp "${td}/sqlite/usr/local/lib/libsqlite3.so.0.8.6" "${destdir}/lib"
     cp "${td}/sqlite/usr/local/lib/libsqlite3.so" "${destdir}/lib"
     cp "${td}/sqlite/usr/local/lib/libsqlite3.so.0" "${destdir}/lib"
