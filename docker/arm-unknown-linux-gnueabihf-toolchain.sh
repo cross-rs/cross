@@ -1,11 +1,14 @@
 #!/bin/bash
 
+set -x
+set -euo pipefail
 . lib.sh
 
 main() {
-    local gcc_version=gcc-8.3.0
-    local glibc_version=glibc-2.28
-    local binutils_version=binutils-2.31.1
+    local gcc_version=8.3.0 \
+          glibc_version=2.28 \
+          binutils_version=2.31.1 \
+          linux_version=5.13.2
 
     install_packages \
         rsync \
@@ -18,52 +21,71 @@ main() {
         bison \
         python3
 
-    cd /tmp
+    local td
+    td="$(mktemp -d)"
 
-    curl -fL https://ftp.gnu.org/gnu/gcc/${gcc_version}/${gcc_version}.tar.gz -O
-    tar xf ${gcc_version}.tar.gz
-    rm ${gcc_version}.tar.gz
+    pushd "${td}"
+    mkdir "${td}"/build-{binutils,gcc,glibc} /usr/arm-linux-gnueabihf
 
-    curl -fL https://ftp.gnu.org/gnu/libc/${glibc_version}.tar.bz2 -O
-    tar xjf ${glibc_version}.tar.bz2
-    rm ${glibc_version}.tar.bz2
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.gz" -O
+    tar -xf "gcc-${gcc_version}.tar.gz"
 
-    curl -fL https://ftp.gnu.org/gnu/binutils/${binutils_version}.tar.bz2 -O
-    tar xjf ${binutils_version}.tar.bz2
-    rm ${binutils_version}.tar.bz2
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/libc/glibc-${glibc_version}.tar.bz2" -O
+    tar -xjf "glibc-${glibc_version}.tar.bz2"
 
-    cd ${gcc_version}
+    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils_version}.tar.bz2" -O
+    tar -xjf "binutils-${binutils_version}.tar.bz2"
+
+    curl --retry 3 -sSfL "https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${linux_version}.tar.xz" -O
+    tar -xJf "linux-${linux_version}.tar.xz"
+
+    pushd "gcc-${gcc_version}"
     contrib/download_prerequisites && rm *.tar.*
+    popd
 
-    mkdir -p /usr/arm-linux-gnueabihf && cd /usr/arm-linux-gnueabihf
-
-    mkdir /tmp/build-binutils && cd /tmp/build-binutils
-    ../${binutils_version}/configure \
+    pushd "build-binutils"
+    ../binutils-${binutils_version}/configure \
         --prefix=/usr/arm-linux-gnueabihf --target=arm-linux-gnueabihf \
         --with-arch=armv6 --with-fpu=vfp --with-float=hard \
         --disable-multilib
-    make -j$(nproc) && make install
+    make -j$(nproc)
+    make install
+    popd
 
-    mkdir /tmp/build-gcc && cd /tmp/build-gcc
-    ../${gcc_version}/configure \
+    pushd "build-gcc"
+    ../gcc-${gcc_version}/configure \
         --prefix=/usr/arm-linux-gnueabihf \
         --target=arm-linux-gnueabihf \
-        --enable-languages=c,c++,fortran \
+        --enable-languages=c,c++ \
         --with-arch=armv6 --with-fpu=vfp --with-float=hard \
-        --disable-multilib
-    make -j$(nproc) all-gcc && make install-gcc
+        --disable-libada \
+        --disable-libcilkrt \
+        --disable-libcilkrts \
+        --disable-libgomp \
+        --disable-libquadmath \
+        --disable-libquadmath-support \
+        --disable-libsanitizer \
+        --disable-libssp \
+        --disable-libvtv \
+        --disable-lto \
+        --disable-multilib \
+        --disable-nls
+    make -j$(nproc) all-gcc
+    make install-gcc
+    popd
 
     export PATH=/usr/arm-linux-gnueabihf/bin:$PATH
 
-    cd /tmp
-
-    git clone --depth=1 https://github.com/raspberrypi/linux && cd linux
+    pushd "linux-${linux_version}"
     export KERNEL=kernel7
-    make ARCH=arm INSTALL_HDR_PATH=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf headers_install
+    make \
+        ARCH=arm \
+        INSTALL_HDR_PATH=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf \
+        headers_install
+    popd
 
-    mkdir /tmp/build-glibc && cd /tmp/build-glibc
-
-    CC=arm-linux-gnueabihf-gcc ../${glibc_version}/configure \
+    pushd "build-glibc"
+    CC=arm-linux-gnueabihf-gcc ../glibc-${glibc_version}/configure \
         --prefix=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf \
         --build=$MACHTYPE --host=arm-linux-gnueabihf --target=arm-linux-gnueabihf \
         --with-arch=armv6 --with-fpu=vfp --with-float=hard \
@@ -74,17 +96,24 @@ main() {
     install csu/crt1.o csu/crti.o csu/crtn.o /usr/arm-linux-gnueabihf/arm-linux-gnueabihf/lib
     arm-linux-gnueabihf-gcc -nostdlib -nostartfiles -shared -x c /dev/null -o /usr/arm-linux-gnueabihf/arm-linux-gnueabihf/lib/libc.so
     touch /usr/arm-linux-gnueabihf/arm-linux-gnueabihf/include/gnu/stubs.h
+    popd
 
-    cd /tmp/build-gcc
-    make -j$(nproc) all-target-libgcc && make install-target-libgcc
+    pushd "build-gcc"
+    make -j$(nproc) all-target-libgcc
+    make install-target-libgcc
+    popd
 
-    cd /tmp/build-glibc
-    make -j$(nproc) && make install
+    pushd "build-glibc"
+    make -j$(nproc)
+    make install
+    popd
 
-    cd /tmp/build-gcc
-    make -j$(nproc) && make install
+    pushd "build-gcc"
+    make -j$(nproc)
+    make install
+    popd
 
-    rm -rf /tmp/*
+    rm -rf "${td}"
 }
 
 main "${@}"
