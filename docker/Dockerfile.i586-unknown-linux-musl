@@ -12,6 +12,20 @@ RUN /xargo.sh
 COPY musl.sh /
 RUN /musl.sh TARGET=i586-linux-musl
 
+COPY qemu.sh /
+RUN /qemu.sh i386 softmmu
+
+COPY dropbear.sh /
+RUN /dropbear.sh
+
+COPY linux-image.sh /
+RUN /linux-image.sh i586
+
+COPY linux-runner /
+
 ENV CARGO_TARGET_I586_UNKNOWN_LINUX_MUSL_LINKER=i586-linux-musl-gcc \
+    CARGO_TARGET_I586_UNKNOWN_LINUX_MUSL_RUNNER="/linux-runner i586" \
     CC_i586_unknown_linux_musl=i586-linux-musl-gcc \
-    CXX_i586_unknown_linux_musl=i586-linux-musl-g++
+    CXX_i586_unknown_linux_musl=i586-linux-musl-g++ \
+    QEMU_LD_PREFIX=/usr/local/i586-linux-muslsf \
+    RUST_TEST_THREADS=1

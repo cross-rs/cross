@@ -27,7 +27,7 @@ main() {
             arch=armhf
             kernel="${kversion}-armmp"
             ;;
-        i686)
+        i586|i686)
             arch=i386
             kernel="${kversion}-686"
             ;;

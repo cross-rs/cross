@@ -27,7 +27,7 @@ case "${arch}" in
     armv7)
         qarch="arm"
         ;;
-    i686)
+    i586|i686)
         qarch="i386"
         ;;
     powerpc)
@@ -78,6 +78,9 @@ case "${arch}" in
         opt="-machine virt"
         driver9p="virtio-9p-device"
         drivernet="virtio-net-device"
+        ;;
+    i586)
+        opt="-cpu pentium -append console=ttyS0"
         ;;
     i686)
         opt="-append console=ttyS0"

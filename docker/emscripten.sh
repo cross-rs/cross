@@ -4,47 +4,45 @@ set -x
 set -euo pipefail
 
 main() {
-    local dependencies=(
-        ca-certificates
-        curl
-        git
-        libxml2
+    apt-get install --no-install-recommends --assume-yes \
+        python3 \
         python
-    )
+        git \
+        llvm \
+        clang \
+        lld \
+        nodejs \
+        npm \
+        binaryen
 
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --no-install-recommends --assume-yes "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
-
-    cd /
     git clone https://github.com/emscripten-core/emsdk.git /emsdk-portable
     cd /emsdk-portable
 
-    ./emsdk install 1.38.46-upstream
-    ./emsdk activate 1.38.46-upstream
+    ./emsdk install emscripten-tag-1.38.31-64bit
+    ./emsdk activate emscripten-tag-1.38.31-64bit
 
-    # Compile and cache libc
-    echo 'int main() {}' > a.c
-    emcc a.c
-    emcc -s BINARYEN=1 a.c
-    echo -e '#include <iostream>\n void hello(){ std::cout << std::endl; }' > a.cpp
-    emcc a.cpp
-    emcc -s BINARYEN=1 a.cpp
-    rm -f a.*
+    echo "LLVM_ROOT = '/usr/bin'" >> .emscripten
+    echo "BINARYEN_ROOT = '/usr/bin'" >> .emscripten
 
-    # Make emsdk usable by any user
-    chmod a+rwX -R "${EMSDK}"
+cat <<EOF > /entrypoint
+#!/bin/bash
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+source /emsdk-portable/emsdk_env.sh >/dev/null
+/bin/bash
+EOF
+    chmod +x /entrypoint
 
-    rm "${0}"
+    # # Compile and cache libc
+    # echo 'int main() {}' > a.c
+    # emcc a.c
+    # emcc -s BINARYEN=1 a.c
+    # echo -e '#include <iostream>\n void hello(){ std::cout << std::endl; }' > a.cpp
+    # emcc a.cpp
+    # emcc -s BINARYEN=1 a.cpp
+    # rm -f a.*
+
+    # # Make emsdk usable by any user
+    # chmod a+rwX -R "${EMSDK}"
 }
 
 main "${@}"

@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:18.04
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -9,9 +9,20 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
+COPY qemu.sh /
+RUN /qemu.sh x86_64
+
 COPY musl.sh /
 RUN /musl.sh TARGET=x86_64-linux-musl
 
+# Allows qemu to run dynamic linked binaries
+RUN ln -sf \
+    /usr/local/x86_64-linux-musl/lib/libc.so \
+    /usr/local/x86_64-linux-musl/lib/ld-musl-x86_64.so.1
+
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-gcc \
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUNNER=qemu-x86_64 \
     CC_x86_64_unknown_linux_musl=x86_64-linux-musl-gcc \
-    CXX_x86_64_unknown_linux_musl=x86_64-linux-musl-g++
+    CXX_x86_64_unknown_linux_musl=x86_64-linux-musl-g++ \
+    QEMU_LD_PREFIX=/usr/local/x86_64-linux-musl \
+    RUST_TEST_THREADS=1

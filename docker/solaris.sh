@@ -6,8 +6,8 @@ set -euo pipefail
 main() {
     local arch="${1}"
 
-    local binutils=2.28.1 \
-          gcc=6.4.0 \
+    local binutils=2.31.1 \
+          gcc=8.3.0 \
           target="${arch}-sun-solaris2.10"
 
     local dependencies=(

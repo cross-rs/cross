@@ -1,9 +1,4 @@
-FROM ubuntu:16.04
-
-COPY linux-image.sh /
-RUN /linux-image.sh x86_64
-
-FROM centos:7
+FROM ubuntu:18.04
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -14,14 +9,29 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
+RUN arch="$(uname -m)" && \
+    case "${arch}" in \
+        arm64|aarch64) apt-get install --assume-yes --no-install-recommends \
+            g++-x86-64-linux-gnu \
+            libc6-dev-amd64-cross ;; \
+        *) apt-get install --assume-yes --no-install-recommends \
+             g++ ;; \
+    esac
+
 COPY qemu.sh /
 RUN /qemu.sh x86_64 softmmu
 
 COPY dropbear.sh /
 RUN /dropbear.sh
 
-COPY --from=0 /qemu /qemu
+COPY linux-image.sh /
+RUN /linux-image.sh x86_64
 
 COPY linux-runner /
 
-ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner x86_64"
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc \
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner x86_64" \
+    CC_x86_64_unknown_linux_gnu=x86_64-linux-gnu-gcc \
+    CXX_x86_64_unknown_linux_gnu=x86_64-linux-gnu-g++ \
+    QEMU_LD_PREFIX=/usr/x86_64-linux-gnu \
+    RUST_TEST_THREADS=1

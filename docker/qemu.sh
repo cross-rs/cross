@@ -7,7 +7,7 @@ set -euo pipefail
 . lib.sh
 
 build_static_libattr() {
-    local version=2.4.46
+    local version=2.4.47
 
     local td
     td="$(mktemp -d)"

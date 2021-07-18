@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -10,7 +10,7 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 RUN apt-get install --assume-yes --no-install-recommends \
-    g++-multilib
+    g++-multilib-i686-linux-gnu
 
 COPY qemu.sh /
 RUN /qemu.sh i386 softmmu
@@ -23,4 +23,9 @@ RUN /linux-image.sh i686
 
 COPY linux-runner /
 
-ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner i686"
+ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER=i686-linux-gnu-gcc \
+    CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner i686" \
+    CC_i686_unknown_linux_gnu=i686-linux-gnu-gcc \
+    CXX_i686_unknown_linux_gnu=i686-linux-gnu-g++ \
+    QEMU_LD_PREFIX=/usr/i686-linux-gnu \
+    RUST_TEST_THREADS=1

@@ -4,6 +4,23 @@ set -x
 set -euo pipefail
 
 version="$(cargo metadata --format-version 1 | jq --raw-output '.packages[] | select(.name == "cross") | .version')"
+aarch64_unsupported = (
+  aarch64-linux-android
+  arm-linux-androideabi
+  armv7-linux-androideabi
+  asmjs-unknown-emscripten # todo
+  i686-linux-android
+  i686-pc-windows-gnu
+  powerpc-unknown-linux-gnu
+  powerpc64-unknown-linux-gnu
+  powerpc64le-unknown-linux-gnu
+  sparc64-unknown-linux-gnu
+  sparcv9-sun-solaris # todo
+  wasm32-unknown-emscripten # todo
+  x86_64-linux-android
+  x86_64-pc-windows-gnu
+  x86_64-sun-solaris
+)
 
 cd docker
 
@@ -12,13 +29,7 @@ run() {
   local image_name="rustembedded/cross:${1}"
   local cache_from_args=()
 
-  if ! docker image inspect "${image_name}" &>/dev/null; then
-    if docker pull "${image_name}"; then
-      cache_from_args=(--cache-from "${image_name}")
-    fi
-  fi
-
-  docker build ${cache_from_args[@]+"${cache_from_args[@]}"} --pull -t "${image_name}" -f "${dockerfile}" .
+  docker build ${cache_from_args[@]+"${cache_from_args[@]}"} -t "${image_name}" -f "${dockerfile}" .
 
   if ! [[ "${version}" =~ alpha ]] && ! [[ "${version}" =~ dev ]]; then
     local versioned_image_name="${image_name}-${version}"
@@ -28,7 +39,8 @@ run() {
 
 if [[ -z "${*}" ]]; then
   for t in Dockerfile.*; do
-    run "${t##Dockerfile.}"
+    target = "${t##Dockerfile.}"
+    run "${target}"
   done
 else
   for image in "${@}"; do

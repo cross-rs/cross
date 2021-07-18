@@ -9,8 +9,10 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY arm-unknown-linux-gnueabihf-toolchain.sh /
-RUN /arm-unknown-linux-gnueabihf-toolchain.sh
+ARG ARCH=arm \
+    KERNEL=kernel7
+COPY gcc-toolchain.sh /
+RUN /gcc-toolchain.sh arm-linux-gnueabihf "--with-arch=armv6 --with-fpu=vfp --with-float=hard"
 
 ENV PATH /usr/arm-linux-gnueabihf/bin:$PATH
 
