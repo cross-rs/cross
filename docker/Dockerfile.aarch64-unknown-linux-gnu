@@ -9,9 +9,14 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-RUN apt-get install --assume-yes --no-install-recommends \
-    g++-aarch64-linux-gnu \
-    libc6-dev-arm64-cross
+RUN arch="$(uname -m)" && \
+    case "${arch}" in \
+        arm64|aarch64) apt-get install --assume-yes --no-install-recommends \
+            g++ ;; \
+        *) apt-get install --assume-yes --no-install-recommends \
+            g++-aarch64-linux-gnu \
+            libc6-dev-arm64-cross ;; \
+    esac
 
 COPY qemu.sh /
 RUN /qemu.sh aarch64 softmmu
