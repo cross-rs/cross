@@ -16,6 +16,7 @@ main() {
         git
         g++-multilib
         make
+        openssh-client
         python
         python3
     )
