@@ -25,7 +25,7 @@ pub fn parse(target_list: &TargetList) -> Args {
     {
         let mut args = env::args().skip(1);
         while let Some(arg) = args.next() {
-            if arg.len() == 0 {
+            if arg.is_empty() {
                 continue;
             }
             if let ("+", ch) = arg.split_at(1) {
