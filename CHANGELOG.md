@@ -5,6 +5,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #552 - Added CHANGELOG.md automation
+- #543 - Added environment variables to control the UID and GID in the container
+- #534 - fix image builds with update of dependencies
+- #502 - fix ci: bump openssl version in freebsd
+- #501 - x86_64-linux: lower glibc version requirement to 2.17 (compatible with centos 7) 
+- #500 - use runner setting specified in Cross.toml 
+- #498 - bump linux-image version to fix CI
+- #497 - don't set RUSTFLAGS in aarch64-musl image 
+- #492 - Add cmake to FreeBSD images
+- #489 - Add support for more hosts and simplify/unify host support checks
+- #477 - Fix Docker/Podman links in README
+- #476 - Use Rustlang mirror for Sabotage linux tarbals
 - Added support for mounting volumes.
 - Re-enabled `powerpc64-unknown-linux-gnu` image
 - Re-enabled `sparc64-unknown-linux-gnu` image
