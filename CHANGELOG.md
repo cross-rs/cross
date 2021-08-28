@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Added support for mounting volumes.
 - Re-enabled `powerpc64-unknown-linux-gnu` image
 - Re-enabled `sparc64-unknown-linux-gnu` image
+- Bump nix dependency to `0.22.1`
 
 ## [v0.2.1] - 2020-06-30
 
