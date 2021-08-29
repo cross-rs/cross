@@ -24,13 +24,24 @@ use self::rustc::{TargetList, VersionMetaExt};
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Host {
-    Other,
+    Other(String),
 
     // OSX
     X86_64AppleDarwin,
+    // Support Apple Silicon, as developers are starting to use it as development workstation.
+    Aarch64AppleDarwin,
 
     // Linux
     X86_64UnknownLinuxGnu,
+    // Linux Aarch64 is become more popular in CI pipelines (e.g. to AWS Graviton based systems)
+    Aarch64UnknownLinuxGnu,
+    // (Alpine) Linux (musl) often use in CI pipelines to cross compile rust projects to different
+    // targets (e.g. in GitLab CI pipelines).
+    X86_64UnknownLinuxMusl,
+    // (Alpine) Linux (musl) often use in CI pipelines to cross compile rust projects to different
+    // targets (e.g. in GitLab CI pipelines). Now, that AWS Graviton based systems are gaining
+    // attraction CI pipelines might run on (Alpine) Linux Aarch64.
+    Aarch64UnknownLinuxMusl,
 
     // Windows MSVC
     X86_64PcWindowsMsvc
@@ -41,23 +52,47 @@ impl Host {
     ///
     /// `target == None` means `target == host`
     fn is_supported(&self, target: Option<&Target>) -> bool {
-        if *self == Host::X86_64AppleDarwin {
-            target.map(|t| t.is_apple() || t.needs_docker()).unwrap_or(false)
-        } else if *self == Host::X86_64UnknownLinuxGnu {
-            target.map(|t| t.needs_docker()).unwrap_or(true)
-        } else if *self == Host::X86_64PcWindowsMsvc {
-            target.map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()).unwrap_or(false)
-        } else {
-            false
+        match std::env::var("CROSS_COMPATIBILITY_VERSION").as_ref().map(|v| v.as_str()) {
+            // Old behavior (up to cross version 0.2.1) can be activated on demand using environment
+            // variable `CROSS_COMPATIBILITY_VERSION`.
+            Ok("0.2.1") => {
+                match self {
+                    Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => {
+                        target.map(|t| t.needs_docker()).unwrap_or(false)
+                    }
+                    Host::X86_64UnknownLinuxGnu | Host::Aarch64UnknownLinuxGnu | Host::X86_64UnknownLinuxMusl | Host::Aarch64UnknownLinuxMusl => {
+                        target.map(|t| t.needs_docker()).unwrap_or(true)
+                    }
+                    Host::X86_64PcWindowsMsvc => {
+                        target.map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()).unwrap_or(false)
+                    }
+                    Host::Other(_) => false,
+                }
+            },
+            // New behaviour, if a target is provided (--target ...) then always run with docker
+            // image unless the target explicitly opts-out (i.e. unless needs_docker() returns false).
+            // If no target is provided run natively (on host) using cargo.
+            //
+            // This not only simplifies the logic, it also enables forward-compatibility without
+            // having to change cross every time someone comes up with the need for a new host/target
+            // combination. It's totally fine to call cross with `--target=$host_triple`, for
+            // example to test custom docker images. Cross should not try to recognize if host and
+            // target are equal, it's a user decision and if user want's to bypass cross he can call
+            // cargo directly or omit the `--target` option.
+            _ => target.map(|t| t.needs_docker()).unwrap_or(false)
         }
     }
 
-    fn triple(&self) -> &'static str {
-        match *self {
+    fn triple(&self) -> &str {
+        match self {
             Host::X86_64AppleDarwin => "x86_64-apple-darwin",
+            Host::Aarch64AppleDarwin => "aarch64-apple-darwin",
             Host::X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
+            Host::Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
+            Host::X86_64UnknownLinuxMusl => "x86_64-unknown-linux-musl",
+            Host::Aarch64UnknownLinuxMusl => "aarch64-unknown-linux-musl",
             Host::X86_64PcWindowsMsvc => "x86_64-pc-windows-msvc",
-            Host::Other => unimplemented!()
+            Host::Other(s) => s.as_str(),
         }
     }
 }
@@ -67,8 +102,12 @@ impl<'a> From<&'a str> for Host {
         match s {
             "x86_64-apple-darwin" => Host::X86_64AppleDarwin,
             "x86_64-unknown-linux-gnu" => Host::X86_64UnknownLinuxGnu,
+            "x86_64-unknown-linux-musl" => Host::X86_64UnknownLinuxMusl,
             "x86_64-pc-windows-msvc" => Host::X86_64PcWindowsMsvc,
-            _ => Host::Other,
+            "aarch64-apple-darwin" => Host::Aarch64AppleDarwin,
+            "aarch64-unknown-linux-gnu" => Host::Aarch64UnknownLinuxGnu,
+            "aarch64-unknown-linux-musl" => Host::Aarch64UnknownLinuxMusl,
+            s => Host::Other(s.to_string()),
         }
     }
 }
@@ -136,7 +175,8 @@ impl Target {
 
     fn needs_docker(&self) -> bool {
         self.is_linux() || self.is_android() || self.is_bare_metal() || self.is_bsd() ||
-        self.is_solaris() || !self.is_builtin() || self.is_windows() || self.is_emscripten()
+        self.is_solaris() || !self.is_builtin() || self.is_windows() || self.is_emscripten() ||
+        self.is_apple()
     }
 
     fn needs_interpreter(&self) -> bool {
@@ -162,9 +202,13 @@ impl From<Host> for Target {
     fn from(host: Host) -> Target {
         match host {
             Host::X86_64UnknownLinuxGnu => Target::new_built_in("x86_64-unknown-linux-gnu"),
+            Host::X86_64UnknownLinuxMusl => Target::new_built_in("x86_64-unknown-linux-musl"),
             Host::X86_64AppleDarwin => Target::new_built_in("x86_64-apple-darwin"),
             Host::X86_64PcWindowsMsvc => Target::new_built_in("x86_64-pc-windows-msvc"),
-            Host::Other => unimplemented!(),
+            Host::Aarch64AppleDarwin => Target::new_built_in("aarch64-apple-darwin"),
+            Host::Aarch64UnknownLinuxGnu => Target::new_built_in("aarch64-unknown-linux-gnu"),
+            Host::Aarch64UnknownLinuxMusl => Target::new_built_in("aarch64-unknown-linux-musl"),
+            Host::Other(s) => Target::from(s.as_str(), &rustc::target_list(false).unwrap()),
         }
     }
 }

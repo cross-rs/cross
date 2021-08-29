@@ -64,7 +64,7 @@ pub fn username() -> Result<Option<String>, Error>  {
 
             if errno == 0 { return Ok(None) }
 
-            return Err(Error::Sys(Errno::from_i32(errno)))
+            return Err(Errno::from_i32(errno))
         }
 
         CStr::from_ptr((*passwd).pw_name)

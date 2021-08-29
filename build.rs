@@ -1,7 +1,7 @@
 use std::env;
 use std::error::Error;
-use std::fs::{read_dir, File};
-use std::io::Write;
+use std::fs::File;
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -63,8 +63,13 @@ fn docker_images() -> String {
     let mut images = String::from("[");
     let mut dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     dir.push("docker");
-    for entry in read_dir(dir).unwrap() {
-        let path = entry.unwrap().path();
+
+    let dir = dir.read_dir().unwrap();
+    let mut paths = dir.collect::<io::Result<Vec<_>>>().unwrap();
+    paths.sort_by_key(|e| e.path());
+
+    for entry in paths {
+        let path = entry.path();
         let file_name = path.file_name().unwrap().to_str().unwrap();
         if file_name.starts_with("Dockerfile.") {
             images.push_str("\"");
@@ -72,6 +77,7 @@ fn docker_images() -> String {
             images.push_str("\", ");
         }
     }
+
     images.push_str("]");
     images
 }
