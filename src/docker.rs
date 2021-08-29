@@ -163,8 +163,11 @@ pub fn run(
     docker
         .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-e", "CARGO_HOME=/cargo"])
-        .args(&["-e", "CARGO_TARGET_DIR=/target"])
-        .args(&["-e", &format!("USER={}", id::username().unwrap().unwrap())]);
+        .args(&["-e", "CARGO_TARGET_DIR=/target"]);
+
+    if let Some(username) = id::username().unwrap() {
+        docker.args(&["-e", &format!("USER={}", username)]);
+    }
 
     if let Ok(value) = env::var("QEMU_STRACE") {
         docker.args(&["-e", &format!("QEMU_STRACE={}", value)]);
