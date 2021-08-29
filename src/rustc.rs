@@ -8,7 +8,7 @@ use crate::errors::*;
 use crate::extensions::CommandExt;
 
 pub struct TargetList {
-    triples: Vec<String>,
+    pub triples: Vec<String>,
 }
 
 impl TargetList {
