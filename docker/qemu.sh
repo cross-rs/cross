@@ -109,7 +109,7 @@ build_static_pixman() {
 }
 
 main() {
-    local version=5.1.0
+    local version=6.1.0
 
     if_centos version=4.2.1
 
@@ -125,6 +125,7 @@ main() {
         flex \
         libtool \
         make \
+        ninja-build \
         patch \
         python3 \
 
