@@ -69,15 +69,6 @@ build_static_pixman() {
 main() {
     local version=4.2.0
 
-    # Qemu versions 3.1.0 and above break 32-bit float conversions
-    # on powerpc, powerpc64, and powerpc64le. Last known working version
-    # is 3.0.1.
-    # Upstream Issue:
-    #   https://bugs.launchpad.net/qemu/+bug/1821444
-    if [[ "${1}" == ppc* ]]; then
-        version=3.0.1
-    fi
-
     local arch="${1}" \
           softmmu="${2:-}"
 
