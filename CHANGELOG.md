@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #588 - fix ci: bump openssl version in freebsd again
 - #552 - Added CHANGELOG.md automation
 - #543 - Added environment variables to control the UID and GID in the container
 - #534 - fix image builds with update of dependencies
