@@ -57,7 +57,7 @@ pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTarg
 
 pub fn install_toolchain(toolchain: &str, verbose: bool) -> Result<()> {
     Command::new("rustup")
-        .args(&["toolchain", "add", toolchain])
+        .args(&["toolchain", "add", toolchain, "--profile", "minimal"])
         .run(verbose)
         .chain_err(|| format!("couldn't install toolchain `{}`", toolchain))
 }
