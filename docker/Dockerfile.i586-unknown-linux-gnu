@@ -9,5 +9,5 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-RUN apt-get install --assume-yes --no-install-recommends \
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-multilib
