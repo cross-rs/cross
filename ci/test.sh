@@ -88,6 +88,8 @@ EOF
         cargo init --bin --name hello .
         retry cargo fetch
         cross build --target "${TARGET}"
+        echo nightly > rust-toolchain
+        cross build --target "${TARGET}"
         popd
 
         rm -rf "${td}"
