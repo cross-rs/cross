@@ -63,6 +63,12 @@ pub fn parse(target_list: &TargetList) -> Args {
         }
     }
 
+    if target.is_none() {
+        if let Ok(target_env) = env::var("CARGO_CROSS_TARGET") {
+            target = Some(Target::from(&target_env, target_list))
+        }
+    }
+
     let docker_in_docker = env::var("CROSS_DOCKER_IN_DOCKER")
         .map(|s| bool::from_str(&s).unwrap_or_default())
         .unwrap_or_default();
