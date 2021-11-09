@@ -19,6 +19,7 @@ install_packages \
     automake \
     binutils \
     ca-certificates \
+    clang \
     curl \
     file \
     gcc \
