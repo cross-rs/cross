@@ -184,7 +184,7 @@ jobs:
             dylib: 1
             std: 1
             run: 1
-            image: macOS-latest
+            image: macos-latest
             deploy: 1
           - target: x86_64-pc-windows-gnu
             cpp: 1
@@ -234,7 +234,7 @@ jobs:
             cpp: 1
             std: 1
             run: 1
-            image: vs2017-win2016
+            image: windows-latest
             deploy: 1
 
     steps:
