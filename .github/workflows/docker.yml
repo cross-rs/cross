@@ -9,7 +9,7 @@ name: Docker Build
 jobs:
   docker-build:
     needs: [docker-builds]
-    runs-on: ${{ matrix.image }}
+    runs-on: ubuntu-latest
     steps:
       - name: Docker builds done
         run: exit 0
