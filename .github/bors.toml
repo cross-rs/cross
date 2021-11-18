@@ -1,5 +1,5 @@
 block_labels = ["needs-decision"]
 delete_merged_branches = true
 required_approvals = 1
-status = ["Docker Build", "CI"]
+status = ["docker-build", "CI"]
 timeout_sec = 21600
