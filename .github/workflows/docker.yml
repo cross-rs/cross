@@ -283,8 +283,8 @@ jobs:
         # TODO: Not sure what package to use for this step.
         run: echo "TODO"; exit 1
       - name: Login to GHCR
-        if: (env.BRANCH == 'master' || startsWith(env.TAG, 'v') && runner.os == 'Linux'
+        if: (env.BRANCH == 'master' || startsWith(env.TAG, 'v')) && runner.os == 'Linux'
         run: echo "${ secrets.GITHUB_TOKEN }" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
       - name: Push image to GHCR
-        if: (env.BRANCH == 'master' || startsWith(env.TAG, 'v') && runner.os == 'Linux'
+        if: (env.BRANCH == 'master' || startsWith(env.TAG, 'v')) && runner.os == 'Linux'
         run: ./ci/docker_push.sh
