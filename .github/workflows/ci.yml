@@ -3,9 +3,48 @@ on: [pull_request, push]
 name: CI
 
 jobs:
+  ci:
+    name: CI
+    needs: [shellcheck, test, fmt]
+    runs-on: ubuntu-latest
+    steps: 
+      - name: I Complete
+        run: exit 0
   shellcheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: ShellCheck
         uses: azohra/shell-linter@v0.3.0
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: clippy
+      - name: Run unit tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+        timeout-minutes: 5
+      - name: Run clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: clippy
+      - name: rustfmt -- --check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
