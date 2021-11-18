@@ -8,7 +8,7 @@ name: Docker Build
 
 jobs:
   docker-build:
-    needs: [docker-build]
+    needs: [docker-builds]
     runs-on: ${{ matrix.image }}
     steps:
       - name: Docker builds done
