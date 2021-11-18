@@ -81,7 +81,9 @@ pub fn root() -> Result<Option<Root>> {
         let toml = dir.join("Cargo.toml");
 
         if fs::metadata(&toml).is_ok() {
-            return Ok(Some(Root { path: dir.to_owned() }));
+            return Ok(Some(Root {
+                path: dir.to_owned(),
+            }));
         }
 
         match dir.parent() {

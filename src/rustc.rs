@@ -3,9 +3,9 @@ use std::process::Command;
 
 use rustc_version::{Version, VersionMeta};
 
-use crate::{Host, Target};
 use crate::errors::*;
 use crate::extensions::CommandExt;
+use crate::{Host, Target};
 
 pub struct TargetList {
     pub triples: Vec<String>,
@@ -28,13 +28,14 @@ impl VersionMetaExt for VersionMeta {
     }
 
     fn needs_interpreter(&self) -> bool {
-        self.semver < Version {
-            major: 1,
-            minor: 19,
-            patch: 0,
-            pre: vec![],
-            build: vec![],
-        }
+        self.semver
+            < Version {
+                major: 1,
+                minor: 19,
+                patch: 0,
+                pre: vec![],
+                build: vec![],
+            }
     }
 }
 
@@ -42,10 +43,8 @@ pub fn target_list(verbose: bool) -> Result<TargetList> {
     Command::new("rustc")
         .args(&["--print", "target-list"])
         .run_and_get_stdout(verbose)
-        .map(|s| {
-            TargetList {
-                triples: s.lines().map(|l| l.to_owned()).collect(),
-            }
+        .map(|s| TargetList {
+            triples: s.lines().map(|l| l.to_owned()).collect(),
         })
 }
 
