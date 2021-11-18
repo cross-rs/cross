@@ -344,6 +344,12 @@ jobs:
         if: startsWith(github.ref, 'refs/heads/')
       - run: echo "TAG=${{ runner.os }}" >> $GITHUB_ENV
         if: startsWith(github.ref, 'refs/tags/')
+      - run: echo "TARGET=${{ matrix.target }}" >> $GITHUB_ENV
+      - run: echo "CPP=${{ matrix.cpp }}" >> $GITHUB_ENV
+      - run: echo "DYLIB=${{ matrix.dylib }}" >> $GITHUB_ENV
+      - run: echo "STD=${{ matrix.std }}" >> $GITHUB_ENV
+      - run: echo "RUN=${{ matrix.run }}" >> $GITHUB_ENV
+      - run: echo "RUNNERS=${{ matrix.runners }}" >> $GITHUB_ENV
       - name: Run unit tests
         uses: actions-rs/cargo@v1
         with:
@@ -353,13 +359,6 @@ jobs:
       - name: Build Docker image
         if: runner.os == 'Linux'
         timeout-minutes: 360
-        env:
-          TARGET: ${{ matrix.target }}
-          CPP: ${{ matrix.cpp }}
-          DYLIB: ${{ matrix.dylib }}
-          STD: ${{ matrix.std }}
-          RUN: ${{ matrix.run }}
-          RUNNERS: ${{ matrix.runners }}
         run: ./build-docker-image.sh "${{ matrix.target }}"
       - name: Test
         run: ./ci/test.sh
