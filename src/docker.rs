@@ -231,9 +231,9 @@ pub fn image(config: &Config, target: &Target) -> Result<String> {
     let version = env!("CARGO_PKG_VERSION");
 
     let image = if version.contains("alpha") || version.contains("dev") {
-        format!("{image}:{}", image = CROSS_IMAGE, triple)
+        format!("{}:{}", CROSS_IMAGE, triple)
     } else {
-        format!("{image}:{}-{}", image = CROSS_IMAGE, triple, version)
+        format!("{}:{}-{}", CROSS_IMAGE, triple, version)
     };
 
     Ok(image)
