@@ -130,6 +130,9 @@ main() {
       rm "${key}"
     done
 
+    # allow apt-get to retry downloads
+    echo 'APT::Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
+    
     apt-get update
 
     mkdir -p "/qemu/${arch}"
