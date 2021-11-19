@@ -154,7 +154,7 @@ esac
         if [ -n "${CROSS_DEBUG}" ]; then
             echo "Not ready but continuing because CROSS_DEBUG is set"
         else
-            echo "Qemu is not ready..."
+            echo "Qemu is not ready after ${SECONDS} seconds..."
             echo "Set the environment variable CROSS_DEBUG=1 to debug"
             exit 1
         fi
