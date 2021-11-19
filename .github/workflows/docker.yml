@@ -284,18 +284,19 @@ jobs:
             cpp: 1
             dylib: 1
             std: 1
-          - target: sparcv9-sun-solaris
-            toolchain: 1.42.0
-            os: ubuntu-latest
-            cpp: 1
-            dylib: 1
-            std: 1
-          - target: x86_64-sun-solaris
-            toolchain: 1.42.0
-            os: ubuntu-latest
-            cpp: 1
-            dylib: 1
-            std: 1
+          # Disabled, see #534
+          # - target: sparcv9-sun-solaris
+          #   toolchain: 1.42.0
+          #   os: ubuntu-latest
+          #   cpp: 1
+          #   dylib: 1
+          #   std: 1
+          # - target: x86_64-sun-solaris
+          #   toolchain: 1.42.0
+          #   os: ubuntu-latest
+          #   cpp: 1
+          #   dylib: 1
+          #   std: 1
           - target: asmjs-unknown-emscripten
             toolchain: 1.42.0
             os: ubuntu-latest
