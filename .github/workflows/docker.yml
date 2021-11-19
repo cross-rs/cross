@@ -362,8 +362,10 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 360
         run: ./build-docker-image.sh "${{ matrix.target }}"
+        shell: bash
       - name: Test
         run: ./ci/test.sh
+        shell: bash
       - name: Publish on crates.io
         if: startsWith(env.TAG, 'v') && matrix.CRATES_IO_PUBLISH == '1'
         env:
@@ -382,3 +384,4 @@ jobs:
       - name: Push image to GHCR
         if: (env.BRANCH == 'master' || startsWith(env.TAG, 'v')) && runner.os == 'Linux'
         run: ./ci/docker_push.sh
+        shell: bash
