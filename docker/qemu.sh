@@ -6,6 +6,47 @@ set -euo pipefail
 # shellcheck disable=SC1091
 . lib.sh
 
+build_static_libffi () {
+    local version=3.0.13
+
+    local td
+    td="$(mktemp -d)"
+
+    pushd "${td}"
+
+
+    curl --retry 3 -sSfL "https://github.com/libffi/libffi/archive/refs/tags/v${version}.tar.gz" -O -L
+    tar --strip-components=1 -xzf "v${version}.tar.gz"
+    ./configure --prefix="$td"/lib --disable-builddir --disable-shared --enable-static
+    make "-j$(nproc)"
+    install -m 644 ./.libs/libffi.a /usr/lib64/
+
+    popd
+
+    rm -rf "${td}"
+}
+
+build_static_libmount () {
+    local version_spec=2.23.2
+    local version=2.23
+    local td
+    td="$(mktemp -d)"
+
+    pushd "${td}"
+
+
+    curl --retry 3 -sSfL "https://kernel.org/pub/linux/utils/util-linux/v${version}/util-linux-${version_spec}.tar.xz" -O -L
+    tar --strip-components=1 -xJf "util-linux-${version_spec}.tar.xz"
+    ./configure --disable-shared --enable-static --without-ncurses
+    make "-j$(nproc)" mount
+    install -m 644 ./.libs/*.a /usr/lib64/
+
+    popd
+
+    rm -rf "${td}"
+}
+
+
 build_static_libattr() {
     local version=2.4.46
 
@@ -98,10 +139,18 @@ main() {
         libfdt-devel \
         pcre-static \
         pixman-devel \
+        libselinux-devel \
+        libselinux-static \
+        libffi \
+        libuuid-devel \
+        libblkid-devel \
+        libmount-devel \
         zlib-devel \
         zlib-static
 
     # these are not packaged as static libraries in centos; build them manually
+    if_centos build_static_libffi
+    if_centos build_static_libmount
     if_centos build_static_libattr
     if_centos build_static_libcap
     if_centos build_static_pixman
@@ -117,7 +166,6 @@ main() {
         libpixman-1-dev \
         libselinux1-dev \
         zlib1g-dev
-
     local td
     td="$(mktemp -d)"
 
