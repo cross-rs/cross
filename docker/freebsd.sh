@@ -71,6 +71,7 @@ main() {
     cp -r "${td}/freebsd/usr/include" "${destdir}"
     cp "${td}/freebsd/lib/libc.so.7" "${destdir}/lib"
     cp "${td}/freebsd/lib/libm.so.5" "${destdir}/lib"
+    cp "${td}/freebsd/lib/libkvm.so.7" "${destdir}/lib"
     cp "${td}/freebsd/lib/libthr.so.3" "${destdir}/lib"
     cp "${td}/freebsd/lib/libutil.so.9" "${destdir}/lib"
     cp "${td}/freebsd/lib/libssp.so.0" "${destdir}/lib"
@@ -80,6 +81,7 @@ main() {
     cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp,ssp_nonshared}.a "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{rt,execinfo,procstat}.so.1 "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/libkvm.a "${destdir}/lib"
 
     ln -s libc.so.7 "${destdir}/lib/libc.so"
     ln -s libc++.so.1 "${destdir}/lib/libc++.so"
@@ -91,6 +93,7 @@ main() {
     ln -s libthr.so.3 "${destdir}/lib/libpthread.so"
     ln -s libssp.so.0 "${destdir}/lib/libssp.so"
     ln -s libdevstat.so.7 "${destdir}/lib/libdevstat.so"
+    ln -s libkvm.so.7 "${destdir}/lib/libkvm.so"
 
     cd gcc-build
     ../gcc/configure \
