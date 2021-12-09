@@ -28,7 +28,7 @@ install_packages \
     make
 
 if_centos install_packages \
-    clang \
+    clang-devel \
     gcc-c++ \
     glibc-devel \
     pkgconfig
