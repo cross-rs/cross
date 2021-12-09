@@ -19,12 +19,12 @@ install_packages \
     automake \
     binutils \
     ca-certificates \
-    clang \
     curl \
     file \
     gcc \
     git \
     libtool \
+    libclang-dev \
     m4 \
     make
 
