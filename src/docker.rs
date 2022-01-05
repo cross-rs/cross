@@ -230,9 +230,9 @@ pub fn image(config: &Config, target: &Target) -> Result<String> {
     let version = env!("CARGO_PKG_VERSION");
 
     let image = if version.contains("alpha") || version.contains("dev") {
-        format!("rustembedded/cross:{}", triple)
+        format!("docker.io/rustembedded/cross:{}", triple)
     } else {
-        format!("rustembedded/cross:{}-{}", triple, version)
+        format!("docker.io/rustembedded/cross:{}-{}", triple, version)
     };
 
     Ok(image)
