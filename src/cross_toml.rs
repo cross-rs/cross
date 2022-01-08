@@ -1,7 +1,7 @@
 #![doc = include_str!("../docs/cross_toml.md")]
 
 use crate::errors::*;
-use crate::Target;
+use crate::{Target, TargetList};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -91,6 +91,11 @@ impl CrossToml {
             .map_or(Vec::new(), |t| t.volumes.clone())
     }
 
+    /// Returns the default target to build,
+    pub fn target(&self, target_list: &TargetList) -> Option<Target> {
+        self.build.as_ref().and_then(|b| b.target.as_ref()).map(|t| Target::from(t, target_list))
+    }
+
     /// Returns a reference to the [`CrossTargetConfig`] of a specific `target`
     fn get_target(&self, target: &Target) -> Option<&CrossTargetConfig> {
         self.targets.get(target)
@@ -136,7 +141,7 @@ mod tests {
         let test_str = r#"
           [build]
           xargo = true
- 
+
           [build.env]
           volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]

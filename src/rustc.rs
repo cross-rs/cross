@@ -7,6 +7,7 @@ use crate::errors::*;
 use crate::extensions::CommandExt;
 use crate::{Host, Target};
 
+#[derive(Debug)]
 pub struct TargetList {
     pub triples: Vec<String>,
 }

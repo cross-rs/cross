@@ -189,7 +189,7 @@ impl Config {
         if let Some(env_value) = self.env.target() {
             return Some(Target::from(&env_value, target_list));
         }
-        None
+        self.toml.as_ref().map_or(None, |t| t.target(target_list))
     }
 
     fn sum_of_env_toml_values(
@@ -386,6 +386,20 @@ mod tests {
             assert!(matches!(
                 config_target.triple(),
                 "armv7-unknown-linux-musleabihf"
+            ));
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn no_env_but_toml_default_target_then_use_toml() -> Result<()> {
+            let env = Environment::new(None);
+            let config = Config::new_with(Some(toml(TOML_DEFAULT_TARGET)?), env);
+
+            let config_target = config.target(&target_list()).unwrap();
+            assert!(matches!(
+                config_target.triple(),
+                "aarch64-unknown-linux-gnu"
             ));
 
             Ok(())
