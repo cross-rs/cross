@@ -1,4 +1,4 @@
-use crate::{CrossToml, Result, Target};
+use crate::{CrossToml, Result, Target, TargetList};
 
 use crate::errors::*;
 use std::collections::HashMap;
@@ -181,6 +181,10 @@ impl Config {
         Ok(collected)
     }
 
+    pub fn target(&self, _target_list: &TargetList) -> Option<Target> {
+        None
+    }
+
     fn sum_of_env_toml_values(
         toml_getter: impl FnOnce() -> Option<Vec<String>>,
         env_values: Option<Vec<String>>,
@@ -201,11 +205,17 @@ mod tests {
     use super::*;
     use crate::{Target, TargetList};
 
-    fn target() -> Target {
-        let target_list = TargetList {
-            triples: vec!["aarch64-unknown-linux-gnu".to_string()],
-        };
+    fn target_list() -> TargetList {
+        TargetList {
+            triples: vec![
+                "aarch64-unknown-linux-gnu".to_string(),
+                "armv7-unknown-linux-musleabihf".to_string(),
+            ],
+        }
+    }
 
+    fn target() -> Target {
+        let target_list = target_list();
         Target::from("aarch64-unknown-linux-gnu", &target_list)
     }
 
@@ -345,6 +355,15 @@ mod tests {
             assert!(result.len() == 2);
             assert!(result.contains(&expected[0]));
             assert!(result.contains(&expected[1]));
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn no_env_and_no_toml_default_target_then_none() -> Result<()> {
+            let config = Config::new_with(None, Environment::new(None));
+            let config_target = config.target(&target_list());
+            assert!(matches!(config_target, None));
 
             Ok(())
         }
