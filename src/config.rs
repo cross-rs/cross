@@ -78,6 +78,10 @@ impl Environment {
         self.get_values_for("ENV_VOLUMES", target)
     }
 
+    fn target(&self) -> Option<String> {
+        self.get_build_var("TARGET")
+    }
+
     fn get_values_for(
         &self,
         var: &str,
@@ -181,7 +185,10 @@ impl Config {
         Ok(collected)
     }
 
-    pub fn target(&self, _target_list: &TargetList) -> Option<Target> {
+    pub fn target(&self, target_list: &TargetList) -> Option<Target> {
+        if let Some(env_value) = self.env.target() {
+            return Some(Target::from(&env_value, target_list));
+        }
         None
     }
 
@@ -368,6 +375,22 @@ mod tests {
             Ok(())
         }
 
+        #[test]
+        pub fn env_and_toml_default_target_then_use_env() -> Result<()> {
+            let mut map = HashMap::new();
+            map.insert("CROSS_BUILD_TARGET", "armv7-unknown-linux-musleabihf");
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(Some(toml(TOML_DEFAULT_TARGET)?), env);
+
+            let config_target = config.target(&target_list()).unwrap();
+            assert!(matches!(
+                config_target.triple(),
+                "armv7-unknown-linux-musleabihf"
+            ));
+
+            Ok(())
+        }
+
         static TOML_BUILD_XARGO_FALSE: &str = r#"
     [build]
     xargo = false
@@ -383,6 +406,11 @@ mod tests {
     volumes = ["VOLUME3", "VOLUME4"]
     [target.aarch64-unknown-linux-gnu]
     xargo = false
+    "#;
+
+        static TOML_DEFAULT_TARGET: &str = r#"
+    [build]
+    target = "aarch64-unknown-linux-gnu"
     "#;
     }
 }
