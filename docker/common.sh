@@ -36,3 +36,13 @@ if_ubuntu install_packages \
     g++ \
     libc6-dev \
     pkg-config
+
+# Allow for passing in git credentials via environment variable in the format described here https://git-scm.com/docs/git-credential-store#_storage_format
+cat <<'EOF' >/usr/local/bin/git_env_credential
+#!/bin/bash
+echo url=$GIT_CREDENTIALS
+EOF
+
+chmod +x /usr/local/bin/git_env_credential
+git config --system credential.helper "/usr/local/bin/git_env_credential"
+git config --system url."https://".insteadOf ssh://git@
