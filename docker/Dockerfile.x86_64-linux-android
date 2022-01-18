@@ -10,7 +10,7 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 COPY android-ndk.sh /
-RUN /android-ndk.sh x86_64 21
+RUN /android-ndk.sh x86_64 28
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY android-system.sh /
@@ -20,7 +20,7 @@ RUN /android-system.sh x86_64
 COPY qemu.sh /
 RUN /qemu.sh x86_64
 
-RUN cp /android-ndk/sysroot/usr/lib/libz.so /system/lib/
+RUN cp /android-ndk/sysroot/usr/lib/x86_64-linux-android/28/libz.so /system/lib/
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
