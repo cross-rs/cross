@@ -10,7 +10,7 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 COPY android-ndk.sh /
-RUN /android-ndk.sh arm64 21
+RUN /android-ndk.sh arm64 28
 ENV PATH=$PATH:/android-ndk/bin
 
 COPY android-system.sh /
