@@ -2,12 +2,15 @@
 [![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
 [![Build Status](https://img.shields.io/azure-devops/build/rust-embedded/c0ce10ee-fd41-4551-b3e3-9612e8ab62f3/2/master)](https://dev.azure.com/rust-embedded/cross/_build?definitionId=2)
 [![Docker Pulls](https://img.shields.io/docker/pulls/rustembedded/cross)](https://hub.docker.com/r/rustembedded/cross)
+[![Matrix](https://img.shields.io/matrix/cross-rs:matrix.org)](https://matrix.to/#/#cross-rs:matrix.org)
 
 # `cross`
 
 > “Zero setup” cross compilation and “cross testing” of Rust crates
 
-This project is developed and maintained by the [Tools team][team].
+This project is developed and maintained by the [cross-rs] team.
+It was previously maintained by the Rust Embedded Working Group Tools team.
+New contributors are welcome! Please join our [Matrix room] and say hi.
 
 <p align="center">
 <img
@@ -312,7 +315,7 @@ terminate.
 [2] Only works with native tests, that is, tests that do not depends on the
     Android Runtime. For i686 some tests may fails with the error `assertion
     failed: signal(libc::SIGPIPE, libc::SIG_IGN) != libc::SIG_ERR`, see
-    [issue #140](https://github.com/rust-embedded/cross/issues/140) for more
+    [issue #140](https://github.com/cross-rs/cross/issues/140) for more
     information.
 
 [4] For *BSD and Solaris targets, the libc column indicates the OS release version
@@ -379,10 +382,11 @@ dual licensed as above, without any additional terms or conditions.
 ## Code of Conduct
 
 Contribution to this crate is organized under the terms of the [Rust Code of
-Conduct][CoC], the maintainer of this crate, the [Tools team][team], promises
+Conduct][CoC], the maintainer of this crate, the [cross-rs] team, promises
 to intervene to uphold that code of conduct.
 
 [CoC]: CODE_OF_CONDUCT.md
-[team]: https://github.com/rust-embedded/wg#the-tools-team
+[cross-rs]: https://github.com/cross-rs
 [Docker]: https://www.docker.com
 [Podman]: https://podman.io
+[Matrix room]: https://matrix.to/#/#cross-rs:matrix.org

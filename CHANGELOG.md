@@ -247,22 +247,22 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/rust-embedded/cross/compare/v0.2.1...HEAD
-[v0.2.1]: https://github.com/rust-embedded/cross/compare/v0.2.0...v0.2.1
-[v0.2.0]: https://github.com/rust-embedded/cross/compare/v0.1.16...v0.2.0
-[v0.1.16]: https://github.com/rust-embedded/cross/compare/v0.1.15...v0.1.16
-[v0.1.15]: https://github.com/rust-embedded/cross/compare/v0.1.14...v0.1.15
-[v0.1.14]: https://github.com/rust-embedded/cross/compare/v0.1.13...v0.1.14
-[v0.1.13]: https://github.com/rust-embedded/cross/compare/v0.1.12...v0.1.13
-[v0.1.12]: https://github.com/rust-embedded/cross/compare/v0.1.11...v0.1.12
-[v0.1.11]: https://github.com/rust-embedded/cross/compare/v0.1.10...v0.1.11
-[v0.1.10]: https://github.com/rust-embedded/cross/compare/v0.1.9...v0.1.10
-[v0.1.9]: https://github.com/rust-embedded/cross/compare/v0.1.8...v0.1.9
-[v0.1.8]: https://github.com/rust-embedded/cross/compare/v0.1.7...v0.1.8
-[v0.1.7]: https://github.com/rust-embedded/cross/compare/v0.1.6...v0.1.7
-[v0.1.6]: https://github.com/rust-embedded/cross/compare/v0.1.5...v0.1.6
-[v0.1.5]: https://github.com/rust-embedded/cross/compare/v0.1.4...v0.1.5
-[v0.1.4]: https://github.com/rust-embedded/cross/compare/v0.1.3...v0.1.4
-[v0.1.3]: https://github.com/rust-embedded/cross/compare/v0.1.2...v0.1.3
-[v0.1.2]: https://github.com/rust-embedded/cross/compare/v0.1.1...v0.1.2
-[v0.1.1]: https://github.com/rust-embedded/cross/compare/v0.1.0...v0.1.1
+[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.1...HEAD
+[v0.2.1]: https://github.com/cross-rs/cross/compare/v0.2.0...v0.2.1
+[v0.2.0]: https://github.com/cross-rs/cross/compare/v0.1.16...v0.2.0
+[v0.1.16]: https://github.com/cross-rs/cross/compare/v0.1.15...v0.1.16
+[v0.1.15]: https://github.com/cross-rs/cross/compare/v0.1.14...v0.1.15
+[v0.1.14]: https://github.com/cross-rs/cross/compare/v0.1.13...v0.1.14
+[v0.1.13]: https://github.com/cross-rs/cross/compare/v0.1.12...v0.1.13
+[v0.1.12]: https://github.com/cross-rs/cross/compare/v0.1.11...v0.1.12
+[v0.1.11]: https://github.com/cross-rs/cross/compare/v0.1.10...v0.1.11
+[v0.1.10]: https://github.com/cross-rs/cross/compare/v0.1.9...v0.1.10
+[v0.1.9]: https://github.com/cross-rs/cross/compare/v0.1.8...v0.1.9
+[v0.1.8]: https://github.com/cross-rs/cross/compare/v0.1.7...v0.1.8
+[v0.1.7]: https://github.com/cross-rs/cross/compare/v0.1.6...v0.1.7
+[v0.1.6]: https://github.com/cross-rs/cross/compare/v0.1.5...v0.1.6
+[v0.1.5]: https://github.com/cross-rs/cross/compare/v0.1.4...v0.1.5
+[v0.1.4]: https://github.com/cross-rs/cross/compare/v0.1.3...v0.1.4
+[v0.1.3]: https://github.com/cross-rs/cross/compare/v0.1.2...v0.1.3
+[v0.1.2]: https://github.com/cross-rs/cross/compare/v0.1.1...v0.1.2
+[v0.1.1]: https://github.com/cross-rs/cross/compare/v0.1.0...v0.1.1

@@ -2,8 +2,6 @@
 
 ## Conduct
 
-**Contact**: [Tools team]
-
 * We are committed to providing a friendly, safe and welcoming environment for all, regardless of level of experience, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, ethnicity, age, religion, nationality, or other similar characteristic.
 * On IRC, please avoid using overtly sexual nicknames or other nicknames that might detract from a friendly, safe and welcoming environment for all.
 * Please be kind and courteous. There's no need to be mean or rude.
@@ -30,8 +28,11 @@ In the Rust community we strive to go the extra step to look out for each other.
 
 And if someone takes issue with something you said or did, resist the urge to be defensive. Just stop doing what it was they complained about and apologize. Even if you feel you were misinterpreted or unfairly accused, chances are good there was something you could've communicated better — remember that it's your responsibility to make your fellow Rustaceans comfortable. Everyone wants to get along and we are all here first and foremost because we want to talk about cool technology. You will find that people will be eager to assume good intent and forgive as long as you earn their trust.
 
-The enforcement policies listed above apply to all official embedded WG venues; including official IRC channels (#rust-embedded); GitHub repositories under rust-embedded; and all forums under rust-embedded.org (forum.rust-embedded.org).
+The enforcement policies listed above apply to the cross-rs [GitHub repositories]
+and the cross-rs [Matrix room].
 
 *Adapted from the [Node.js Policy on Trolling](http://blog.izs.me/post/30036893703/policy-on-trolling) as well as the [Contributor Covenant v1.3.0](https://www.contributor-covenant.org/version/1/3/0/).*
 
-[team]: https://github.com/rust-embedded/wg#the-Tools-team
+[team]: https://github.com/cross-rs
+[GitHub repositories]: https://github.com/cross-rs
+[Matrix room]: https://matrix.to/#/#cross-rs:matrix.org
