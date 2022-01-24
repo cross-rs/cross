@@ -9,7 +9,7 @@ cd docker
 
 run() {
   local dockerfile="Dockerfile.${1}"
-  local image_name="ghcr.io/rustembedded/cross:${1}"
+  local image_name="ghcr.io/cross-rs/cross:${1}"
   local cache_from_args=()
 
   if ! docker image inspect "${image_name}" &>/dev/null; then

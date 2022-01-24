@@ -2,7 +2,7 @@
 
 set -eux
 
-image_name="ghcr.io/rustembedded/cross:${TARGET}"
+image_name="ghcr.io/cross-rs/cross:${TARGET}"
 
 if [[ "${TAG-}" =~ ^v.* ]] && ! [[ "${TAG}" =~ alpha ]] && ! [[ "${TAG}" =~ dev ]]; then
   version="${TAG##v}"

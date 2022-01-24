@@ -13,7 +13,7 @@ use crate::id;
 use crate::{Config, Target};
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
-const CROSS_IMAGE: &str = "ghcr.io/rustembedded/cross";
+const CROSS_IMAGE: &str = "ghcr.io/cross-rs/cross";
 const DOCKER: &str = "docker";
 const PODMAN: &str = "podman";
 
