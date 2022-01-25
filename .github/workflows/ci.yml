@@ -23,7 +23,7 @@ jobs:
       - name: install rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.42.0
+          toolchain: 1.58.1
           profile: minimal
           components: clippy
       - name: Run unit tests
@@ -44,7 +44,7 @@ jobs:
       - name: install rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.42.0
+          toolchain: 1.58.1
           profile: minimal
           components: rustfmt
       - name: rustfmt -- --check

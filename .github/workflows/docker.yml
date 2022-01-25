@@ -24,7 +24,7 @@ jobs:
       matrix:
         include:
           - target: aarch64-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -32,21 +32,21 @@ jobs:
             run: 1
             runners: qemu-user qemu-system
           - target: arm-unknown-linux-gnueabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
             std: 1
             run: 1
           - target: arm-unknown-linux-gnueabihf
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
             std: 1
             run: 1
           - target: armv7-unknown-linux-gnueabihf
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -54,14 +54,14 @@ jobs:
             run: 1
             runners: qemu-user qemu-system
           - target: i586-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
             std: 1
             run: 1
           - target: i686-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -69,7 +69,7 @@ jobs:
             run: 1
             runners: native qemu-user qemu-system
           - target: mips-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -77,7 +77,7 @@ jobs:
             run: 1
             runners: qemu-user qemu-system
           - target: mipsel-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -85,14 +85,14 @@ jobs:
             run: 1
             runners: qemu-user qemu-system
           - target: mips64-unknown-linux-gnuabi64
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
             std: 1
             run: 1
           - target: mips64el-unknown-linux-gnuabi64
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -100,7 +100,7 @@ jobs:
             run: 1
             runners: qemu-user qemu-system
           - target: powerpc-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -108,7 +108,7 @@ jobs:
             run: 1
             runners: qemu-user qemu-system
           - target: powerpc64-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -116,7 +116,7 @@ jobs:
             run: 1
             runners: qemu-user qemu-system
           - target: powerpc64le-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -124,13 +124,13 @@ jobs:
             run: 1
             runners: qemu-user qemu-system
           - target: riscv64gc-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: s390x-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -138,7 +138,7 @@ jobs:
             run: 1
             runners: qemu-system
           - target: sparc64-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -146,7 +146,7 @@ jobs:
             run: 1
             runners: qemu-system
           - target: x86_64-unknown-linux-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
@@ -156,95 +156,95 @@ jobs:
             deploy: 1
             CRATES_IO_PUBLISH: 1
           - target: aarch64-unknown-linux-musl
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           - target: arm-unknown-linux-musleabihf
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           - target: arm-unknown-linux-musleabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           - target: armv5te-unknown-linux-gnueabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           - target: armv5te-unknown-linux-musleabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           - target: armv7-unknown-linux-musleabihf
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           - target: i586-unknown-linux-musl
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           - target: i686-unknown-linux-musl
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           - target: mips-unknown-linux-musl
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: mipsel-unknown-linux-musl
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: x86_64-unknown-linux-musl
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
             deploy: 1
           - target: aarch64-linux-android
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: arm-linux-androideabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: armv7-linux-androideabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: i686-linux-android
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: x86_64-linux-android
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: x86_64-apple-darwin
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: macos-latest
             cpp: 1
             dylib: 1
@@ -252,13 +252,13 @@ jobs:
             run: 1
             deploy: 1
           - target: x86_64-pc-windows-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
             run: 1
           - target: i686-pc-windows-gnu
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             std: 1
@@ -270,62 +270,62 @@ jobs:
           #   cpp: 1
           #   dylib: 1
           - target: i686-unknown-freebsd
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             dylib: 1
             std: 1
           - target: x86_64-unknown-freebsd
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             dylib: 1
             std: 1
           - target: x86_64-unknown-netbsd
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             cpp: 1
             dylib: 1
             std: 1
           # Disabled, see #534
           # - target: sparcv9-sun-solaris
-          #   toolchain: 1.42.0
+          #   toolchain: 1.58.1
           #   os: ubuntu-latest
           #   cpp: 1
           #   dylib: 1
           #   std: 1
           # - target: x86_64-sun-solaris
-          #   toolchain: 1.42.0
+          #   toolchain: 1.58.1
           #   os: ubuntu-latest
           #   cpp: 1
           #   dylib: 1
           #   std: 1
           - target: asmjs-unknown-emscripten
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
             run: 1
           # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
           - target: wasm32-unknown-emscripten
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
           - target: thumbv6m-none-eabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
           - target: thumbv7em-none-eabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
           - target: thumbv7em-none-eabihf
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
           - target: thumbv7m-none-eabi
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: ubuntu-latest
             std: 1
           - target: x86_64-pc-windows-msvc
-            toolchain: 1.42.0
+            toolchain: 1.58.1
             os: windows-latest
             cpp: 1
             std: 1
