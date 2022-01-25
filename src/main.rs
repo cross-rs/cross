@@ -13,6 +13,7 @@ mod rustc;
 mod rustup;
 
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
@@ -525,9 +526,13 @@ impl Toml {
     }
 }
 
-/// Parses the `Cross.toml` at the root of the Cargo project (if any)
+/// Parses the `Cross.toml` at the root of the Cargo project or from the
+/// `CROSS_CONFIG` environment variable (if any exist in either location).
 fn toml(root: &Root) -> Result<Option<Toml>> {
-    let path = root.path().join("Cross.toml");
+    let path = match env::var("CROSS_CONFIG") {
+        Ok(var) => PathBuf::from(var),
+        Err(_) => root.path().join("Cross.toml")
+    };
 
     if path.exists() {
         Ok(Some(Toml {
