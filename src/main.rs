@@ -552,7 +552,7 @@ impl Toml {
 fn toml(root: &Root) -> Result<Option<Toml>> {
     let path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),
-        Err(_) => root.path().join("Cross.toml")
+        Err(_) => root.path().join("Cross.toml"),
     };
 
     if path.exists() {
