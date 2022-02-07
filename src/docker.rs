@@ -146,20 +146,6 @@ pub fn run(
 
     docker.arg("--rm");
 
-    // We need to specify the user for Docker, but not for Podman.
-    if let Ok(ce) = get_container_engine() {
-        if ce.ends_with(DOCKER) {
-            docker.args(&[
-                "--user",
-                &format!(
-                    "{}:{}",
-                    env::var("CROSS_CONTAINER_UID").unwrap_or(id::user().to_string()),
-                    env::var("CROSS_CONTAINER_GID").unwrap_or(id::group().to_string()),
-                ),
-            ]);
-        }
-    }
-
     docker
         .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-e", "CARGO_HOME=/cargo"])
@@ -206,9 +192,47 @@ pub fn run(
         }
     }
 
+    // We need to specify the user for Docker, but not for Podman.
+    let uid_gid = if let Ok(ce) = get_container_engine() {
+        if ce.ends_with(DOCKER) {
+            Some((
+                env::var("CROSS_CONTAINER_UID").unwrap_or(id::user().to_string()),
+                env::var("CROSS_CONTAINER_GID").unwrap_or(id::group().to_string()),
+            ))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let path_env = "PATH=$PATH:/rust/bin";
+    let expanded_cmd = match config.pre_build(target)? {
+        Some(pre_build) => {
+            let mut commands = pre_build.lines().collect::<Vec<_>>();
+            let cmd = if let Some((uid, gid)) = uid_gid {
+                // De-escalate privileges to user level after pre-build commands if uid/gid are set
+                format!(
+                    "{} gosu {}:{} {:?}",
+                    path_env, uid, gid, cmd
+                )
+            } else {
+              format!("{} {:?}", path_env, cmd)
+            };
+            commands.push(&cmd);
+            commands.join(" && ")
+        }
+        None => {
+            if let Some((uid, gid)) = uid_gid {
+                docker.args(&["--user", &format!("{}:{}", uid, gid)]);
+            };
+            format!("{} {:?}", path_env, cmd)
+        }
+    };
+
     docker
         .arg(&image(config, target)?)
-        .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
+        .args(&["sh", "-c", &expanded_cmd])
         .run_and_get_status(verbose)
 }
 

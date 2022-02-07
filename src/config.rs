@@ -180,6 +180,10 @@ impl Config {
         Ok(collected)
     }
 
+    pub fn pre_build(&self, target: &Target) -> Result<Option<String>> {
+        self.toml.as_ref().map_or(Ok(None), |t| t.pre_build(target))
+    }
+
     fn sum_of_env_toml_values<'a>(
         toml_getter: impl FnOnce() -> Option<Result<Vec<&'a str>>>,
         env_values: Option<Vec<String>>,

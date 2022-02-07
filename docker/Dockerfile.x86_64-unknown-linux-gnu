@@ -20,6 +20,9 @@ RUN /qemu.sh x86_64 softmmu
 COPY dropbear.sh /
 RUN /dropbear.sh
 
+COPY gosu.sh /
+RUN /gosu.sh
+
 COPY --from=0 /qemu /qemu
 
 COPY linux-runner /

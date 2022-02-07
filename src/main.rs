@@ -469,7 +469,7 @@ impl Toml {
     pub fn env_passthrough_target(&self, target: &Target) -> Result<Vec<&str>> {
         self.target_env(target, "passthrough")
     }
-    
+
     /// Returns the list of environment variables to pass through for `build`,
     pub fn env_volumes_build(&self) -> Result<Vec<&str>> {
         self.build_env("volumes")
@@ -478,6 +478,24 @@ impl Toml {
     /// Returns the list of environment variables to pass through for `target`,
     pub fn env_volumes_target(&self, target: &Target) -> Result<Vec<&str>> {
         self.target_env(target, "volumes")
+    }
+
+    /// Returns the `target.{}.pre-build` part of `Cross.toml`
+    pub fn pre_build(&self, target: &Target) -> Result<Option<String>> {
+        let triple = target.triple();
+
+        if let Some(value) = self
+            .table
+            .get("target")
+            .and_then(|t| t.get(triple))
+            .and_then(|t| t.get("pre-build"))
+        {
+            Ok(Some(value.as_str().ok_or_else(|| {
+                format!("target.{}.pre-build must be a string", triple)
+            })?.to_string()))
+        } else {
+            Ok(None)
+        }
     }
 
     fn target_env(&self, target: &Target, key: &str) -> Result<Vec<&str>> {
