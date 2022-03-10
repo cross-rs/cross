@@ -345,21 +345,24 @@ jobs:
       - run: echo "OS=${{ runner.os }}" >> $GITHUB_ENV
       - run: echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
         if: startsWith(github.ref, 'refs/heads/')
-      - run: echo "TAG=${{ runner.os }}" >> $GITHUB_ENV
+      - run: echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
         if: startsWith(github.ref, 'refs/tags/')
-      - run: echo "TARGET=${{ matrix.target }}" >> $GITHUB_ENV
-      - run: echo "CPP=${{ matrix.cpp }}" >> $GITHUB_ENV
-      - run: echo "DYLIB=${{ matrix.dylib }}" >> $GITHUB_ENV
-      - run: echo "STD=${{ matrix.std }}" >> $GITHUB_ENV
-      - run: echo "RUN=${{ matrix.run }}" >> $GITHUB_ENV
-      - run: echo "RUNNERS=${{ matrix.runners }}" >> $GITHUB_ENV
       - name: Build Docker image
         if: runner.os == 'Linux'
         timeout-minutes: 360
-        run: ./build-docker-image.sh "${{ matrix.target }}"
+        run: ./build-docker-image.sh "${TARGET}"
+        env:
+          TARGET: ${{ matrix.target }}
         shell: bash
       - name: Test
         run: ./ci/test.sh
+        env:
+          TARGET: ${{ matrix.target }}
+          CPP: ${{ matrix.cpp }}
+          DYLIB: ${{ matrix.dylib }}
+          STD: ${{ matrix.std }}
+          RUN: ${{ matrix.run }}
+          RUNNERS: ${{ matrix.runners }}
         shell: bash
       - name: Publish on crates.io
         if: startsWith(env.TAG, 'v') && matrix.CRATES_IO_PUBLISH == '1'
