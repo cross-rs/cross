@@ -353,12 +353,6 @@ jobs:
       - run: echo "STD=${{ matrix.std }}" >> $GITHUB_ENV
       - run: echo "RUN=${{ matrix.run }}" >> $GITHUB_ENV
       - run: echo "RUNNERS=${{ matrix.runners }}" >> $GITHUB_ENV
-      - name: Run unit tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --locked
-        timeout-minutes: 5
       - name: Build Docker image
         if: runner.os == 'Linux'
         timeout-minutes: 360
