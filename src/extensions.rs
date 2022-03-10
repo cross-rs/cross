@@ -47,7 +47,8 @@ impl CommandExt for Command {
             .output()
             .chain_err(|| format!("couldn't execute `{:?}`", self))?;
 
-        self.status_result(out.status)?;
+        self.status_result(out.status)
+            .chain_err(|| String::from_utf8_lossy(&out.stderr).to_string())?;
 
         Ok(String::from_utf8(out.stdout)
             .chain_err(|| format!("`{:?}` output was not UTF-8", self))?)

@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #352 - Add Xtensa targets.
 - #650 - Improve Docker caching.
 - #588 - fix ci: bump openssl version in freebsd again
 - #552 - Added CHANGELOG.md automation

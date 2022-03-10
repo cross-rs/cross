@@ -195,8 +195,14 @@ pub fn run(
         .args(&[
             "-v",
             &format!("{}:/{}:Z", mount_root.display(), mount_root.display()),
-        ])
-        .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
+        ]);
+
+    // Custom toolchain is already installed in Docker image.
+    if !target.is_xtensa() {
+        docker.args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())]);
+    }
+
+    docker
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
         .args(&["-w", &mount_root.display().to_string()]);
 

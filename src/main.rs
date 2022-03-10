@@ -182,6 +182,10 @@ impl Target {
         self.triple().contains("windows")
     }
 
+    fn is_xtensa(&self) -> bool {
+        self.triple().contains("xtensa")
+    }
+
     fn needs_docker(&self) -> bool {
         self.is_linux()
             || self.is_android()
@@ -192,6 +196,7 @@ impl Target {
             || self.is_windows()
             || self.is_emscripten()
             || self.is_apple()
+            || self.is_xtensa()
     }
 
     fn needs_interpreter(&self) -> bool {
@@ -313,19 +318,27 @@ fn run() -> Result<ExitStatus> {
                 rustup::install_toolchain(&toolchain, verbose)?;
             }
 
-            let available_targets = rustup::available_targets(&toolchain, verbose)?;
-            let uses_xargo = config
-                .xargo(&target)?
-                .unwrap_or_else(|| !target.is_builtin() || !available_targets.contains(&target));
+            let uses_xargo = config.xargo(&target)?;
+            let uses_xargo = if target.is_xtensa() {
+                // Xtensa currently needs a custom toolchain which already includes the needed targets,
+                uses_xargo.unwrap_or(false)
+            } else {
+                let available_targets = rustup::available_targets(&toolchain, verbose)?;
+                let uses_xargo = uses_xargo.unwrap_or_else(|| {
+                    !target.is_builtin() || !available_targets.contains(&target)
+                });
 
-            if !uses_xargo
-                && !available_targets.is_installed(&target)
-                && available_targets.contains(&target)
-            {
-                rustup::install(&target, &toolchain, verbose)?;
-            } else if !rustup::component_is_installed("rust-src", &toolchain, verbose)? {
-                rustup::install_component("rust-src", &toolchain, verbose)?;
-            }
+                if !uses_xargo
+                    && !available_targets.is_installed(&target)
+                    && available_targets.contains(&target)
+                {
+                    rustup::install(&target, &toolchain, verbose)?;
+                } else if !rustup::component_is_installed("rust-src", &toolchain, verbose)? {
+                    rustup::install_component("rust-src", &toolchain, verbose)?;
+                }
+
+                uses_xargo
+            };
 
             if args
                 .subcommand

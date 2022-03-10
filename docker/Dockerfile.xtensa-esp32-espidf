@@ -1,0 +1,35 @@
+FROM ubuntu:20.04
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+ENV HOME=/home/rust \
+    PATH="${HOME}/.local/bin:${PATH}" \
+    RUSTUP_HOME=/rustup \
+    CARGO_HOME=/cargo \
+    RUST_TOOLCHAIN=esp \
+    IDF_TOOLS_PATH=/espressif
+RUN mkdir -p "${HOME}" \
+ && chmod o+rw -R "${HOME}" \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      python3 \
+      python3-pip \
+      xz-utils \
+ && curl -fSsL https://raw.githubusercontent.com/esp-rs/rust-build/HEAD/install-rust-toolchain.sh | \
+      bash -s -- --extra-crates ldproxy --export-file "${HOME}/esp-rust.sh" --clear-cache YES
+
+COPY qemu.sh /
+RUN /qemu.sh xtensa
+
+COPY xtensa-entry.sh /
+ENTRYPOINT ["/xtensa-entry.sh"]
+
+ENV CARGO_TARGET_XTENSA_ESP32_ESPIDF_LINKER="${CARGO_HOME}/bin/ldproxy" \
+    PATH="${RUSTUP_HOME}/toolchains/${RUST_TOOLCHAIN}/bin:${PATH}"
