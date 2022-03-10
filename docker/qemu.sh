@@ -38,7 +38,7 @@ build_static_libmount () {
     curl --retry 3 -sSfL "https://kernel.org/pub/linux/utils/util-linux/v${version}/util-linux-${version_spec}.tar.xz" -O -L
     tar --strip-components=1 -xJf "util-linux-${version_spec}.tar.xz"
     ./configure --disable-shared --enable-static --without-ncurses
-    make "-j$(nproc)" mount
+    make "-j$(nproc)" mount blkid
     install -m 644 ./.libs/*.a /usr/lib64/
 
     popd
