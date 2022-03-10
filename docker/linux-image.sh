@@ -132,7 +132,7 @@ main() {
 
     # allow apt-get to retry downloads
     echo 'APT::Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
-    
+
     apt-get update
 
     mkdir -p "/qemu/${arch}"
@@ -165,7 +165,7 @@ main() {
 
     # initrd
     mkdir -p "${root}/modules"
-    cp \
+    cp -v \
         "${root}/lib/modules"/*/kernel/drivers/net/net_failover.ko \
         "${root}/lib/modules"/*/kernel/drivers/net/virtio_net.ko \
         "${root}/lib/modules"/*/kernel/drivers/virtio/* \
