@@ -17,7 +17,13 @@ jobs:
       - name: ShellCheck
         uses: azohra/shell-linter@v0.3.0
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
     steps:
       - uses: actions/checkout@v2
       - name: install rust
