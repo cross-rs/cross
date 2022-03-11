@@ -353,7 +353,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
       - name: Test
-        if: contains(['refs/heads/staging', 'refs/heads/trying'], github.ref)
+        if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/trying'
         run: ./ci/test.sh
         env:
           TARGET: ${{ matrix.target }}
