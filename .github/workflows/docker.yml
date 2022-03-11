@@ -17,7 +17,7 @@ jobs:
       - name: Docker builds done
         run: exit 0
   docker-builds:
-    name: Docker Build ${{ matrix.target }} ${{matrix.os}}  ${{matrix.toolchain}} 
+    name: Docker Build ${{ matrix.target }} ${{matrix.os}}  ${{matrix.toolchain}}
     runs-on: ${{ matrix.os }}
     env:
       CARGO_NET_RETRY: 3
@@ -345,11 +345,6 @@ jobs:
           target: ${{ matrix.target }}
           default: true
           profile: minimal
-      - run: echo "OS=${{ runner.os }}" >> $GITHUB_ENV
-      - run: echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
-        if: startsWith(github.ref, 'refs/heads/')
-      - run: echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
-        if: startsWith(github.ref, 'refs/tags/')
       - name: Build Docker image
         if: runner.os == 'Linux'
         timeout-minutes: 360
@@ -358,6 +353,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
       - name: Test
+        if: contains(['refs/heads/staging', 'refs/heads/trying'], github.ref)
         run: ./ci/test.sh
         env:
           TARGET: ${{ matrix.target }}
@@ -368,21 +364,25 @@ jobs:
           RUNNERS: ${{ matrix.runners }}
         shell: bash
       - name: Publish on crates.io
-        if: startsWith(env.TAG, 'v') && matrix.CRATES_IO_PUBLISH == '1'
+        if: matrix.CRATES_IO_PUBLISH == '1'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         uses: actions-rs/cargo@v1
         with:
           command: publish
-          args: --dry-run
+          args: ${{ (!startsWith(github.ref, 'refs/tags/v') && '--dry-run') || '' }}
       - name: Create GitHub Release
-        if: startsWith(env.TAG, 'v') && env.DEPLOY == '1'
+        if: startsWith(github.ref, 'refs/tags/v') && env.DEPLOY == '1'
         # TODO: Not sure what package to use for this step.
         run: echo "TODO"; exit 1
-      - name: Login to GHCR
-        if: (env.BRANCH == 'master' || startsWith(env.TAG, 'v')) && runner.os == 'Linux'
-        run: echo "${ secrets.GITHUB_TOKEN }" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push image to GHCR
-        if: (env.BRANCH == 'master' || startsWith(env.TAG, 'v')) && runner.os == 'Linux'
+        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
         run: ./ci/docker_push.sh
-        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
