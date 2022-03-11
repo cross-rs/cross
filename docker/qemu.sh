@@ -70,19 +70,17 @@ build_static_libattr() {
 }
 
 build_static_libcap() {
-    local version=0.7.5
+    local version=2.22
 
     local td
     td="$(mktemp -d)"
 
     pushd "${td}"
 
-    curl --retry 3 -sSfL "https://github.com/stevegrubb/libcap-ng/archive/refs/tags/v${version}.tar.gz" -O -L
-    tar --strip-components=1 -xzf "v${version}.tar.gz"
-    ./autogen.sh
-    ./configure
+    curl --retry 3 -sSfL "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-${version}.tar.xz" -O
+    tar --strip-components=1 -xJf "libcap-${version}.tar.xz"
     make "-j$(nproc)"
-    install -m 644 src/.libs/libcap-ng.a /usr/lib64/
+    install -m 644 libcap/libcap.a /usr/lib64/
 
     popd
 
