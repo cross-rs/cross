@@ -134,7 +134,7 @@ main() {
         glib2-static \
         glibc-static \
         libattr-devel \
-        libcap-ng-devel \
+        libcap-devel \
         libfdt-devel \
         pcre-static \
         pixman-devel \
