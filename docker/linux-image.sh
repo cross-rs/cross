@@ -242,7 +242,7 @@ insmod /modules/virtio_mmio.ko || true
 insmod /modules/virtio_pci_modern_dev.ko || true
 insmod /modules/virtio_pci.ko || true
 insmod /modules/virtio_net.ko || true
-insmod /modules/netfs.ko
+insmod /modules/netfs.ko || true
 insmod /modules/fscache.ko
 insmod /modules/9pnet.ko
 insmod /modules/9pnet_virtio.ko || true
