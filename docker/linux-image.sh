@@ -40,7 +40,8 @@ main() {
         powerpc)
             # there is no buster powerpc port, so we use jessie
             # use a more recent kernel from backports
-            kernel=4.9.0-0.bpo.6-powerpc
+            kversion='4.9.0-0.bpo.6'
+            kernel="${kversion}-powerpc"
             debsource="deb http://archive.debian.org/debian jessie main"
             debsource="${debsource}\ndeb http://archive.debian.org/debian jessie-backports main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
@@ -57,7 +58,8 @@ main() {
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kernel='*-powerpc64'
+            kversion='5.15.0-2'
+            kernel="${kversion}-powerpc64"
             libgcc="libgcc-s1"
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
