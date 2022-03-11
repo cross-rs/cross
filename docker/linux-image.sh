@@ -171,6 +171,7 @@ main() {
         "${root}/lib/modules"/*/kernel/drivers/net/net_failover.ko \
         "${root}/lib/modules"/*/kernel/drivers/net/virtio_net.ko \
         "${root}/lib/modules"/*/kernel/drivers/virtio/* \
+        "${root}/lib/modules"/*/kernel/fs/netfs/netfs.ko \
         "${root}/lib/modules"/*/kernel/fs/9p/9p.ko \
         "${root}/lib/modules"/*/kernel/fs/fscache/fscache.ko \
         "${root}/lib/modules"/*/kernel/net/9p/9pnet.ko \
@@ -240,6 +241,7 @@ insmod /modules/virtio_ring.ko || true
 insmod /modules/virtio_mmio.ko || true
 insmod /modules/virtio_pci.ko || true
 insmod /modules/virtio_net.ko || true
+insmod /modules/netfs.ko
 insmod /modules/fscache.ko
 insmod /modules/9pnet.ko
 insmod /modules/9pnet_virtio.ko || true
