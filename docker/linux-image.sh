@@ -239,6 +239,7 @@ insmod /modules/net_failover.ko || true
 insmod /modules/virtio.ko || true
 insmod /modules/virtio_ring.ko || true
 insmod /modules/virtio_mmio.ko || true
+insmod /modules/virtio_pci_legacy_dev.ko || true
 insmod /modules/virtio_pci_modern_dev.ko || true
 insmod /modules/virtio_pci.ko || true
 insmod /modules/virtio_net.ko || true
