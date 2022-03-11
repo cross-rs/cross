@@ -34,7 +34,6 @@ build_static_libmount () {
 
     pushd "${td}"
 
-
     curl --retry 3 -sSfL "https://kernel.org/pub/linux/utils/util-linux/v${version}/util-linux-${version_spec}.tar.xz" -O -L
     tar --strip-components=1 -xJf "util-linux-${version_spec}.tar.xz"
     ./configure --disable-shared --enable-static --without-ncurses
@@ -111,6 +110,8 @@ build_static_pixman() {
 
 main() {
     local version=5.1.0
+
+    if_centos version=4.2.1
 
     local arch="${1}" \
           softmmu="${2:-}"
