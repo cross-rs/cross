@@ -376,6 +376,7 @@ jobs:
         # TODO: Not sure what package to use for this step.
         run: echo "TODO"; exit 1
       - name: Login to GitHub Container Registry
+        if: runner.os == 'Linux'
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
