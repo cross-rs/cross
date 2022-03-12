@@ -6,9 +6,6 @@ on:
 
 name: Docker Build
 
-env:
-  CROSS_DEBUG: '1'
-
 jobs:
   docker-build:
     needs: [docker-builds]

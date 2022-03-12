@@ -156,8 +156,8 @@ esac
         else
             echo "Qemu is not ready after ${SECONDS} seconds..."
             echo "Set the environment variable CROSS_DEBUG=1 to debug"
-            echo "Last 10 lines of qemu output:"
-            tail "${LOG}"
+            echo "Last 100 lines of qemu output:"
+            tail -n 100 "${LOG}"
             exit 1
         fi
     fi
