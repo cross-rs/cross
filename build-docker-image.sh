@@ -67,7 +67,7 @@ run() {
     build_args+=(--tag "${tag}")
   done
 
-  docker buildx build "${build_args[@]}" "${cache_args[@]}" -f "${dockerfile}" --progress plain .
+  docker buildx build "${build_args[@]}" -f "${dockerfile}" --progress plain .
 }
 
 if [[ "${#images[@]}" -eq 0 ]]; then
