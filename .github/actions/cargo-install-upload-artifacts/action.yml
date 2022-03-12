@@ -42,7 +42,7 @@ runs:
         artifact_name="${package_name}-${target}"
         artifact_path="${artifacts_dir}/${artifact_name}.tar.gz"
 
-        pushd "${out_dir}"
+        pushd "${out_dir}/bin"
         tar -cvzf "${artifact_path}" *
         popd
 
@@ -59,7 +59,7 @@ runs:
       shell: bash
 
     - name: Upload artifacts
-      if: ${{ steps.artifact.outputs.path }}
+      if: ${{ steps.archive.outputs.path }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ steps.archive.outputs.name }}
