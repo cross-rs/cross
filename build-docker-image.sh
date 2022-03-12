@@ -57,11 +57,10 @@ run() {
 
       # Local development.
       tags+=("${image_name}:local")
-      build_args+=(--load)
       ;;
   esac
 
-  build_args+=(--pull --cache-from 'type=gha' --cache-to 'type=gha,mode=max')
+  build_args+=(--pull --load --cache-from 'type=gha' --cache-to 'type=gha,mode=max')
 
   for tag in "${tags[@]}"; do
     build_args+=(--tag "${tag}")
