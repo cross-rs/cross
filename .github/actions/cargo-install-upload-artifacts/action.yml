@@ -1,0 +1,66 @@
+inputs:
+  target:
+    description: 'Target'
+    type: string
+
+runs:
+  using: composite
+  steps:
+    - name: Check if crate has binaries
+      id: metadata
+      run: |
+        metadata="$(cargo metadata --format-version 1 --no-deps)"
+
+        package_name="$(jq -r '.packages[0].name' <<< "${metadata}")"
+        has_binaries="$(jq '.packages[0].targets | any(.kind | contains(["bin"]))' <<< "${metadata}")"
+        echo "::set-output name=package-name::${package_name}"
+        echo "::set-output name=has-binaries::${has_binaries}"
+        echo "::set-output name=out-dir::$(mktemp -d)"
+        echo "::set-output name=artifacts-dir::$(mktemp -d)"
+
+    - name: Build with all features
+      if: ${{ fromJson(steps.metadata.outputs.has-binaries) }}
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args: >
+          --locked
+          --path .
+          --target ${{ inputs.target }}
+          --all-features
+          --root ${{ steps.metadata.outputs.out-dir }}
+          --bins
+        use-cross: true
+
+    - name: Archive artifacts
+      if: ${{ fromJson(steps.metadata.outputs.has-binaries) }}
+      id: archive
+      run: |
+        set -x
+
+        artifact_name="${package_name}-${target}"
+        artifact_path="${artifacts_dir}/${artifact_name}.tar.gz"
+
+        pushd "${out_dir}"
+        tar -cvzf "${artifact_path}" *
+        popd
+
+        tar -tf "${artifact_path}"
+        ls -al "${artifact_path}"
+
+        echo "::set-output name=name::${artifact_name}"
+        echo "::set-output name=path::${artifact_path}"
+      env:
+        package_name: ${{ steps.metadata.outputs.package-name }}
+        out_dir: ${{ steps.metadata.outputs.out-dir }}
+        artifacts_dir: ${{ steps.metadata.outputs.artifacts-dir }}
+        target: ${{ inputs.target }}
+      shell: bash
+
+    - name: Upload artifacts
+      if: ${{ steps.artifact.outputs.path }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ steps.archive.outputs.name }}
+        path: ${{ steps.archive.outputs.path }}
+        if-no-files-found: error

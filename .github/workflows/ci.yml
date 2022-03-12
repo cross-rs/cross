@@ -184,22 +184,10 @@ jobs:
         if: matrix.deploy
         run: cargo install --path . --force
 
-      - name: Build with all features
-        if: matrix.deploy
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: >
-            --release
-            --target ${{ matrix.target }}
-            --all-features
-          use-cross: true
-
-      - uses: ./.github/actions/upload-rust-artifacts
+      - uses: ./.github/actions/cargo-install-upload-artifacts
         if: matrix.deploy
         with:
           target: ${{ matrix.target }}
-
 
       - name: Login to GitHub Container Registry
         if: runner.os == 'Linux'
