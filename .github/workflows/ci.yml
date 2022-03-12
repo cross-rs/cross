@@ -7,9 +7,12 @@ jobs:
     name: CI
     needs: [shellcheck, test, fmt]
     runs-on: ubuntu-latest
-    steps: 
-      - name: I Complete
-        run: exit 0
+    steps:
+      - name: Result
+        run: |
+          jq -C <<< "${needs}"
+        env:
+          needs: ${{ toJson(needs) }}
   shellcheck:
     runs-on: ubuntu-latest
     steps:
