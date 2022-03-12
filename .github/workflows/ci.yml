@@ -80,7 +80,7 @@ jobs:
   docker-image:
     name: docker-image (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    needs: [shellcheck]
+    needs: [shellcheck, test]
     if: github.event_name == 'push'
     strategy:
       fail-fast: false
