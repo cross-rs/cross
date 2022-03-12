@@ -3,16 +3,6 @@ on: [pull_request, push]
 name: CI
 
 jobs:
-  ci:
-    name: CI
-    needs: [shellcheck, test, fmt]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Result
-        run: |
-          jq -C <<< "${needs}"
-        env:
-          needs: ${{ toJson(needs) }}
   shellcheck:
     runs-on: ubuntu-latest
     steps:
@@ -61,3 +51,21 @@ jobs:
         with:
           command: fmt
           args: -- --check
+  docker-test:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - run: 'true'
+  ci:
+    name: CI
+    needs: [shellcheck, test, fmt, docker-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Result
+        run: |
+          jq -C <<< "${needs}"
+
+          "$(jq -r 'all(.result as $result | (["success", "skipped"] | contains([$result])))' <<< "${needs}")"
+        env:
+          needs: ${{ toJson(needs) }}
