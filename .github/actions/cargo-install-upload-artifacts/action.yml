@@ -17,6 +17,7 @@ runs:
         echo "::set-output name=has-binaries::${has_binaries}"
         echo "::set-output name=out-dir::$(mktemp -d)"
         echo "::set-output name=artifacts-dir::$(mktemp -d)"
+      shell: bash
 
     - name: Build with all features
       if: ${{ fromJson(steps.metadata.outputs.has-binaries) }}
