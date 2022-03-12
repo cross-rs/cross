@@ -25,16 +25,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - uses: ./.github/actions/setup-rust
         with:
-          toolchain: 1.58.1
-          profile: minimal
           components: rustfmt
 
-      - uses: Swatinem/rust-cache@v1.3.0
-
-      - name: rustfmt -- --check
+      - name: Run rustfmt
         uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -51,14 +46,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - uses: ./.github/actions/setup-rust
         with:
-          toolchain: 1.58.1
-          profile: minimal
           components: clippy
-
-      - uses: Swatinem/rust-cache@v1.3.0
 
       - name: Run clippy
         uses: actions-rs/cargo@v1
@@ -78,13 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.58.1
-          profile: minimal
-
-      - uses: Swatinem/rust-cache@v1.3.0
+      - uses: ./.github/actions/setup-rust
 
       - name: Run unit tests
         uses: actions-rs/cargo@v1
@@ -413,14 +397,10 @@ jobs:
             deploy: true
 
     steps:
-      - uses: actions/checkout@v2
-      - name: install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.toolchain }}
-          target: ${{ matrix.target }}
-          default: true
-          profile: minimal
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+
       - name: Set up Docker Buildx
         if: runner.os == 'Linux'
         uses: docker/setup-buildx-action@v1
