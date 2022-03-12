@@ -60,7 +60,14 @@ run() {
       ;;
   esac
 
-  build_args+=(--pull --load --cache-from 'type=gha' --cache-to 'type=gha,mode=max')
+  build_args+=(--pull --load)
+
+  if [[ -n "${GITHUB_ACTIONS-}" ]]; then
+    build_args+=(
+      --cache-from 'type=gha'
+      --cache-to 'type=gha,mode=max'
+    )
+  fi
 
   for tag in "${tags[@]}"; do
     build_args+=(--tag "${tag}")
