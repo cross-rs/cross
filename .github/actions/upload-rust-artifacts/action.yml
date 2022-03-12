@@ -37,6 +37,7 @@ runs:
         echo "::set-output name=path::${artifact_path}"
       env:
         target: ${{ inputs.target }}
+      shell: bash
 
     - name: Upload artifacts
       if: ${{ steps.artifact.outputs.path }}
