@@ -1,0 +1,47 @@
+inputs:
+  target:
+    description: 'Target'
+    type: string
+
+runs:
+  using: composite
+  steps:
+    - name: Archive artifacts
+      id: artifact
+      run: |
+        set -x
+
+        target_dir="target/${target}/release/"
+
+        metadata="$(cargo metadata --format-version 1 --no-deps)"
+        package_name="$(jq -r '.packages[0].name' <<< "${metadata}")"
+        files="$(jq "[.packages[0].targets[] | select(.kind[] | contains(\"bin\")) | .name]" <<< "${metadata}")"
+
+        if [[ $(jq -r 'length' <<< "${files}") -eq 0 ]]; then
+          exit
+        fi
+
+        artifact_name="${package_name}-${target}"
+        artifacts_dir="artifacts"
+        artifact_path="${artifacts_dir}/${artifact_name}.tar.gz"
+
+        mkdir "${artifacts_dir}"
+
+        jq -r '.[]' <<< "${files}" | \
+          tar -cvzf "${artifact_path}" -C "${target_dir}" -T -
+
+        tar -tf "${artifact_path}"
+        ls -al "${artifact_path}"
+
+        echo "::set-output name=name::${artifact_name}"
+        echo "::set-output name=path::${artifact_path}"
+      env:
+        target: ${{ inputs.target }}
+
+    - name: Upload artifacts
+      if: ${{ steps.artifact.outputs.path }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ steps.artifact.outputs.name }}
+        path: ${{ steps.artifact.outputs.path }}
+        if-no-files-found: error
