@@ -3,35 +3,79 @@
 set -x
 set -euo pipefail
 
-version="$(cargo metadata --format-version 1 | jq --raw-output '.packages[] | select(.name == "cross") | .version')"
+version="$(cargo metadata --format-version 1 --no-deps | jq --raw-output '.packages[0].version')"
+images=()
+push=false
 
-cd docker
+for arg in "${@}"; do
+  if [[ "${arg}" == --push ]]; then
+    push=true
+  else
+    images+=("${arg}")
+  fi
+done
+
+pushd docker
 
 run() {
-  local dockerfile="Dockerfile.${1}"
-  local image_name="ghcr.io/cross-rs/cross:${1}"
-  local cache_from_args=()
+  local push="${1}"
+  local build_args=()
 
-  if ! docker image inspect "${image_name}" &>/dev/null; then
-    if docker pull "${image_name}"; then
-      cache_from_args=(--cache-from "${image_name}")
-    fi
+  if "${push}"; then
+    build_args+=(--push)
   fi
 
-  docker build ${cache_from_args[@]+"${cache_from_args[@]}"} --pull -t "${image_name}" -f "${dockerfile}" .
+  local dockerfile="Dockerfile.${2}"
+  local image_name="ghcr.io/cross-rs/${2}"
 
-  if ! [[ "${version}" =~ alpha ]] && ! [[ "${version}" =~ dev ]]; then
-    local versioned_image_name="${image_name}-${version}"
-    docker tag "${image_name}" "${versioned_image_name}"
-  fi
+  local tags=()
+
+  case "${GITHUB_REF_TYPE-}:${GITHUB_REF_NAME-}" in
+    tag:v*)
+      local tag_version="${GITHUB_REF_NAME##v}"
+
+      if [[ "${tag_version}" == "${version}" ]]; then
+        echo "Git tag does not match package version." >&2
+        exit 1
+      fi
+
+      tags+=("${image_name}:${tag_version}")
+
+      # Tag stable versions as latest.
+      if ! [[ "${tag_version}" =~ alpha ]] && ! [[ "${tag_version}" =~ dev ]]; then
+        tags+=("${image_name}:latest")
+      fi
+      ;;
+    branch:*)
+      tags+=("${image_name}:${GITHUB_REF_NAME}")
+      ;;
+    *)
+      if "${push}"; then
+        echo "Refusing to push without tag or branch." >&2
+        exit 1
+      fi
+
+      # Local development.
+      tags+=("${image_name}:local")
+      build_args+=(--load)
+      ;;
+  esac
+
+  build_args+=(--pull --cache-from type=gha --cache-to type=gha,mode=max)
+
+  for tag in "${tags[@]}"; do
+    build_args+=(--tag "${tag}")
+  done
+
+  docker buildx build "${build_args[@]}" "${cache_args[@]}" -f "${dockerfile}" --progress plain .
 }
 
-if [[ -z "${*}" ]]; then
+if [[ "${#images[@]}" -eq 0 ]]; then
   for t in Dockerfile.*; do
-    run "${t##Dockerfile.}"
+    run "${push}" "${t##Dockerfile.}"
   done
 else
-  for image in "${@}"; do
-    run "${image}"
+  for image in "${images[@]}"; do
+    run "${push}" "${image}"
   done
 fi

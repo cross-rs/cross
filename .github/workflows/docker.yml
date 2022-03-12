@@ -345,9 +345,12 @@ jobs:
           target: ${{ matrix.target }}
           default: true
           profile: minimal
+      - name: Set up Docker Buildx
+        if: runner.os == 'Linux'
+        uses: docker/setup-buildx-action@v1
       - name: Build Docker image
         if: runner.os == 'Linux'
-        timeout-minutes: 360
+        timeout-minutes: 60
         run: ./build-docker-image.sh "${TARGET}"
         env:
           TARGET: ${{ matrix.target }}
@@ -382,8 +385,8 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push image to GHCR
-        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
-        run: ./ci/docker_push.sh
+      - name: Push image to GitHub Container Registry
+        if: runner.os == 'Linux' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+        run: ./build-docker-image.sh --push "${TARGET}"
         env:
-          TAG: ${{ github.ref_name }}
+          TARGET: ${{ matrix.target }}
