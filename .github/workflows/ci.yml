@@ -472,6 +472,7 @@ jobs:
 
   publish:
     needs: [docker-image]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup-rust
