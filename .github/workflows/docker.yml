@@ -14,7 +14,7 @@ jobs:
       - name: Docker builds done
         run: exit 0
   docker-builds:
-    name: Docker Build ${{ matrix.target }} ${{matrix.os}}  ${{matrix.toolchain}}
+    name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     env:
       CARGO_NET_RETRY: 3
