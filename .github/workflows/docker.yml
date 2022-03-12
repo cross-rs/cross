@@ -345,7 +345,9 @@ jobs:
       - name: Set up Docker Buildx
         if: runner.os == 'Linux'
         uses: docker/setup-buildx-action@v1
-      - name: Build Docker image
+      - name: Expose GitHub runtime
+        uses: crazy-max/ghaction-github-runtime@v1.0.0
+      - name: Build and push Docker image
         id: build-docker-image
         if: runner.os == 'Linux'
         timeout-minutes: 60

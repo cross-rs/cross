@@ -64,8 +64,8 @@ run() {
 
   if [[ -n "${GITHUB_ACTIONS-}" ]]; then
     build_args+=(
-      --cache-from 'type=gha'
-      --cache-to 'type=gha,mode=max'
+      --cache-from "type=gha,url=${ACTIONS_CACHE_URL},token=${ACTIONS_RUNTIME_TOKEN}"
+      --cache-to "type=gha,mode=max,url=${ACTIONS_CACHE_URL},token=${ACTIONS_RUNTIME_TOKEN}"
     )
   fi
 
