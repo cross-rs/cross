@@ -6,9 +6,31 @@ jobs:
   shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: ShellCheck
+      - uses: actions/checkout@v3
+
+      - name: Run ShellCheck
         uses: azohra/shell-linter@v0.3.0
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.58.1
+          profile: minimal
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v1.3.0
+
+      - name: rustfmt -- --check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -18,44 +40,36 @@ jobs:
           - ubuntu-latest
           - windows-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: install rust
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.58.1
           profile: minimal
           components: clippy
+
+      - uses: Swatinem/rust-cache@v1.3.0
+
       - name: Run unit tests
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --locked
         timeout-minutes: 5
+
       - name: Run clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: --locked
-  fmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.58.1
-          profile: minimal
-          components: rustfmt
-      - name: rustfmt -- --check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
+
   docker-test:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
       - run: 'true'
+
   ci:
     name: CI
     needs: [shellcheck, test, fmt, docker-test]
