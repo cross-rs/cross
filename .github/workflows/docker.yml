@@ -349,11 +349,21 @@ jobs:
         if: runner.os == 'Linux'
         uses: docker/setup-buildx-action@v1
       - name: Build Docker image
+        id: build-docker-image
         if: runner.os == 'Linux'
         timeout-minutes: 60
         run: ./build-docker-image.sh "${TARGET}"
         env:
           TARGET: ${{ matrix.target }}
+        shell: bash
+      - name: Set Docker image for test
+        if: steps.build-docker-image.outputs.image
+        run: |
+          TARGET_VAR="cross_target_${TARGET//-/_}_image"
+          echo "${TARGET_VAR^^}=${IMAGE}" | tee -a "${GITHUB_ENV}"
+        env:
+          TARGET: ${{ matrix.target }}
+          IMAGE: ${{ steps.build-docker-image.outputs.image }}
         shell: bash
       - name: Test
         if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/trying'
@@ -390,3 +400,4 @@ jobs:
         run: ./build-docker-image.sh --push "${TARGET}"
         env:
           TARGET: ${{ matrix.target }}
+        shell: bash

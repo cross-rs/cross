@@ -4,14 +4,14 @@ set -x
 set -euo pipefail
 
 version="$(cargo metadata --format-version 1 --no-deps | jq --raw-output '.packages[0].version')"
-images=()
+targets=()
 push=false
 
 for arg in "${@}"; do
   if [[ "${arg}" == --push ]]; then
     push=true
   else
-    images+=("${arg}")
+    targets+=("${arg}")
   fi
 done
 
@@ -68,14 +68,19 @@ run() {
   done
 
   docker buildx build "${build_args[@]}" -f "${dockerfile}" --progress plain .
+
+  if [[ -n "${GITHUB_ACTIONS-}" ]]; then
+    echo "::set-output name=image::${tags[0]}"
+  fi
 }
 
-if [[ "${#images[@]}" -eq 0 ]]; then
-  for t in Dockerfile.*; do
-    run "${push}" "${t##Dockerfile.}"
+if [[ "${#targets[@]}" -eq 0 ]]; then
+  for dockerfile in Dockerfile.*; do
+    target="${dockerfile##Dockerfile.}"
+    run "${push}" "${target}"
   done
 else
-  for image in "${images[@]}"; do
-    run "${push}" "${image}"
+  for target in "${targets[@]}"; do
+    run "${push}" "${target}"
   done
 fi
