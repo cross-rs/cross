@@ -61,7 +61,7 @@ run() {
       ;;
   esac
 
-  build_args+=(--pull --cache-from type=gha --cache-to type=gha,mode=max)
+  build_args+=(--pull --cache-from 'type=gha' --cache-to 'type=gha,mode=max')
 
   for tag in "${tags[@]}"; do
     build_args+=(--tag "${tag}")
