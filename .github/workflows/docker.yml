@@ -308,10 +308,10 @@ jobs:
           #  std: 1
           #  run: 1
           # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
-          - target: wasm32-unknown-emscripten
-            toolchain: 1.58.1
-            os: ubuntu-latest
-            std: 1
+          # - target: wasm32-unknown-emscripten
+          #   toolchain: 1.58.1
+          #   os: ubuntu-latest
+          #   std: 1
           - target: thumbv6m-none-eabi
             toolchain: 1.58.1
             os: ubuntu-latest
