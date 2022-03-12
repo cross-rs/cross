@@ -56,7 +56,7 @@ jobs:
         with:
           toolchain: 1.58.1
           profile: minimal
-          components: rustfmt
+          components: clippy
 
       - uses: Swatinem/rust-cache@v1.3.0
 
@@ -83,7 +83,6 @@ jobs:
         with:
           toolchain: 1.58.1
           profile: minimal
-          components: clippy
 
       - uses: Swatinem/rust-cache@v1.3.0
 
@@ -95,7 +94,7 @@ jobs:
         timeout-minutes: 5
 
   docker-image:
-    name: ${{ matrix.target }}
+    name: docker-image (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     needs: [shellcheck]
     if: github.event_name == 'push'
