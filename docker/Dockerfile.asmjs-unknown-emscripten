@@ -9,7 +9,7 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY --from=trzeci/emscripten:1.38.46-upstream /emsdk_portable /emsdk_portable
+COPY --from=trzeci/emscripten:1.39.20-upstream /emsdk_portable /emsdk_portable
 
 ENV EMSDK /emsdk_portable
 ENV EMSCRIPTEN=${EMSDK}/emscripten/sdk

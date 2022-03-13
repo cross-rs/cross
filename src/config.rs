@@ -351,7 +351,7 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
             let expected = vec!["VOLUME3".to_string(), "VOLUME4".into()];
-           
+
             let result = config.env_volumes(&target()).unwrap();
             assert!(result.len() == 2);
             assert!(result.contains(&expected[0]));
@@ -369,8 +369,8 @@ mod tests {
     [target.aarch64-unknown-linux-gnu]
     xargo = false
     "#;
-     
-    static TOML_BUILD_VOLUMES: &str = r#"
+
+        static TOML_BUILD_VOLUMES: &str = r#"
     [build.env]
     volumes = ["VOLUME3", "VOLUME4"]
     [target.aarch64-unknown-linux-gnu]

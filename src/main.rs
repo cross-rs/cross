@@ -55,22 +55,24 @@ impl Host {
     ///
     /// `target == None` means `target == host`
     fn is_supported(&self, target: Option<&Target>) -> bool {
-        match std::env::var("CROSS_COMPATIBILITY_VERSION").as_ref().map(|v| v.as_str()) {
+        match std::env::var("CROSS_COMPATIBILITY_VERSION")
+            .as_ref()
+            .map(|v| v.as_str())
+        {
             // Old behavior (up to cross version 0.2.1) can be activated on demand using environment
             // variable `CROSS_COMPATIBILITY_VERSION`.
-            Ok("0.2.1") => {
-                match self {
-                    Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => {
-                        target.map(|t| t.needs_docker()).unwrap_or(false)
-                    }
-                    Host::X86_64UnknownLinuxGnu | Host::Aarch64UnknownLinuxGnu | Host::X86_64UnknownLinuxMusl | Host::Aarch64UnknownLinuxMusl => {
-                        target.map(|t| t.needs_docker()).unwrap_or(true)
-                    }
-                    Host::X86_64PcWindowsMsvc => {
-                        target.map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()).unwrap_or(false)
-                    }
-                    Host::Other(_) => false,
+            Ok("0.2.1") => match self {
+                Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => {
+                    target.map(|t| t.needs_docker()).unwrap_or(false)
                 }
+                Host::X86_64UnknownLinuxGnu
+                | Host::Aarch64UnknownLinuxGnu
+                | Host::X86_64UnknownLinuxMusl
+                | Host::Aarch64UnknownLinuxMusl => target.map(|t| t.needs_docker()).unwrap_or(true),
+                Host::X86_64PcWindowsMsvc => target
+                    .map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker())
+                    .unwrap_or(false),
+                Host::Other(_) => false,
             },
             // New behaviour, if a target is provided (--target ...) then always run with docker
             // image unless the target explicitly opts-out (i.e. unless needs_docker() returns false).
@@ -82,7 +84,7 @@ impl Host {
             // example to test custom docker images. Cross should not try to recognize if host and
             // target are equal, it's a user decision and if user want's to bypass cross he can call
             // cargo directly or omit the `--target` option.
-            _ => target.map(|t| t.needs_docker()).unwrap_or(false)
+            _ => target.map(|t| t.needs_docker()).unwrap_or(false),
         }
     }
 
@@ -181,9 +183,15 @@ impl Target {
     }
 
     fn needs_docker(&self) -> bool {
-        self.is_linux() || self.is_android() || self.is_bare_metal() || self.is_bsd() ||
-        self.is_solaris() || !self.is_builtin() || self.is_windows() || self.is_emscripten() ||
-        self.is_apple()
+        self.is_linux()
+            || self.is_android()
+            || self.is_bare_metal()
+            || self.is_bsd()
+            || self.is_solaris()
+            || !self.is_builtin()
+            || self.is_windows()
+            || self.is_emscripten()
+            || self.is_apple()
     }
 
     fn needs_interpreter(&self) -> bool {
@@ -306,8 +314,9 @@ fn run() -> Result<ExitStatus> {
             }
 
             let available_targets = rustup::available_targets(&toolchain, verbose)?;
-            let uses_xargo = config.xargo(&target)?
-            .unwrap_or_else(|| !target.is_builtin() || !available_targets.contains(&target));
+            let uses_xargo = config
+                .xargo(&target)?
+                .unwrap_or_else(|| !target.is_builtin() || !available_targets.contains(&target));
 
             if !uses_xargo
                 && !available_targets.is_installed(&target)
@@ -337,7 +346,7 @@ fn run() -> Result<ExitStatus> {
                 Err(err) => {
                     eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
                     false
-                },
+                }
             };
 
             let filtered_args = if args
@@ -407,9 +416,12 @@ impl Toml {
             .and_then(|t| t.get(triple))
             .and_then(|t| t.get("image"))
         {
-            Ok(Some(value.as_str().ok_or_else(|| {
-                format!("target.{}.image must be a string", triple)
-            })?.to_string()))
+            Ok(Some(
+                value
+                    .as_str()
+                    .ok_or_else(|| format!("target.{}.image must be a string", triple))?
+                    .to_string(),
+            ))
         } else {
             Ok(None)
         }
@@ -427,7 +439,8 @@ impl Toml {
         {
             let value = value
                 .as_str()
-                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?.to_string();
+                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?
+                .to_string();
             Ok(Some(value))
         } else {
             Ok(None)
@@ -439,11 +452,14 @@ impl Toml {
         let triple = target.triple();
 
         if let Some(value) = self.table.get("build").and_then(|b| b.get("xargo")) {
-            return Ok((Some(
-                value
-                    .as_bool()
-                    .ok_or_else(|| "build.xargo must be a boolean")?,
-            ), None));
+            return Ok((
+                Some(
+                    value
+                        .as_bool()
+                        .ok_or_else(|| "build.xargo must be a boolean")?,
+                ),
+                None,
+            ));
         }
 
         if let Some(value) = self
@@ -452,9 +468,14 @@ impl Toml {
             .and_then(|b| b.get(triple))
             .and_then(|t| t.get("xargo"))
         {
-            Ok((None, Some(value.as_bool().ok_or_else(|| {
-                format!("target.{}.xargo must be a boolean", triple)
-            })?)))
+            Ok((
+                None,
+                Some(
+                    value
+                        .as_bool()
+                        .ok_or_else(|| format!("target.{}.xargo must be a boolean", triple))?,
+                ),
+            ))
         } else {
             Ok((None, None))
         }
@@ -469,7 +490,7 @@ impl Toml {
     pub fn env_passthrough_target(&self, target: &Target) -> Result<Vec<&str>> {
         self.target_env(target, "passthrough")
     }
-    
+
     /// Returns the list of environment variables to pass through for `build`,
     pub fn env_volumes_build(&self) -> Result<Vec<&str>> {
         self.build_env("volumes")
@@ -531,7 +552,7 @@ impl Toml {
 fn toml(root: &Root) -> Result<Option<Toml>> {
     let path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),
-        Err(_) => root.path().join("Cross.toml")
+        Err(_) => root.path().join("Cross.toml"),
     };
 
     if path.exists() {

@@ -1,5 +1,5 @@
 block_labels = ["needs-decision"]
 delete_merged_branches = true
 required_approvals = 1
-status = ["shellcheck"]
+status = ["conclusion"]
 timeout_sec = 21600

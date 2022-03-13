@@ -1,0 +1,25 @@
+inputs:
+  toolchain:
+    description: 'Toolchain'
+    default: 1.58.1
+    type: string
+  target:
+    description: 'Target'
+    type: string
+  components:
+    description: 'Components'
+    type: string
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        target: ${{ inputs.target }}
+        default: true
+        components: ${{ inputs.components }}
+        profile: minimal
+
+    - uses: Swatinem/rust-cache@v1.3.0

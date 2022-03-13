@@ -28,10 +28,6 @@ function retry {
 main() {
     local td=
 
-    if [[ "${BRANCH-}" = master ]] || [[ "${TAG-}" =~ ^v.* ]]; then
-        return
-    fi
-
     retry cargo fetch
     cargo install --force --path .
 

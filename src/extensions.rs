@@ -1,6 +1,6 @@
 use std::borrow::Cow;
-use std::process::{Command, ExitStatus};
 use std::fmt;
+use std::process::{Command, ExitStatus};
 
 use crate::errors::*;
 
@@ -43,7 +43,8 @@ impl CommandExt for Command {
     /// Runs the command to completion and returns its stdout
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String> {
         self.print_verbose(verbose);
-        let out = self.output()
+        let out = self
+            .output()
             .chain_err(|| format!("couldn't execute `{:?}`", self))?;
 
         self.status_result(out.status)?;
@@ -68,17 +69,17 @@ impl SafeCommand {
     }
 
     pub fn arg<'b, S>(&mut self, arg: &S) -> &mut Self
-        where
-            S: ToString,
+    where
+        S: ToString,
     {
         self.args.push(arg.to_string());
         self
     }
 
     pub fn args<I, S>(&mut self, args: I) -> &mut Self
-        where
-            I: IntoIterator<Item = S>,
-            S: ToString,
+    where
+        I: IntoIterator<Item = S>,
+        S: ToString,
     {
         for arg in args {
             self.arg(&arg);

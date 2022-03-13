@@ -12,11 +12,10 @@ pub fn is_registered(target: &Target) -> Result<bool> {
 
     let ok = if target.is_windows() {
         let wine = Path::new("/proc/sys/fs/binfmt_misc/wine");
-        wine.exists() &&
-        {
+        wine.exists() && {
             let f = file::read(wine)?;
-            f.contains("/usr/bin/run-detectors") ||
-            f.contains("/usr/lib/binfmt-support/run-detectors")
+            f.contains("/usr/bin/run-detectors")
+                || f.contains("/usr/lib/binfmt-support/run-detectors")
         }
     } else {
         // NOTE checking any architecture will do, here we pick arm

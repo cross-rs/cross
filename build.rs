@@ -8,7 +8,8 @@ use std::process::Command;
 struct Some {}
 
 impl<E> From<E> for Some
-    where E: Error
+where
+    E: Error,
 {
     fn from(_: E) -> Some {
         Some {}
@@ -37,7 +38,8 @@ fn commit_info() -> String {
 }
 
 fn commit_hash() -> Result<String, Some> {
-    let output = Command::new("git").args(&["rev-parse", "--short", "HEAD"])
+    let output = Command::new("git")
+        .args(&["rev-parse", "--short", "HEAD"])
         .output()?;
 
     if output.status.success() {

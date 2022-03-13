@@ -1,8 +1,8 @@
 use std::process::Command;
 
-use crate::Target;
 use crate::errors::*;
 use crate::extensions::CommandExt;
+use crate::Target;
 
 #[derive(Debug)]
 pub struct AvailableTargets {
@@ -28,7 +28,15 @@ pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
         .args(&["toolchain", "list"])
         .run_and_get_stdout(verbose)?;
 
-    Ok(out.lines().map(|l| l.replace(" (default)", "").replace(" (override)", "").trim().to_owned()).collect())
+    Ok(out
+        .lines()
+        .map(|l| {
+            l.replace(" (default)", "")
+                .replace(" (override)", "")
+                .trim()
+                .to_owned()
+        })
+        .collect())
 }
 
 pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTargets> {
@@ -52,7 +60,11 @@ pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTarg
         }
     }
 
-    Ok(AvailableTargets { default, installed, not_installed })
+    Ok(AvailableTargets {
+        default,
+        installed,
+        not_installed,
+    })
 }
 
 pub fn install_toolchain(toolchain: &str, verbose: bool) -> Result<()> {
