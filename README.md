@@ -109,12 +109,12 @@ the default one. Normal Docker behavior applies, so:
 - If only `tag` is omitted, then Docker will use the `latest` tag.
 
 It's recommended to base your custom image on the default Docker image that
-cross uses: `cross-rs/cross:{{TARGET}}-{{VERSION}}` (where `{{VERSION}}` is cross's version).
+cross uses: `ghcr.io/cross-rs/{{TARGET}}:{{VERSION}}` (where `{{VERSION}}` is cross's version).
 This way you won't have to figure out how to install a cross C toolchain in your
 custom image. Example below:
 
 ``` Dockerfile
-FROM cross-rs/cross:aarch64-unknown-linux-gnu-0.2.1
+FROM ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest
 
 RUN dpkg --add-architecture arm64 && \
     apt-get update && \
