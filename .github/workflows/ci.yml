@@ -212,7 +212,7 @@ jobs:
       - uses: ./.github/actions/setup-rust
       - uses: ./.github/actions/cargo-publish
         with:
-          cratesio-token: ${{ secrets.CRATESIO_TOKEN }}
+          cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   conclusion:
     needs: [shellcheck, fmt, clippy, test, docker-image, publish]

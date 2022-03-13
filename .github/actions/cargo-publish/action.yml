@@ -1,5 +1,5 @@
 inputs:
-  cratesio-token:
+  cargo-registry-token:
     description: 'API token for crates.io'
     type: string
 
@@ -26,7 +26,7 @@ runs:
       uses: actions-rs/cargo@v1
       with:
         command: login
-        args: -- ${{ inputs.cratesio-token }}
+        args: -- ${{ inputs.cargo-registry-token }}
       timeout-minutes: 1
 
     - name: Create GitHub release
