@@ -42,12 +42,16 @@ run() {
       tags+=("${image_name}:${tag_version}")
 
       # Tag stable versions as latest.
-      if ! [[ "${tag_version}" =~ alpha ]] && ! [[ "${tag_version}" =~ dev ]]; then
+      if ! [[ "${tag_version}" =~ -* ]]; then
         tags+=("${image_name}:latest")
       fi
       ;;
     branch:*)
+      # Tag active branch as edge.
       tags+=("${image_name}:${GITHUB_REF_NAME}")
+      if ! [[ "${GITHUB_REF_NAME-}" =~ staging ]] && ! [[ "${GITHUB_REF_NAME-}" =~ trying ]]; then
+        tags+=("${image_name}:edge")
+      fi
       ;;
     *)
       if "${push}"; then
