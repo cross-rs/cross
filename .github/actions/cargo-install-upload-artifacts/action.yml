@@ -15,8 +15,17 @@ runs:
         has_binaries="$(jq '.packages[0].targets | any(.kind | contains(["bin"]))' <<< "${metadata}")"
         echo "::set-output name=package-name::${package_name}"
         echo "::set-output name=has-binaries::${has_binaries}"
-        echo "::set-output name=out-dir::$(mktemp -d)"
-        echo "::set-output name=artifacts-dir::$(mktemp -d)"
+
+        out_dir="$(mktemp -d)"
+        artifacts_dir="$(mktemp -d)"
+
+        if which cygpath; then
+          out_dir="$(cygpath -w "${out_dir}")"
+          artifacts_dir="$(cygpath -w "${artifacts_dir}")"
+        fi
+
+        echo "::set-output name=out-dir::${out_dir}"
+        echo "::set-output name=artifacts-dir::${artifacts_dir}"
       shell: bash
 
     - name: Build with all features
@@ -39,6 +48,11 @@ runs:
       run: |
         set -x
 
+        if which cygpath; then
+          out_dir="$(cygpath -u "${out_dir}")"
+          artifacts_dir="$(cygpath -u "${artifacts_dir}")"
+        fi
+
         artifact_name="${package_name}-${target}"
         artifact_path="${artifacts_dir}/${artifact_name}.tar.gz"
 
@@ -48,6 +62,10 @@ runs:
 
         tar -tf "${artifact_path}"
         ls -al "${artifact_path}"
+
+        if which cygpath; then
+          artifact_path="$(cygpath -w "${artifact_path}")"
+        fi
 
         echo "::set-output name=name::${artifact_name}"
         echo "::set-output name=path::${artifact_path}"
