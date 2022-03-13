@@ -27,7 +27,6 @@ runs:
       with:
         command: login
         args: -- ${{ inputs.cargo-registry-token }}
-      timeout-minutes: 5
 
     - name: Create GitHub release
       if: >
