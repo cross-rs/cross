@@ -58,7 +58,7 @@ main() {
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kversion='5.15.0-2'
+            kversion='5.16.0-4'
             kernel="${kversion}-powerpc64"
             libgcc="libgcc-s1"
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
