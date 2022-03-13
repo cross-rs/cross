@@ -16,7 +16,6 @@ runs:
 
     - name: Download artifacts
       id: download-artifacts
-      if: needs.build.outputs.artifact
       uses: actions/download-artifact@v3
       with:
         path:
@@ -28,10 +27,11 @@ runs:
       with:
         command: login
         args: -- ${{ inputs.cratesio-token }}
+      timeout-minutes: 1
 
-    - name: Upload GitHub release artifacts
+    - name: Create GitHub release
       if: >
-        needs.build.outputs.artifact != '' && github.event_name == 'push' && (
+        github.event_name == 'push' && (
           github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
           startsWith(github.ref, 'refs/tags/v')
         )
