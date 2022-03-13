@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 purge_list=()
 
 install_packages() {
@@ -36,12 +34,12 @@ purge_packages() {
 
 if_centos() {
     if grep -q -i centos /etc/os-release; then
-        "${@}"
+        eval "${@}"
     fi
 }
 
 if_ubuntu() {
     if grep -q -i ubuntu /etc/os-release; then
-        "${@}"
+        eval "${@}"
     fi
 }
