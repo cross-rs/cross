@@ -42,7 +42,7 @@ run() {
       tags+=("${image_name}:${tag_version}")
 
       # Tag stable versions as latest.
-      if ! [[ "${tag_version}" =~ -* ]]; then
+      if ! [[ "${tag_version}" =~ -.* ]]; then
         tags+=("${image_name}:latest")
       fi
       ;;
