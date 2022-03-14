@@ -28,6 +28,7 @@ install_packages \
     make
 
 if_centos install_packages \
+    clang-devel \
     gcc-c++ \
     glibc-devel \
     pkgconfig
@@ -35,4 +36,5 @@ if_centos install_packages \
 if_ubuntu install_packages \
     g++ \
     libc6-dev \
+    libclang-dev \
     pkg-config
