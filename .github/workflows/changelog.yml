@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Changelog updated
-        uses: Zomzog/changelog-checker@v1.1.0
+        uses: Zomzog/changelog-checker@v1.2.0
         with:
           fileName: CHANGELOG.md
         env:
