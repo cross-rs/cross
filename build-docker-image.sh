@@ -23,6 +23,8 @@ run() {
 
   if "${push}"; then
     build_args+=(--push)
+  else
+    build_args+=(--load)
   fi
 
   local dockerfile="Dockerfile.${2}"
@@ -64,7 +66,7 @@ run() {
       ;;
   esac
 
-  build_args+=(--pull --load)
+  build_args+=(--pull)
 
   if [[ -n "${GITHUB_ACTIONS-}" ]]; then
     build_args+=(
