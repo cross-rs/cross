@@ -46,12 +46,12 @@ impl Subcommand {
 impl<'a> From<&'a str> for Subcommand {
     fn from(s: &str) -> Subcommand {
         match s {
-            "build" => Subcommand::Build,
-            "check" => Subcommand::Check,
+            "b" | "build" => Subcommand::Build,
+            "c" | "check" => Subcommand::Check,
             "doc" => Subcommand::Doc,
-            "run" => Subcommand::Run,
+            "r" | "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,
-            "test" => Subcommand::Test,
+            "t" | "test" => Subcommand::Test,
             "bench" => Subcommand::Bench,
             "deb" => Subcommand::Deb,
             "clippy" => Subcommand::Clippy,
