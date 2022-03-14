@@ -168,6 +168,7 @@ pub fn run(
     docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
 
     docker.arg("--rm");
+    docker.arg("--privileged");
 
     // We need to specify the user for Docker, but not for Podman.
     if let Ok(ce) = get_container_engine() {
