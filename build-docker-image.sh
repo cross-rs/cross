@@ -66,17 +66,28 @@ run() {
       ;;
   esac
 
-  build_args+=(--pull)
+  build_args+=(
+    --pull
+    --cache-from "type=registry,ref=${image_name}:main"
+  )
+
+  if "${push}"; then
+    build_args+=(--cache-to 'type=inline')
+  fi
 
   if [[ -n "${GITHUB_ACTIONS-}" ]]; then
-    build_args+=(
-      --cache-from "type=gha,url=${ACTIONS_CACHE_URL},token=${ACTIONS_RUNTIME_TOKEN}"
-      --cache-to "type=gha,mode=max,url=${ACTIONS_CACHE_URL},token=${ACTIONS_RUNTIME_TOKEN}"
-    )
+    build_args+=(--cache-from "type=gha,url=${ACTIONS_CACHE_URL},token=${ACTIONS_RUNTIME_TOKEN}")
+
+    if ! "${push}"; then
+      build_args+=(--cache-to "type=gha,mode=max,url=${ACTIONS_CACHE_URL},token=${ACTIONS_RUNTIME_TOKEN}")
+    fi
   fi
 
   for tag in "${tags[@]}"; do
-    build_args+=(--tag "${tag}")
+    build_args+=(
+      --cache-from "type=registry,ref=${tag}"
+      --tag "${tag}"
+    )
   done
 
   docker buildx build "${build_args[@]}" -f "${dockerfile}" --progress plain .
