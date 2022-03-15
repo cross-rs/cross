@@ -84,10 +84,7 @@ run() {
   fi
 
   for tag in "${tags[@]}"; do
-    build_args+=(
-      --cache-from "type=registry,ref=${tag}"
-      --tag "${tag}"
-    )
+    build_args+=(--tag "${tag}")
   done
 
   docker buildx build "${build_args[@]}" -f "${dockerfile}" --progress plain .
