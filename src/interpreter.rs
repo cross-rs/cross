@@ -7,7 +7,7 @@ use crate::Target;
 /// Checks if the interpreters have been registered in the host system
 pub fn is_registered(target: &Target) -> Result<bool> {
     if file::read("/proc/sys/fs/binfmt_misc/status")?.trim() != "enabled" {
-        return Err("host system doesn't have binfmt_misc support".into());
+        eyre::bail!("host system doesn't have binfmt_misc support")
     }
 
     let ok = if target.is_windows() {

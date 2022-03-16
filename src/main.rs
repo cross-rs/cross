@@ -12,10 +12,9 @@ mod interpreter;
 mod rustc;
 mod rustup;
 
-use std::io::Write;
+use std::env;
 use std::path::PathBuf;
 use std::process::ExitStatus;
-use std::{env, io, process};
 
 use config::Config;
 use toml::{value::Table, Value};
@@ -228,38 +227,10 @@ impl From<Host> for Target {
     }
 }
 
-pub fn main() {
-    fn show_backtrace() -> bool {
-        env::var("RUST_BACKTRACE").as_ref().map(|s| &s[..]) == Ok("1")
-    }
-
-    match run() {
-        Err(e) => {
-            let stderr = io::stderr();
-            let mut stderr = stderr.lock();
-
-            writeln!(stderr, "error: {}", e).ok();
-
-            for e in e.iter().skip(1) {
-                writeln!(stderr, "caused by: {}", e).ok();
-            }
-
-            if show_backtrace() {
-                if let Some(backtrace) = e.backtrace() {
-                    writeln!(stderr, "{:?}", backtrace).ok();
-                }
-            } else {
-                writeln!(stderr, "note: run with `RUST_BACKTRACE=1` for a backtrace").ok();
-            }
-
-            process::exit(1)
-        }
-        Ok(status) => {
-            if !status.success() {
-                process::exit(status.code().unwrap_or(1))
-            }
-        }
-    }
+pub fn main() -> Result<()> {
+    install_panic_hook()?;
+    run()?;
+    Ok(())
 }
 
 fn run() -> Result<ExitStatus> {
@@ -279,7 +250,7 @@ fn run() -> Result<ExitStatus> {
         .any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
     let version_meta =
-        rustc_version::version_meta().chain_err(|| "couldn'toml.t fetch the `rustc` version")?;
+        rustc_version::version_meta().wrap_err("couldn't fetch the `rustc` version")?;
     if let Some(root) = cargo::root()? {
         let host = version_meta.host();
 
@@ -294,7 +265,7 @@ fn run() -> Result<ExitStatus> {
             let default_toolchain = sysroot
                 .file_name()
                 .and_then(|file_name| file_name.to_str())
-                .ok_or("couldn't get toolchain name")?;
+                .ok_or_else(|| eyre::eyre!("couldn't get toolchain name"))?;
             let toolchain = if let Some(channel) = args.channel {
                 [channel]
                     .iter()
@@ -419,7 +390,7 @@ impl Toml {
             Ok(Some(
                 value
                     .as_str()
-                    .ok_or_else(|| format!("target.{}.image must be a string", triple))?
+                    .ok_or_else(|| eyre::eyre!("target.{triple}.image must be a string"))?
                     .to_string(),
             ))
         } else {
@@ -439,7 +410,7 @@ impl Toml {
         {
             let value = value
                 .as_str()
-                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?
+                .ok_or_else(|| eyre::eyre!("target.{triple}.runner must be a string"))?
                 .to_string();
             Ok(Some(value))
         } else {
@@ -453,7 +424,11 @@ impl Toml {
 
         if let Some(value) = self.table.get("build").and_then(|b| b.get("xargo")) {
             return Ok((
-                Some(value.as_bool().ok_or("build.xargo must be a boolean")?),
+                Some(
+                    value
+                        .as_bool()
+                        .ok_or_else(|| eyre::eyre!("build.xargo must be a boolean"))?,
+                ),
                 None,
             ));
         }
@@ -469,7 +444,7 @@ impl Toml {
                 Some(
                     value
                         .as_bool()
-                        .ok_or_else(|| format!("target.{}.xargo must be a boolean", triple))?,
+                        .ok_or_else(|| eyre::eyre!("target.{triple}.xargo must be a boolean"))?,
                 ),
             ))
         } else {
@@ -500,45 +475,41 @@ impl Toml {
     fn target_env(&self, target: &Target, key: &str) -> Result<Vec<&str>> {
         let triple = target.triple();
 
-        match self
+        if let Some(&Value::Array(ref vec)) = self
             .table
             .get("target")
             .and_then(|t| t.get(triple))
             .and_then(|t| t.get("env"))
             .and_then(|e| e.get(key))
         {
-            Some(&Value::Array(ref vec)) => vec
-                .iter()
+            vec.iter()
                 .map(|val| {
                     val.as_str().ok_or_else(|| {
-                        format!(
-                            "every target.{}.env.{} element must be a string",
-                            triple, key
-                        )
-                        .into()
+                        eyre::eyre!("every target.{triple}.env.{key} element must be a string",)
                     })
                 })
-                .collect(),
-            _ => Ok(Vec::new()),
+                .collect()
+        } else {
+            Ok(Vec::new())
         }
     }
 
     fn build_env(&self, key: &str) -> Result<Vec<&str>> {
-        match self
+        if let Some(&Value::Array(ref vec)) = self
             .table
             .get("build")
             .and_then(|b| b.get("env"))
             .and_then(|e| e.get(key))
         {
-            Some(&Value::Array(ref vec)) => vec
-                .iter()
+            vec.iter()
                 .map(|val| {
                     val.as_str().ok_or_else(|| {
-                        format!("every build.env.{} element must be a string", key).into()
+                        eyre::eyre!("every build.env.{key} element must be a string")
                     })
                 })
-                .collect(),
-            _ => Ok(Vec::new()),
+                .collect()
+        } else {
+            Ok(Vec::new())
         }
     }
 }
@@ -552,13 +523,10 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
     };
 
     if path.exists() {
-        Ok(Some(Toml {
-            table: if let Ok(Value::Table(table)) = file::read(&path)?.parse() {
-                table
-            } else {
-                return Err(format!("couldn't parse {} as TOML table", path.display()).into());
-            },
-        }))
+        let content = file::read(&path)
+            .wrap_err_with(|| format!("could not read file `{}`", path.display()))?;
+        parse_toml(&content)
+            .wrap_err_with(|| format!("failed to parse file `{}` as TOML", path.display()))
     } else {
         // Let's check if there is a lower case version of the file
         if root.path().join("cross.toml").exists() {
@@ -566,4 +534,13 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
         }
         Ok(None)
     }
+}
+
+fn parse_toml(content: &str) -> Result<Option<Toml>> {
+    Ok(Some(crate::Toml {
+        table: match content.parse()? {
+            toml::Value::Table(table) => table,
+            _ => eyre::bail!("couldn't parse as TOML table"),
+        },
+    }))
 }
