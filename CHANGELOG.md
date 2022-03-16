@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - #652 - Allow trying individual targets via bors.
 - #650 - Improve Docker caching.
+- #609 - Switch to Github Actions and GHCR.
 - #588 - fix ci: bump openssl version in freebsd again
 - #552 - Added CHANGELOG.md automation
 - #543 - Added environment variables to control the UID and GID in the container
