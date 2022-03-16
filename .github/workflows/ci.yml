@@ -255,7 +255,7 @@ jobs:
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, docker-image, publish]
+    needs: [shellcheck, fmt, clippy, test, generate-matrix, docker-image, publish]
     if: always()
     runs-on: ubuntu-latest
     steps:
