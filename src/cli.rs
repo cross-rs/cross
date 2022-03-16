@@ -38,9 +38,8 @@ pub fn parse(target_list: &TargetList) -> Args {
                 }
             } else if arg.starts_with("--target=") {
                 target = arg
-                    .splitn(2, '=')
-                    .nth(1)
-                    .map(|s| Target::from(&*s, target_list));
+                    .split_once('=')
+                    .map(|(_, t)| Target::from(t, target_list));
                 all.push(arg);
             } else if arg == "--target-dir" {
                 all.push(arg);
@@ -49,9 +48,9 @@ pub fn parse(target_list: &TargetList) -> Args {
                     all.push("/target".to_string());
                 }
             } else if arg.starts_with("--target-dir=") {
-                if let Some(td) = arg.splitn(2, '=').nth(1) {
+                if let Some((_, td)) = arg.split_once('=') {
                     target_dir = Some(PathBuf::from(&td));
-                    all.push(format!("--target-dir=/target"));
+                    all.push("--target-dir=/target".into());
                 }
             } else {
                 if !arg.starts_with('-') && sc.is_none() {

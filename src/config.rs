@@ -11,14 +11,13 @@ impl Environment {
     }
 
     fn build_var_name(&self, name: &str) -> String {
-        format!("{}_{}", self.0, name.to_ascii_uppercase().replace("-", "_"))
+        format!("{}_{}", self.0, name.to_ascii_uppercase().replace('-', "_"))
     }
 
     fn get_var(&self, name: &str) -> Option<String> {
         self.1
             .as_ref()
-            .map(|internal_map| internal_map.get(name).map(|v| v.to_string()))
-            .flatten()
+            .and_then(|internal_map| internal_map.get(name).map(|v| v.to_string()))
             .or_else(|| env::var(name).ok())
     }
 
@@ -186,9 +185,9 @@ impl Config {
     ) -> Result<Vec<String>> {
         let mut collect = vec![];
         if let Some(mut vars) = env_values {
-            collect.extend(vars.drain(..));
+            collect.append(&mut vars);
         } else if let Some(toml_values) = toml_getter() {
-            collect.extend(toml_values?.drain(..).map(|v| v.to_string()));
+            collect.extend(toml_values?.into_iter().map(|v| v.to_string()));
         }
 
         Ok(collect)
