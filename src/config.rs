@@ -219,7 +219,7 @@ mod tests {
             let env = Environment::new(Some(map));
 
             let res = env.xargo(&target());
-            if let Ok(_) = res {
+            if res.is_ok() {
                 panic!("invalid bool string parsing should fail");
             }
         }
@@ -265,16 +265,10 @@ mod tests {
             let env = Environment::new(Some(map));
 
             let (build, target) = env.passthrough(&target());
-            assert_eq!(build.as_ref().unwrap().contains(&"TEST1".to_string()), true);
-            assert_eq!(build.as_ref().unwrap().contains(&"TEST2".to_string()), true);
-            assert_eq!(
-                target.as_ref().unwrap().contains(&"PASS1".to_string()),
-                true
-            );
-            assert_eq!(
-                target.as_ref().unwrap().contains(&"PASS2".to_string()),
-                true
-            );
+            assert!(build.as_ref().unwrap().contains(&"TEST1".to_string()));
+            assert!(build.as_ref().unwrap().contains(&"TEST2".to_string()));
+            assert!(target.as_ref().unwrap().contains(&"PASS1".to_string()));
+            assert!(target.as_ref().unwrap().contains(&"PASS2".to_string()));
         }
     }
 
