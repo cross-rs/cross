@@ -74,12 +74,12 @@ fn docker_images() -> String {
         let path = entry.path();
         let file_name = path.file_name().unwrap().to_str().unwrap();
         if file_name.starts_with("Dockerfile.") {
-            images.push_str("\"");
+            images.push('"');
             images.push_str(&file_name.replacen("Dockerfile.", "", 1));
             images.push_str("\", ");
         }
     }
 
-    images.push_str("]");
+    images.push(']');
     images
 }

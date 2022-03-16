@@ -4,7 +4,6 @@ use std::{env, fs};
 
 use atty::Stream;
 use error_chain::bail;
-use serde_json;
 
 use crate::cargo::Root;
 use crate::errors::*;
@@ -59,6 +58,7 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         .run(verbose)
 }
 
+#[allow(clippy::too_many_arguments)] // TODO: refactor
 pub fn run(
     target: &Target,
     args: &[String],
@@ -66,7 +66,7 @@ pub fn run(
     root: &Root,
     config: &Config,
     uses_xargo: bool,
-    sysroot: &PathBuf,
+    sysroot: &Path,
     verbose: bool,
     docker_in_docker: bool,
 ) -> Result<ExitStatus> {
@@ -77,7 +77,7 @@ pub fn run(
     };
 
     let root = root.path();
-    let home_dir = home::home_dir().ok_or_else(|| "could not find home directory")?;
+    let home_dir = home::home_dir().ok_or("could not find home directory")?;
     let cargo_dir = home::cargo_home()?;
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
@@ -91,11 +91,11 @@ pub fn run(
     fs::create_dir(&xargo_dir).ok();
 
     // update paths to the host mounts path.
-    let cargo_dir = mount_finder.find_mount_path(&cargo_dir);
-    let xargo_dir = mount_finder.find_mount_path(&xargo_dir);
-    let target_dir = mount_finder.find_mount_path(&target_dir);
-    let mount_root = mount_finder.find_mount_path(&root);
-    let sysroot = mount_finder.find_mount_path(&sysroot);
+    let cargo_dir = mount_finder.find_mount_path(cargo_dir);
+    let xargo_dir = mount_finder.find_mount_path(xargo_dir);
+    let target_dir = mount_finder.find_mount_path(target_dir);
+    let mount_root = mount_finder.find_mount_path(root);
+    let sysroot = mount_finder.find_mount_path(sysroot);
 
     let mut cmd = if uses_xargo {
         SafeCommand::new("xargo")
@@ -154,8 +154,8 @@ pub fn run(
                 "--user",
                 &format!(
                     "{}:{}",
-                    env::var("CROSS_CONTAINER_UID").unwrap_or(id::user().to_string()),
-                    env::var("CROSS_CONTAINER_GID").unwrap_or(id::group().to_string()),
+                    env::var("CROSS_CONTAINER_UID").unwrap_or_else(|_| id::user().to_string()),
+                    env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string()),
                 ),
             ]);
         }
@@ -186,7 +186,7 @@ pub fn run(
     docker
         .args(&[
             "-e",
-            &format!("CROSS_RUNNER={}", runner.unwrap_or(String::new())),
+            &format!("CROSS_RUNNER={}", runner.unwrap_or_default()),
         ])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
@@ -214,7 +214,7 @@ pub fn run(
 }
 
 pub fn image(config: &Config, target: &Target) -> Result<String> {
-    if let Some(image) = config.image(target)?.map(|s| s.to_owned()) {
+    if let Some(image) = config.image(target)? {
         return Ok(image);
     }
 
@@ -301,7 +301,7 @@ fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
             }
             mounts
         })
-        .unwrap_or_else(|| Vec::new())
+        .unwrap_or_else(Vec::new)
 }
 
 #[derive(Debug, Default)]
@@ -327,13 +327,16 @@ impl MountFinder {
         MountFinder { mounts }
     }
 
-    fn find_mount_path(&self, path: &Path) -> PathBuf {
+    fn find_mount_path(&self, path: impl AsRef<Path>) -> PathBuf {
+        let path = path.as_ref();
+
         for info in &self.mounts {
             if let Ok(stripped) = path.strip_prefix(&info.destination) {
                 return info.source.join(stripped);
             }
         }
-        return path.to_path_buf();
+
+        path.to_path_buf()
     }
 }
 
@@ -349,7 +352,7 @@ mod tests {
             let finder = MountFinder::default();
             assert_eq!(
                 PathBuf::from("/test/path"),
-                finder.find_mount_path(&PathBuf::from("/test/path")),
+                finder.find_mount_path("/test/path"),
             );
         }
 
@@ -367,7 +370,7 @@ mod tests {
             ]);
             assert_eq!(
                 PathBuf::from("/target/path/test"),
-                finder.find_mount_path(&PathBuf::from("/project/target/test"))
+                finder.find_mount_path("/project/target/test")
             )
         }
 
@@ -385,15 +388,15 @@ mod tests {
             ]);
             assert_eq!(
                 PathBuf::from("/var/lib/docker/overlay2/container-id/merged/container/path"),
-                finder.find_mount_path(&PathBuf::from("/container/path"))
+                finder.find_mount_path("/container/path")
             );
             assert_eq!(
                 PathBuf::from("/home/project/path"),
-                finder.find_mount_path(&PathBuf::from("/project"))
+                finder.find_mount_path("/project")
             );
             assert_eq!(
                 PathBuf::from("/home/project/path/target"),
-                finder.find_mount_path(&PathBuf::from("/project/target"))
+                finder.find_mount_path("/project/target")
             );
         }
     }

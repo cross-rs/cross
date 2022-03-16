@@ -453,11 +453,7 @@ impl Toml {
 
         if let Some(value) = self.table.get("build").and_then(|b| b.get("xargo")) {
             return Ok((
-                Some(
-                    value
-                        .as_bool()
-                        .ok_or_else(|| "build.xargo must be a boolean")?,
-                ),
+                Some(value.as_bool().ok_or("build.xargo must be a boolean")?),
                 None,
             ));
         }

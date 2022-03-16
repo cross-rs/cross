@@ -49,8 +49,7 @@ impl CommandExt for Command {
 
         self.status_result(out.status)?;
 
-        Ok(String::from_utf8(out.stdout)
-            .chain_err(|| format!("`{:?}` output was not UTF-8", self))?)
+        String::from_utf8(out.stdout).chain_err(|| format!("`{:?}` output was not UTF-8", self))
     }
 }
 
@@ -68,7 +67,7 @@ impl SafeCommand {
         }
     }
 
-    pub fn arg<'b, S>(&mut self, arg: &S) -> &mut Self
+    pub fn arg<S>(&mut self, arg: &S) -> &mut Self
     where
         S: ToString,
     {
