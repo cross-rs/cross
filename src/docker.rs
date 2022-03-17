@@ -194,7 +194,7 @@ pub fn run(
         .args(&["-v", "/cargo/bin"])
         .args(&[
             "-v",
-            &format!("{}:/{}:Z", mount_root.display(), mount_root.display()),
+            &format!("{}:{}:Z", mount_root.display(), mount_root.display()),
         ])
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
