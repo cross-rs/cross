@@ -29,14 +29,12 @@ fn get_container_engine() -> Result<std::path::PathBuf> {
 }
 
 pub fn docker_command(subcommand: &str) -> Result<Command> {
-    if let Ok(ce) = get_container_engine() {
-        let mut command = Command::new(ce);
-        command.arg(subcommand);
-        command.args(&["--userns", "host"]);
-        Ok(command)
-    } else {
-        Err("no container engine found; install docker or podman".into())
-    }
+    let mut command = Command::new(
+        get_container_engine().or(Err("no container engine found; install docker or podman"))?,
+    );
+    command.arg(subcommand);
+    command.args(&["--userns", "host"]);
+    Ok(command)
 }
 
 /// Register binfmt interpreters
@@ -233,12 +231,7 @@ pub fn image(config: &Config, target: &Target) -> Result<String> {
 }
 
 fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
-    let hostname = if let Ok(v) = env::var("HOSTNAME") {
-        Ok(v)
-    } else {
-        Err("HOSTNAME environment variable not found")
-    }?;
-
+    let hostname = env::var("HOSTNAME").or(Err("HOSTNAME environment variable not found"))?;
     let docker_path = which::which(DOCKER)?;
     let mut docker: Command = {
         let mut command = Command::new(docker_path);
@@ -248,11 +241,7 @@ fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
     };
 
     let output = docker.run_and_get_stdout(false)?;
-    let info = if let Ok(val) = serde_json::from_str(&output) {
-        Ok(val)
-    } else {
-        Err("failed to parse docker inspect output")
-    }?;
+    let info = serde_json::from_str(&output).or(Err("failed to parse docker inspect output"))?;
 
     dockerinfo_parse_mounts(&info)
 }
