@@ -28,14 +28,7 @@ impl VersionMetaExt for VersionMeta {
     }
 
     fn needs_interpreter(&self) -> bool {
-        self.semver
-            < Version {
-                major: 1,
-                minor: 19,
-                patch: 0,
-                pre: vec![],
-                build: vec![],
-            }
+        self.semver < Version::new(1, 19, 0)
     }
 }
 
