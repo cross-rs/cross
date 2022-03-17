@@ -162,15 +162,15 @@ pub fn run(
         .args(&["-e", "CARGO_TARGET_DIR=/target"]);
 
     if let Some(username) = id::username().unwrap() {
-        docker.args(&["-e", &format!("USER={}", username)]);
+        docker.args(&["-e", &format!("USER={username}")]);
     }
 
     if let Ok(value) = env::var("QEMU_STRACE") {
-        docker.args(&["-e", &format!("QEMU_STRACE={}", value)]);
+        docker.args(&["-e", &format!("QEMU_STRACE={value}")]);
     }
 
     if let Ok(value) = env::var("CROSS_DEBUG") {
-        docker.args(&["-e", &format!("CROSS_DEBUG={}", value)]);
+        docker.args(&["-e", &format!("CROSS_DEBUG={value}")]);
     }
 
     if let Ok(value) = env::var("DOCKER_OPTS") {
@@ -222,18 +222,15 @@ pub fn image(config: &Config, target: &Target) -> Result<String> {
         return Ok(image);
     }
 
-    let triple = target.triple();
-
-    if !DOCKER_IMAGES.contains(&triple) {
+    if !DOCKER_IMAGES.contains(&target.triple()) {
         bail!(
-            "`cross` does not provide a Docker image for target {}, \
-               specify a custom image in `Cross.toml`.",
-            triple
+            "`cross` does not provide a Docker image for target {target}, \
+               specify a custom image in `Cross.toml`."
         );
     }
 
     let version = env!("CARGO_PKG_VERSION");
-    Ok(format!("{}/{}:{}", CROSS_IMAGE, triple, version))
+    Ok(format!("{CROSS_IMAGE}/{target}:{version}"))
 }
 
 fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
@@ -276,7 +273,7 @@ fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDet
             destination: PathBuf::from("/"),
         })
     } else {
-        eyre::bail!("want driver overlay2, got {}", driver_name)
+        eyre::bail!("want driver overlay2, got {driver_name}")
     }
 }
 
