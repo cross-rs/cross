@@ -16,7 +16,7 @@ RUN dpkg --add-architecture i386 && apt-get update && \
         wine32 \
         libz-mingw-w64-dev
 
-RUN apt-get install --assume-yes --no-install-recommends g++-mingw-w64-x86-64
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends g++-mingw-w64-x86-64
 
 # run-detectors are responsible for calling the correct interpreter for exe
 # files. For some reason it does not work inside a docker container (it works
