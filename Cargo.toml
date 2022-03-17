@@ -18,7 +18,7 @@ lazy_static = "1.0"
 libc = "0.2.104"
 rustc_version = "0.2"
 toml = "0.5"
-which = { version = "3.1.0", default_features = false }
+which = { version = "4", default_features = false }
 shell-escape = "0.1.4"
 serde_json = "1.0.48"
 
