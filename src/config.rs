@@ -1,7 +1,9 @@
 use crate::{Result, Target, Toml};
 
+use crate::errors::*;
 use std::collections::HashMap;
 use std::env;
+
 #[derive(Debug)]
 struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
 
@@ -42,22 +44,20 @@ impl Environment {
             self.get_build_var("XARGO"),
             self.get_target_var(target, "XARGO"),
         );
-        let build_env =
-            if let Some(value) = build_xargo {
-                Some(value.parse::<bool>().map_err(|_| {
-                    format!("error parsing {} from XARGO environment variable", value)
-                })?)
-            } else {
-                None
-            };
-        let target_env =
-            if let Some(value) = target_xargo {
-                Some(value.parse::<bool>().map_err(|_| {
-                    format!("error parsing {} from XARGO environment variable", value)
-                })?)
-            } else {
-                None
-            };
+        let build_env = if let Some(value) = build_xargo {
+            Some(value.parse::<bool>().wrap_err_with(|| {
+                format!("error parsing {} from XARGO environment variable", value)
+            })?)
+        } else {
+            None
+        };
+        let target_env = if let Some(value) = target_xargo {
+            Some(value.parse::<bool>().wrap_err_with(|| {
+                format!("error parsing {} from XARGO environment variable", value)
+            })?)
+        } else {
+            None
+        };
 
         Ok((build_env, target_env))
     }
@@ -279,10 +279,9 @@ mod tests {
 
         fn toml(content: &str) -> Result<crate::Toml> {
             Ok(crate::Toml {
-                table: if let Ok(toml::Value::Table(table)) = content.parse() {
-                    table
-                } else {
-                    return Err("couldn't parse toml as TOML table".into());
+                table: match content.parse().wrap_err("couldn't parse toml")? {
+                    toml::Value::Table(table) => table,
+                    _ => eyre::bail!("couldn't parse toml as TOML table"),
                 },
             })
         }
