@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #658 - Upgrade dependencies
 - #647 - Add `mips64-unknown-linux-muslabi64` and `mips64el-unknown-linux-muslabi64` support
 - #652 - Allow trying individual targets via bors.
 - #650 - Improve Docker caching.
