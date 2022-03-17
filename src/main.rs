@@ -560,6 +560,10 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
             },
         }))
     } else {
+        // Let's check if there is a lower case version of the file
+        if root.path().join("cross.toml").exists() {
+            eprintln!("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.");
+        }
         Ok(None)
     }
 }
