@@ -89,7 +89,17 @@ pub fn run(
     let cargo_dir = mount_finder.find_mount_path(cargo_dir);
     let xargo_dir = mount_finder.find_mount_path(xargo_dir);
     let target_dir = mount_finder.find_mount_path(target_dir);
-    let mount_root = mount_finder.find_mount_path(root);
+    let host_root = mount_finder.find_mount_path(root);
+    let mount_root: PathBuf;
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        mount_root = wslpath(&host_root, verbose)?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        mount_root = host_root.clone();
+    }
     let sysroot = mount_finder.find_mount_path(sysroot);
 
     let mut cmd = if uses_xargo {
@@ -123,18 +133,35 @@ pub fn run(
         // flag forwards the value from the parent shell
         docker.args(&["-e", var]);
     }
-
+    let mut env_volumes = false;
     for ref var in config.env_volumes(target)? {
         validate_env_var(var)?;
 
         if let Ok(val) = env::var(var) {
-            let host_path = Path::new(&val).canonicalize()?;
-            let mount_path = &host_path;
+            let host_path: PathBuf;
+            let mount_path: PathBuf;
+
+            #[cfg(target_os = "windows")]
+            {
+                // Docker does not support UNC paths, this will try to not use UNC paths
+                host_path = dunce::canonicalize(&val)
+                    .wrap_err_with(|| format!("when canonicalizing path `{val}`"))?;
+                // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+                mount_path = wslpath(&host_path, verbose)?;
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                host_path = Path::new(&val)
+                    .canonicalize()
+                    .wrap_err_with(|| format!("when canonicalizing path `{val}`"))?;
+                mount_path = host_path.clone();
+            }
             docker.args(&[
                 "-v",
                 &format!("{}:{}", host_path.display(), mount_path.display()),
             ]);
             docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
+            env_volumes = true;
         }
     }
 
@@ -186,14 +213,24 @@ pub fn run(
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
-        .args(&["-v", "/cargo/bin"])
-        .args(&[
+        .args(&["-v", "/cargo/bin"]);
+    if env_volumes {
+        docker.args(&[
             "-v",
-            &format!("{}:{}:Z", mount_root.display(), mount_root.display()),
-        ])
+            &format!("{}:{}:Z", host_root.display(), mount_root.display()),
+        ]);
+    } else {
+        docker.args(&["-v", &format!("{}:/project:Z", host_root.display())]);
+    }
+    docker
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
-        .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
-        .args(&["-w", &mount_root.display().to_string()]);
+        .args(&["-v", &format!("{}:/target:Z", target_dir.display())]);
+
+    if env_volumes {
+        docker.args(&["-w", &mount_root.display().to_string()]);
+    } else {
+        docker.args(&["-w", "/project"]);
+    }
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
@@ -231,6 +268,28 @@ pub fn image(config: &Config, target: &Target) -> Result<String> {
 
     let version = env!("CARGO_PKG_VERSION");
     Ok(format!("{CROSS_IMAGE}/{target}:{version}"))
+}
+
+#[cfg(target_os = "windows")]
+fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
+    let wslpath = which::which("wsl.exe")
+        .map_err(|_| eyre::eyre!("could not find wsl.exe"))
+        .warning("usage of `env.volumes` requires WSL on Windows")
+        .suggestion("is WSL installed on the host?")?;
+
+    Command::new(wslpath)
+        .arg("-e")
+        .arg("wslpath")
+        .arg("-a")
+        .arg(path)
+        .run_and_get_stdout(verbose)
+        .wrap_err_with(|| {
+            format!(
+                "could not get linux compatible path for `{}`",
+                path.display()
+            )
+        })
+        .map(|s| s.trim().into())
 }
 
 fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
