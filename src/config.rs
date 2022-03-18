@@ -1,7 +1,9 @@
 use crate::{Result, Target, Toml};
 
+use crate::errors::*;
 use std::collections::HashMap;
 use std::env;
+
 #[derive(Debug)]
 struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
 
@@ -11,14 +13,13 @@ impl Environment {
     }
 
     fn build_var_name(&self, name: &str) -> String {
-        format!("{}_{}", self.0, name.to_ascii_uppercase().replace("-", "_"))
+        format!("{}_{}", self.0, name.to_ascii_uppercase().replace('-', "_"))
     }
 
     fn get_var(&self, name: &str) -> Option<String> {
         self.1
             .as_ref()
-            .map(|internal_map| internal_map.get(name).map(|v| v.to_string()))
-            .flatten()
+            .and_then(|internal_map| internal_map.get(name).map(|v| v.to_string()))
             .or_else(|| env::var(name).ok())
     }
 
@@ -43,22 +44,20 @@ impl Environment {
             self.get_build_var("XARGO"),
             self.get_target_var(target, "XARGO"),
         );
-        let build_env =
-            if let Some(value) = build_xargo {
-                Some(value.parse::<bool>().map_err(|_| {
-                    format!("error parsing {} from XARGO environment variable", value)
-                })?)
-            } else {
-                None
-            };
-        let target_env =
-            if let Some(value) = target_xargo {
-                Some(value.parse::<bool>().map_err(|_| {
-                    format!("error parsing {} from XARGO environment variable", value)
-                })?)
-            } else {
-                None
-            };
+        let build_env = if let Some(value) = build_xargo {
+            Some(value.parse::<bool>().wrap_err_with(|| {
+                format!("error parsing {} from XARGO environment variable", value)
+            })?)
+        } else {
+            None
+        };
+        let target_env = if let Some(value) = target_xargo {
+            Some(value.parse::<bool>().wrap_err_with(|| {
+                format!("error parsing {} from XARGO environment variable", value)
+            })?)
+        } else {
+            None
+        };
 
         Ok((build_env, target_env))
     }
@@ -186,9 +185,9 @@ impl Config {
     ) -> Result<Vec<String>> {
         let mut collect = vec![];
         if let Some(mut vars) = env_values {
-            collect.extend(vars.drain(..));
+            collect.append(&mut vars);
         } else if let Some(toml_values) = toml_getter() {
-            collect.extend(toml_values?.drain(..).map(|v| v.to_string()));
+            collect.extend(toml_values?.into_iter().map(|v| v.to_string()));
         }
 
         Ok(collect)
@@ -220,7 +219,7 @@ mod tests {
             let env = Environment::new(Some(map));
 
             let res = env.xargo(&target());
-            if let Ok(_) = res {
+            if res.is_ok() {
                 panic!("invalid bool string parsing should fail");
             }
         }
@@ -266,16 +265,10 @@ mod tests {
             let env = Environment::new(Some(map));
 
             let (build, target) = env.passthrough(&target());
-            assert_eq!(build.as_ref().unwrap().contains(&"TEST1".to_string()), true);
-            assert_eq!(build.as_ref().unwrap().contains(&"TEST2".to_string()), true);
-            assert_eq!(
-                target.as_ref().unwrap().contains(&"PASS1".to_string()),
-                true
-            );
-            assert_eq!(
-                target.as_ref().unwrap().contains(&"PASS2".to_string()),
-                true
-            );
+            assert!(build.as_ref().unwrap().contains(&"TEST1".to_string()));
+            assert!(build.as_ref().unwrap().contains(&"TEST2".to_string()));
+            assert!(target.as_ref().unwrap().contains(&"PASS1".to_string()));
+            assert!(target.as_ref().unwrap().contains(&"PASS2".to_string()));
         }
     }
 
@@ -286,10 +279,9 @@ mod tests {
 
         fn toml(content: &str) -> Result<crate::Toml> {
             Ok(crate::Toml {
-                table: if let Ok(toml::Value::Table(table)) = content.parse() {
-                    table
-                } else {
-                    return Err("couldn't parse toml as TOML table".into());
+                table: match content.parse().wrap_err("couldn't parse toml")? {
+                    toml::Value::Table(table) => table,
+                    _ => eyre::bail!("couldn't parse toml as TOML table"),
                 },
             })
         }

@@ -23,7 +23,7 @@ impl CommandExt for Command {
         if status.success() {
             Ok(())
         } else {
-            Err(format!("`{:?}` failed with exit code: {:?}", self, status.code()).into())
+            eyre::bail!("`{:?}` failed with exit code: {:?}", self, status.code())
         }
     }
 
@@ -37,7 +37,7 @@ impl CommandExt for Command {
     fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus> {
         self.print_verbose(verbose);
         self.status()
-            .chain_err(|| format!("couldn't execute `{:?}`", self))
+            .wrap_err_with(|| format!("couldn't execute `{:?}`", self))
     }
 
     /// Runs the command to completion and returns its stdout
@@ -45,13 +45,12 @@ impl CommandExt for Command {
         self.print_verbose(verbose);
         let out = self
             .output()
-            .chain_err(|| format!("couldn't execute `{:?}`", self))?;
+            .wrap_err_with(|| format!("couldn't execute `{:?}`", self))?;
 
         self.status_result(out.status)
             .chain_err(|| String::from_utf8_lossy(&out.stderr).to_string())?;
 
-        Ok(String::from_utf8(out.stdout)
-            .chain_err(|| format!("`{:?}` output was not UTF-8", self))?)
+        String::from_utf8(out.stdout).wrap_err_with(|| format!("`{:?}` output was not UTF-8", self))
     }
 }
 
@@ -69,7 +68,7 @@ impl SafeCommand {
         }
     }
 
-    pub fn arg<'b, S>(&mut self, arg: &S) -> &mut Self
+    pub fn arg<S>(&mut self, arg: &S) -> &mut Self
     where
         S: ToString,
     {

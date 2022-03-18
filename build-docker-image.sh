@@ -75,14 +75,6 @@ run() {
     build_args+=(--cache-to 'type=inline')
   fi
 
-  if [[ -n "${GITHUB_ACTIONS-}" ]]; then
-    build_args+=(--cache-from "type=gha,url=${ACTIONS_CACHE_URL},token=${ACTIONS_RUNTIME_TOKEN}")
-
-    if ! "${push}"; then
-      build_args+=(--cache-to "type=gha,mode=max,url=${ACTIONS_CACHE_URL},token=${ACTIONS_RUNTIME_TOKEN}")
-    fi
-  fi
-
   for tag in "${tags[@]}"; do
     build_args+=(--tag "${tag}")
   done

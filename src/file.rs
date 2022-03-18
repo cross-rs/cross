@@ -14,8 +14,8 @@ where
 fn read_(path: &Path) -> Result<String> {
     let mut s = String::new();
     File::open(path)
-        .chain_err(|| format!("couldn't open {}", path.display()))?
+        .wrap_err_with(|| format!("couldn't open {}", path.display()))?
         .read_to_string(&mut s)
-        .chain_err(|| format!("couldn't read {}", path.display()))?;
+        .wrap_err_with(|| format!("couldn't read {}", path.display()))?;
     Ok(s)
 }

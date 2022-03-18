@@ -2,42 +2,35 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
-use atty::Stream;
-use error_chain::bail;
-use serde_json;
-
 use crate::cargo::Root;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::id;
 use crate::{Config, Target};
+use atty::Stream;
+use eyre::bail;
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 const DOCKER: &str = "docker";
 const PODMAN: &str = "podman";
 
-fn get_container_engine() -> Result<std::path::PathBuf> {
-    let container_engine = env::var("CROSS_CONTAINER_ENGINE").unwrap_or_default();
-
-    if container_engine.is_empty() {
-        which::which(DOCKER)
-            .or_else(|_| which::which(PODMAN))
-            .map_err(|e| e.into())
+fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
+    if let Ok(ce) = env::var("CROSS_CONTAINER_ENGINE") {
+        which::which(ce)
     } else {
-        which::which(container_engine).map_err(|e| e.into())
+        which::which(DOCKER).or_else(|_| which::which(PODMAN))
     }
 }
 
 pub fn docker_command(subcommand: &str) -> Result<Command> {
-    if let Ok(ce) = get_container_engine() {
-        let mut command = Command::new(ce);
-        command.arg(subcommand);
-        command.args(&["--userns", "host"]);
-        Ok(command)
-    } else {
-        Err("no container engine found; install docker or podman".into())
-    }
+    let ce = get_container_engine()
+        .map_err(|_| eyre::eyre!("no container engine found"))
+        .with_suggestion(|| "is docker or podman installed?")?;
+    let mut command = Command::new(ce);
+    command.arg(subcommand);
+    command.args(&["--userns", "host"]);
+    Ok(command)
 }
 
 /// Register binfmt interpreters
@@ -59,6 +52,7 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         .run(verbose)
 }
 
+#[allow(clippy::too_many_arguments)] // TODO: refactor
 pub fn run(
     target: &Target,
     args: &[String],
@@ -66,7 +60,7 @@ pub fn run(
     root: &Root,
     config: &Config,
     uses_xargo: bool,
-    sysroot: &PathBuf,
+    sysroot: &Path,
     verbose: bool,
     docker_in_docker: bool,
 ) -> Result<ExitStatus> {
@@ -77,11 +71,12 @@ pub fn run(
     };
 
     let root = root.path();
-    let home_dir = home::home_dir().ok_or_else(|| "could not find home directory")?;
+    let home_dir = home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
     let cargo_dir = home::cargo_home()?;
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".xargo"));
+    let nix_store_dir = env::var_os("NIX_STORE").map(PathBuf::from);
     let target_dir = target_dir.clone().unwrap_or_else(|| root.join("target"));
 
     // create the directories we are going to mount before we mount them,
@@ -91,11 +86,11 @@ pub fn run(
     fs::create_dir(&xargo_dir).ok();
 
     // update paths to the host mounts path.
-    let cargo_dir = mount_finder.find_mount_path(&cargo_dir);
-    let xargo_dir = mount_finder.find_mount_path(&xargo_dir);
-    let target_dir = mount_finder.find_mount_path(&target_dir);
-    let mount_root = mount_finder.find_mount_path(&root);
-    let sysroot = mount_finder.find_mount_path(&sysroot);
+    let cargo_dir = mount_finder.find_mount_path(cargo_dir);
+    let xargo_dir = mount_finder.find_mount_path(xargo_dir);
+    let target_dir = mount_finder.find_mount_path(target_dir);
+    let mount_root = mount_finder.find_mount_path(root);
+    let sysroot = mount_finder.find_mount_path(sysroot);
 
     let mut cmd = if uses_xargo {
         SafeCommand::new("xargo")
@@ -154,8 +149,8 @@ pub fn run(
                 "--user",
                 &format!(
                     "{}:{}",
-                    env::var("CROSS_CONTAINER_UID").unwrap_or(id::user().to_string()),
-                    env::var("CROSS_CONTAINER_GID").unwrap_or(id::group().to_string()),
+                    env::var("CROSS_CONTAINER_UID").unwrap_or_else(|_| id::user().to_string()),
+                    env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string()),
                 ),
             ]);
         }
@@ -186,7 +181,7 @@ pub fn run(
     docker
         .args(&[
             "-e",
-            &format!("CROSS_RUNNER={}", runner.unwrap_or(String::new())),
+            &format!("CROSS_RUNNER={}", runner.unwrap_or_default()),
         ])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
@@ -194,7 +189,7 @@ pub fn run(
         .args(&["-v", "/cargo/bin"])
         .args(&[
             "-v",
-            &format!("{}:/{}:Z", mount_root.display(), mount_root.display()),
+            &format!("{}:{}:Z", mount_root.display(), mount_root.display()),
         ]);
 
     // Custom toolchain is already installed in Docker image.
@@ -205,6 +200,15 @@ pub fn run(
     docker
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
         .args(&["-w", &mount_root.display().to_string()]);
+
+    // When running inside NixOS or using Nix packaging we need to add the Nix
+    // Store to the running container so it can load the needed binaries.
+    if let Some(nix_store) = nix_store_dir {
+        docker.args(&[
+            "-v",
+            &format!("{}:{}:Z", nix_store.display(), nix_store.display()),
+        ]);
+    }
 
     if atty::is(Stream::Stdin) {
         docker.arg("-i");
@@ -220,7 +224,7 @@ pub fn run(
 }
 
 pub fn image(config: &Config, target: &Target) -> Result<String> {
-    if let Some(image) = config.image(target)?.map(|s| s.to_owned()) {
+    if let Some(image) = config.image(target)? {
         return Ok(image);
     }
 
@@ -239,11 +243,7 @@ pub fn image(config: &Config, target: &Target) -> Result<String> {
 }
 
 fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
-    let hostname = if let Ok(v) = env::var("HOSTNAME") {
-        Ok(v)
-    } else {
-        Err("HOSTNAME environment variable not found")
-    }?;
+    let hostname = env::var("HOSTNAME").wrap_err("HOSTNAME environment variable not found")?;
 
     let docker_path = which::which(DOCKER)?;
     let mut docker: Command = {
@@ -254,12 +254,7 @@ fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
     };
 
     let output = docker.run_and_get_stdout(false)?;
-    let info = if let Ok(val) = serde_json::from_str(&output) {
-        Ok(val)
-    } else {
-        Err("failed to parse docker inspect output")
-    }?;
-
+    let info = serde_json::from_str(&output).wrap_err("failed to parse docker inspect output")?;
     dockerinfo_parse_mounts(&info)
 }
 
@@ -274,20 +269,20 @@ fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDet
     let driver_name = info
         .pointer("/0/GraphDriver/Name")
         .and_then(|v| v.as_str())
-        .ok_or("No driver name found")?;
+        .ok_or_else(|| eyre::eyre!("no driver name found"))?;
 
     if driver_name == "overlay2" {
         let path = info
             .pointer("/0/GraphDriver/Data/MergedDir")
             .and_then(|v| v.as_str())
-            .ok_or("No merge directory found")?;
+            .ok_or_else(|| eyre::eyre!("No merge directory found"))?;
 
         Ok(MountDetail {
             source: PathBuf::from(&path),
             destination: PathBuf::from("/"),
         })
     } else {
-        Err(format!("want driver overlay2, got {}", driver_name).into())
+        eyre::bail!("want driver overlay2, got {}", driver_name)
     }
 }
 
@@ -307,7 +302,7 @@ fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
             }
             mounts
         })
-        .unwrap_or_else(|| Vec::new())
+        .unwrap_or_else(Vec::new)
 }
 
 #[derive(Debug, Default)]
@@ -333,13 +328,16 @@ impl MountFinder {
         MountFinder { mounts }
     }
 
-    fn find_mount_path(&self, path: &Path) -> PathBuf {
+    fn find_mount_path(&self, path: impl AsRef<Path>) -> PathBuf {
+        let path = path.as_ref();
+
         for info in &self.mounts {
             if let Ok(stripped) = path.strip_prefix(&info.destination) {
                 return info.source.join(stripped);
             }
         }
-        return path.to_path_buf();
+
+        path.to_path_buf()
     }
 }
 
@@ -355,7 +353,7 @@ mod tests {
             let finder = MountFinder::default();
             assert_eq!(
                 PathBuf::from("/test/path"),
-                finder.find_mount_path(&PathBuf::from("/test/path")),
+                finder.find_mount_path("/test/path"),
             );
         }
 
@@ -373,7 +371,7 @@ mod tests {
             ]);
             assert_eq!(
                 PathBuf::from("/target/path/test"),
-                finder.find_mount_path(&PathBuf::from("/project/target/test"))
+                finder.find_mount_path("/project/target/test")
             )
         }
 
@@ -391,15 +389,15 @@ mod tests {
             ]);
             assert_eq!(
                 PathBuf::from("/var/lib/docker/overlay2/container-id/merged/container/path"),
-                finder.find_mount_path(&PathBuf::from("/container/path"))
+                finder.find_mount_path("/container/path")
             );
             assert_eq!(
                 PathBuf::from("/home/project/path"),
-                finder.find_mount_path(&PathBuf::from("/project"))
+                finder.find_mount_path("/project")
             );
             assert_eq!(
                 PathBuf::from("/home/project/path/target"),
-                finder.find_mount_path(&PathBuf::from("/project/target"))
+                finder.find_mount_path("/project/target")
             );
         }
     }

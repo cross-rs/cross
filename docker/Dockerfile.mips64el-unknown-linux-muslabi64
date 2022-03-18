@@ -1,0 +1,30 @@
+FROM ubuntu:18.04
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+COPY qemu.sh /
+RUN /qemu.sh mips64el
+
+COPY musl.sh /
+RUN /musl.sh \
+    TARGET=mips64el-linux-muslsf \
+    "COMMON_CONFIG += -with-arch=mips64"
+
+# This allows qemu run dynamic linked binaries
+RUN ln -sf \
+    /usr/local/mips64el-linux-muslsf/lib/libc.so \
+    /usr/local/mips64el-linux-muslsf/lib/ld-musl-mips64el-sf.so.1
+ENV QEMU_LD_PREFIX=/usr/local/mips64el-linux-muslsf
+
+ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_LINKER=mips64el-linux-muslsf-gcc \
+    CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_RUNNER=qemu-mips64el \
+    CC_mips64el_unknown_linux_muslabi64=mips64el-linux-muslsf-gcc \
+    CXX_mips64el_unknown_linux_muslabi64=mips64el-linux-muslsf-g++ \
+    RUST_TEST_THREADS=1

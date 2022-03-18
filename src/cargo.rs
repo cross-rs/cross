@@ -22,24 +22,15 @@ pub enum Subcommand {
 
 impl Subcommand {
     pub fn needs_docker(self) -> bool {
-        match self {
-            Subcommand::Other => false,
-            _ => true,
-        }
+        !matches!(self, Subcommand::Other)
     }
 
     pub fn needs_interpreter(self) -> bool {
-        match self {
-            Subcommand::Run | Subcommand::Test | Subcommand::Bench => true,
-            _ => false,
-        }
+        matches!(self, Subcommand::Run | Subcommand::Test | Subcommand::Bench)
     }
 
     pub fn needs_target_in_command(self) -> bool {
-        match self {
-            Subcommand::Metadata => false,
-            _ => true,
-        }
+        !matches!(self, Subcommand::Metadata)
     }
 }
 
@@ -74,7 +65,7 @@ impl Root {
 
 /// Cargo project root
 pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
+    let cd = env::current_dir().wrap_err("couldn't get current directory")?;
 
     let mut dir = &*cd;
     loop {

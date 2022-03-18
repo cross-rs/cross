@@ -6,11 +6,17 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - #352 - Add Xtensa targets.
+- #654 - Use color-eyre for error reporting
+- #658 - Upgrade dependencies
+- #647 - Add `mips64-unknown-linux-muslabi64` and `mips64el-unknown-linux-muslabi64` support
+- #652 - Allow trying individual targets via bors.
 - #650 - Improve Docker caching.
+- #609 - Switch to Github Actions and GHCR.
 - #588 - fix ci: bump openssl version in freebsd again
 - #552 - Added CHANGELOG.md automation
 - #543 - Added environment variables to control the UID and GID in the container
 - #534 - fix image builds with update of dependencies
+- #524 - docker: Add Nix Store volume support
 - #502 - fix ci: bump openssl version in freebsd
 - #501 - x86_64-linux: lower glibc version requirement to 2.17 (compatible with centos 7)
 - #500 - use runner setting specified in Cross.toml

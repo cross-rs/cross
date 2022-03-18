@@ -9,7 +9,7 @@ RUN /common.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     g++-riscv64-linux-gnu \
     libc6-dev-riscv64-cross
 

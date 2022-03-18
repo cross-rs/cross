@@ -1,6 +1,4 @@
 #[cfg(not(target_os = "windows"))]
-use libc;
-#[cfg(not(target_os = "windows"))]
 use nix::{
     errno::{errno, Errno},
     unistd::{Gid, Uid},

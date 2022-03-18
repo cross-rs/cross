@@ -54,7 +54,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --locked
+          args: --locked -- -D warnings
 
   test:
     runs-on: ${{ matrix.os }}
@@ -77,71 +77,110 @@ jobs:
           args: --locked
         timeout-minutes: 5
 
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+      - name: Generate matrix
+        id: generate-matrix
+        run: |
+          if [[ -z "${commit_message}" ]]; then
+            bors_args=()
+          else
+            bors_args="$(echo "${commit_message}" | sed -E 's/^Try #[0-9]+:\s+//')"
+            declare -a "bors_args=(${bors_args})"
+          fi
+
+          if [[ "${bors_args[0]-}" == --target ]]; then
+            echo "Only running targets matching '${bors_args[1]}'."
+            matrix="$(
+              target="${bors_args[1]}" yq --output-format json '[.[] | select(.target | test(env(target)))]' <<< "${matrix}"
+            )"
+          else
+            echo 'Running all targets.'
+            matrix="$(yq --output-format json <<< "${matrix}")"
+          fi
+
+          jq -C <<< "${matrix}"
+
+          echo "::set-output name=matrix::$(jq -c <<< "${matrix}")"
+        env:
+          commit_message: >
+            ${{
+              ((
+                startsWith(github.event.head_commit.message, 'Try #') &&
+                github.event.head_commit.author.username == 'bors[bot]'
+              ) && github.event.head_commit.message) || ''
+            }}
+          matrix: |
+            - { target: x86_64-apple-darwin,              os: macos-10.15,    cpp: 1, dylib: 1, std: 1, run: 1,                                        deploy: true }
+            - { target: x86_64-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system, deploy: true }
+            - { target: x86_64-unknown-linux-musl,        os: ubuntu-latest,                    std: 1, run: 1,                                        deploy: true }
+            - { target: x86_64-pc-windows-msvc,           os: windows-2019,   cpp: 1,           std: 1, run: 1,                                        deploy: true }
+
+            - { target: aarch64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: arm-unknown-linux-gnueabi,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: arm-unknown-linux-gnueabihf,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: armv7-unknown-linux-gnueabihf,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: i586-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: i686-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
+            - { target: mips-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: mipsel-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: mips64-unknown-linux-gnuabi64,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: mips64el-unknown-linux-gnuabi64,  os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: mips64-unknown-linux-muslabi64,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: mips64el-unknown-linux-muslabi64, os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: powerpc-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: powerpc64-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: powerpc64le-unknown-linux-gnu,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: riscv64gc-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: s390x-unknown-linux-gnu,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-system }
+            - { target: sparc64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-system }
+            - { target: aarch64-unknown-linux-musl,       os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: arm-unknown-linux-musleabihf,     os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: arm-unknown-linux-musleabi,       os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: armv5te-unknown-linux-gnueabi,    os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: armv5te-unknown-linux-musleabi,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: armv7-unknown-linux-musleabihf,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: i586-unknown-linux-musl,          os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: i686-unknown-linux-musl,          os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: mips-unknown-linux-musl,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: mipsel-unknown-linux-musl,        os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: aarch64-linux-android,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: arm-linux-androideabi,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: armv7-linux-androideabi,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: i686-linux-android,               os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: x86_64-linux-android,             os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: x86_64-pc-windows-gnu,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: i686-pc-windows-gnu,              os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            # Disabled, see #396
+            #-{ target: x86_64-unknown-dragonfly,          os: ubuntu-latest,  cpp: 1, dylib: 1 }
+            - { target: i686-unknown-freebsd,             os: ubuntu-latest,          dylib: 1, std: 1 }
+            - { target: x86_64-unknown-freebsd,           os: ubuntu-latest,          dylib: 1, std: 1 }
+            - { target: x86_64-unknown-netbsd,            os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
+            # Disabled, see #534
+            #-{ target: sparcv9-sun-solaris,              os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
+            #-{ target: x86_64-sun-solaris,               os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
+            # Disabled, see #634
+            #-{ target: asmjs-unknown-emscripten,         os: ubuntu-latest,                    std: 1, run: 1 }
+            # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
+            #-{ target: wasm32-unknown-emscripten,        os: ubuntu-latest,                    std: 1 }
+            - { target: thumbv6m-none-eabi,               os: ubuntu-latest,                    std: 1 }
+            - { target: thumbv7em-none-eabi,              os: ubuntu-latest,                    std: 1 }
+            - { target: thumbv7em-none-eabihf,            os: ubuntu-latest,                    std: 1 }
+            - { target: thumbv7m-none-eabi,               os: ubuntu-latest,                    std: 1 }
+            - { target: xtensa-esp32-espidf,              os: ubuntu-latest,                    std: 1 }
+
   docker-image:
     name: docker-image (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    needs: [shellcheck, test]
+    needs: [shellcheck, test, generate-matrix]
     if: github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { target: x86_64-apple-darwin,             os: macos-latest,   cpp: 1, dylib: 1, std: 1, run: 1,                                        deploy: true }
-          - { target: x86_64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system, deploy: true }
-          - { target: x86_64-unknown-linux-musl,       os: ubuntu-latest,                    std: 1, run: 1,                                        deploy: true }
-          - { target: x86_64-pc-windows-msvc,          os: windows-latest, cpp: 1,           std: 1, run: 1,                                        deploy: true }
-
-          - { target: aarch64-unknown-linux-gnu,       os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-          - { target: arm-unknown-linux-gnueabi,       os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-          - { target: arm-unknown-linux-gnueabihf,     os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-          - { target: armv7-unknown-linux-gnueabihf,   os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-          - { target: i586-unknown-linux-gnu,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-          - { target: i686-unknown-linux-gnu,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
-          - { target: mips-unknown-linux-gnu,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-          - { target: mipsel-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-          - { target: mips64-unknown-linux-gnuabi64,   os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-          - { target: mips64el-unknown-linux-gnuabi64, os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-          - { target: powerpc-unknown-linux-gnu,       os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-          - { target: powerpc64-unknown-linux-gnu,     os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-          - { target: powerpc64le-unknown-linux-gnu,   os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-          - { target: riscv64gc-unknown-linux-gnu,     os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: s390x-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-system }
-          - { target: sparc64-unknown-linux-gnu,       os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-system }
-          - { target: aarch64-unknown-linux-musl,      os: ubuntu-latest,                    std: 1, run: 1 }
-          - { target: arm-unknown-linux-musleabihf,    os: ubuntu-latest,                    std: 1, run: 1 }
-          - { target: arm-unknown-linux-musleabi,      os: ubuntu-latest,                    std: 1, run: 1 }
-          - { target: armv5te-unknown-linux-gnueabi,   os: ubuntu-latest,                    std: 1, run: 1 }
-          - { target: armv5te-unknown-linux-musleabi,  os: ubuntu-latest,                    std: 1, run: 1 }
-          - { target: armv7-unknown-linux-musleabihf,  os: ubuntu-latest,                    std: 1, run: 1 }
-          - { target: i586-unknown-linux-musl,         os: ubuntu-latest,                    std: 1, run: 1 }
-          - { target: i686-unknown-linux-musl,         os: ubuntu-latest,                    std: 1, run: 1 }
-          - { target: mips-unknown-linux-musl,         os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: mipsel-unknown-linux-musl,       os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: aarch64-linux-android,           os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: arm-linux-androideabi,           os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: armv7-linux-androideabi,         os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: i686-linux-android,              os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: x86_64-linux-android,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: x86_64-pc-windows-gnu,           os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          - { target: i686-pc-windows-gnu,             os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-          # Disabled, see #396
-          #-{ target: x86_64-unknown-dragonfly,        os: ubuntu-latest, cpp: 1, dylib: 1 }
-          - { target: i686-unknown-freebsd,            os: ubuntu-latest,          dylib: 1, std: 1 }
-          - { target: x86_64-unknown-freebsd,          os: ubuntu-latest,          dylib: 1, std: 1 }
-          - { target: x86_64-unknown-netbsd,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-          # Disabled, see #534
-          #-{ target: sparcv9-sun-solaris,             os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-          #-{ target: x86_64-sun-solaris,              os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-          # Disabled, see #634
-          #-{ target: asmjs-unknown-emscripten,        os: ubuntu-latest,                    std: 1, run: 1 }
-          # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
-          #-{ target: wasm32-unknown-emscripten,       os: ubuntu-latest,                    std: 1 }
-          - { target: thumbv6m-none-eabi,              os: ubuntu-latest,                    std: 1 }
-          - { target: thumbv7em-none-eabi,             os: ubuntu-latest,                    std: 1 }
-          - { target: thumbv7em-none-eabihf,           os: ubuntu-latest,                    std: 1 }
-          - { target: thumbv7m-none-eabi,              os: ubuntu-latest,                    std: 1 }
-          - { target: xtensa-esp32-espidf,             os: ubuntu-latest,                    std: 1 }
-
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v3
 
@@ -150,8 +189,6 @@ jobs:
       - name: Set up Docker Buildx
         if: runner.os == 'Linux'
         uses: docker/setup-buildx-action@v1
-      - name: Expose GitHub runtime
-        uses: crazy-max/ghaction-github-runtime@v1.0.0
       - name: Build and push Docker image
         id: build-docker-image
         if: runner.os == 'Linux'
@@ -220,7 +257,7 @@ jobs:
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, docker-image, publish]
+    needs: [shellcheck, fmt, clippy, test, generate-matrix, docker-image, publish]
     if: always()
     runs-on: ubuntu-latest
     steps:
