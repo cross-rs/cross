@@ -24,11 +24,11 @@ impl Environment {
     }
 
     fn target_path(target: &Target, key: &str) -> String {
-        format!("TARGET_{}_{}", target.triple(), key)
+        format!("TARGET_{target}_{key}")
     }
 
     fn build_path(key: &str) -> String {
-        format!("BUILD_{}", key)
+        format!("BUILD_{key}")
     }
 
     fn get_build_var(&self, key: &str) -> Option<String> {
@@ -46,7 +46,7 @@ impl Environment {
         );
         let build_env = if let Some(value) = build_xargo {
             Some(value.parse::<bool>().wrap_err_with(|| {
-                format!("error parsing {} from XARGO environment variable", value)
+                format!("error parsing {value} from XARGO environment variable")
             })?)
         } else {
             None

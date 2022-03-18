@@ -202,6 +202,12 @@ impl Target {
     }
 }
 
+impl std::fmt::Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.triple())
+    }
+}
+
 impl Target {
     fn from(triple: &str, target_list: &TargetList) -> Target {
         if target_list.contains(triple) {

@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Change rust edition to 2021 and bump MSRV for the cross binary to 1.58.1
 - #654 - Use color-eyre for error reporting
 - #658 - Upgrade dependencies
 - #647 - Add `mips64-unknown-linux-muslabi64` and `mips64el-unknown-linux-muslabi64` support
