@@ -45,6 +45,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Re-enabled `sparc64-unknown-linux-gnu` image
 - #582 - Added `libprocstat.so` to FreeBSD images
 - #665 - when not using [env.volumes](https://github.com/cross-rs/cross#mounting-volumes-into-the-build-environment), mount project in /project
+- #494 - Parse Cargo's --manifest-path option to determine mounted docker root
 
 
 ### Removed

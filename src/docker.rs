@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
-use crate::cargo::Root;
+use crate::cargo::CargoMetadata;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::id;
@@ -70,12 +70,13 @@ pub fn run(
     target: &Target,
     args: &[String],
     target_dir: &Option<PathBuf>,
-    root: &Root,
+    metadata: &CargoMetadata,
     config: &Config,
     uses_xargo: bool,
     sysroot: &Path,
     verbose: bool,
     docker_in_docker: bool,
+    cwd: &Path,
 ) -> Result<ExitStatus> {
     let mount_finder = if docker_in_docker {
         MountFinder::new(docker_read_mount_paths()?)
@@ -83,14 +84,15 @@ pub fn run(
         MountFinder::default()
     };
 
-    let root = root.path();
     let home_dir = home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
     let cargo_dir = home::cargo_home()?;
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".xargo"));
     let nix_store_dir = env::var_os("NIX_STORE").map(PathBuf::from);
-    let target_dir = target_dir.clone().unwrap_or_else(|| root.join("target"));
+    let target_dir = target_dir
+        .clone()
+        .unwrap_or_else(|| metadata.workspace_root().join("target"));
 
     // create the directories we are going to mount before we mount them,
     // otherwise `docker` will create them but they will be owned by `root`
@@ -102,7 +104,12 @@ pub fn run(
     let cargo_dir = mount_finder.find_mount_path(cargo_dir);
     let xargo_dir = mount_finder.find_mount_path(xargo_dir);
     let target_dir = mount_finder.find_mount_path(target_dir);
-    let host_root = mount_finder.find_mount_path(root);
+    // root is either workspace_root, or, if we're outside the workspace root, the current directory
+    let host_root = mount_finder.find_mount_path(if metadata.workspace_root().starts_with(cwd) {
+        cwd
+    } else {
+        metadata.workspace_root()
+    });
     let mount_root: PathBuf;
     #[cfg(target_os = "windows")]
     {
@@ -117,11 +124,11 @@ pub fn run(
     #[cfg(target_os = "windows")]
     {
         // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-        mount_cwd = wslpath(&std::env::current_dir()?, verbose)?;
+        mount_cwd = wslpath(&cwd, verbose)?;
     }
     #[cfg(not(target_os = "windows"))]
     {
-        mount_cwd = mount_finder.find_mount_path(std::env::current_dir()?);
+        mount_cwd = mount_finder.find_mount_path(cwd);
     }
     let sysroot = mount_finder.find_mount_path(sysroot);
 
@@ -145,6 +152,12 @@ pub fn run(
         docker.args(&["-e", var]);
     }
     let mut env_volumes = false;
+    // FIXME(emilgardis 2022-04-07): This is a fallback so that if it's hard for use to do mounting logic, make it simple(r)
+    // Preferably we would not have to do this.
+    if cwd.strip_prefix(metadata.workspace_root()).is_err() {
+        env_volumes = true;
+    }
+
     for ref var in config.env_volumes(target)? {
         let (var, value) = validate_env_var(var)?;
         let value = match value {
@@ -247,12 +260,12 @@ pub fn run(
 
     if env_volumes {
         docker.args(&["-w".as_ref(), mount_cwd.as_os_str()]);
-    } else if mount_cwd == root {
+    } else if mount_cwd == metadata.workspace_root() {
         docker.args(&["-w", "/project"]);
     } else {
         // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
-        let cwd = &std::env::current_dir()?;
-        let working_dir = Path::new("project").join(cwd.strip_prefix(root)?);
+        let cwd = &cwd;
+        let working_dir = Path::new("project").join(cwd.strip_prefix(metadata.workspace_root())?);
         // No [T].join for OsStr
         let mut mount_wd = std::ffi::OsString::new();
         for part in working_dir.iter() {
