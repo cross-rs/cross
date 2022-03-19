@@ -1,4 +1,4 @@
-FROM rust
+FROM rust:latest
 
 ENV CROSS_DOCKER_IN_DOCKER=true
 
