@@ -1,7 +1,9 @@
+name: Upload cargo install artifacts
+description: Upload `cargo install` artifacts
 inputs:
   target:
     description: 'Target'
-    type: string
+    required: true
 
 runs:
   using: composite

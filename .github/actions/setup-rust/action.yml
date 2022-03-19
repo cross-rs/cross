@@ -1,14 +1,16 @@
+name: Setup Rust
+description: Setup Rust with specified toolchain, target and components.
 inputs:
   toolchain:
     description: 'Toolchain'
     default: 1.58.1
-    type: string
+    required: true
   target:
     description: 'Target'
-    type: string
+    required: true
   components:
     description: 'Components'
-    type: string
+    required: true
 
 runs:
   using: composite
