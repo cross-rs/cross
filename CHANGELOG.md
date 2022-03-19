@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #494 - Parse Cargo's --manifest-path option to determine mounted docker root
 - Change rust edition to 2021 and bump MSRV for the cross binary to 1.58.1
 - #654 - Use color-eyre for error reporting
 - #658 - Upgrade dependencies

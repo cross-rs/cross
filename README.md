@@ -354,6 +354,9 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 - path dependencies (in Cargo.toml) that point outside the Cargo project won't
   work because `cross` use docker containers only mounts the Cargo project so
   the container doesn't have access to the rest of the filesystem.
+  However, you may use Cargo's `--manifest-path` option to reference your
+  target crate, executed from a common root directory from which all your
+  dependencies are available.
 
 ## Minimum Supported Rust Version (MSRV)
 

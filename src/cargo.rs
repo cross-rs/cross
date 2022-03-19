@@ -64,26 +64,35 @@ impl Root {
 }
 
 /// Cargo project root
-pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().wrap_err("couldn't get current directory")?;
-
-    let mut dir = &*cd;
-    loop {
-        let toml = dir.join("Cargo.toml");
-
-        if fs::metadata(&toml).is_ok() {
-            return Ok(Some(Root {
-                path: dir.to_owned(),
-            }));
+pub fn root(manifest_path: Option<PathBuf>) -> Result<Option<Root>> {
+    if let Some(manifest_path) = manifest_path {
+        if !manifest_path.is_file() {
+            eyre::bail!("No manifest found at \"{}\"", manifest_path.display());
         }
+        return Ok(Some(Root {
+            path: manifest_path
+                .parent()
+                .expect("File must have a parent")
+                .to_owned(),
+        }));
+    } else {
+        let cd = env::current_dir().wrap_err("couldn't get current dir")?;
+        let mut dir = &*cd;
+        loop {
+            let toml = dir.join("Cargo.toml");
 
-        match dir.parent() {
-            Some(p) => dir = p,
-            None => break,
+            if fs::metadata(&toml).is_ok() {
+                return Ok(Some(Root {
+                    path: dir.to_owned(),
+                }));
+            }
+            if let Some(p) = dir.parent() {
+                dir = p;
+            } else {
+                break Ok(None);
+            }
         }
     }
-
-    Ok(None)
 }
 
 /// Pass-through mode
