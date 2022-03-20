@@ -170,6 +170,8 @@ jobs:
             - { target: thumbv7em-none-eabi,              os: ubuntu-latest,                    std: 1 }
             - { target: thumbv7em-none-eabihf,            os: ubuntu-latest,                    std: 1 }
             - { target: thumbv7m-none-eabi,               os: ubuntu-latest,                    std: 1 }
+            
+            - { target: cross                             os: ubuntu-latest }
 
   docker-image:
     name: docker-image (${{ matrix.target }})
