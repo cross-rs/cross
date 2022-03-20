@@ -7,4 +7,4 @@ ARG checksum="d9d9b964d428733e98c2579b91772af4  /usr/bin/docker"
 RUN wget -O- https://download.docker.com/linux/static/stable/x86_64/docker-20.10.9.tgz | tar -C /usr/bin/ --strip-components=1 -xzf - docker/docker
 RUN echo $checksum | md5sum -c
 
-RUN cargo install cross
+RUN cargo install --git https://github.com/cross-rs/cross
