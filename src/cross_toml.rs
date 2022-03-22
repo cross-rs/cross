@@ -8,12 +8,14 @@ use std::collections::HashMap;
 /// Build environment configuration
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CrossBuildEnvConfig {
-    volumes: Option<Vec<String>>,
-    passthrough: Option<Vec<String>>,
+    #[serde(default)]
+    volumes: Vec<String>,
+    #[serde(default)]
+    passthrough: Vec<String>,
 }
 
 /// Build configuration
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Default)]
 pub struct CrossBuildConfig {
     env: Option<CrossBuildEnvConfig>,
     xargo: Option<bool>,
@@ -23,28 +25,20 @@ pub struct CrossBuildConfig {
 /// Target configuration
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CrossTargetConfig {
-    passthrough: Option<Vec<String>>,
-    volumes: Option<Vec<String>>,
+    #[serde(default)]
+    passthrough: Vec<String>,
+    #[serde(default)]
+    volumes: Vec<String>,
     xargo: Option<bool>,
     image: Option<String>,
     runner: Option<String>,
 }
 
-/// Wrapper struct for mappings from [`Target`] to [`CrossTargetConfig`]
-///
-/// This is used to circumvent that serde's flatten and field aliases
-/// currently don't work together: <https://github.com/serde-rs/serde/issues/1504>
-#[derive(Debug, Deserialize, PartialEq)]
-pub struct CrossTargetMapConfig {
-    #[serde(flatten)]
-    inner: HashMap<Target, CrossTargetConfig>,
-}
-
 /// Cross configuration
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CrossToml {
-    #[serde(rename = "target")]
-    targets: Option<CrossTargetMapConfig>,
+    #[serde(default, rename = "target")]
+    targets: HashMap<Target, CrossTargetConfig>,
     build: Option<CrossBuildConfig>,
 }
 
@@ -76,34 +70,30 @@ impl CrossToml {
     /// Returns the list of environment variables to pass through for `build`,
     pub fn env_passthrough_build(&self) -> Vec<String> {
         self.get_build_env()
-            .and_then(|e| e.passthrough.as_ref())
-            .map_or(Vec::new(), |v| v.to_vec())
+            .map_or(Vec::new(), |e| e.passthrough.clone())
     }
 
     /// Returns the list of environment variables to pass through for `target`,
     pub fn env_passthrough_target(&self, target: &Target) -> Vec<String> {
         self.get_target(target)
-            .and_then(|t| t.passthrough.as_ref())
-            .map_or(Vec::new(), |v| v.to_vec())
+            .map_or(Vec::new(), |t| t.passthrough.clone())
     }
 
     /// Returns the list of environment variables to pass through for `build`,
     pub fn env_volumes_build(&self) -> Vec<String> {
         self.get_build_env()
-            .and_then(|e| e.volumes.as_ref())
-            .map_or(Vec::new(), |v| v.to_vec())
+            .map_or(Vec::new(), |e| e.volumes.clone())
     }
 
     /// Returns the list of environment variables to pass through for `target`,
     pub fn env_volumes_target(&self, target: &Target) -> Vec<String> {
         self.get_target(target)
-            .and_then(|t| t.volumes.as_ref())
-            .map_or(Vec::new(), |v| v.to_vec())
+            .map_or(Vec::new(), |t| t.volumes.clone())
     }
 
     /// Returns a reference to the [`CrossTargetConfig`] of a specific `target`
     fn get_target(&self, target: &Target) -> Option<&CrossTargetConfig> {
-        self.targets.as_ref().and_then(|t| t.inner.get(target))
+        self.targets.get(target)
     }
 
     /// Returns a reference to the [`CrossBuildEnvConfig`]
@@ -118,7 +108,7 @@ mod tests {
     #[test]
     pub fn parse_empty_toml() -> Result<()> {
         let cfg = CrossToml {
-            targets: None,
+            targets: HashMap::new(),
             build: None,
         };
         let parsed_cfg = CrossToml::from_str("")?;
@@ -131,11 +121,11 @@ mod tests {
     #[test]
     pub fn parse_build_toml() -> Result<()> {
         let cfg = CrossToml {
-            targets: None,
+            targets: HashMap::new(),
             build: Some(CrossBuildConfig {
                 env: Some(CrossBuildEnvConfig {
-                    volumes: Some(vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()]),
-                    passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()]),
+                    volumes: vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()],
+                    passthrough: vec!["VAR1".to_string(), "VAR2".to_string()],
                 }),
                 xargo: Some(true),
                 target: None,
@@ -165,8 +155,8 @@ mod tests {
                 triple: "aarch64-unknown-linux-gnu".to_string(),
             },
             CrossTargetConfig {
-                passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()]),
-                volumes: Some(vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()]),
+                passthrough: vec!["VAR1".to_string(), "VAR2".to_string()],
+                volumes: vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()],
                 xargo: Some(false),
                 image: Some("test-image".to_string()),
                 runner: None,
@@ -174,7 +164,7 @@ mod tests {
         );
 
         let cfg = CrossToml {
-            targets: Some(CrossTargetMapConfig { inner: target_map }),
+            targets: target_map,
             build: None,
         };
 
