@@ -1,38 +1,4 @@
-//! Implements the parsing of `Cross.toml`
-//!
-//! `Cross.toml` can contain the following elements:
-//!
-//! # `build`
-//! The `build` key allows you to set global variables, e.g.:
-//!
-//! ```toml
-//! [build]
-//! xargo = true
-//! ```
-//!
-//! # `build.env`
-//! With the `build.env` key you can globally set volumes that should be mounted
-//! in the Docker container or environment variables that should be passed through.
-//! For example:
-//!
-//! ```toml
-//! [build.env]
-//! volumes = ["vol1", "vol2"]
-//! passthrough = ["IMPORTANT_ENV_VARIABLES"]
-//! ```
-//!
-//! # `target.TARGET`
-//! The `target` key allows you to specify parameters for specific compilation targets.
-//!
-//! ```toml
-//! [target.aarch64-unknown-linux-gnu]
-//! volumes = ["vol1", "vol2"]
-//! passthrough = ["VAR1", "VAR2"]
-//! xargo = false
-//! image = "test-image"
-//! runner = "custom-runner"
-//! ```
-//! 
+#![doc = include_str!("../docs/cross_toml.md")]
 
 use std::collections::HashMap;
 use serde::Deserialize;
@@ -165,7 +131,7 @@ mod tests {
             targets: None,
             build: Some(CrossBuildConfig {
                 env: Some(CrossBuildEnvConfig {
-                    volumes: Some(vec!["vol1".to_string(), "vol2".to_string()]),
+                    volumes: Some(vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()]),
                     passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()])
                 }),
                 xargo: Some(true),
@@ -178,7 +144,7 @@ mod tests {
           xargo = true
  
           [build.env]
-          volumes = ["vol1", "vol2"]
+          volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
         "#;
         let parsed_cfg = CrossToml::from_str(test_str)?;
@@ -195,7 +161,7 @@ mod tests {
             Target::BuiltIn { triple: "aarch64-unknown-linux-gnu".to_string() },
             CrossTargetConfig {
                 passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()]),
-                volumes: Some(vec!["vol1".to_string(), "vol2".to_string()]),
+                volumes: Some(vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()]),
                 xargo: Some(false),
                 image: Some("test-image".to_string()),
                 runner: None,
@@ -209,7 +175,7 @@ mod tests {
 
         let test_str = r#"
           [target.aarch64-unknown-linux-gnu]
-          volumes = ["vol1", "vol2"]
+          volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
           xargo = false
           image = "test-image"

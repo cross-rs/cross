@@ -83,7 +83,8 @@ $ cross rustc --target powerpc-unknown-linux-gnu --release -- -C lto
 ## Configuration
 
 You can place a `Cross.toml` file in the root of your Cargo project or use a
-`CROSS_CONFIG` environment variable to tweak `cross`'s behavior:
+`CROSS_CONFIG` environment variable to tweak `cross`'s behavior. The format
+of `Cross.toml` is documented in [docs/cross_toml.md](docs/cross_toml.md).
 
 ### Custom Docker images
 
