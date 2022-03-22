@@ -1,4 +1,4 @@
-use crate::{Result, Target, Toml};
+use crate::{CrossToml, Result, Target};
 
 use crate::errors::*;
 use std::collections::HashMap;
@@ -101,12 +101,12 @@ fn split_to_cloned_by_ws(string: &str) -> Vec<String> {
 
 #[derive(Debug)]
 pub struct Config {
-    toml: Option<Toml>,
+    toml: Option<CrossToml>,
     env: Environment,
 }
 
 impl Config {
-    pub fn new(toml: Option<Toml>) -> Self {
+    pub fn new(toml: Option<CrossToml>) -> Self {
         Config {
             toml,
             env: Environment::new(None),
@@ -114,14 +114,14 @@ impl Config {
     }
 
     #[cfg(test)]
-    fn new_with(toml: Option<Toml>, env: Environment) -> Self {
+    fn new_with(toml: Option<CrossToml>, env: Environment) -> Self {
         Config { toml, env }
     }
 
     pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
         let (build_xargo, target_xargo) = self.env.xargo(target)?;
         let (toml_build_xargo, toml_target_xargo) = if let Some(ref toml) = self.toml {
-            toml.xargo(target)?
+            toml.xargo(target)
         } else {
             (None, None)
         };
@@ -145,7 +145,7 @@ impl Config {
         if let Some(env_value) = env_value {
             return Ok(Some(env_value));
         }
-        self.toml.as_ref().map_or(Ok(None), |t| t.image(target))
+        self.toml.as_ref().map_or(Ok(None), |t| Ok(t.image(target)))
     }
 
     pub fn runner(&self, target: &Target) -> Result<Option<String>> {
@@ -153,7 +153,9 @@ impl Config {
         if let Some(env_value) = env_value {
             return Ok(Some(env_value));
         }
-        self.toml.as_ref().map_or(Ok(None), |t| t.runner(target))
+        self.toml
+            .as_ref()
+            .map_or(Ok(None), |t| Ok(t.runner(target)))
     }
 
     pub fn env_passthrough(&self, target: &Target) -> Result<Vec<String>> {
@@ -179,15 +181,15 @@ impl Config {
         Ok(collected)
     }
 
-    fn sum_of_env_toml_values<'a>(
-        toml_getter: impl FnOnce() -> Option<Result<Vec<&'a str>>>,
+    fn sum_of_env_toml_values(
+        toml_getter: impl FnOnce() -> Option<Vec<String>>,
         env_values: Option<Vec<String>>,
     ) -> Result<Vec<String>> {
         let mut collect = vec![];
         if let Some(mut vars) = env_values {
             collect.append(&mut vars);
         } else if let Some(toml_values) = toml_getter() {
-            collect.extend(toml_values?.into_iter().map(|v| v.to_string()));
+            collect.extend(toml_values.into_iter());
         }
 
         Ok(collect)
@@ -277,13 +279,8 @@ mod tests {
         use super::*;
         use std::matches;
 
-        fn toml(content: &str) -> Result<crate::Toml> {
-            Ok(crate::Toml {
-                table: match content.parse().wrap_err("couldn't parse toml")? {
-                    toml::Value::Table(table) => table,
-                    _ => eyre::bail!("couldn't parse toml as TOML table"),
-                },
-            })
+        fn toml(content: &str) -> Result<crate::CrossToml> {
+            Ok(CrossToml::from_str(content).wrap_err("couldn't parse toml")?)
         }
 
         #[test]
