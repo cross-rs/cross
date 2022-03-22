@@ -1,4 +1,4 @@
-use crate::{Result, Target, CrossToml};
+use crate::{CrossToml, Result, Target};
 
 use crate::errors::*;
 use std::collections::HashMap;
@@ -153,7 +153,9 @@ impl Config {
         if let Some(env_value) = env_value {
             return Ok(Some(env_value));
         }
-        self.toml.as_ref().map_or(Ok(None), |t| Ok(t.runner(target)))
+        self.toml
+            .as_ref()
+            .map_or(Ok(None), |t| Ok(t.runner(target)))
     }
 
     pub fn env_passthrough(&self, target: &Target) -> Result<Vec<String>> {

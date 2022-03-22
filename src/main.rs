@@ -1,9 +1,9 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
-mod cross_toml;
 mod cargo;
 mod cli;
 mod config;
+mod cross_toml;
 mod docker;
 mod errors;
 mod extensions;
@@ -20,8 +20,8 @@ use std::process::ExitStatus;
 use config::Config;
 use serde::Deserialize;
 
-use self::cross_toml::CrossToml;
 use self::cargo::{Root, Subcommand};
+use self::cross_toml::CrossToml;
 use self::errors::*;
 use self::rustc::{TargetList, VersionMetaExt};
 
@@ -411,4 +411,3 @@ fn toml(root: &Root) -> Result<Option<CrossToml>> {
         Ok(None)
     }
 }
-

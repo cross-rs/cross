@@ -1,9 +1,9 @@
 #![doc = include_str!("../docs/cross_toml.md")]
 
-use std::collections::HashMap;
-use serde::Deserialize;
 use crate::errors::*;
 use crate::Target;
+use serde::Deserialize;
+use std::collections::HashMap;
 
 /// Build environment configuration
 #[derive(Debug, Deserialize, PartialEq)]
@@ -40,7 +40,7 @@ pub struct CrossTargetMapConfig {
     inner: HashMap<Target, CrossTargetConfig>,
 }
 
-/// Cross configuration 
+/// Cross configuration
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CrossToml {
     #[serde(rename = "target")]
@@ -54,7 +54,7 @@ impl CrossToml {
         let cfg: CrossToml = toml::from_str(toml_str)?;
         Ok(cfg)
     }
-        
+
     /// Returns the `target.{}.image` part of `Cross.toml`
     pub fn image(&self, target: &Target) -> Option<String> {
         self.get_target(target).and_then(|t| t.image.clone())
@@ -76,8 +76,8 @@ impl CrossToml {
     /// Returns the list of environment variables to pass through for `build`,
     pub fn env_passthrough_build(&self) -> Vec<String> {
         self.get_build_env()
-           .and_then(|e| e.passthrough.as_ref())
-           .map_or(Vec::new(), |v| v.to_vec())
+            .and_then(|e| e.passthrough.as_ref())
+            .map_or(Vec::new(), |v| v.to_vec())
     }
 
     /// Returns the list of environment variables to pass through for `target`,
@@ -117,7 +117,10 @@ mod tests {
 
     #[test]
     pub fn parse_empty_toml() -> Result<()> {
-        let cfg = CrossToml { targets: None, build: None };
+        let cfg = CrossToml {
+            targets: None,
+            build: None,
+        };
         let parsed_cfg = CrossToml::from_str("")?;
 
         assert_eq!(parsed_cfg, cfg);
@@ -132,11 +135,11 @@ mod tests {
             build: Some(CrossBuildConfig {
                 env: Some(CrossBuildEnvConfig {
                     volumes: Some(vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()]),
-                    passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()])
+                    passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()]),
                 }),
                 xargo: Some(true),
                 target: None,
-            })
+            }),
         };
 
         let test_str = r#"
@@ -158,14 +161,16 @@ mod tests {
     pub fn parse_target_toml() -> Result<()> {
         let mut target_map = HashMap::new();
         target_map.insert(
-            Target::BuiltIn { triple: "aarch64-unknown-linux-gnu".to_string() },
+            Target::BuiltIn {
+                triple: "aarch64-unknown-linux-gnu".to_string(),
+            },
             CrossTargetConfig {
                 passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()]),
                 volumes: Some(vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()]),
                 xargo: Some(false),
                 image: Some("test-image".to_string()),
                 runner: None,
-            }
+            },
         );
 
         let cfg = CrossToml {
