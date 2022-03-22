@@ -89,7 +89,7 @@ impl Host {
         }
     }
 
-    /// Returns the `Target` as target triple string
+    /// Returns the [`Target`] as target triple string
     fn triple(&self) -> &str {
         match self {
             Host::X86_64AppleDarwin => "x86_64-apple-darwin",
