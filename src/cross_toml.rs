@@ -64,7 +64,7 @@ pub struct CrossTargetConfig {
     runner: Option<String>,
 }
 
-/// Wrapper struct for `Target` -> `CrossTargetConfig` mappings
+/// Wrapper struct for mappings from [`Target`] to [`CrossTargetConfig`]
 ///
 /// This is used to circumvent that serde's flatten and field aliases
 /// currently don't work together: <https://github.com/serde-rs/serde/issues/1504>
@@ -83,7 +83,7 @@ pub struct CrossToml {
 }
 
 impl CrossToml {
-    /// Parses the `CrossConfig` from a string
+    /// Parses the [`CrossToml`] from a string
     pub fn from_str(toml_str: &str) -> Result<Self> {
         let cfg: CrossToml = toml::from_str(toml_str)?;
         Ok(cfg)
@@ -135,12 +135,12 @@ impl CrossToml {
             .map_or(Vec::new(), |v| v.to_vec())
     }
 
-    /// Returns a reference to the `CrossTargetConfig` of a specific `target`
+    /// Returns a reference to the [`CrossTargetConfig`] of a specific `target`
     fn get_target(&self, target: &Target) -> Option<&CrossTargetConfig> {
         self.targets.as_ref().and_then(|t| t.inner.get(target))
     }
 
-    /// Returns a reference to the `CrossBuildEnvConfig`
+    /// Returns a reference to the [`CrossBuildEnvConfig`]
     fn get_build_env(&self) -> Option<&CrossBuildEnvConfig> {
         self.build.as_ref().and_then(|b| b.env.as_ref())
     }
@@ -169,6 +169,7 @@ mod tests {
                     passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()])
                 }),
                 xargo: Some(true),
+                target: None,
             })
         };
 
