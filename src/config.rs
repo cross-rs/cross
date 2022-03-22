@@ -189,7 +189,7 @@ impl Config {
         if let Some(mut vars) = env_values {
             collect.append(&mut vars);
         } else if let Some(toml_values) = toml_getter() {
-            collect.extend(toml_values.into_iter().map(|v| v.to_string()));
+            collect.extend(toml_values.into_iter());
         }
 
         Ok(collect)
