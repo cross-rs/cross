@@ -15,7 +15,7 @@ For example:
 
 ```toml
 [build.env]
-volumes = ["vol1", "vol2"]
+volumes = ["VOL1_ARG", "VOL2_ARG"]
 passthrough = ["IMPORTANT_ENV_VARIABLES"]
 ```
 
@@ -24,7 +24,7 @@ The `target` key allows you to specify parameters for specific compilation targe
 
 ```toml
 [target.aarch64-unknown-linux-gnu]
-volumes = ["vol1", "vol2"]
+volumes = ["VOL1_ARG", "VOL2_ARG"]
 passthrough = ["VAR1", "VAR2"]
 xargo = false
 image = "test-image"
