@@ -15,6 +15,7 @@ pub struct CrossBuildEnvConfig {
 pub struct CrossBuildConfig {
     env: Option<CrossBuildEnvConfig>,
     xargo: Option<bool>,
+    target: Option<String>,
 }
 
 /// Target configuration
