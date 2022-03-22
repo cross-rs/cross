@@ -1,5 +1,6 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
+mod cross_toml;
 mod cargo;
 mod cli;
 mod config;
@@ -17,8 +18,9 @@ use std::path::PathBuf;
 use std::process::ExitStatus;
 
 use config::Config;
-use toml::{value::Table, Value};
+use serde::Deserialize;
 
+use self::cross_toml::CrossToml;
 use self::cargo::{Root, Subcommand};
 use self::errors::*;
 use self::rustc::{TargetList, VersionMetaExt};
@@ -87,6 +89,7 @@ impl Host {
         }
     }
 
+    /// Returns the `Target` as target triple string
     fn triple(&self) -> &str {
         match self {
             Host::X86_64AppleDarwin => "x86_64-apple-darwin",
@@ -116,7 +119,8 @@ impl<'a> From<&'a str> for Host {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+#[serde(from = "&str")]
 pub enum Target {
     BuiltIn { triple: String },
     Custom { triple: String },
@@ -230,6 +234,13 @@ impl From<Host> for Target {
             Host::Aarch64UnknownLinuxMusl => Target::new_built_in("aarch64-unknown-linux-musl"),
             Host::Other(s) => Target::from(s.as_str(), &rustc::target_list(false).unwrap()),
         }
+    }
+}
+
+impl From<&str> for Target {
+    fn from(target_str: &str) -> Target {
+        let target_host: Host = target_str.into();
+        target_host.into()
     }
 }
 
@@ -376,153 +387,9 @@ fn run() -> Result<ExitStatus> {
     cargo::run(&args.all, verbose)
 }
 
-/// Parsed `Cross.toml`
-#[derive(Debug)]
-pub struct Toml {
-    table: Table,
-}
-
-impl Toml {
-    /// Returns the `target.{}.image` part of `Cross.toml`
-    pub fn image(&self, target: &Target) -> Result<Option<String>> {
-        let triple = target.triple();
-
-        if let Some(value) = self
-            .table
-            .get("target")
-            .and_then(|t| t.get(triple))
-            .and_then(|t| t.get("image"))
-        {
-            Ok(Some(
-                value
-                    .as_str()
-                    .ok_or_else(|| eyre::eyre!("target.{triple}.image must be a string"))?
-                    .to_string(),
-            ))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Returns the `target.{}.runner` part of `Cross.toml`
-    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
-        let triple = target.triple();
-
-        if let Some(value) = self
-            .table
-            .get("target")
-            .and_then(|t| t.get(triple))
-            .and_then(|t| t.get("runner"))
-        {
-            let value = value
-                .as_str()
-                .ok_or_else(|| eyre::eyre!("target.{triple}.runner must be a string"))?
-                .to_string();
-            Ok(Some(value))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Returns the `build.image` or the `target.{}.xargo` part of `Cross.toml`
-    pub fn xargo(&self, target: &Target) -> Result<(Option<bool>, Option<bool>)> {
-        let triple = target.triple();
-
-        if let Some(value) = self.table.get("build").and_then(|b| b.get("xargo")) {
-            return Ok((
-                Some(
-                    value
-                        .as_bool()
-                        .ok_or_else(|| eyre::eyre!("build.xargo must be a boolean"))?,
-                ),
-                None,
-            ));
-        }
-
-        if let Some(value) = self
-            .table
-            .get("target")
-            .and_then(|b| b.get(triple))
-            .and_then(|t| t.get("xargo"))
-        {
-            Ok((
-                None,
-                Some(
-                    value
-                        .as_bool()
-                        .ok_or_else(|| eyre::eyre!("target.{triple}.xargo must be a boolean"))?,
-                ),
-            ))
-        } else {
-            Ok((None, None))
-        }
-    }
-
-    /// Returns the list of environment variables to pass through for `build`,
-    pub fn env_passthrough_build(&self) -> Result<Vec<&str>> {
-        self.build_env("passthrough")
-    }
-
-    /// Returns the list of environment variables to pass through for `target`,
-    pub fn env_passthrough_target(&self, target: &Target) -> Result<Vec<&str>> {
-        self.target_env(target, "passthrough")
-    }
-
-    /// Returns the list of environment variables to pass through for `build`,
-    pub fn env_volumes_build(&self) -> Result<Vec<&str>> {
-        self.build_env("volumes")
-    }
-
-    /// Returns the list of environment variables to pass through for `target`,
-    pub fn env_volumes_target(&self, target: &Target) -> Result<Vec<&str>> {
-        self.target_env(target, "volumes")
-    }
-
-    fn target_env(&self, target: &Target, key: &str) -> Result<Vec<&str>> {
-        let triple = target.triple();
-
-        if let Some(&Value::Array(ref vec)) = self
-            .table
-            .get("target")
-            .and_then(|t| t.get(triple))
-            .and_then(|t| t.get("env"))
-            .and_then(|e| e.get(key))
-        {
-            vec.iter()
-                .map(|val| {
-                    val.as_str().ok_or_else(|| {
-                        eyre::eyre!("every target.{triple}.env.{key} element must be a string",)
-                    })
-                })
-                .collect()
-        } else {
-            Ok(Vec::new())
-        }
-    }
-
-    fn build_env(&self, key: &str) -> Result<Vec<&str>> {
-        if let Some(&Value::Array(ref vec)) = self
-            .table
-            .get("build")
-            .and_then(|b| b.get("env"))
-            .and_then(|e| e.get(key))
-        {
-            vec.iter()
-                .map(|val| {
-                    val.as_str().ok_or_else(|| {
-                        eyre::eyre!("every build.env.{key} element must be a string")
-                    })
-                })
-                .collect()
-        } else {
-            Ok(Vec::new())
-        }
-    }
-}
-
 /// Parses the `Cross.toml` at the root of the Cargo project or from the
 /// `CROSS_CONFIG` environment variable (if any exist in either location).
-fn toml(root: &Root) -> Result<Option<Toml>> {
+fn toml(root: &Root) -> Result<Option<CrossToml>> {
     let path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),
         Err(_) => root.path().join("Cross.toml"),
@@ -531,10 +398,13 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
     if path.exists() {
         let content = file::read(&path)
             .wrap_err_with(|| format!("could not read file `{}`", path.display()))?;
-        parse_toml(&content)
-            .wrap_err_with(|| format!("failed to parse file `{}` as TOML", path.display()))
+
+        let config = CrossToml::from_str(&content)
+            .wrap_err_with(|| format!("failed to parse file `{}` as TOML", path.display()))?;
+
+        Ok(Some(config))
     } else {
-        // Let's check if there is a lower case version of the file
+        // Checks if there is a lowercase version of this file
         if root.path().join("cross.toml").exists() {
             eprintln!("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.");
         }
@@ -542,11 +412,3 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
     }
 }
 
-fn parse_toml(content: &str) -> Result<Option<Toml>> {
-    Ok(Some(crate::Toml {
-        table: match content.parse()? {
-            toml::Value::Table(table) => table,
-            _ => eyre::bail!("couldn't parse as TOML table"),
-        },
-    }))
-}
