@@ -102,6 +102,7 @@ impl CrossToml {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
