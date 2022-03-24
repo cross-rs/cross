@@ -1,4 +1,7 @@
+use std::path::Path;
 use std::process::Command;
+
+use rustc_version::Version;
 
 use crate::errors::*;
 use crate::extensions::CommandExt;
@@ -96,4 +99,33 @@ pub fn component_is_installed(component: &str, toolchain: &str, verbose: bool) -
         .run_and_get_stdout(verbose)?
         .lines()
         .any(|l| l.starts_with(component) && l.contains("installed")))
+}
+
+pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Option<String>)>> {
+    let path = toolchain_path.join("lib/rustlib/multirust-channel-manifest.toml");
+    if path.exists() {
+        let contents = std::fs::read(&path)
+            .wrap_err_with(|| format!("couldn't open file `{}`", path.display()))?;
+        let manifest: toml::value::Table = toml::from_slice(&contents)?;
+        if let Some(rust_version) = manifest
+            .get("pkg")
+            .and_then(|pkg| pkg.get("rust"))
+            .and_then(|rust| rust.get("version"))
+            .and_then(|version| version.as_str())
+        {
+            let mut i = rust_version.splitn(2, ' ');
+            Ok(Some((
+                Version::parse(
+                    i.next().ok_or_else(|| {
+                        eyre::eyre!("no rust version found in {}", path.display())
+                    })?,
+                )?,
+                i.next().map(|s| s.to_owned()),
+            )))
+        } else {
+            Ok(None)
+        }
+    } else {
+        Ok(None)
+    }
 }

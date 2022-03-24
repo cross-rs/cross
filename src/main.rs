@@ -277,10 +277,10 @@ fn run() -> Result<ExitStatus> {
         .iter()
         .any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
-    let version_meta =
+    let host_version_meta =
         rustc_version::version_meta().wrap_err("couldn't fetch the `rustc` version")?;
     if let Some(root) = cargo::root()? {
-        let host = version_meta.host();
+        let host = host_version_meta.host();
         let toml = toml(&root)?;
         let config = Config::new(toml);
         let target = args
@@ -319,6 +319,35 @@ fn run() -> Result<ExitStatus> {
 
             if !installed_toolchains.into_iter().any(|t| t == toolchain) {
                 rustup::install_toolchain(&toolchain, verbose)?;
+            } else if let Some((rustc_version, rustc_commit)) = rustup::rustc_version(&sysroot)? {
+                let host_commit = (&host_version_meta.short_version_string)
+                    .splitn(3, ' ')
+                    .nth(2);
+                // This should only hit on non Host::X86_64UnknownLinuxGnu hosts
+                if rustc_version != host_version_meta.semver
+                    || (rustc_commit.as_deref() != host_commit)
+                {
+                    let warning = if let Some(ref commit) = rustc_commit {
+                        format!("Warning: using rustc `{rustc_version} {commit}` for the target, but current active rustc is `{}`.", host_version_meta.short_version_string)
+                    } else {
+                        format!("Warning: using rustc `{rustc_version}` for the target, but current active rustc is `{}`.", host_version_meta.short_version_string)
+                    };
+                    let rustc_commit_date = rustc_commit
+                        .as_ref()
+                        .and_then(|c| c.split_once(' ').map(|x| x.1));
+                    if rustc_version < host_version_meta.semver
+                        || (rustc_version == host_version_meta.semver
+                            && rustc_commit_date < host_version_meta.commit_date.as_deref())
+                    {
+                        // If host version is newer than target version.
+                        eprintln!(
+                            "{warning} Update with `rustup update --force-non-host {toolchain}`"
+                        );
+                    } else if rustc_version > host_version_meta.semver {
+                        // if target version is newer than host version.
+                        eprintln!("{warning} Update with `rustup update`");
+                    }
+                }
             }
 
             let available_targets = rustup::available_targets(&toolchain, verbose)?;
@@ -377,7 +406,7 @@ fn run() -> Result<ExitStatus> {
 
             if target.needs_docker() && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
             {
-                if version_meta.needs_interpreter()
+                if host_version_meta.needs_interpreter()
                     && needs_interpreter
                     && target.needs_interpreter()
                     && !interpreter::is_registered(&target)?
