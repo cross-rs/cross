@@ -288,7 +288,16 @@ fn run() -> Result<ExitStatus> {
             .or_else(|| config.target(&target_list))
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
         config.confusable_target(&target);
-        if host.is_supported(Some(&target)) {
+
+        let image_exists = match docker::image(&config, &target) {
+            Ok(_) => true,
+            Err(err) => {
+                eprintln!("Warning: {}", err);
+                false
+            }
+        };
+
+        if image_exists && host.is_supported(Some(&target)) {
             let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
             let default_toolchain = sysroot
                 .file_name()
@@ -340,14 +349,6 @@ fn run() -> Result<ExitStatus> {
                 .map(|sc| sc.needs_interpreter())
                 .unwrap_or(false);
 
-            let image_exists = match docker::image(&config, &target) {
-                Ok(_) => true,
-                Err(err) => {
-                    eprintln!("Warning: {} Falling back to `cargo` on the host.", err);
-                    false
-                }
-            };
-
             let filtered_args = if args
                 .subcommand
                 .map_or(false, |s| !s.needs_target_in_command())
@@ -374,9 +375,7 @@ fn run() -> Result<ExitStatus> {
                 args.all.clone()
             };
 
-            if image_exists
-                && target.needs_docker()
-                && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
+            if target.needs_docker() && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
             {
                 if version_meta.needs_interpreter()
                     && needs_interpreter
@@ -401,6 +400,7 @@ fn run() -> Result<ExitStatus> {
         }
     }
 
+    eprintln!("Warning: Falling back to `cargo` on the host.");
     cargo::run(&args.all, verbose)
 }
 
