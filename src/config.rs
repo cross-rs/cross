@@ -1,4 +1,4 @@
-use crate::{CrossToml, Result, Target};
+use crate::{CrossToml, Result, Target, TargetList};
 
 use crate::errors::*;
 use std::collections::HashMap;
@@ -76,6 +76,10 @@ impl Environment {
 
     fn volumes(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
         self.get_values_for("ENV_VOLUMES", target)
+    }
+
+    fn target(&self) -> Option<String> {
+        self.get_build_var("TARGET")
     }
 
     fn get_values_for(
@@ -181,6 +185,15 @@ impl Config {
         Ok(collected)
     }
 
+    pub fn target(&self, target_list: &TargetList) -> Option<Target> {
+        if let Some(env_value) = self.env.target() {
+            return Some(Target::from(&env_value, target_list));
+        }
+        self.toml
+            .as_ref()
+            .and_then(|t| t.default_target(target_list))
+    }
+
     fn sum_of_env_toml_values(
         toml_getter: impl FnOnce() -> Option<Vec<String>>,
         env_values: Option<Vec<String>>,
@@ -201,11 +214,17 @@ mod tests {
     use super::*;
     use crate::{Target, TargetList};
 
-    fn target() -> Target {
-        let target_list = TargetList {
-            triples: vec!["aarch64-unknown-linux-gnu".to_string()],
-        };
+    fn target_list() -> TargetList {
+        TargetList {
+            triples: vec![
+                "aarch64-unknown-linux-gnu".to_string(),
+                "armv7-unknown-linux-musleabihf".to_string(),
+            ],
+        }
+    }
 
+    fn target() -> Target {
+        let target_list = target_list();
         Target::from("aarch64-unknown-linux-gnu", &target_list)
     }
 
@@ -349,6 +368,45 @@ mod tests {
             Ok(())
         }
 
+        #[test]
+        pub fn no_env_and_no_toml_default_target_then_none() -> Result<()> {
+            let config = Config::new_with(None, Environment::new(None));
+            let config_target = config.target(&target_list());
+            assert!(matches!(config_target, None));
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn env_and_toml_default_target_then_use_env() -> Result<()> {
+            let mut map = HashMap::new();
+            map.insert("CROSS_BUILD_TARGET", "armv7-unknown-linux-musleabihf");
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(Some(toml(TOML_DEFAULT_TARGET)?), env);
+
+            let config_target = config.target(&target_list()).unwrap();
+            assert!(matches!(
+                config_target.triple(),
+                "armv7-unknown-linux-musleabihf"
+            ));
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn no_env_but_toml_default_target_then_use_toml() -> Result<()> {
+            let env = Environment::new(None);
+            let config = Config::new_with(Some(toml(TOML_DEFAULT_TARGET)?), env);
+
+            let config_target = config.target(&target_list()).unwrap();
+            assert!(matches!(
+                config_target.triple(),
+                "aarch64-unknown-linux-gnu"
+            ));
+
+            Ok(())
+        }
+
         static TOML_BUILD_XARGO_FALSE: &str = r#"
     [build]
     xargo = false
@@ -364,6 +422,11 @@ mod tests {
     volumes = ["VOLUME3", "VOLUME4"]
     [target.aarch64-unknown-linux-gnu]
     xargo = false
+    "#;
+
+        static TOML_DEFAULT_TARGET: &str = r#"
+    [build]
+    default-target = "aarch64-unknown-linux-gnu"
     "#;
     }
 }

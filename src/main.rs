@@ -270,14 +270,14 @@ fn run() -> Result<ExitStatus> {
         rustc_version::version_meta().wrap_err("couldn't fetch the `rustc` version")?;
     if let Some(root) = cargo::root()? {
         let host = version_meta.host();
+        let toml = toml(&root)?;
+        let config = Config::new(toml);
+        let target = args
+            .target
+            .or_else(|| config.target(&target_list))
+            .unwrap_or_else(|| Target::from(host.triple(), &target_list));
 
-        if host.is_supported(args.target.as_ref()) {
-            let target = args
-                .target
-                .unwrap_or_else(|| Target::from(host.triple(), &target_list));
-            let toml = toml(&root)?;
-            let config = Config::new(toml);
-
+        if host.is_supported(Some(&target)) {
             let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
             let default_toolchain = sysroot
                 .file_name()
@@ -353,6 +353,12 @@ fn run() -> Result<ExitStatus> {
                     }
                 }
                 filtered_args
+            // Make sure --target is present
+            } else if !args.all.iter().any(|a| a.starts_with("--target")) {
+                let mut args_with_target = args.all.clone();
+                args_with_target.push("--target".to_string());
+                args_with_target.push(target.triple().to_string());
+                args_with_target
             } else {
                 args.all.clone()
             };
