@@ -274,7 +274,7 @@ fn run() -> Result<ExitStatus> {
         let config = Config::new(toml);
         let target = args
             .target
-            .or(config.target(&target_list))
+            .or_else(|| config.target(&target_list))
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
 
         if host.is_supported(Some(&target)) {

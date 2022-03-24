@@ -6,6 +6,7 @@ The `build` key allows you to set global variables, e.g.:
 ```toml
 [build]
 xargo = true
+default-target = "x86_64-unknown-linux-gnu"
 ```
 
 # `build.env`

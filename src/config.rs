@@ -189,7 +189,9 @@ impl Config {
         if let Some(env_value) = self.env.target() {
             return Some(Target::from(&env_value, target_list));
         }
-        self.toml.as_ref().map_or(None, |t| t.target(target_list))
+        self.toml
+            .as_ref()
+            .and_then(|t| t.default_target(target_list))
     }
 
     fn sum_of_env_toml_values(
@@ -424,7 +426,7 @@ mod tests {
 
         static TOML_DEFAULT_TARGET: &str = r#"
     [build]
-    target = "aarch64-unknown-linux-gnu"
+    default-target = "aarch64-unknown-linux-gnu"
     "#;
     }
 }
