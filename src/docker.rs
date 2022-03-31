@@ -229,7 +229,12 @@ pub fn image(config: &Config, target: &Target) -> Result<String> {
         );
     }
 
-    let version = env!("CARGO_PKG_VERSION");
+    let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
+        env!("CARGO_PKG_VERSION")
+    } else {
+        "main"
+    };
+
     Ok(format!("{CROSS_IMAGE}/{target}:{version}"))
 }
 
