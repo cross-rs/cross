@@ -144,7 +144,7 @@ EOF
     if (( ${CPP:-0} )); then
         td="$(mktemp -d)"
 
-        git clone --depth 1 https://github.com/japaric/hellopp "${td}"
+        git clone --depth 1 https://github.com/dalance/hellopp -b update_cc "${td}"
 
         pushd "${td}"
         cargo update -p gcc
