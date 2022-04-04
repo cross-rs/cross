@@ -1,7 +1,9 @@
+name: Publish crate
+description: Publish crate on crates.io and create release on github
 inputs:
   cargo-registry-token:
     description: 'API token for crates.io'
-    type: string
+    required: true
 
 runs:
   using: composite
