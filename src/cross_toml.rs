@@ -39,8 +39,8 @@ pub struct CrossTargetConfig {
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CrossToml {
     #[serde(default, rename = "target")]
-    targets: HashMap<Target, CrossTargetConfig>,
-    build: Option<CrossBuildConfig>,
+    pub targets: HashMap<Target, CrossTargetConfig>,
+    pub build: Option<CrossBuildConfig>,
 }
 
 impl CrossToml {
