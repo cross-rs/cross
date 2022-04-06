@@ -1,5 +1,8 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
+#[cfg(test)]
+mod tests;
+
 mod cargo;
 mod cli;
 mod config;
@@ -405,7 +408,7 @@ fn toml(root: &Root) -> Result<Option<CrossToml>> {
         let content = file::read(&path)
             .wrap_err_with(|| format!("could not read file `{}`", path.display()))?;
 
-        let config = CrossToml::from_str(&content)
+        let (config, _) = CrossToml::parse(&content)
             .wrap_err_with(|| format!("failed to parse file `{}` as TOML", path.display()))?;
 
         Ok(Some(config))

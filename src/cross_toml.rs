@@ -3,7 +3,7 @@
 use crate::errors::*;
 use crate::{Target, TargetList};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 /// Environment configuration
 #[derive(Debug, Deserialize, PartialEq, Default)]
@@ -45,10 +45,10 @@ pub struct CrossToml {
 
 impl CrossToml {
     /// Parses the [`CrossToml`] from a string
-    pub fn from_str(toml_str: &str) -> Result<Self> {
+    pub fn parse(toml_str: &str) -> Result<(Self, BTreeSet<String>)> {
         let tomld = &mut toml::Deserializer::new(toml_str);
 
-        let mut unused = std::collections::BTreeSet::new();
+        let mut unused = BTreeSet::new();
 
         let cfg = serde_ignored::deserialize(tomld, |path| {
             unused.insert(path.to_string());
@@ -57,11 +57,11 @@ impl CrossToml {
         if !unused.is_empty() {
             eprintln!(
                 "Warning: found unused key(s) in Cross configuration:\n > {}",
-                unused.into_iter().collect::<Vec<_>>().join(", ")
+                unused.clone().into_iter().collect::<Vec<_>>().join(", ")
             );
         }
 
-        Ok(cfg)
+        Ok((cfg, unused))
     }
 
     /// Returns the `target.{}.image` part of `Cross.toml`
@@ -128,7 +128,7 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig::default(),
         };
-        let parsed_cfg = CrossToml::from_str("")?;
+        let (parsed_cfg, _) = CrossToml::parse("")?;
 
         assert_eq!(parsed_cfg, cfg);
 
@@ -157,7 +157,7 @@ mod tests {
           volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
         "#;
-        let parsed_cfg = CrossToml::from_str(test_str)?;
+        let (parsed_cfg, _) = CrossToml::parse(test_str)?;
 
         assert_eq!(parsed_cfg, cfg);
 
@@ -195,7 +195,7 @@ mod tests {
             xargo = false
             image = "test-image"
         "#;
-        let parsed_cfg = CrossToml::from_str(test_str)?;
+        let (parsed_cfg, _) = CrossToml::parse(test_str)?;
 
         assert_eq!(parsed_cfg, cfg);
 
