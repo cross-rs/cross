@@ -276,7 +276,7 @@ fn run() -> Result<ExitStatus> {
             .target
             .or_else(|| config.target(&target_list))
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
-
+        config.confusable_target(&target);
         if host.is_supported(Some(&target)) {
             let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
             let default_toolchain = sysroot

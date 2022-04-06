@@ -39,14 +39,28 @@ pub struct CrossTargetConfig {
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CrossToml {
     #[serde(default, rename = "target")]
-    targets: HashMap<Target, CrossTargetConfig>,
-    build: Option<CrossBuildConfig>,
+    pub targets: HashMap<Target, CrossTargetConfig>,
+    pub build: Option<CrossBuildConfig>,
 }
 
 impl CrossToml {
     /// Parses the [`CrossToml`] from a string
     pub fn from_str(toml_str: &str) -> Result<Self> {
-        let cfg: CrossToml = toml::from_str(toml_str)?;
+        let tomld = &mut toml::Deserializer::new(toml_str);
+
+        let mut unused = std::collections::BTreeSet::new();
+
+        let cfg = serde_ignored::deserialize(tomld, |path| {
+            unused.insert(path.to_string());
+        })?;
+
+        if !unused.is_empty() {
+            eprintln!(
+                "Warning: found unused key(s) in Cross configuration:\n > {}",
+                unused.into_iter().collect::<Vec<_>>().join(", ")
+            );
+        }
+
         Ok(cfg)
     }
 

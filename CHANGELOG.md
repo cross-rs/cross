@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #681 - Warn on unknown fields and confusable targets
 - #665 - when not using [env.volumes](https://github.com/cross-rs/cross#mounting-volumes-into-the-build-environment), mount project in /project
 - #624 - Add `build.default-target`
 - #670 - Use serde for deserialization of Cross.toml

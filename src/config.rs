@@ -117,6 +117,25 @@ impl Config {
         }
     }
 
+    pub fn confusable_target(&self, target: &Target) {
+        if let Some(keys) = self.toml.as_ref().map(|t| t.targets.keys()) {
+            for mentioned_target in keys {
+                let mentioned_target_norm = mentioned_target
+                    .to_string()
+                    .replace(|c| c == '-' || c == '_', "")
+                    .to_lowercase();
+                let target_norm = target
+                    .to_string()
+                    .replace(|c| c == '-' || c == '_', "")
+                    .to_lowercase();
+                if mentioned_target != target && mentioned_target_norm == target_norm {
+                    eprintln!("Warning: a target named \"{mentioned_target}\" is mentioned in the Cross configuration, but the current specified target is \"{target}\".");
+                    eprintln!(" > Is the target misspelled in the Cross configuration?");
+                }
+            }
+        }
+    }
+
     #[cfg(test)]
     fn new_with(toml: Option<CrossToml>, env: Environment) -> Self {
         Config { toml, env }
@@ -293,6 +312,7 @@ mod tests {
         }
     }
 
+    #[cfg(test)]
     mod test_config {
 
         use super::*;
