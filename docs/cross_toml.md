@@ -18,6 +18,7 @@ For example:
 [build.env]
 volumes = ["VOL1_ARG", "VOL2_ARG"]
 passthrough = ["IMPORTANT_ENV_VARIABLES"]
+var.ARG1 = "value"
 ```
 
 # `target.TARGET`
@@ -38,4 +39,5 @@ This is similar to `build.env`, but allows you to be more specific per target.
 [target.x86_64-unknown-linux-gnu.env]
 volumes = ["VOL1_ARG", "VOL2_ARG"]
 passthrough = ["IMPORTANT_ENV_VARIABLES"]
+var.ARG1 = "value"
 ```

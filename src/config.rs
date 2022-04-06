@@ -185,6 +185,18 @@ impl Config {
         Ok(collected)
     }
 
+    
+    pub fn env_variables(&self, target: &Target) -> HashMap<String, String> {
+        // Does not support env variable config, that would make not much sense
+        if let Some(ref toml) = self.toml {
+            let mut map = toml.env_variable_target(target);
+            map.extend(toml.env_variable_build());
+            map
+        } else {
+            HashMap::new()
+        }
+    }
+
     pub fn target(&self, target_list: &TargetList) -> Option<Target> {
         if let Some(env_value) = self.env.target() {
             return Some(Target::from(&env_value, target_list));

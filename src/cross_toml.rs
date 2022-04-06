@@ -12,6 +12,8 @@ pub struct CrossEnvConfig {
     volumes: Vec<String>,
     #[serde(default)]
     passthrough: Vec<String>,
+    #[serde(default, alias = "var")]
+    variable: HashMap<String, String>,
 }
 
 /// Build configuration
@@ -79,15 +81,26 @@ impl CrossToml {
             .map_or(Vec::new(), |t| t.env.passthrough.clone())
     }
 
-    /// Returns the list of environment variables to pass through for `build`,
+    /// Returns the list of environment variables to use for/as volumes in `build`,
     pub fn env_volumes_build(&self) -> Vec<String> {
         self.build.env.volumes.clone()
     }
 
-    /// Returns the list of environment variables to pass through for `target`,
+    /// Returns the list of environment variables to use for/as volumes in `target`,
     pub fn env_volumes_target(&self, target: &Target) -> Vec<String> {
         self.get_target(target)
             .map_or(Vec::new(), |t| t.env.volumes.clone())
+    }
+
+    /// Returns the list of environment variables to set and pass through
+    pub fn env_variable_target(&self, target: &Target) -> HashMap<String, String> {
+        self.get_target(target)
+            .map_or(HashMap::new(), |t| t.env.variable.clone())
+    }
+
+    /// Returns the list of environment variables to set and pass through
+    pub fn env_variable_build(&self) -> HashMap<String, String> {
+        self.build.env.variable.clone()
     }
 
     /// Returns the default target to build,
@@ -129,6 +142,7 @@ mod tests {
                 env: CrossEnvConfig {
                     volumes: vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()],
                     passthrough: vec!["VAR1".to_string(), "VAR2".to_string()],
+                    variable: [("ARG1".to_owned(), "value".to_owned())].into(),
                 },
                 xargo: Some(true),
                 default_target: None,
@@ -142,6 +156,7 @@ mod tests {
           [build.env]
           volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
+          var.ARG1 = "value"
         "#;
         let parsed_cfg = CrossToml::from_str(test_str)?;
 
@@ -161,6 +176,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: vec!["VAR1".to_string(), "VAR2".to_string()],
                     volumes: vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()],
+                    variable: [("ARG1".to_owned(), "value".to_owned())].into(),
                 },
                 xargo: Some(false),
                 image: Some("test-image".to_string()),
@@ -177,6 +193,7 @@ mod tests {
             [target.aarch64-unknown-linux-gnu.env]
             volumes = ["VOL1_ARG", "VOL2_ARG"]
             passthrough = ["VAR1", "VAR2"]
+            var.ARG1 = "value"
             [target.aarch64-unknown-linux-gnu]
             xargo = false
             image = "test-image"

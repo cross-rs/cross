@@ -133,6 +133,13 @@ pub fn run(
         // flag forwards the value from the parent shell
         docker.args(&["-e", var]);
     }
+
+    for (ref var, ref value) in config.env_variables(target) {
+        validate_env_var(var)?;
+
+        docker.args(&["-e", &format!("{var}={value}")]);
+    }
+
     let mut env_volumes = false;
     for ref var in config.env_volumes(target)? {
         validate_env_var(var)?;
