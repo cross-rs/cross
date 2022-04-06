@@ -5,9 +5,9 @@ use crate::{Target, TargetList};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-/// Build environment configuration
-#[derive(Debug, Deserialize, PartialEq)]
-pub struct CrossBuildEnvConfig {
+/// Environment configuration
+#[derive(Debug, Deserialize, PartialEq, Default)]
+pub struct CrossEnvConfig {
     #[serde(default)]
     volumes: Vec<String>,
     #[serde(default)]
@@ -18,7 +18,8 @@ pub struct CrossBuildEnvConfig {
 #[derive(Debug, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CrossBuildConfig {
-    env: Option<CrossBuildEnvConfig>,
+    #[serde(default)]
+    env: CrossEnvConfig,
     xargo: Option<bool>,
     default_target: Option<String>,
 }
@@ -26,13 +27,11 @@ pub struct CrossBuildConfig {
 /// Target configuration
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CrossTargetConfig {
-    #[serde(default)]
-    passthrough: Vec<String>,
-    #[serde(default)]
-    volumes: Vec<String>,
     xargo: Option<bool>,
     image: Option<String>,
     runner: Option<String>,
+    #[serde(default)]
+    env: CrossEnvConfig,
 }
 
 /// Cross configuration
@@ -40,14 +39,15 @@ pub struct CrossTargetConfig {
 pub struct CrossToml {
     #[serde(default, rename = "target")]
     targets: HashMap<Target, CrossTargetConfig>,
-    build: Option<CrossBuildConfig>,
+    #[serde(default)]
+    build: CrossBuildConfig,
 }
 
 impl CrossToml {
     /// Parses the [`CrossToml`] from a string
     pub fn from_str(toml_str: &str) -> Result<Self> {
         let cfg: CrossToml = toml::from_str(toml_str)?;
-        Ok(cfg)
+        Ok(dbg!(cfg))
     }
 
     /// Returns the `target.{}.image` part of `Cross.toml`
@@ -62,7 +62,7 @@ impl CrossToml {
 
     /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
     pub fn xargo(&self, target: &Target) -> (Option<bool>, Option<bool>) {
-        let build_xargo = self.build.as_ref().and_then(|b| b.xargo);
+        let build_xargo = self.build.xargo;
         let target_xargo = self.get_target(target).and_then(|t| t.xargo);
 
         (build_xargo, target_xargo)
@@ -70,44 +70,37 @@ impl CrossToml {
 
     /// Returns the list of environment variables to pass through for `build`,
     pub fn env_passthrough_build(&self) -> Vec<String> {
-        self.get_build_env()
-            .map_or(Vec::new(), |e| e.passthrough.clone())
+        self.build.env.passthrough.clone()
     }
 
     /// Returns the list of environment variables to pass through for `target`,
     pub fn env_passthrough_target(&self, target: &Target) -> Vec<String> {
         self.get_target(target)
-            .map_or(Vec::new(), |t| t.passthrough.clone())
+            .map_or(Vec::new(), |t| t.env.passthrough.clone())
     }
 
     /// Returns the list of environment variables to pass through for `build`,
     pub fn env_volumes_build(&self) -> Vec<String> {
-        self.get_build_env()
-            .map_or(Vec::new(), |e| e.volumes.clone())
+        self.build.env.volumes.clone()
     }
 
     /// Returns the list of environment variables to pass through for `target`,
     pub fn env_volumes_target(&self, target: &Target) -> Vec<String> {
         self.get_target(target)
-            .map_or(Vec::new(), |t| t.volumes.clone())
+            .map_or(Vec::new(), |t| t.env.volumes.clone())
     }
 
     /// Returns the default target to build,
     pub fn default_target(&self, target_list: &TargetList) -> Option<Target> {
         self.build
+            .default_target
             .as_ref()
-            .and_then(|b| b.default_target.as_ref())
             .map(|t| Target::from(t, target_list))
     }
 
     /// Returns a reference to the [`CrossTargetConfig`] of a specific `target`
     fn get_target(&self, target: &Target) -> Option<&CrossTargetConfig> {
         self.targets.get(target)
-    }
-
-    /// Returns a reference to the [`CrossBuildEnvConfig`]
-    fn get_build_env(&self) -> Option<&CrossBuildEnvConfig> {
-        self.build.as_ref().and_then(|b| b.env.as_ref())
     }
 }
 
@@ -119,7 +112,7 @@ mod tests {
     pub fn parse_empty_toml() -> Result<()> {
         let cfg = CrossToml {
             targets: HashMap::new(),
-            build: None,
+            build: CrossBuildConfig::default(),
         };
         let parsed_cfg = CrossToml::from_str("")?;
 
@@ -132,14 +125,14 @@ mod tests {
     pub fn parse_build_toml() -> Result<()> {
         let cfg = CrossToml {
             targets: HashMap::new(),
-            build: Some(CrossBuildConfig {
-                env: Some(CrossBuildEnvConfig {
+            build: CrossBuildConfig {
+                env: CrossEnvConfig {
                     volumes: vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()],
                     passthrough: vec!["VAR1".to_string(), "VAR2".to_string()],
-                }),
+                },
                 xargo: Some(true),
                 default_target: None,
-            }),
+            },
         };
 
         let test_str = r#"
@@ -165,8 +158,10 @@ mod tests {
                 triple: "aarch64-unknown-linux-gnu".to_string(),
             },
             CrossTargetConfig {
-                passthrough: vec!["VAR1".to_string(), "VAR2".to_string()],
-                volumes: vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()],
+                env: CrossEnvConfig {
+                    passthrough: vec!["VAR1".to_string(), "VAR2".to_string()],
+                    volumes: vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()],
+                },
                 xargo: Some(false),
                 image: Some("test-image".to_string()),
                 runner: None,
@@ -175,15 +170,16 @@ mod tests {
 
         let cfg = CrossToml {
             targets: target_map,
-            build: None,
+            build: CrossBuildConfig::default(),
         };
 
         let test_str = r#"
-          [target.aarch64-unknown-linux-gnu]
-          volumes = ["VOL1_ARG", "VOL2_ARG"]
-          passthrough = ["VAR1", "VAR2"]
-          xargo = false
-          image = "test-image"
+            [target.aarch64-unknown-linux-gnu.env]
+            volumes = ["VOL1_ARG", "VOL2_ARG"]
+            passthrough = ["VAR1", "VAR2"]
+            [target.aarch64-unknown-linux-gnu]
+            xargo = false
+            image = "test-image"
         "#;
         let parsed_cfg = CrossToml::from_str(test_str)?;
 
