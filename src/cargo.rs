@@ -1,6 +1,6 @@
+use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
-use std::{env, fs};
 
 use crate::errors::*;
 use crate::extensions::CommandExt;
@@ -54,7 +54,7 @@ impl<'a> From<&'a str> for Subcommand {
 
 #[derive(Debug)]
 pub struct Root {
-    path: PathBuf,
+    pub path: PathBuf,
 }
 
 impl Root {
@@ -64,26 +64,28 @@ impl Root {
 }
 
 /// Cargo project root
-pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().wrap_err("couldn't get current directory")?;
-
-    let mut dir = &*cd;
-    loop {
-        let toml = dir.join("Cargo.toml");
-
-        if fs::metadata(&toml).is_ok() {
-            return Ok(Some(Root {
-                path: dir.to_owned(),
-            }));
-        }
-
-        match dir.parent() {
-            Some(p) => dir = p,
-            None => break,
-        }
+pub fn root(cd: Option<&Path>) -> Result<Option<Root>> {
+    #[derive(Deserialize)]
+    struct Manifest {
+        workspace_root: PathBuf,
     }
-
-    Ok(None)
+    let mut command = std::process::Command::new(
+        std::env::var("CARGO")
+            .ok()
+            .unwrap_or_else(|| "cargo".to_string()),
+    );
+    command
+        .arg("metadata")
+        .arg("--format-version=1")
+        .arg("--no-deps");
+    if let Some(cd) = cd {
+        command.current_dir(cd);
+    }
+    let output = command.output()?;
+    let manifest: Option<Manifest> = serde_json::from_slice(&output.stdout)?;
+    Ok(manifest.map(|m| Root {
+        path: m.workspace_root,
+    }))
 }
 
 /// Pass-through mode

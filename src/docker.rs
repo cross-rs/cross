@@ -111,7 +111,17 @@ pub fn run(
     }
     #[cfg(not(target_os = "windows"))]
     {
-        mount_root = host_root.clone();
+        mount_root = mount_finder.find_mount_path(host_root.clone());
+    }
+    let mount_cwd: PathBuf;
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        mount_cwd = wslpath(&std::env::current_dir()?, verbose)?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        mount_cwd = mount_finder.find_mount_path(std::env::current_dir()?);
     }
     let sysroot = mount_finder.find_mount_path(sysroot);
 
@@ -236,9 +246,20 @@ pub fn run(
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())]);
 
     if env_volumes {
-        docker.args(&["-w", &mount_root.display().to_string()]);
-    } else {
+        docker.args(&["-w".as_ref(), mount_cwd.as_os_str()]);
+    } else if mount_cwd == root {
         docker.args(&["-w", "/project"]);
+    } else {
+        // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
+        let cwd = &std::env::current_dir()?;
+        let working_dir = Path::new("project").join(cwd.strip_prefix(root)?);
+        // No [T].join for OsStr
+        let mut mount_wd = std::ffi::OsString::new();
+        for part in working_dir.iter() {
+            mount_wd.push("/");
+            mount_wd.push(part);
+        }
+        docker.args(&["-w".as_ref(), mount_wd.as_os_str()]);
     }
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
