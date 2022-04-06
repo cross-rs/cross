@@ -12,7 +12,7 @@ runs:
       id: changelog-reader
       uses: mindsers/changelog-reader-action@v2.0.0
       with:
-        validation_depth: 10
+        # validation_depth: 10
         version: ${{ (github.ref_type == 'tag' && github.ref_name) || 'Unreleased' }}
         path: ./CHANGELOG.md
 
@@ -24,7 +24,7 @@ runs:
           ${{ runner.temp }}/artifacts
 
     - name: Log into crates.io
-      if: steps.cargo-toml-publish.outputs.value != 'false' && github.event_name != 'pull_request'
+      if: github.event_name != 'pull_request'
       uses: actions-rs/cargo@v1
       with:
         command: login
@@ -38,8 +38,7 @@ runs:
         )
       uses: softprops/action-gh-release@v1
       with:
-        tag: ${{ steps.changelog-reader.outputs.version }}
-        name: ${{ steps.changelog-reader.outputs.version }}
+        tag_name: ${{ steps.changelog-reader.outputs.version }}
         body: ${{ steps.changelog-reader.outputs.changes }}
         prerelease: ${{ steps.changelog-reader.outputs.status == 'prereleased' }}
         draft: ${{ steps.changelog-reader.outputs.status == 'unreleased' }}
