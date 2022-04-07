@@ -3,7 +3,7 @@
 set -x
 set -euo pipefail
 
-NDK_URL=https://dl.google.com/android/repository/android-ndk-r13b-linux-x86_64.zip
+NDK_URL=https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip
 
 main() {
     local arch="${1}" \

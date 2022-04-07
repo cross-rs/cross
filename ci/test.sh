@@ -144,10 +144,9 @@ EOF
     if (( ${CPP:-0} )); then
         td="$(mktemp -d)"
 
-        git clone --depth 1 https://github.com/japaric/hellopp "${td}"
+        git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"
 
         pushd "${td}"
-        cargo update -p gcc
         retry cargo fetch
         if (( ${RUN:-0} )); then
             cross_run --target "${TARGET}"

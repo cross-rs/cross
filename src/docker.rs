@@ -169,6 +169,10 @@ pub fn run(
 
     docker.arg("--rm");
 
+    if target.needs_docker_privileged() {
+        docker.arg("--privileged");
+    }
+
     // We need to specify the user for Docker, but not for Podman.
     if let Ok(ce) = get_container_engine() {
         if ce.ends_with(DOCKER) {
