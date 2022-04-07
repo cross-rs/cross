@@ -1,1 +1,5 @@
-target
+**/target/
+**/.idea/
+**/.vscode/*.*
+**/*.log
+/cargo-timing*.html

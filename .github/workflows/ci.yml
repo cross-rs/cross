@@ -74,7 +74,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked
+          args: --locked --all-targets --workspace
         timeout-minutes: 5
 
   generate-matrix:
