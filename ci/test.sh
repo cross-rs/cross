@@ -135,6 +135,21 @@ EOF
                 popd
 
                 rm -rf "${td}"
+                td=$(mktemp -d)
+                git clone \
+                    --depth 1 \
+                    --recursive \
+                    https://github.com/cross-rs/test-workspace "${td}"
+                
+                pushd "${td}"
+      cross run --target "${TARGET}" -p binary --manifest-path="./workspace/Cargo.toml"
+                pushd "workspace"
+                cross run --target "${TARGET}" -p binary
+                pushd "binary"
+                cross run --target "${TARGET}"
+                popd
+                popd
+                popd
             ;;
         esac
 

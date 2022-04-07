@@ -12,6 +12,7 @@ pub struct Args {
     pub subcommand: Option<Subcommand>,
     pub channel: Option<String>,
     pub target: Option<Target>,
+    pub features: Vec<String>,
     pub target_dir: Option<PathBuf>,
     pub docker_in_docker: bool,
     pub enable_doctests: bool,
@@ -73,6 +74,7 @@ pub fn fmt_subcommands(stdout: &str) {
 pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut channel = None;
     let mut target = None;
+    let mut features = Vec::new();
     let mut manifest_path: Option<PathBuf> = None;
     let mut target_dir = None;
     let mut sc = None;
@@ -111,6 +113,15 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                     .split_once('=')
                     .map(|(_, t)| Target::from(t, target_list));
                 all.push(arg);
+            } else if arg == "--features" {
+                all.push(arg);
+                if let Some(t) = args.next() {
+                    features.push(t.clone());
+                    all.push(t);
+                }
+            } else if arg.starts_with("--features=") {
+                features.extend(arg.split_once('=').map(|(_, t)| t.to_owned()));
+                all.push(arg);
             } else if arg == "--target-dir" {
                 all.push(arg);
                 if let Some(td) = args.next() {
@@ -144,6 +155,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         subcommand: sc,
         channel,
         target,
+        features,
         target_dir,
         docker_in_docker,
         enable_doctests,

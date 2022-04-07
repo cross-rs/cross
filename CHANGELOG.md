@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #543 - Added environment variables to control the UID and GID in the container
 - #524 - docker: Add Nix Store volume support
 - Added support for mounting volumes.
+- #684 - Enable cargo workspaces to work from any path in the workspace, and make path dependencies mount seamlessly.
 
 ### Changed
 

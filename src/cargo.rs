@@ -1,12 +1,10 @@
 use serde::Deserialize;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 
 use crate::cli::Args;
-use crate::config::Config;
 use crate::errors::*;
-use crate::extensions::{CommandExt, OutputExt};
+use crate::extensions::CommandExt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subcommand {
@@ -58,11 +56,40 @@ impl<'a> From<&'a str> for Subcommand {
 #[derive(Debug, Deserialize)]
 pub struct CargoMetadata {
     pub workspace_root: PathBuf,
+    pub target_directory: PathBuf,
+    pub packages: Vec<Package>,
+    pub workspace_members: Vec<String>,
 }
 
 impl CargoMetadata {
-    pub fn workspace_root(&self) -> &Path {
-        &self.workspace_root
+    fn non_workspace_members(&self) -> impl Iterator<Item = &Package> {
+        self.packages
+            .iter()
+            .filter(|p| !self.workspace_members.iter().any(|m| m == &p.id))
+    }
+
+    pub fn path_dependencies(&self) -> impl Iterator<Item = &Path> {
+        // TODO: Also filter out things that are in workspace, but not a workspace member
+        self.non_workspace_members().filter_map(|p| p.crate_path())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Package {
+    id: String,
+    manifest_path: PathBuf,
+    source: Option<String>,
+}
+
+impl Package {
+    /// Returns the absolute path to the packages manifest "folder"
+    fn crate_path(&self) -> Option<&Path> {
+        // when source is none, this package is a path dependency or a workspace member
+        if self.source.is_none() {
+            self.manifest_path.parent()
+        } else {
+            None
+        }
     }
 }
 
@@ -70,6 +97,7 @@ impl CargoMetadata {
 pub fn cargo_metadata_with_args(
     cd: Option<&Path>,
     args: Option<&Args>,
+    verbose: bool,
 ) -> Result<Option<CargoMetadata>> {
     let mut command = std::process::Command::new(
         std::env::var("CARGO")
@@ -87,29 +115,28 @@ pub fn cargo_metadata_with_args(
     } else {
         command.arg("--no-deps");
     }
-    #[derive(Deserialize)]
-    struct Manifest {
-        workspace_root: PathBuf,
+    if let Some(target) = args.and_then(|a| a.target.as_ref()) {
+        command.args(["--filter-platform", target.triple()]);
     }
-    if let Some(cd) = cd {
-        command.current_dir(cd);
+    if let Some(features) = args.map(|a| &a.features).filter(|v| !v.is_empty()) {
+        command.args([String::from("--features"), features.join(",")]);
     }
-    let output = command.run_and_get_output(false)?;
+    let output = command.run_and_get_output(verbose)?;
     if !output.status.success() {
-        let mut stderr = std::io::stderr();
-        stderr.write_all(&output.stderr)?;
-        stderr.flush()?;
-        std::process::exit(output.status.code().unwrap_or(1));
+        // TODO: logging
+        return Ok(None);
     }
-    let manifest: Option<Manifest> = serde_json::from_slice(&output.stdout)?;
-    Ok(manifest.map(|m| CargoMetadata {
-        workspace_root: m.workspace_root,
-    }))
-}
-
-/// Cargo metadata
-pub fn cargo_metadata(cd: Option<&Path>) -> Result<Option<CargoMetadata>> {
-    cargo_metadata_with_args(cd, None)
+    let manifest: Option<CargoMetadata> = serde_json::from_slice(&output.stdout)?;
+    manifest
+        .map(|m| -> Result<_> {
+            Ok(CargoMetadata {
+                target_directory: args
+                    .and_then(|a| a.target_dir.clone())
+                    .unwrap_or(m.target_directory),
+                ..m
+            })
+        })
+        .transpose()
 }
 
 /// Pass-through mode

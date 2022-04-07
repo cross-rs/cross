@@ -283,7 +283,7 @@ fn run() -> Result<ExitStatus> {
     let host_version_meta =
         rustc_version::version_meta().wrap_err("couldn't fetch the `rustc` version")?;
     let cwd = std::env::current_dir()?;
-    if let Some(metadata) = cargo::cargo_metadata_with_args(Some(&cwd), Some(&args))? {
+    if let Some(metadata) = cargo::cargo_metadata_with_args(None, Some(&args), verbose)? {
         let host = host_version_meta.host();
         let toml = toml(&metadata)?;
         let config = Config::new(toml);
@@ -408,11 +408,9 @@ fn run() -> Result<ExitStatus> {
                     docker::register(&target, verbose)?
                 }
 
-                let docker_root = env::current_dir()?;
                 return docker::run(
                     &target,
                     &filtered_args,
-                    &args.target_dir,
                     &metadata,
                     &config,
                     uses_xargo,
@@ -492,10 +490,10 @@ pub(crate) fn warn_host_version_mismatch(
 
 /// Parses the `Cross.toml` at the root of the Cargo project or from the
 /// `CROSS_CONFIG` environment variable (if any exist in either location).
-fn toml(root: &CargoMetadata) -> Result<Option<CrossToml>> {
+fn toml(metadata: &CargoMetadata) -> Result<Option<CrossToml>> {
     let path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),
-        Err(_) => root.workspace_root().join("Cross.toml"),
+        Err(_) => metadata.workspace_root.join("Cross.toml"),
     };
 
     if path.exists() {
@@ -508,7 +506,7 @@ fn toml(root: &CargoMetadata) -> Result<Option<CrossToml>> {
         Ok(Some(config))
     } else {
         // Checks if there is a lowercase version of this file
-        if root.workspace_root().join("cross.toml").exists() {
+        if metadata.workspace_root.join("cross.toml").exists() {
             eprintln!("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.");
         }
         Ok(None)
