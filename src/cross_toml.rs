@@ -128,9 +128,10 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig::default(),
         };
-        let (parsed_cfg, _) = CrossToml::parse("")?;
+        let (parsed_cfg, unused) = CrossToml::parse("")?;
 
         assert_eq!(parsed_cfg, cfg);
+        assert!(unused.is_empty());
 
         Ok(())
     }
@@ -157,9 +158,10 @@ mod tests {
           volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
         "#;
-        let (parsed_cfg, _) = CrossToml::parse(test_str)?;
+        let (parsed_cfg, unused) = CrossToml::parse(test_str)?;
 
         assert_eq!(parsed_cfg, cfg);
+        assert!(unused.is_empty());
 
         Ok(())
     }
@@ -195,9 +197,10 @@ mod tests {
             xargo = false
             image = "test-image"
         "#;
-        let (parsed_cfg, _) = CrossToml::parse(test_str)?;
+        let (parsed_cfg, unused) = CrossToml::parse(test_str)?;
 
         assert_eq!(parsed_cfg, cfg);
+        assert!(unused.is_empty());
 
         Ok(())
     }
