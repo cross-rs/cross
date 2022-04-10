@@ -6,7 +6,7 @@ set -euo pipefail
 main() {
     # arch in the rust target
     local arch="${1}" \
-          kversion=4.19.0-17
+          kversion=4.19.0-20
 
     local debsource="deb http://http.debian.net/debian/ buster main"
     debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
