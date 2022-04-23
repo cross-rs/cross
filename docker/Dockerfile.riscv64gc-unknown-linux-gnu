@@ -1,4 +1,5 @@
 FROM ubuntu:18.04
+ARG DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
 RUN /common.sh
