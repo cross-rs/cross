@@ -101,7 +101,7 @@ pub fn component_is_installed(component: &str, toolchain: &str, verbose: bool) -
         .any(|l| l.starts_with(component) && l.contains("installed")))
 }
 
-pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Option<String>)>> {
+pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, String)>> {
     let path = toolchain_path.join("lib/rustlib/multirust-channel-manifest.toml");
     if path.exists() {
         let contents = std::fs::read(&path)
@@ -113,19 +113,16 @@ pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Option<St
             .and_then(|rust| rust.get("version"))
             .and_then(|version| version.as_str())
         {
-            let mut i = rust_version.splitn(2, ' ');
-            Ok(Some((
-                Version::parse(
-                    i.next().ok_or_else(|| {
-                        eyre::eyre!("no rust version found in {}", path.display())
+            // Field is `"{version} ({commit} {date})"`
+            if let Some((version, meta)) = rust_version.split_once(' ') {
+                return Ok(Some((
+                    Version::parse(version).wrap_err_with(|| {
+                        format!("invalid rust version found in {}", path.display())
                     })?,
-                )?,
-                i.next().map(|s| s.to_owned()),
-            )))
-        } else {
-            Ok(None)
+                    meta.to_owned(),
+                )));
+            }
         }
-    } else {
-        Ok(None)
     }
+    Ok(None)
 }

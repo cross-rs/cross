@@ -319,35 +319,15 @@ fn run() -> Result<ExitStatus> {
 
             if !installed_toolchains.into_iter().any(|t| t == toolchain) {
                 rustup::install_toolchain(&toolchain, verbose)?;
-            } else if let Some((rustc_version, rustc_commit)) = rustup::rustc_version(&sysroot)? {
-                let host_commit = (&host_version_meta.short_version_string)
-                    .splitn(3, ' ')
-                    .nth(2);
-                // This should only hit on non Host::X86_64UnknownLinuxGnu hosts
-                if rustc_version != host_version_meta.semver
-                    || (rustc_commit.as_deref() != host_commit)
-                {
-                    let warning = if let Some(ref commit) = rustc_commit {
-                        format!("Warning: using rustc `{rustc_version} {commit}` for the target, but current active rustc is `{}`.", host_version_meta.short_version_string)
-                    } else {
-                        format!("Warning: using rustc `{rustc_version}` for the target, but current active rustc is `{}`.", host_version_meta.short_version_string)
-                    };
-                    let rustc_commit_date = rustc_commit
-                        .as_ref()
-                        .and_then(|c| c.split_once(' ').map(|x| x.1));
-                    if rustc_version < host_version_meta.semver
-                        || (rustc_version == host_version_meta.semver
-                            && rustc_commit_date < host_version_meta.commit_date.as_deref())
-                    {
-                        // If host version is newer than target version.
-                        eprintln!(
-                            "{warning} Update with `rustup update --force-non-host {toolchain}`"
-                        );
-                    } else if rustc_version > host_version_meta.semver {
-                        // if target version is newer than host version.
-                        eprintln!("{warning} Update with `rustup update`");
-                    }
-                }
+            }
+            // TODO: Provide a way to pick/match the toolchain version as a consumer of `cross`.
+            if let Some((rustc_version, rustc_commit)) = rustup::rustc_version(&sysroot)? {
+                warn_host_version_mismatch(
+                    &host_version_meta,
+                    &toolchain,
+                    &rustc_version,
+                    &rustc_commit,
+                )?;
             }
 
             let available_targets = rustup::available_targets(&toolchain, verbose)?;
@@ -431,6 +411,50 @@ fn run() -> Result<ExitStatus> {
 
     eprintln!("Warning: Falling back to `cargo` on the host.");
     cargo::run(&args.all, verbose)
+}
+
+#[derive(PartialEq, Debug)]
+pub(crate) enum VersionMatch {
+    Same,
+    OlderTarget,
+    NewerTarget,
+    Different,
+}
+
+pub(crate) fn warn_host_version_mismatch(
+    host_version_meta: &rustc_version::VersionMeta,
+    toolchain: &str,
+    rustc_version: &rustc_version::Version,
+    rustc_commit: &str,
+) -> Result<VersionMatch> {
+    let host_commit = (&host_version_meta.short_version_string)
+        .splitn(3, ' ')
+        .nth(2);
+    let rustc_commit_date = rustc_commit
+        .split_once(' ')
+        .and_then(|x| x.1.strip_suffix(')'));
+
+    // This should only hit on non Host::X86_64UnknownLinuxGnu hosts
+    if rustc_version != &host_version_meta.semver || (Some(rustc_commit) != host_commit) {
+        let versions = rustc_version.cmp(&host_version_meta.semver);
+        let dates = rustc_commit_date.cmp(&host_version_meta.commit_date.as_deref());
+
+        let rustc_warning = format!(
+            "rustc `{rustc_version} {rustc_commit}` for the target. Current active rustc on the host is `{}`",
+            host_version_meta.short_version_string
+        );
+        if versions.is_lt() || (versions.is_eq() && dates.is_lt()) {
+            eprintln!("Warning: using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`");
+            return Ok(VersionMatch::OlderTarget);
+        } else if versions.is_gt() || (versions.is_eq() && dates.is_gt()) {
+            eprintln!("Warning: using newer {rustc_warning}.\n > Update with `rustup update`");
+            return Ok(VersionMatch::NewerTarget);
+        } else {
+            eprintln!("Warning: using {rustc_warning}.");
+            return Ok(VersionMatch::Different);
+        }
+    }
+    Ok(VersionMatch::Same)
 }
 
 /// Parses the `Cross.toml` at the root of the Cargo project or from the
