@@ -6,7 +6,7 @@ set -euo pipefail
 main() {
     local arch="${1}"
 
-    local base_release=12.1 \
+    local base_release=12.3 \
           binutils=2.32 \
           gcc=6.4.0 \
           target="${arch}-unknown-freebsd12"
@@ -74,11 +74,10 @@ main() {
     cp "${td}/freebsd/lib/libkvm.so.7" "${destdir}/lib"
     cp "${td}/freebsd/lib/libthr.so.3" "${destdir}/lib"
     cp "${td}/freebsd/lib/libutil.so.9" "${destdir}/lib"
-    cp "${td}/freebsd/lib/libssp.so.0" "${destdir}/lib"
     cp "${td}/freebsd/lib/libdevstat.so.7" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.so.1" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.a" "${destdir}/lib"
-    cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp,ssp_nonshared}.a "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp_nonshared}.a "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{rt,execinfo,procstat}.so.1 "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/libkvm.a "${destdir}/lib"
@@ -91,7 +90,6 @@ main() {
     ln -s librt.so.1 "${destdir}/lib/librt.so"
     ln -s libutil.so.9 "${destdir}/lib/libutil.so"
     ln -s libthr.so.3 "${destdir}/lib/libpthread.so"
-    ln -s libssp.so.0 "${destdir}/lib/libssp.so"
     ln -s libdevstat.so.7 "${destdir}/lib/libdevstat.so"
     ln -s libkvm.so.7 "${destdir}/lib/libkvm.so"
 
