@@ -1,6 +1,6 @@
 block_labels = ["needs-decision"]
 delete_merged_branches = true
 required_approvals = 0
-use_codeowners = true
+use_codeowners = false
 status = ["conclusion"]
 timeout_sec = 21600
