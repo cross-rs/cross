@@ -25,10 +25,11 @@ RUN /musl.sh \
 RUN ln -sf \
     /usr/local/arm-linux-musleabihf/lib/libc.so \
     /usr/local/arm-linux-musleabihf/lib/ld-musl-armhf.so.1
-ENV QEMU_LD_PREFIX=/usr/local/arm-linux-musleabihf
 
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-musleabihf-gcc \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_RUNNER=qemu-arm \
     CC_arm_unknown_linux_musleabihf=arm-linux-musleabihf-gcc \
     CXX_arm_unknown_linux_musleabihf=arm-linux-musleabihf-g++ \
+    QEMU_LD_PREFIX=/usr/local/arm-linux-musleabihf \
+    BINDGEN_EXTRA_CLANG_ARGS_ARM_UNKNOWN_LINUX_MUSLEABIHF="--sysroot=/usr/local/arm-linux-musleabihf" \
     RUST_TEST_THREADS=1

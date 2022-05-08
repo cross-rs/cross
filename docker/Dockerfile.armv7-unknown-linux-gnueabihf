@@ -30,4 +30,5 @@ ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc \
     CXX_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++ \
     QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf \
+    BINDGEN_EXTRA_CLANG_ARGS_ARMV7_UNKNOWN_LINUX_GNUEABIHF="--sysroot=/usr/arm-linux-gnueabihf" \
     RUST_TEST_THREADS=1

@@ -22,4 +22,5 @@ ENV CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
     CC_armv5te_unknown_linux_gnueabi=arm-linux-gnueabi-gcc \
     CXX_armv5te_unknown_linux_gnueabi=arm-linux-gnueabi-g++ \
     QEMU_LD_PREFIX=/usr/arm-linux-gnueabi \
+    BINDGEN_EXTRA_CLANG_ARGS_ARMV5TE_UNKNOWN_LINUX_GNUEABI="--sysroot=/usr/arm-linux-gnueabi" \
     RUST_TEST_THREADS=1
