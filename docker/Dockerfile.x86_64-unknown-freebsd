@@ -19,5 +19,5 @@ RUN /freebsd-extras.sh x86_64
 ENV CARGO_TARGET_X86_64_UNKNOWN_FREEBSD_LINKER=x86_64-unknown-freebsd12-gcc \
     CC_x86_64_unknown_freebsd=x86_64-unknown-freebsd12-gcc \
     CXX_x86_64_unknown_freebsd=x86_64-unknown-freebsd12-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_X86_64_UNKNOWN_FREEBSD="--sysroot=/usr/local/x86_64-unknown-freebsd12" \
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_freebsd="--sysroot=/usr/local/x86_64-unknown-freebsd12" \
     X86_64_UNKNOWN_FREEBSD_OPENSSL_DIR=/usr/local/x86_64-unknown-freebsd12/

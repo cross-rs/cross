@@ -16,4 +16,4 @@ RUN /solaris.sh x86_64
 ENV CARGO_TARGET_X86_64_SUN_SOLARIS_LINKER=x86_64-sun-solaris2.10-gcc \
     CC_x86_64_sun_solaris=x86_64-sun-solaris2.10-gcc \
     CXX_x86_64_sun_solaris=x86_64-sun-solaris2.10-g++ \
-    BINDGEN_EXTRA_CLANG_ARG_X86_64_SUN_SOLARIS="--sysroot=/usr/local/x86_64-sun-solaris2.10"
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_sun_solaris="--sysroot=/usr/local/x86_64-sun-solaris2.10"

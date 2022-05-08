@@ -29,6 +29,6 @@ ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_GNUABI64_LINKER=mips64el-linux-gnuabi64-
     CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_GNUABI64_RUNNER="/linux-runner mips64el" \
     CC_mips64el_unknown_linux_gnuabi64=mips64el-linux-gnuabi64-gcc \
     CXX_mips64el_unknown_linux_gnuabi64=mips64el-linux-gnuabi64-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_mips64el_unknown_linux_gnuabi64="--sysroot=/usr/mips64el-linux-gnuabi64" \
     QEMU_LD_PREFIX=/usr/mips64el-linux-gnuabi64 \
-    BINDGEN_EXTRA_CLANG_ARGS_MIPS64EL_UNKNOWN_LINUX_GNUABI64="--sysroot=/usr/mips64el-linux-gnuabi64" \
     RUST_TEST_THREADS=1
