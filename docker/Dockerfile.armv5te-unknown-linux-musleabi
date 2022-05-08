@@ -29,6 +29,6 @@ ENV CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_MUSLEABI_LINKER=arm-linux-musleabi-gcc \
     CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_MUSLEABI_RUNNER=qemu-arm \
     CC_armv5te_unknown_linux_musleabi=arm-linux-musleabi-gcc \
     CXX_armv5te_unknown_linux_musleabi=arm-linux-musleabi-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_armv5te_unknown_linux_musleabi="--sysroot=/usr/arm-linux-musleabi" \
     QEMU_LD_PREFIX=/usr/local/arm-linux-musleabi \
-    BINDGEN_EXTRA_CLANG_ARGS_ARMV5TE_UNKNOWN_LINUX_MUSLEABI="--sysroot=/usr/arm-linux-musleabi" \
     RUST_TEST_THREADS=1

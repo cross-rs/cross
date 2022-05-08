@@ -26,6 +26,6 @@ ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_LINKER=mips64el-linux-muslsf-g
     CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_RUNNER=qemu-mips64el \
     CC_mips64el_unknown_linux_muslabi64=mips64el-linux-muslsf-gcc \
     CXX_mips64el_unknown_linux_muslabi64=mips64el-linux-muslsf-g++ \
-    EMU_LD_PREFIX=/usr/local/mips64el-linux-muslsf \
-    BINDGEN_EXTRA_CLANG_ARGS_MIPS64EL_UNKNOWN_LINUX_MUSLABI64="--sysroot=/usr/local/mips64el-linux-muslsf" \
+    BINDGEN_EXTRA_CLANG_ARGS_mips64el_unknown_linux_muslabi64="--sysroot=/usr/local/mips64el-linux-muslsf" \
+    QEMU_LD_PREFIX=/usr/local/mips64el-linux-muslsf \
     RUST_TEST_THREADS=1

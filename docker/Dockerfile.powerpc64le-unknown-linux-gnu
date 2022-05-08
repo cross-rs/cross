@@ -29,6 +29,6 @@ ENV CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_LINKER=powerpc64le-linux-gnu-gcc 
     CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner powerpc64le" \
     CC_powerpc64le_unknown_linux_gnu=powerpc64le-linux-gnu-gcc \
     CXX_powerpc64le_unknown_linux_gnu=powerpc64le-linux-gnu-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_powerpc64le_unknown_linux_gnu="--sysroot=/usr/powerpc64le-linux-gnu" \
     QEMU_LD_PREFIX=/usr/powerpc64le-linux-gnu \
-    BINDGEN_EXTRA_CLANG_ARGS_POWERPC64LE_UNKNOWN_LINUX_GNU="--sysroot=/usr/powerpc64le-linux-gnu" \
     RUST_TEST_THREADS=1

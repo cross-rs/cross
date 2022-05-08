@@ -29,6 +29,6 @@ ENV CARGO_TARGET_SPARC64_UNKNOWN_LINUX_GNU_LINKER=sparc64-linux-gnu-gcc \
     CARGO_TARGET_SPARC64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner sparc64" \
     CC_sparc64_unknown_linux_gnu=sparc64-linux-gnu-gcc \
     CXX_sparc64_unknown_linux_gnu=sparc64-linux-gnu-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_sparc64_unknown_linux_gnu="--sysroot=/usr/sparc64-linux-gnu" \
     QEMU_LD_PREFIX=/usr/sparc64-linux-gnu \
-    BINDGEN_EXTRA_CLANG_ARGS_SPARC64_UNKNOWN_LINUX_GNU="--sysroot=/usr/sparc64-linux-gnu" \
     RUST_TEST_THREADS=1

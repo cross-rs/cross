@@ -28,8 +28,8 @@ ENV CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
     CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_RUNNER=qemu-arm \
     CC_armv7_linux_androideabi=arm-linux-androideabi-gcc \
     CXX_armv7_linux_androideabi=arm-linux-androideabi-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_armv7_linux_androideabi="--sysroot=/android-ndk/sysroot" \
     DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
-    BINDGEN_EXTRA_CLANG_ARGS_ARMV7_LINUX_ANDROIDEABI="--sysroot=/android-ndk/sysroot" \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \

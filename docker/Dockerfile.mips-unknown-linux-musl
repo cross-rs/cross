@@ -27,6 +27,6 @@ ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_LINKER=mips-linux-muslsf-gcc \
     CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_RUNNER=qemu-mips \
     CC_mips_unknown_linux_musl=mips-linux-muslsf-gcc \
     CXX_mips_unknown_linux_musl=mips-linux-muslsf-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_mips_unknown_linux_musl="--sysroot=/usr/local/mips-linux-muslsf" \
     QEMU_LD_PREFIX=/usr/local/mips-linux-muslsf \
-    BINDGEN_EXTRA_CLANG_ARGS_MIPS_UNKNOWN_LINUX_MUSL="--sysroot=/usr/local/mips-linux-muslsf" \
     RUST_TEST_THREADS=1
