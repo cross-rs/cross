@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #707 - Set `BINDGEN_EXTRA_CLANG_ARGS` environment variable to pass sysroot to `rust-bindgen`
 - #696 - bump freebsd to 12.3
 - #629 - Update Android NDK version and API version
 - #681 - Warn on unknown fields and confusable targets
