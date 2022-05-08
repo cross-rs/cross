@@ -154,6 +154,9 @@ jobs:
             - { target: x86_64-linux-android,             os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
             - { target: x86_64-pc-windows-gnu,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
             - { target: i686-pc-windows-gnu,              os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            # Disabled, see rust-lang/rust#85821
+            #- { target: asmjs-unknown-emscripten,         os: ubuntu-latest,                    std: 1, run: 1 }
+            #- { target: wasm32-unknown-emscripten,        os: ubuntu-latest,                    std: 1, run: 1 }
             # Disabled, see #396
             #-{ target: x86_64-unknown-dragonfly,          os: ubuntu-latest,  cpp: 1, dylib: 1 }
             - { target: i686-unknown-freebsd,             os: ubuntu-latest,          dylib: 1, std: 1 }
@@ -162,10 +165,6 @@ jobs:
             # Disabled, see #534
             #-{ target: sparcv9-sun-solaris,              os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
             #-{ target: x86_64-sun-solaris,               os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-            # Disabled, see #634
-            #-{ target: asmjs-unknown-emscripten,         os: ubuntu-latest,                    std: 1, run: 1 }
-            # `cargo run` fails with an assertion error (https://github.com/rust-lang/cargo/issues/4689) on `wasm32-unknown-emscripten`.
-            #-{ target: wasm32-unknown-emscripten,        os: ubuntu-latest,                    std: 1 }
             - { target: thumbv6m-none-eabi,               os: ubuntu-latest,                    std: 1 }
             - { target: thumbv7em-none-eabi,              os: ubuntu-latest,                    std: 1 }
             - { target: thumbv7em-none-eabihf,            os: ubuntu-latest,                    std: 1 }
