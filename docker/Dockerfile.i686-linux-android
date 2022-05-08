@@ -36,6 +36,7 @@ ENV CARGO_TARGET_I686_LINUX_ANDROID_LINKER=i686-linux-android-gcc \
     CC_i686_linux_android=i686-linux-android-gcc \
     CXX_i686_linux_android=i686-linux-android-g++ \
     DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
+    BINDGEN_EXTRA_CLANG_ARGS_I686_LINUX_ANDROID="--sysroot=/android-ndk/sysroot" \
     LIBZ_SYS_STATIC=1 \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \

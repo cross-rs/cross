@@ -30,4 +30,5 @@ ENV CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
     CC_powerpc_unknown_linux_gnu=powerpc-linux-gnu-gcc \
     CXX_powerpc_unknown_linux_gnu=powerpc-linux-gnu-g++ \
     QEMU_LD_PREFIX=/usr/powerpc-linux-gnu \
+    BINDGEN_EXTRA_CLANG_ARGS_POWERPC_UNKNOWN_LINUX_GNU="--sysroot=/usr/powerpc-linux-gnu" \
     RUST_TEST_THREADS=1

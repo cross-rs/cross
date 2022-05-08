@@ -24,4 +24,5 @@ ENV CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc \
     CC_riscv64gc_unknown_linux_gnu=riscv64-linux-gnu-gcc \
     CXX_riscv64gc_unknown_linux_gnu=riscv64-linux-gnu-g++ \
     QEMU_LD_PREFIX=/usr/riscv64-linux-gnu \
+    BINDGEN_EXTRA_CLANG_ARGS_RISCV64GC_UNKNOWN_LINUX_GNU="--sysroot=/usr/riscv64-linux-gnu" \
     RUST_TEST_THREADS=1

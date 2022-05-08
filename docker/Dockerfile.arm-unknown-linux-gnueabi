@@ -21,4 +21,5 @@ ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
     CC_arm_unknown_linux_gnueabi=arm-linux-gnueabi-gcc \
     CXX_arm_unknown_linux_gnueabi=arm-linux-gnueabi-g++ \
     QEMU_LD_PREFIX=/usr/arm-linux-gnueabi \
+    BINDGEN_EXTRA_CLANG_ARGS_ARM_UNKNOWN_LINUX_GNUEABI="--sysroot=/usr/arm-linux-gnueabi" \
     RUST_TEST_THREADS=1

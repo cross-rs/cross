@@ -30,4 +30,5 @@ ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
     CC_mips_unknown_linux_gnu=mips-linux-gnu-gcc \
     CXX_mips_unknown_linux_gnu=mips-linux-gnu-g++ \
     QEMU_LD_PREFIX=/usr/mips-linux-gnu \
+    BINDGEN_EXTRA_CLANG_ARGS_MIPS_UNKNOWN_LINUX_GNU="--sysroot=/usr/mips-linux-gnu" \
     RUST_TEST_THREADS=1
