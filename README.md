@@ -327,7 +327,8 @@ terminate.
 
 [5] libc = newlib
 
-[6] libc = musl, gcc = emcc
+[6] libc = musl, gcc = emcc. The Docker images for these targets are currently not built automatically
+due to a [compiler bug](https://github.com/rust-lang/rust/issues/85821), you will have to build them yourself for now.
 
 ## Debugging
 
