@@ -277,6 +277,7 @@ terminate.
 | `armv7-linux-androideabi` [2]        | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 5.1.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `asmjs-unknown-emscripten` [6]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
 | `i686-unknown-freebsd` [4]           | 12.1   | 6.4.0   |     | N/A   |   ✓    |
@@ -301,7 +302,7 @@ terminate.
 | `thumbv7em-none-eabi` [5]            | 2.2.0  | 5.3.1   |     | N/A   |        |
 | `thumbv7em-none-eabihf` [5]          | 2.2.0  | 5.3.1   |     | N/A   |        |
 | `thumbv7m-none-eabi` [5]             | 2.2.0  | 5.3.1   |     | N/A   |        |
-| `wasm32-unknown-emscripten` [6]      | 1.1.15 | 1.37.13 | ✓   | N/A   |   ✓    |
+| `wasm32-unknown-emscripten` [6]      | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |
 | `x86_64-linux-android` [2]           | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
 | `x86_64-sun-solaris` [4]             | 2.11   | 5.3.0   | ✓   | N/A   |        |
@@ -326,8 +327,8 @@ terminate.
 
 [5] libc = newlib
 
-[6] libc = musl, gcc = emcc; Some projects that use libc may fail due to wrong
-    definitions (will be fixed by https://github.com/rust-lang/libc/pull/610)
+[6] libc = musl, gcc = emcc. The Docker images for these targets are currently not built automatically
+due to a [compiler bug](https://github.com/rust-lang/rust/issues/85821), you will have to build them yourself for now.
 
 ## Debugging
 
