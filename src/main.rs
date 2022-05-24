@@ -411,9 +411,7 @@ fn run() -> Result<ExitStatus> {
 
     eprintln!("Warning: Falling back to `cargo` on the host.");
 
-    // fix for #619: other subcommands have the wrong target dir here.
-    // in the docker host, the target directory is mounted as /target.
-    // if we fallback to the host cargo, need to use the original path.
+    // if we fallback to the host cargo, use the same invocation that was made to cross
     let argv: Vec<String> = env::args().skip(1).collect();
     cargo::run(&argv, verbose)
 }
