@@ -410,7 +410,12 @@ fn run() -> Result<ExitStatus> {
     }
 
     eprintln!("Warning: Falling back to `cargo` on the host.");
-    cargo::run(&args.all, verbose)
+
+    // fix for #619: other subcommands have the wrong target dir here.
+    // in the docker host, the target directory is mounted as /target.
+    // if we fallback to the host cargo, need to use the original path.
+    let argv: Vec<String> = env::args().skip(1).collect();
+    cargo::run(&argv, verbose)
 }
 
 #[derive(PartialEq, Debug)]
