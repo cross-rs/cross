@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #713 - convert relative target directories to absolute paths.
 - #709 - Update Emscripten targets to `emcc` version 3.1.10
 - #707, #708 - Set `BINDGEN_EXTRA_CLANG_ARGS` environment variable to pass sysroot to `rust-bindgen`
 - #696 - bump freebsd to 12.3

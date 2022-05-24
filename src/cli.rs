@@ -2,6 +2,7 @@ use std::str::FromStr;
 use std::{env, path::PathBuf};
 
 use crate::cargo::Subcommand;
+use crate::errors::Result;
 use crate::rustc::TargetList;
 use crate::Target;
 
@@ -15,7 +16,16 @@ pub struct Args {
     pub docker_in_docker: bool,
 }
 
-pub fn parse(target_list: &TargetList) -> Args {
+// Fix for issue #581. target_dir must be absolute.
+fn absolute_path(path: PathBuf) -> Result<PathBuf> {
+    Ok(if path.is_absolute() {
+        path
+    } else {
+        env::current_dir()?.join(path)
+    })
+}
+
+pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut channel = None;
     let mut target = None;
     let mut target_dir = None;
@@ -44,12 +54,12 @@ pub fn parse(target_list: &TargetList) -> Args {
             } else if arg == "--target-dir" {
                 all.push(arg);
                 if let Some(td) = args.next() {
-                    target_dir = Some(PathBuf::from(&td));
+                    target_dir = Some(absolute_path(PathBuf::from(&td))?);
                     all.push("/target".to_string());
                 }
             } else if arg.starts_with("--target-dir=") {
                 if let Some((_, td)) = arg.split_once('=') {
-                    target_dir = Some(PathBuf::from(&td));
+                    target_dir = Some(absolute_path(PathBuf::from(&td))?);
                     all.push("--target-dir=/target".into());
                 }
             } else {
@@ -66,12 +76,12 @@ pub fn parse(target_list: &TargetList) -> Args {
         .map(|s| bool::from_str(&s).unwrap_or_default())
         .unwrap_or_default();
 
-    Args {
+    Ok(Args {
         all,
         subcommand: sc,
         channel,
         target,
         target_dir,
         docker_in_docker,
-    }
+    })
 }

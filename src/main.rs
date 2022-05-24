@@ -263,7 +263,7 @@ pub fn main() -> Result<()> {
 
 fn run() -> Result<ExitStatus> {
     let target_list = rustc::target_list(false)?;
-    let args = cli::parse(&target_list);
+    let args = cli::parse(&target_list)?;
 
     if args.all.iter().any(|a| a == "--version" || a == "-V") && args.subcommand.is_none() {
         println!(
