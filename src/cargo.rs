@@ -15,7 +15,6 @@ pub enum Subcommand {
     Rustc,
     Test,
     Bench,
-    Deb,
     Clippy,
     Metadata,
 }
@@ -44,7 +43,6 @@ impl<'a> From<&'a str> for Subcommand {
             "rustc" => Subcommand::Rustc,
             "t" | "test" => Subcommand::Test,
             "bench" => Subcommand::Bench,
-            "deb" => Subcommand::Deb,
             "clippy" => Subcommand::Clippy,
             "metadata" => Subcommand::Metadata,
             _ => Subcommand::Other,
