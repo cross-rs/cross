@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -e
+
+# arch in the rust target
+arch="${1}"
+shift
+
+# select android abi, and find the shared libc++ library
+android_abi="${arch}-linux-android"
+qarch="${arch}"
+case "${arch}" in
+    arm)
+        android_abi="arm-linux-androideabi"
+        ;;
+    i686)
+        qarch="i386"
+        ;;
+esac
+libdir="/android-ndk/sysroot/usr/lib/${android_abi}"
+
+LD_PRELOAD="${libdir}/libc++_shared.so" exec qemu-"${qarch}" "${@}"
