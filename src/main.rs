@@ -410,7 +410,10 @@ fn run() -> Result<ExitStatus> {
     }
 
     eprintln!("Warning: Falling back to `cargo` on the host.");
-    cargo::run(&args.all, verbose)
+
+    // if we fallback to the host cargo, use the same invocation that was made to cross
+    let argv: Vec<String> = env::args().skip(1).collect();
+    cargo::run(&argv, verbose)
 }
 
 #[derive(PartialEq, Debug)]
