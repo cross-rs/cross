@@ -14,6 +14,7 @@ pub struct Args {
     pub target: Option<Target>,
     pub target_dir: Option<PathBuf>,
     pub docker_in_docker: bool,
+    pub enable_doctests: bool,
 }
 
 // Fix for issue #581. target_dir must be absolute.
@@ -85,6 +86,9 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let docker_in_docker = env::var("CROSS_DOCKER_IN_DOCKER")
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
+    let enable_doctests = env::var("CROSS_UNSTABLE_ENABLE_DOCTESTS")
+        .map(|s| bool_from_envvar(&s))
+        .unwrap_or_default();
 
     Ok(Args {
         all,
@@ -93,5 +97,6 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         target,
         target_dir,
         docker_in_docker,
+        enable_doctests,
     })
 }

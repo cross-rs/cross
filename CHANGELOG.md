@@ -6,6 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - #722 - boolean environment variables are evaluated as truthy or falsey.
+- #721 - add support for running doctests on nightly if `CROSS_UNSTABLE_ENABLE_DOCTESTS=true`.
 - #718 - remove deb subcommand.
 - #714 - use host target directory when falling back to host cargo.
 - #713 - convert relative target directories to absolute paths.
