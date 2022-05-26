@@ -207,6 +207,15 @@ passthrough = [
 ]
 ```
 
+### Unstable Features
+
+Certain unstable features can enable additional functionality useful to 
+cross-compiling. Note that these are unstable, and may be removed at any
+time (particularly if the feature is stabilized or removed), and will
+only be used on a nightly channel.
+
+- `CROSS_UNSTABLE_ENABLE_DOCTESTS=true`: also run doctests.
+
 ### Mounting volumes into the build environment
 
 In addition to passing environment variables, you can also specify environment

@@ -21,6 +21,7 @@ use std::path::PathBuf;
 use std::process::ExitStatus;
 
 use config::Config;
+use rustc_version::Channel;
 use serde::Deserialize;
 
 use self::cargo::{Root, Subcommand};
@@ -314,6 +315,7 @@ fn run() -> Result<ExitStatus> {
                 default_toolchain.to_string()
             };
             sysroot.set_file_name(&toolchain);
+            let mut is_nightly = toolchain.contains("nightly");
 
             let installed_toolchains = rustup::installed_toolchains(verbose)?;
 
@@ -321,13 +323,14 @@ fn run() -> Result<ExitStatus> {
                 rustup::install_toolchain(&toolchain, verbose)?;
             }
             // TODO: Provide a way to pick/match the toolchain version as a consumer of `cross`.
-            if let Some((rustc_version, rustc_commit)) = rustup::rustc_version(&sysroot)? {
+            if let Some((rustc_version, channel, rustc_commit)) = rustup::rustc_version(&sysroot)? {
                 warn_host_version_mismatch(
                     &host_version_meta,
                     &toolchain,
                     &rustc_version,
                     &rustc_commit,
                 )?;
+                is_nightly = channel == Channel::Nightly;
             }
 
             let available_targets = rustup::available_targets(&toolchain, verbose)?;
@@ -358,7 +361,7 @@ fn run() -> Result<ExitStatus> {
                 .map(|sc| sc.needs_interpreter())
                 .unwrap_or(false);
 
-            let filtered_args = if args
+            let mut filtered_args = if args
                 .subcommand
                 .map_or(false, |s| !s.needs_target_in_command())
             {
@@ -383,6 +386,14 @@ fn run() -> Result<ExitStatus> {
             } else {
                 args.all.clone()
             };
+
+            let is_test = args
+                .subcommand
+                .map(|sc| sc == Subcommand::Test)
+                .unwrap_or(false);
+            if is_test && args.enable_doctests && is_nightly {
+                filtered_args.push("-Zdoctest-xcompile".to_string());
+            }
 
             if target.needs_docker() && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
             {

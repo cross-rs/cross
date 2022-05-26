@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::Command;
 
-use rustc_version::Version;
+use rustc_version::{Channel, Version};
 
 use crate::errors::*;
 use crate::extensions::CommandExt;
@@ -101,7 +101,17 @@ pub fn component_is_installed(component: &str, toolchain: &str, verbose: bool) -
         .any(|l| l.starts_with(component) && l.contains("installed")))
 }
 
-pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, String)>> {
+fn rustc_channel(version: &Version) -> Result<Channel> {
+    match version.pre.split('.').next().unwrap() {
+        "" => Ok(Channel::Stable),
+        "dev" => Ok(Channel::Dev),
+        "beta" => Ok(Channel::Beta),
+        "nightly" => Ok(Channel::Nightly),
+        x => eyre::bail!("unknown prerelease tag {x}"),
+    }
+}
+
+pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Channel, String)>> {
     let path = toolchain_path.join("lib/rustlib/multirust-channel-manifest.toml");
     if path.exists() {
         let contents = std::fs::read(&path)
@@ -115,12 +125,11 @@ pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, String)>>
         {
             // Field is `"{version} ({commit} {date})"`
             if let Some((version, meta)) = rust_version.split_once(' ') {
-                return Ok(Some((
-                    Version::parse(version).wrap_err_with(|| {
-                        format!("invalid rust version found in {}", path.display())
-                    })?,
-                    meta.to_owned(),
-                )));
+                let version = Version::parse(version).wrap_err_with(|| {
+                    format!("invalid rust version found in {}", path.display())
+                })?;
+                let channel = rustc_channel(&version)?;
+                return Ok(Some((version, channel, meta.to_owned())));
             }
         }
     }
