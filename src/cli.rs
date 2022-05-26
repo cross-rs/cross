@@ -25,6 +25,16 @@ fn absolute_path(path: PathBuf) -> Result<PathBuf> {
     })
 }
 
+fn bool_from_envvar(envvar: &str) -> bool {
+    if let Ok(value) = bool::from_str(envvar) {
+        value
+    } else if let Ok(value) = i32::from_str(envvar) {
+        value != 0
+    } else {
+        !envvar.is_empty()
+    }
+}
+
 pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut channel = None;
     let mut target = None;
@@ -73,7 +83,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     }
 
     let docker_in_docker = env::var("CROSS_DOCKER_IN_DOCKER")
-        .map(|s| bool::from_str(&s).unwrap_or_default())
+        .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
 
     Ok(Args {
