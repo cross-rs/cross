@@ -6,6 +6,14 @@ set -e
 arch="${1}"
 shift
 
+if [ -n "${CROSS_DEBUG}" ]; then
+    set -x
+fi
+
+if [ "${CROSS_RUNNER}" = "" ]; then
+    CROSS_RUNNER=qemu-user
+fi
+
 # select android abi, and find the shared libc++ library
 android_abi="${arch}-linux-android"
 qarch="${arch}"
@@ -15,8 +23,25 @@ case "${arch}" in
         ;;
     i686)
         qarch="i386"
+        qemu_args=("-cpu" "n270")
+        ;;
+    x86_64)
+        qemu_args=("-cpu" "qemu64,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt")
         ;;
 esac
 libdir="/android-ndk/sysroot/usr/lib/${android_abi}"
 
-LD_PRELOAD="${libdir}/libc++_shared.so" exec qemu-"${qarch}" "${@}"
+export LD_PRELOAD="${libdir}/libc++_shared.so"
+case "${CROSS_RUNNER}" in
+    native)
+        exec "${@}"
+        ;;
+    qemu-user)
+        exec "qemu-${qarch}" "${qemu_args[@]}" "${@}"
+        ;;
+    *)
+        echo "Invalid runner: \"${CROSS_RUNNER}\"";
+        echo "Valid runners are: native and qemu-user"
+        exit 1
+        ;;
+esac
