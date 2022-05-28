@@ -36,6 +36,39 @@ fn bool_from_envvar(envvar: &str) -> bool {
     }
 }
 
+pub fn is_subcommand_list(stdout: &str) -> bool {
+    stdout.starts_with("Installed Commands:")
+}
+
+pub fn group_subcommands(stdout: &str) -> (Vec<&str>, Vec<&str>) {
+    let mut cross = vec![];
+    let mut host = vec![];
+    for line in stdout.lines().skip(1) {
+        // trim all whitespace, then grab the command name
+        let first = line.trim().split_whitespace().next();
+        if let Some(command) = first {
+            match Subcommand::from(command) {
+                Subcommand::Other => host.push(line),
+                _ => cross.push(line),
+            }
+        }
+    }
+
+    (cross, host)
+}
+
+pub fn fmt_subcommands(stdout: &str) {
+    let (cross, host) = group_subcommands(stdout);
+    if !cross.is_empty() {
+        println!("Cross Commands:");
+        cross.iter().for_each(|line| println!("{}", line));
+    }
+    if !host.is_empty() {
+        println!("Host Commands:");
+        host.iter().for_each(|line| println!("{}", line));
+    }
+}
+
 pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut channel = None;
     let mut target = None;
@@ -74,7 +107,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                     all.push("--target-dir=/target".into());
                 }
             } else {
-                if !arg.starts_with('-') && sc.is_none() {
+                if (!arg.starts_with('-') || arg == "--list") && sc.is_none() {
                     sc = Some(Subcommand::from(arg.as_ref()));
                 }
 

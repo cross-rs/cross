@@ -10,6 +10,7 @@ pub trait CommandExt {
     fn run(&mut self, verbose: bool) -> Result<()>;
     fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus>;
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String>;
+    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output>;
 }
 
 impl CommandExt for Command {
@@ -42,14 +43,32 @@ impl CommandExt for Command {
 
     /// Runs the command to completion and returns its stdout
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String> {
-        self.print_verbose(verbose);
-        let out = self
-            .output()
-            .wrap_err_with(|| format!("couldn't execute `{:?}`", self))?;
-
+        let out = self.run_and_get_output(verbose)?;
         self.status_result(out.status)?;
+        out.stdout()
+    }
 
-        String::from_utf8(out.stdout).wrap_err_with(|| format!("`{:?}` output was not UTF-8", self))
+    /// Runs the command to completion and returns the status and its [output](std::process::Output).
+    ///
+    /// # Notes
+    ///
+    /// This command does not check the status.
+    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output> {
+        self.print_verbose(verbose);
+        self.output()
+            .wrap_err_with(|| format!("couldn't execute `{:?}`", self))
+            .map_err(Into::into)
+    }
+}
+
+pub trait OutputExt {
+    fn stdout(&self) -> Result<String>;
+}
+
+impl OutputExt for std::process::Output {
+    fn stdout(&self) -> Result<String> {
+        String::from_utf8(self.stdout.clone())
+            .wrap_err_with(|| format!("`{:?}` output was not UTF-8", self))
     }
 }
 
