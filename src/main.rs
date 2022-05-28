@@ -17,6 +17,7 @@ mod rustc;
 mod rustup;
 
 use std::env;
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
@@ -27,6 +28,7 @@ use serde::Deserialize;
 use self::cargo::{Root, Subcommand};
 use self::cross_toml::CrossToml;
 use self::errors::*;
+use self::extensions::OutputExt;
 use self::rustc::{TargetList, VersionMetaExt};
 
 #[allow(non_camel_case_types)]
@@ -420,11 +422,25 @@ fn run() -> Result<ExitStatus> {
         }
     }
 
-    eprintln!("Warning: Falling back to `cargo` on the host.");
-
     // if we fallback to the host cargo, use the same invocation that was made to cross
     let argv: Vec<String> = env::args().skip(1).collect();
-    cargo::run(&argv, verbose)
+    eprintln!("Warning: Falling back to `cargo` on the host.");
+    match args.subcommand {
+        Some(Subcommand::List) => {
+            // this won't print in order if we have both stdout and stderr.
+            let out = cargo::run_and_get_output(&argv, verbose)?;
+            let stdout = out.stdout()?;
+            if out.status.success() && cli::is_subcommand_list(&stdout) {
+                cli::fmt_subcommands(&stdout);
+            } else {
+                // Not a list subcommand, which can happen with weird edge-cases.
+                print!("{}", stdout);
+                io::stdout().flush().unwrap();
+            }
+            Ok(out.status)
+        }
+        _ => cargo::run(&argv, verbose),
+    }
 }
 
 #[derive(PartialEq, Debug)]

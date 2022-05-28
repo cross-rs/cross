@@ -17,11 +17,12 @@ pub enum Subcommand {
     Bench,
     Clippy,
     Metadata,
+    List,
 }
 
 impl Subcommand {
     pub fn needs_docker(self) -> bool {
-        !matches!(self, Subcommand::Other)
+        !matches!(self, Subcommand::Other | Subcommand::List)
     }
 
     pub fn needs_interpreter(self) -> bool {
@@ -45,6 +46,7 @@ impl<'a> From<&'a str> for Subcommand {
             "bench" => Subcommand::Bench,
             "clippy" => Subcommand::Clippy,
             "metadata" => Subcommand::Metadata,
+            "--list" => Subcommand::List,
             _ => Subcommand::Other,
         }
     }
@@ -87,4 +89,9 @@ pub fn root() -> Result<Option<Root>> {
 /// Pass-through mode
 pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus> {
     Command::new("cargo").args(args).run_and_get_status(verbose)
+}
+
+/// run cargo and get the output, does not check the exit status
+pub fn run_and_get_output(args: &[String], verbose: bool) -> Result<std::process::Output> {
+    Command::new("cargo").args(args).run_and_get_output(verbose)
 }
