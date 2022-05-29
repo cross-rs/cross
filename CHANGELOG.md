@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #727 - add `PKG_CONFIG_PATH` to all `*-linux-gnu` images.
 - #725 - support `CROSS_DEBUG` and `CROSS_RUNNER` on android images.
 - #722 - boolean environment variables are evaluated as truthy or falsey.
 - #721 - add support for running doctests on nightly if `CROSS_UNSTABLE_ENABLE_DOCTESTS=true`.

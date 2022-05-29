@@ -31,4 +31,5 @@ ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
     CXX_s390x_unknown_linux_gnu=s390x-linux-gnu-g++ \
     BINDGEN_EXTRA_CLANG_ARGS_s390x_unknown_linux_gnu="--sysroot=/usr/s390x-linux-gnu" \
     QEMU_LD_PREFIX=/usr/s390x-linux-gnu \
-    RUST_TEST_THREADS=1
+    RUST_TEST_THREADS=1 \
+    PKG_CONFIG_PATH="/usr/lib/s390x-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"

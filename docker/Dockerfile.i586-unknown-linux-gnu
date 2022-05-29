@@ -12,3 +12,5 @@ RUN /xargo.sh
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-multilib
+
+ENV PKG_CONFIG_PATH="/usr/lib/i386-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"
