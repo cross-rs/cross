@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #588 - fix ci: bump openssl version in freebsd again
 - #552 - Added CHANGELOG.md automation
 - #543 - Added environment variables to control the UID and GID in the container
+- #538 - changed default container engine to podman
 - #534 - fix image builds with update of dependencies
 - #524 - docker: Add Nix Store volume support
 - #502 - fix ci: bump openssl version in freebsd
