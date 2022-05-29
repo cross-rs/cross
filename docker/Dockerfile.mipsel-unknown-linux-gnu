@@ -31,4 +31,5 @@ ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc \
     CXX_mipsel_unknown_linux_gnu=mipsel-linux-gnu-g++ \
     BINDGEN_EXTRA_CLANG_ARGS_mipsel_unknown_linux_gnu="--sysroot=/usr/mipsel-linux-gnu" \
     QEMU_LD_PREFIX=/usr/mipsel-linux-gnu \
-    RUST_TEST_THREADS=1
+    RUST_TEST_THREADS=1 \
+    PKG_CONFIG_PATH="/usr/lib/mipsel-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"

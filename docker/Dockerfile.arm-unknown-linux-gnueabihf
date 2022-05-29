@@ -29,4 +29,5 @@ ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_gnueabihf="--sysroot=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/libc" \
     QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/libc \
     LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/libc/lib:/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/lib:/usr/arm-linux-gnueabihf/lib \
-    RUST_TEST_THREADS=1
+    RUST_TEST_THREADS=1 \
+    PKG_CONFIG_PATH="/usr/lib/usr/arm-linux-gnueabihf/pkgconfig/:${PKG_CONFIG_PATH}"

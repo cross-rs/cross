@@ -22,4 +22,5 @@ ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_GNUABI64_LINKER=mips64-linux-gnuabi64-gcc 
     CXX_mips64_unknown_linux_gnuabi64=mips64-linux-gnuabi64-g++ \
     BINDGEN_EXTRA_CLANG_ARGS_mips64_unknown_linux_gnuabi64="--sysroot=/usr/mips64-linux-gnuabi64" \
     QEMU_LD_PREFIX=/usr/mips64-linux-gnuabi64 \
-    RUST_TEST_THREADS=1
+    RUST_TEST_THREADS=1 \
+    PKG_CONFIG_PATH="/usr/lib/mips64-linux-gnuabi64/pkgconfig/:${PKG_CONFIG_PATH}"
