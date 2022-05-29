@@ -1,10 +1,9 @@
-#![allow(unused_doc_comments)]
+pub use color_eyre::Section;
+pub use eyre::Context;
+pub use eyre::Result;
 
-use error_chain::error_chain;
-
-error_chain! {
-  foreign_links {
-    Io(std::io::Error);
-    Which(which::Error);
-  }
+pub fn install_panic_hook() -> Result<()> {
+    color_eyre::config::HookBuilder::new()
+        .display_env_section(false)
+        .install()
 }

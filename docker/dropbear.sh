@@ -7,7 +7,7 @@ set -euo pipefail
 . lib.sh
 
 main() {
-    local version=2020.80
+    local version=2022.82
 
     install_packages \
         autoconf \
@@ -24,7 +24,7 @@ main() {
 
     pushd "${td}"
 
-    curl --retry 3 -sSfL "https://matt.ucc.asn.au/dropbear/dropbear-${version}.tar.bz2" -O
+    curl --retry 3 -sSfL "https://matt.ucc.asn.au/dropbear/releases/dropbear-${version}.tar.bz2" -O
     tar --strip-components=1 -xjf "dropbear-${version}.tar.bz2"
 
     # Remove some unwanted message

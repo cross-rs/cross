@@ -1,0 +1,27 @@
+name: Setup Rust
+description: Setup Rust with specified toolchain, target and components.
+inputs:
+  toolchain:
+    description: 'Toolchain'
+    default: 1.58.1
+    required: true
+  target:
+    description: 'Target'
+    required: true
+  components:
+    description: 'Components'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        target: ${{ inputs.target }}
+        default: true
+        components: ${{ inputs.components }}
+        profile: minimal
+
+    - uses: Swatinem/rust-cache@v1.3.0

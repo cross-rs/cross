@@ -1,9 +1,11 @@
 #[cfg(not(target_os = "windows"))]
-use libc;
+use nix::{
+    errno::{errno, Errno},
+    unistd::{Gid, Uid},
+    Error,
+};
 #[cfg(not(target_os = "windows"))]
 use std::ffi::CStr;
-#[cfg(not(target_os = "windows"))]
-use nix::{errno::{errno, Errno}, unistd::{Gid, Uid}, Error};
 
 #[cfg(target_os = "windows")]
 pub fn group() -> u32 {
@@ -36,7 +38,7 @@ pub fn username() -> Result<Option<String>, String> {
         GetUserNameW(ptr::null_mut(), &mut size);
 
         if size == 0 {
-            return Ok(None)
+            return Ok(None);
         }
 
         let mut username = Vec::with_capacity(size as usize);
@@ -53,7 +55,7 @@ pub fn username() -> Result<Option<String>, String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn username() -> Result<Option<String>, Error>  {
+pub fn username() -> Result<Option<String>, Error> {
     let name = unsafe {
         Errno::clear();
 
@@ -62,9 +64,11 @@ pub fn username() -> Result<Option<String>, Error>  {
         if passwd.is_null() {
             let errno = errno();
 
-            if errno == 0 { return Ok(None) }
+            if errno == 0 {
+                return Ok(None);
+            }
 
-            return Err(Error::Sys(Errno::from_i32(errno)))
+            return Err(Errno::from_i32(errno));
         }
 
         CStr::from_ptr((*passwd).pw_name)

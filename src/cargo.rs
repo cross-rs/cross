@@ -15,47 +15,38 @@ pub enum Subcommand {
     Rustc,
     Test,
     Bench,
-    Deb,
     Clippy,
     Metadata,
+    List,
 }
 
 impl Subcommand {
     pub fn needs_docker(self) -> bool {
-        match self {
-            Subcommand::Other => false,
-            _ => true,
-        }
+        !matches!(self, Subcommand::Other | Subcommand::List)
     }
 
     pub fn needs_interpreter(self) -> bool {
-        match self {
-            Subcommand::Run | Subcommand::Test | Subcommand::Bench => true,
-            _ => false,
-        }
+        matches!(self, Subcommand::Run | Subcommand::Test | Subcommand::Bench)
     }
 
     pub fn needs_target_in_command(self) -> bool {
-        match self {
-            Subcommand::Metadata => false,
-            _ => true,
-        }
+        !matches!(self, Subcommand::Metadata)
     }
 }
 
 impl<'a> From<&'a str> for Subcommand {
     fn from(s: &str) -> Subcommand {
         match s {
-            "build" => Subcommand::Build,
-            "check" => Subcommand::Check,
+            "b" | "build" => Subcommand::Build,
+            "c" | "check" => Subcommand::Check,
             "doc" => Subcommand::Doc,
-            "run" => Subcommand::Run,
+            "r" | "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,
-            "test" => Subcommand::Test,
+            "t" | "test" => Subcommand::Test,
             "bench" => Subcommand::Bench,
-            "deb" => Subcommand::Deb,
             "clippy" => Subcommand::Clippy,
             "metadata" => Subcommand::Metadata,
+            "--list" => Subcommand::List,
             _ => Subcommand::Other,
         }
     }
@@ -74,14 +65,16 @@ impl Root {
 
 /// Cargo project root
 pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
+    let cd = env::current_dir().wrap_err("couldn't get current directory")?;
 
     let mut dir = &*cd;
     loop {
         let toml = dir.join("Cargo.toml");
 
         if fs::metadata(&toml).is_ok() {
-            return Ok(Some(Root { path: dir.to_owned() }));
+            return Ok(Some(Root {
+                path: dir.to_owned(),
+            }));
         }
 
         match dir.parent() {
@@ -96,4 +89,9 @@ pub fn root() -> Result<Option<Root>> {
 /// Pass-through mode
 pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus> {
     Command::new("cargo").args(args).run_and_get_status(verbose)
+}
+
+/// run cargo and get the output, does not check the exit status
+pub fn run_and_get_output(args: &[String], verbose: bool) -> Result<std::process::Output> {
+    Command::new("cargo").args(args).run_and_get_output(verbose)
 }

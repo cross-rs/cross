@@ -1,4 +1,5 @@
 FROM ubuntu:16.04
+ARG DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -9,7 +10,7 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-RUN apt-get install --assume-yes --no-install-recommends \
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-s390x-linux-gnu \
     libc6-dev-s390x-cross
 
@@ -28,5 +29,6 @@ ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
     CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner s390x" \
     CC_s390x_unknown_linux_gnu=s390x-linux-gnu-gcc \
     CXX_s390x_unknown_linux_gnu=s390x-linux-gnu-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_s390x_unknown_linux_gnu="--sysroot=/usr/s390x-linux-gnu" \
     QEMU_LD_PREFIX=/usr/s390x-linux-gnu \
     RUST_TEST_THREADS=1

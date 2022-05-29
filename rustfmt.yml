@@ -1,0 +1,9 @@
+condense_wildcard_suffixes = true
+brace_style = "PreferSameLine"
+fn_single_line = true
+where_single_line = true
+use_field_init_shorthand = true
+reorder_impl_items = true
+edition = "2018"
+newline_style = "Unix"
+format_code_in_doc_comments = true

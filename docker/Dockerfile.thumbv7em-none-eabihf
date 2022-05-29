@@ -1,4 +1,5 @@
 FROM ubuntu:16.04
+ARG DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -10,7 +11,7 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 COPY qemu.sh /
-RUN apt-get install --assume-yes --no-install-recommends \
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     gcc-arm-none-eabi \
     libnewlib-arm-none-eabi && \
     /qemu.sh arm

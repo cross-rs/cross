@@ -6,7 +6,7 @@ set -euo pipefail
 main() {
     # arch in the rust target
     local arch="${1}" \
-          kversion=4.19.0-11
+          kversion=4.19.0-20
 
     local debsource="deb http://http.debian.net/debian/ buster main"
     debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
@@ -40,7 +40,8 @@ main() {
         powerpc)
             # there is no buster powerpc port, so we use jessie
             # use a more recent kernel from backports
-            kernel=4.9.0-0.bpo.6-powerpc
+            kversion='4.9.0-0.bpo.6'
+            kernel="${kversion}-powerpc"
             debsource="deb http://archive.debian.org/debian jessie main"
             debsource="${debsource}\ndeb http://archive.debian.org/debian jessie-backports main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
@@ -57,7 +58,8 @@ main() {
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kernel='*-powerpc64'
+            kversion='5.*'
+            kernel="${kversion}-powerpc64"
             libgcc="libgcc-s1"
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
@@ -123,12 +125,15 @@ main() {
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10}.asc' -O
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10}-security.asc' -O
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10}.asc' -O
-    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021}.key' -O
+    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022}.key' -O
 
     for key in *.asc *.key; do
       apt-key add "${key}"
       rm "${key}"
     done
+
+    # allow apt-get to retry downloads
+    echo 'APT::Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
 
     apt-get update
 
@@ -162,10 +167,11 @@ main() {
 
     # initrd
     mkdir -p "${root}/modules"
-    cp \
+    cp -v \
         "${root}/lib/modules"/*/kernel/drivers/net/net_failover.ko \
         "${root}/lib/modules"/*/kernel/drivers/net/virtio_net.ko \
         "${root}/lib/modules"/*/kernel/drivers/virtio/* \
+        "${root}/lib/modules"/*/kernel/fs/netfs/netfs.ko \
         "${root}/lib/modules"/*/kernel/fs/9p/9p.ko \
         "${root}/lib/modules"/*/kernel/fs/fscache/fscache.ko \
         "${root}/lib/modules"/*/kernel/net/9p/9pnet.ko \
@@ -233,8 +239,11 @@ insmod /modules/net_failover.ko || true
 insmod /modules/virtio.ko || true
 insmod /modules/virtio_ring.ko || true
 insmod /modules/virtio_mmio.ko || true
+insmod /modules/virtio_pci_legacy_dev.ko || true
+insmod /modules/virtio_pci_modern_dev.ko || true
 insmod /modules/virtio_pci.ko || true
 insmod /modules/virtio_net.ko || true
+insmod /modules/netfs.ko || true
 insmod /modules/fscache.ko
 insmod /modules/9pnet.ko
 insmod /modules/9pnet_virtio.ko || true

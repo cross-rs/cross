@@ -1,4 +1,5 @@
 FROM ubuntu:16.04
+ARG DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -14,4 +15,5 @@ RUN /netbsd.sh
 
 ENV CARGO_TARGET_X86_64_UNKNOWN_NETBSD_LINKER=x86_64-unknown-netbsd-gcc \
     CC_x86_64_unknown_netbsd=x86_64-unknown-netbsd-gcc \
-    CXX_x86_64_unknown_netbsd=x86_64-unknown-netbsd-g++
+    CXX_x86_64_unknown_netbsd=x86_64-unknown-netbsd-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_netbsd="--sysroot=/usr/local/x86_64-unknown-netbsd"

@@ -1,8 +1,11 @@
+use std::path::Path;
 use std::process::Command;
 
-use crate::Target;
+use rustc_version::{Channel, Version};
+
 use crate::errors::*;
 use crate::extensions::CommandExt;
+use crate::Target;
 
 #[derive(Debug)]
 pub struct AvailableTargets {
@@ -28,7 +31,15 @@ pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
         .args(&["toolchain", "list"])
         .run_and_get_stdout(verbose)?;
 
-    Ok(out.lines().map(|l| l.replace(" (default)", "").replace(" (override)", "").trim().to_owned()).collect())
+    Ok(out
+        .lines()
+        .map(|l| {
+            l.replace(" (default)", "")
+                .replace(" (override)", "")
+                .trim()
+                .to_owned()
+        })
+        .collect())
 }
 
 pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTargets> {
@@ -52,14 +63,18 @@ pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTarg
         }
     }
 
-    Ok(AvailableTargets { default, installed, not_installed })
+    Ok(AvailableTargets {
+        default,
+        installed,
+        not_installed,
+    })
 }
 
 pub fn install_toolchain(toolchain: &str, verbose: bool) -> Result<()> {
     Command::new("rustup")
-        .args(&["toolchain", "add", toolchain])
+        .args(&["toolchain", "add", toolchain, "--profile", "minimal"])
         .run(verbose)
-        .chain_err(|| format!("couldn't install toolchain `{}`", toolchain))
+        .wrap_err_with(|| format!("couldn't install toolchain `{toolchain}`"))
 }
 
 pub fn install(target: &Target, toolchain: &str, verbose: bool) -> Result<()> {
@@ -68,14 +83,14 @@ pub fn install(target: &Target, toolchain: &str, verbose: bool) -> Result<()> {
     Command::new("rustup")
         .args(&["target", "add", target, "--toolchain", toolchain])
         .run(verbose)
-        .chain_err(|| format!("couldn't install `std` for {}", target))
+        .wrap_err_with(|| format!("couldn't install `std` for {target}"))
 }
 
 pub fn install_component(component: &str, toolchain: &str, verbose: bool) -> Result<()> {
     Command::new("rustup")
         .args(&["component", "add", component, "--toolchain", toolchain])
         .run(verbose)
-        .chain_err(|| format!("couldn't install the `{}` component", component))
+        .wrap_err_with(|| format!("couldn't install the `{component}` component"))
 }
 
 pub fn component_is_installed(component: &str, toolchain: &str, verbose: bool) -> Result<bool> {
@@ -84,4 +99,39 @@ pub fn component_is_installed(component: &str, toolchain: &str, verbose: bool) -
         .run_and_get_stdout(verbose)?
         .lines()
         .any(|l| l.starts_with(component) && l.contains("installed")))
+}
+
+fn rustc_channel(version: &Version) -> Result<Channel> {
+    match version.pre.split('.').next().unwrap() {
+        "" => Ok(Channel::Stable),
+        "dev" => Ok(Channel::Dev),
+        "beta" => Ok(Channel::Beta),
+        "nightly" => Ok(Channel::Nightly),
+        x => eyre::bail!("unknown prerelease tag {x}"),
+    }
+}
+
+pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Channel, String)>> {
+    let path = toolchain_path.join("lib/rustlib/multirust-channel-manifest.toml");
+    if path.exists() {
+        let contents = std::fs::read(&path)
+            .wrap_err_with(|| format!("couldn't open file `{}`", path.display()))?;
+        let manifest: toml::value::Table = toml::from_slice(&contents)?;
+        if let Some(rust_version) = manifest
+            .get("pkg")
+            .and_then(|pkg| pkg.get("rust"))
+            .and_then(|rust| rust.get("version"))
+            .and_then(|version| version.as_str())
+        {
+            // Field is `"{version} ({commit} {date})"`
+            if let Some((version, meta)) = rust_version.split_once(' ') {
+                let version = Version::parse(version).wrap_err_with(|| {
+                    format!("invalid rust version found in {}", path.display())
+                })?;
+                let channel = rustc_channel(&version)?;
+                return Ok(Some((version, channel, meta.to_owned())));
+            }
+        }
+    }
+    Ok(None)
 }
