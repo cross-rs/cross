@@ -10,6 +10,7 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
+COPY freebsd-common.sh /
 COPY freebsd.sh /
 RUN /freebsd.sh i686
 
