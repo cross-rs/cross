@@ -3,13 +3,52 @@
 set -x
 set -euo pipefail
 
-main() {
-    local arch="${1}"
+export ARCH="${1}"
+# shellcheck disable=SC1091
+. freebsd-common.sh
 
-    local base_release=12.3 \
-          binutils=2.32 \
+max_freebsd() {
+    local best=
+    local minor=0
+    local version=
+    local release_major=
+    local release_minor=
+    for release in "${@}"; do
+        version=$(echo "${release}" | cut -d '-' -f 1)
+        release_major=$(echo "${version}"| cut -d '.' -f 1)
+        release_minor=$(echo "${version}"| cut -d '.' -f 2)
+        if [ "${release_major}" == "${BSD_MAJOR}" ] && [ "${release_minor}" -gt "${minor}" ]; then
+            best="${release}"
+            minor="${release_minor}"
+        fi
+    done
+    if [[ -z "$best" ]]; then
+        echo "Could not find best release for FreeBSD ${BSD_MAJOR}." 1>&2
+        exit 1
+    fi
+    echo "${best}"
+}
+
+latest_freebsd() {
+    local dirs
+    local releases
+    local max_release
+
+    dirs=$(curl --silent --list-only "${BSD_HOME}/${BSD_ARCH}/" | grep RELEASE)
+    read -r -a releases <<< "${dirs[@]}"
+    max_release=$(max_freebsd "${releases[@]}")
+
+    echo "${max_release//-RELEASE/}"
+}
+
+base_release="$(latest_freebsd)"
+bsd_ftp="${BSD_HOME}/${BSD_ARCH}/${base_release}-RELEASE"
+bsd_http="http://${bsd_ftp}"
+
+main() {
+    local binutils=2.32 \
           gcc=6.4.0 \
-          target="${arch}-unknown-freebsd12"
+          target="${ARCH}-unknown-freebsd${BSD_MAJOR}"
 
     local dependencies=(
         ca-certificates
@@ -47,17 +86,7 @@ main() {
     ./contrib/download_prerequisites
     cd ..
 
-    local bsd_arch=
-    case "${arch}" in
-        x86_64)
-            bsd_arch=amd64
-            ;;
-        i686)
-            bsd_arch=i386
-            ;;
-    esac
-
-    curl --retry 3 -sSfL "http://ftp.freebsd.org/pub/FreeBSD/releases/${bsd_arch}/${base_release}-RELEASE/base.txz" -O
+    curl --retry 3 -sSfL "${bsd_http}/base.txz" -O
     tar -C "${td}/freebsd" -xJf base.txz ./usr/include ./usr/lib ./lib
 
     cd binutils-build
@@ -118,6 +147,10 @@ main() {
     if (( ${#purge_list[@]} )); then
       apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
     fi
+
+    # store the version info for the FreeBSD release
+    bsd_revision=$(curl --retry 3 -sSfL "${bsd_http}/REVISION")
+    echo "${base_release} (${bsd_revision})" > /opt/freebsd-version
 
     rm -rf "${td}"
     rm "${0}"
