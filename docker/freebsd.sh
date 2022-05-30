@@ -6,6 +6,8 @@ set -euo pipefail
 export ARCH="${1}"
 # shellcheck disable=SC1091
 . freebsd-common.sh
+# shellcheck disable=SC1091
+. lib.sh
 
 max_freebsd() {
     local best=
@@ -50,23 +52,12 @@ main() {
           gcc=6.4.0 \
           target="${ARCH}-unknown-freebsd${BSD_MAJOR}"
 
-    local dependencies=(
-        ca-certificates
-        curl
-        g++
-        make
-        wget
+    install_packages ca-certificates \
+        curl \
+        g++ \
+        make \
+        wget \
         xz-utils
-    )
-
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --no-install-recommends --assume-yes "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
 
     local td
     td="$(mktemp -d)"
@@ -144,9 +135,7 @@ main() {
     # clean up
     popd
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     # store the version info for the FreeBSD release
     bsd_revision=$(curl --retry 3 -sSfL "${bsd_http}/REVISION")

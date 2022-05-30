@@ -1,6 +1,7 @@
 FROM ubuntu:16.04
 ARG DEBIAN_FRONTEND=noninteractive
 
+COPY lib.sh /
 COPY linux-image.sh /
 RUN /linux-image.sh x86_64
 

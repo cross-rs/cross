@@ -3,6 +3,9 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 main() {
     local arch="${1}"
 
@@ -10,26 +13,15 @@ main() {
           gcc=6.4.0 \
           target="${arch}-sun-solaris2.10"
 
-    local dependencies=(
-        bzip2
-        ca-certificates
-        curl
-        g++
-        make
-        patch
-        software-properties-common
-        wget
+    install_packages bzip2 \
+        ca-certificates \
+        curl \
+        g++ \
+        make \
+        patch \
+        software-properties-common \
+        wget \
         xz-utils
-    )
-
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
 
     local td
     td="$(mktemp -d)"
@@ -134,9 +126,7 @@ EOF
     # clean up
     popd
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     rm -rf "${td}"
     rm "${0}"

@@ -3,23 +3,15 @@
 set -x
 set -euo pipefail
 
-main() {
-    local dependencies=(
-        ca-certificates
-        curl
-        git
-        libxml2
-        python
-    )
+# shellcheck disable=SC1091
+. lib.sh
 
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --no-install-recommends --assume-yes "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+main() {
+    install_packages ca-certificates \
+        curl \
+        git \
+        libxml2 \
+        python
 
     cd /
     git clone https://github.com/emscripten-core/emsdk.git /emsdk-portable
@@ -40,9 +32,7 @@ main() {
     # Make emsdk usable by any user
     chmod a+rwX -R "${EMSDK}"
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     rm "${0}"
 }

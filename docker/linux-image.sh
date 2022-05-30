@@ -3,6 +3,9 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 main() {
     # arch in the rust target
     local arch="${1}" \
@@ -94,22 +97,11 @@ main() {
             ;;
     esac
 
-    local dependencies=(
-        ca-certificates
-        curl
-        cpio
-        sharutils
+    install_packages ca-certificates \
+        curl \
+        cpio \
+        sharutils \
         gnupg
-    )
-
-    local purge_list=()
-    apt-get update
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}" >/dev/null 2>/dev/null; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
 
     # Download packages
     mv /etc/apt/sources.list /etc/apt/sources.list.bak
@@ -274,9 +266,7 @@ EOF
     dpkg --remove-architecture "${arch}" || true
     apt-get update
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     ls -lh /qemu
 }
