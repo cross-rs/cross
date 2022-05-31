@@ -19,7 +19,7 @@ body:
             Write a description of your issue. Include error messages if there are any.
         placeholder: |
             Examples:
-              - cross no longer compiles my project after version upgrade.
+              - cross no longer compiles my project after upgrade.
               - I have trouble doing X.
               - Feature X has stopped working for me.
 
@@ -80,39 +80,36 @@ body:
         - x86_64-unknown-netbsd
         - other (specify in description)
 
-  - type: dropdown
+  - type: checkboxes
     id: host-system
     attributes:
       label: Which operating system is the host (e.g computer cross is on) running?
       description: You may select more than one or none if N/A.
-      multiple: true
       options:
-        - macOS
-        - Windows
-        - Linux / BSD
-        - other OS (specify in description)
+        - label: macOS
+        - label: Windows
+        - label: Linux / BSD
+        - label: other OS (specify in description)
   
-  - type: dropdown
+  - type: checkboxes
     id: host-arch
     attributes:
       label: What architecture is the host?
       description: You may select more than one or none if N/A.
-      multiple: true
       options:
-        - x86_64 / AMD64
-        - arm32
-        - arm64 (including Mac M1)
+        - label: x86_64 / AMD64
+        - label: arm32
+        - label: arm64 (including Mac M1)
 
-  - type: dropdown
+  - type: checkboxes
     id: container-engine
     attributes:
       label: What container engine is cross using?
       description: You may select more than one or none if N/A.
-      multiple: true
       options:
-        - docker
-        - podman
-        - other container engine (specify in description)
+        - label: docker
+        - label: podman
+        - label: other container engine (specify in description)
 
   - type: input
     id: cross-version
