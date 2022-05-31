@@ -126,8 +126,12 @@ body:
       label: Example
       description: Please provide a short, complete example of the issue if possible.
       placeholder: |
-          `git clone https://github.com/ghost/my_mcve`
-          `cross build --target x86_65-unknown-linux-gnu`
+          ```sh
+          git clone https://github.com/ghost/my_mcve
+          cross build --target x86_65-unknown-linux-gnu
+          ```
+
+          Gives the error message `could not discover target specification`
 
   - type: textarea
     id: additional
