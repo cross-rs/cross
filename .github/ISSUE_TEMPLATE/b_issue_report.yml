@@ -1,0 +1,131 @@
+name: Issue report
+description: Report something that is broken, missing or wrong.
+
+body:
+  - type: checkboxes
+    id: acknowledgments
+    attributes:
+        label: Checklist
+        options:
+            - label: I've looked through the [issues and pull requests](https://github.com/cross-rs/cross/issues?q=) for similar reports
+              required: true
+  - type: textarea
+    id: description
+    validations:
+        required: true
+    attributes:
+        label: Describe your issue
+        description: |
+            Write a description of your issue. Include error messages if there are any.
+        placeholder: |
+            Examples:
+              - cross no longer compiles my project after version upgrade.
+              - I have trouble doing X.
+              - Feature X has stopped working for me.
+
+  - type: dropdown
+    id: target
+    attributes:
+      label: What target(s) are you cross-compiling for?
+      description: You may select more than one or none if this is not applicable (N/A).
+      multiple: true
+      options:
+        - aarch64-linux-android
+        - aarch64-unknown-linux-gnu
+        - aarch64-unknown-linux-musl
+        - arm-linux-androideabi
+        - arm-unknown-linux-gnueabi
+        - arm-unknown-linux-gnueabihf
+        - arm-unknown-linux-musleabi
+        - arm-unknown-linux-musleabihf
+        - armv5te-unknown-linux-gnueabi
+        - armv5te-unknown-linux-musleabi
+        - armv7-linux-androideabi
+        - armv7-unknown-linux-gnueabihf
+        - armv7-unknown-linux-musleabihf
+        - asmjs-unknown-emscripten
+        - i586-unknown-linux-gnu
+        - i586-unknown-linux-musl
+        - i686-linux-android
+        - i686-pc-windows-gnu
+        - i686-unknown-freebsd
+        - i686-unknown-linux-gnu
+        - i686-unknown-linux-musl
+        - mips64el-unknown-linux-gnuabi64
+        - mips64el-unknown-linux-muslabi64
+        - mips64-unknown-linux-gnuabi64
+        - mips64-unknown-linux-muslabi64
+        - mipsel-unknown-linux-gnu
+        - mipsel-unknown-linux-musl
+        - mips-unknown-linux-gnu
+        - mips-unknown-linux-musl
+        - powerpc64le-unknown-linux-gnu
+        - powerpc64-unknown-linux-gnu
+        - powerpc-unknown-linux-gnu
+        - riscv64gc-unknown-linux-gnu
+        - s390x-unknown-linux-gnu
+        - sparc64-unknown-linux-gnu
+        - sparcv9-sun-solaris
+        - thumbv6m-none-eabi
+        - thumbv7em-none-eabi
+        - thumbv7em-none-eabihf
+        - thumbv7m-none-eabi
+        - wasm32-unknown-emscripten
+        - x86_64-linux-android
+        - x86_64-pc-windows-gnu
+        - x86_64-sun-solaris
+        - x86_64-unknown-freebsd
+        - x86_64-unknown-linux-gnu
+        - x86_64-unknown-linux-musl
+        - x86_64-unknown-netbsd
+        - other (specify in description)
+
+  - type: dropdown
+    id: host-system
+    attributes:
+      label: Which operating system is the host (e.g computer cross is on) running?
+      description: You may select more than one or none if N/A.
+      multiple: true
+      options:
+        - macOS
+        - Windows
+        - Linux / BSD
+        - other OS (specify in description)
+  
+  - type: dropdown
+    id: host-arch
+    attributes:
+      label: What architecture is the host?
+      description: You may select more than one or none if N/A.
+      multiple: true
+      options:
+        - x86_64 / AMD64
+        - arm32
+        - arm64 (including Mac M1)
+
+  - type: dropdown
+    id: container-engine
+    attributes:
+      label: What container engine is cross using?
+      description: You may select more than one or none if N/A.
+      multiple: true
+      options:
+        - docker
+        - podman
+        - other container engine (specify in description)
+
+  - type: input
+    id: cross-version
+    validations:
+        required: true
+    attributes:
+        label: cross version
+        description: The version of cross given with `cross -V` or `cross --version`
+        placeholder: cross 0.4.2 (c8df353 2025-01-01)
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information / notes
+      description: Provide any information you think is relevant to the issue
+      placeholder: It builds on `asmjs-unknown-emscripten`

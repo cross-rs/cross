@@ -1,0 +1,37 @@
+name: Feature Request
+description: Leave a feature request if you have a suggestion to improve cross and/or the rust ecosystem
+labels: ["feature-request"]
+
+body:
+  - type: checkboxes
+    id: acknowledgments
+    attributes:
+        label: Checklist
+        options:
+            - label: I've looked through the [issues and pull requests](https://github.com/cross-rs/cross/issues?q=) for similar request
+              required: true
+            - label: This feature could be solved with a [custom docker image](https://github.com/cross-rs/cross#custom-docker-images) (optional)
+  - type: textarea
+    id: description
+    validations:
+        required: true
+    attributes:
+        label: Describe your request
+        description: |
+            Write a description of what your feature would do.
+            If you have an idea how to solve this, feel free to leave a comment on the feature request after creating it.
+            
+            If you have tried solved this but couldn't, explain what you tried and how or why it didn't work. We want to help!
+        placeholder: |
+            Examples:
+              - cross should be able to do X.
+              - Add more emojis to the error printing.
+              - Implement support for cargo feature X.
+  - type: textarea
+    id: motivation
+    validations:
+        required: false
+    attributes:
+        label: Describe why this would be a good inclusion for `cross`
+        description: |
+            Why should this be added?
