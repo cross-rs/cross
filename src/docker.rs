@@ -18,8 +18,10 @@ const PODMAN: &str = "podman";
 fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
     if let Ok(ce) = env::var("CROSS_CONTAINER_ENGINE") {
         which::which(ce)
-    } else {
+    } else if cfg!(target_os = "linux") {
         which::which(PODMAN).or_else(|_| which::which(DOCKER))
+    } else {
+        which::which(DOCKER).or_else(|_| which::which(PODMAN))
     }
 }
 
