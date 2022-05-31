@@ -121,6 +121,15 @@ body:
         placeholder: cross 0.4.2 (c8df353 2025-01-01)
 
   - type: textarea
+    id: mcve
+    attributes:
+      label: Example
+      description: Please provide a short, complete example of the issue if possible.
+      placeholder: |
+          `git clone https://github.com/ghost/my_mcve`
+          `cross build --target x86_65-unknown-linux-gnu`
+
+  - type: textarea
     id: additional
     attributes:
       label: Additional information / notes
