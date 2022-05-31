@@ -10,24 +10,19 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-RUN mkdir /usr/arm-linux-gnueabihf \
- && cd /usr/arm-linux-gnueabihf \
- && export TOOLCHAIN_VERSION=8.3-2019.03 \
- && curl --retry 3 -sSfL https://developer.arm.com/-/media/Files/downloads/gnu-a/${TOOLCHAIN_VERSION}/binrel/gcc-arm-${TOOLCHAIN_VERSION}-x86_64-arm-linux-gnueabihf.tar.xz -O \
- && tar --strip-components 1 -xJf gcc-arm-${TOOLCHAIN_VERSION}-x86_64-arm-linux-gnueabihf.tar.xz \
- && rm gcc-arm-${TOOLCHAIN_VERSION}-x86_64-arm-linux-gnueabihf.tar.xz
+COPY crosstool-ng.sh /
+COPY crosstool-config/arm-unknown-linux-gnueabihf.config /
+RUN /crosstool-ng.sh arm-unknown-linux-gnueabihf.config 5
 
-ENV PATH /usr/arm-linux-gnueabihf/bin:$PATH
+ENV PATH /x-tools/arm-unknown-linux-gnueabihf/bin/:$PATH
 
 COPY qemu.sh /
 RUN /qemu.sh arm
 
-ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
+ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-unknown-linux-gnueabihf-gcc \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER=qemu-arm \
-    CC_arm_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc \
-    CXX_arm_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_gnueabihf="--sysroot=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/libc" \
-    QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/libc \
-    LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/libc/lib:/usr/arm-linux-gnueabihf/arm-linux-gnueabihf/lib:/usr/arm-linux-gnueabihf/lib \
-    RUST_TEST_THREADS=1 \
-    PKG_CONFIG_PATH="/usr/lib/usr/arm-linux-gnueabihf/pkgconfig/:${PKG_CONFIG_PATH}"
+    CC_arm_unknown_linux_gnueabihf=arm-unknown-linux-gnueabihf-gcc \
+    CXX_arm_unknown_linux_gnueabihf=arm-unknown-linux-gnueabihf-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_gnueabihf="--sysroot=/x-tools/arm-unknown-linux-gnueabihf/arm-unknown-linux-gnueabihf/sysroot/" \
+    QEMU_LD_PREFIX=/x-tools/arm-unknown-linux-gnueabihf/arm-unknown-linux-gnueabihf/sysroot/ \
+    RUST_TEST_THREADS=1
