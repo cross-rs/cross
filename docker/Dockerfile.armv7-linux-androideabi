@@ -22,6 +22,8 @@ RUN /qemu.sh arm
 
 RUN cp /android-ndk/sysroot/usr/lib/arm-linux-androideabi/28/libz.so /system/lib/
 
+COPY android-runner /
+
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
