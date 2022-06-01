@@ -11,11 +11,10 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 RUN dpkg --add-architecture i386 && apt-get update && \
-    apt-get install --assume-yes --no-install-recommends \
-        wine-stable \
-        wine64 \
-        wine32 \
-        libz-mingw-w64-dev
+    apt-get install --assume-yes --no-install-recommends libz-mingw-w64-dev
+
+COPY wine.sh /
+RUN /wine.sh
 
 # Build mingw tools using dwarf exceptions
 COPY mingw.sh /
