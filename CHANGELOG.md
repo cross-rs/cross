@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #377 - update WINE versions to 7.0.
 - #734 - patch `arm-unknown-linux-gnueabihf` to build for ARMv6, and add architecture for crosstool-ng-based images.
 - #730 - make FreeBSD builds more resilient.
 - #727 - add `PKG_CONFIG_PATH` to all `*-linux-gnu` images.
