@@ -75,14 +75,14 @@ main() {
         # work with any bash functions: must call a command.
         timeout "${timeout}" \
             su "${username}" -c \
-            "STOP=${step} CT_DEBUG_CT_SAVE_STEPS=1 ${crosstooldir}/bin/ct-ng build.${nproc}"
+            "STOP=${step} CT_DEBUG_CT_SAVE_STEPS=1 ${crosstooldir}/bin/ct-ng build.${nproc} &> /dev/null"
     }
 
     while download; [ $? -eq 124 ]; do
         # Indicates a timeout, repeat the command.
         sleep "${sleep}"
     done
-    su "${username}" -c "CT_DEBUG_CT_SAVE_STEPS=1 ${crosstooldir}/bin/ct-ng build.${nproc}"
+    su "${username}" -c "CT_DEBUG_CT_SAVE_STEPS=1 ${crosstooldir}/bin/ct-ng build.${nproc} &> /dev/null"
 
     popd
 
