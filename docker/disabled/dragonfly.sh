@@ -3,32 +3,24 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 main() {
     local binutils=2.25.1 \
           dragonfly=4.6.1_REL \
           gcc=5.3.0 \
           target=x86_64-unknown-dragonfly
 
-    local dependencies=(
-        bsdtar
-        bzip2
-        ca-certificates
-        curl
-        g++
-        make
-        patch
-        wget
+    install_packages bsdtar \
+        bzip2 \
+        ca-certificates \
+        curl \
+        g++ \
+        make \
+        patch \
+        wget \
         xz-utils
-    )
-
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --no-install-recommends --assume-yes "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
 
     local td
     td="$(mktemp -d)"
@@ -140,9 +132,7 @@ EOF
     # clean up
     popd
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     rm -rf "${td}"
     rm "${0}"

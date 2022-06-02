@@ -3,26 +3,16 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 NDK_URL=https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip
 
 main() {
     local arch="${1}" \
           api="${2}"
 
-    local dependencies=(
-        curl
-        unzip
-        python
-    )
-
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+    install_packages curl unzip python
 
     local td
     td="$(mktemp -d)"
@@ -37,9 +27,7 @@ main() {
       --arch "${arch}" \
       --api "${api}"
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     popd
     popd

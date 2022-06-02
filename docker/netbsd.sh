@@ -3,31 +3,23 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 main() {
     local binutils=2.36.1 \
           gcc=9.4.0 \
           target=x86_64-unknown-netbsd
 
-    local dependencies=(
-        bzip2
-        ca-certificates
-        curl
-        g++
-        make
-        patch
-        texinfo
-        wget
+    install_packages bzip2 \
+        ca-certificates \
+        curl \
+        g++ \
+        make \
+        patch \
+        texinfo \
+        wget \
         xz-utils
-    )
-
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
 
     local td
     td="$(mktemp -d)"
@@ -117,9 +109,7 @@ main() {
     # clean up
     popd
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     rm -rf "${td}"
     rm "${0}"

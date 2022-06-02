@@ -3,26 +3,14 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 main() {
     local arch="${1}"
     local td
     td="$(mktemp -d)"
     pushd "${td}"
-
-    local dependencies=(
-        ca-certificates
-        curl
-        gcc-multilib
-        git
-        g++-multilib
-        libncurses5
-        libtinfo5
-        make
-        openssh-client
-        python
-        python3
-        xz-utils
-    )
 
     # fake java and javac, it is not necessary for what we build, but the build
     # script ask for it
@@ -46,14 +34,19 @@ EOF
     mkdir /tmp/lib/
     touch /tmp/lib/tools.jar
 
-    apt-get update
-    local purge_list=(default-jre)
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+    install_packages ca-certificates \
+        curl \
+        gcc-multilib \
+        git \
+        g++-multilib \
+        libncurses5 \
+        libtinfo5 \
+        make \
+        openssh-client \
+        python \
+        python3 \
+        xz-utils
+    purge_list+=(default-jre)
 
     curl --retry 3 -sSfL https://storage.googleapis.com/git-repo-downloads/repo -O
     chmod +x repo
@@ -160,9 +153,7 @@ EOF
 
     echo "127.0.0.1 localhost" > /system/etc/hosts
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --auto-remove -y "${purge_list[@]}"
-    fi
+    purge_packages
 
     popd
 
