@@ -277,14 +277,16 @@ terminate.
 | `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
 | `aarch64-unknown-linux-musl`         | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `arm-linux-androideabi` [2]          | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabi`          | 2.17   | 8.3.0   | ✓   | 5.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 5.1.0 |   ✓    |
 | `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
 | `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `armv7-linux-androideabi` [2]        | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabi`        | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabi`       | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `asmjs-unknown-emscripten` [6]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | N/A   |   ✓    |

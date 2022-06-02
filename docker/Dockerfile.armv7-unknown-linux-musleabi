@@ -1,0 +1,35 @@
+FROM ubuntu:18.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+COPY qemu.sh /
+RUN /qemu.sh arm
+
+COPY musl.sh /
+RUN /musl.sh \
+    TARGET=arm-linux-musleabi \
+    "COMMON_CONFIG += --with-arch=armv7-a \
+                      --with-float=soft \
+                      --with-mode=thumb \
+                      --with-mode=arm"
+
+# Allows qemu run dynamic linked binaries
+RUN ln -sf \
+    /usr/local/arm-linux-musleabi/lib/libc.so \
+    /usr/local/arm-linux-musleabi/lib/ld-musl-arm.so.1
+
+ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABI_LINKER=arm-linux-musleabi-gcc \
+    CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABI_RUNNER=qemu-arm \
+    CC_armv7_unknown_linux_musleabi=arm-linux-musleabi-gcc \
+    CXX_armv7_unknown_linux_musleabi=arm-linux-musleabi-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_armv7_unknown_linux_musleabi="--sysroot=/usr/local/arm-linux-musleabi" \
+    QEMU_LD_PREFIX=/usr/local/arm-linux-musleabi \
+    RUST_TEST_THREADS=1
