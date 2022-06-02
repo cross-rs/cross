@@ -122,6 +122,7 @@ jobs:
             - { target: aarch64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: arm-unknown-linux-gnueabi,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: arm-unknown-linux-gnueabihf,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: armv7-unknown-linux-gnueabi,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: armv7-unknown-linux-gnueabihf,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: i586-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: i686-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
@@ -142,6 +143,7 @@ jobs:
             - { target: arm-unknown-linux-musleabi,       os: ubuntu-latest,                    std: 1, run: 1 }
             - { target: armv5te-unknown-linux-gnueabi,    os: ubuntu-latest,                    std: 1, run: 1 }
             - { target: armv5te-unknown-linux-musleabi,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: armv7-unknown-linux-musleabi,   os: ubuntu-latest,                    std: 1, run: 1 }
             - { target: armv7-unknown-linux-musleabihf,   os: ubuntu-latest,                    std: 1, run: 1 }
             - { target: i586-unknown-linux-musl,          os: ubuntu-latest,                    std: 1, run: 1 }
             - { target: i686-unknown-linux-musl,          os: ubuntu-latest,                    std: 1, run: 1 }
