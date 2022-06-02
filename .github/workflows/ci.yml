@@ -92,11 +92,26 @@ jobs:
             declare -a "bors_args=(${bors_args})"
           fi
 
-          if [[ "${bors_args[0]-}" == --target ]]; then
-            echo "Only running targets matching '${bors_args[1]}'."
-            matrix="$(
-              target="${bors_args[1]}" yq --output-format json '[.[] | select(.target | test(env(target)))]' <<< "${matrix}"
-            )"
+          targets=()
+          index=0
+          while [[ "${bors_args[$index]-}" == --target ]]; do
+            index=$(expr $index + 1)
+            targets+=("${bors_args[$index]}")
+            index=$(expr $index + 1)
+          done
+
+          selects=()
+          for target in "${targets[@]}"; do
+            selects+=(".target == \"${target}\"")
+          done
+          query=$(printf " or %s" "${selects[@]}")
+          query="${query:4}"
+
+          if [[ "${#targets[@]}" != "0" ]]; then
+            echo "Only running targets matching '${targets[@]}'."
+            matrix=$(
+              yq --output-format json '[.[] | select('"${query}"')]' <<< "${matrix}"
+            )
           else
             echo 'Running all targets.'
             matrix="$(yq --output-format json <<< "${matrix}")"
