@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- #747 - reduced android image sizes.
 - #377 - update WINE versions to 7.0.
 - #734 - patch `arm-unknown-linux-gnueabihf` to build for ARMv6, and add architecture for crosstool-ng-based images.
 - #709 - Update Emscripten targets to `emcc` version 3.1.10
