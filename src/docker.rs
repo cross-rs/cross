@@ -52,6 +52,19 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         .run(verbose)
 }
 
+fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
+    let (key, value) = match var.split_once('=') {
+        Some((key, value)) => (key, Some(value)),
+        _ => (var, None),
+    };
+
+    if key == "CROSS_RUNNER" {
+        bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
+    }
+
+    Ok((key, value))
+}
+
 #[allow(clippy::too_many_arguments)] // TODO: refactor
 pub fn run(
     target: &Target,
@@ -114,19 +127,6 @@ pub fn run(
 
     let mut docker = docker_command("run")?;
 
-    let validate_env_var = |var: &str| -> Result<()> {
-        let var = match var.split_once('=') {
-            Some((key, _)) => key,
-            _ => var,
-        };
-
-        if var == "CROSS_RUNNER" {
-            bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
-        }
-
-        Ok(())
-    };
-
     for ref var in config.env_passthrough(target)? {
         validate_env_var(var)?;
 
@@ -136,9 +136,13 @@ pub fn run(
     }
     let mut env_volumes = false;
     for ref var in config.env_volumes(target)? {
-        validate_env_var(var)?;
+        let (var, value) = validate_env_var(var)?;
+        let value = match value {
+            Some(v) => Ok(v.to_string()),
+            None => env::var(var),
+        };
 
-        if let Ok(val) = env::var(var) {
+        if let Ok(val) = value {
             let host_path: PathBuf;
             let mount_path: PathBuf;
 
