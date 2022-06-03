@@ -27,6 +27,30 @@ main() {
       --arch "${arch}" \
       --api "${api}"
 
+    # clean up unused toolchains to reduce image size
+    local triple
+    local triples
+    local triple_arch="${arch}"
+    case "${arch}" in
+      arm64)
+        triple_arch="aarch64"
+        ;;
+      x86)
+        triple_arch="i686"
+        ;;
+    esac
+    triples=(
+      "aarch64-linux-android"
+      "arm-linux-androideabi"
+      "i686-linux-android"
+      "x86_64-linux-android"
+    )
+    for triple in "${triples[@]}"; do
+      if ! [[ "${triple}" =~ ^"${triple_arch}".* ]]; then
+        rm -rf "/android-ndk/sysroot/usr/lib/${triple}"
+      fi
+    done
+
     purge_packages
 
     popd
