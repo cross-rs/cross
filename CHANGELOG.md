@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- #748 - allow definitions in the environment variable passthrough
 - #741 - added `armv7-unknown-linux-gnueabi` and `armv7-unknown-linux-musleabi` targets.
 - #377 - update WINE versions to 7.0.
 - #734 - patch `arm-unknown-linux-gnueabihf` to build for ARMv6, and add architecture for crosstool-ng-based images.

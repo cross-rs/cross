@@ -115,9 +115,10 @@ pub fn run(
     let mut docker = docker_command("run")?;
 
     let validate_env_var = |var: &str| -> Result<()> {
-        if var.contains('=') {
-            bail!("environment variable names must not contain the '=' character");
-        }
+        let var = match var.split_once('=') {
+            Some((key, _)) => key,
+            _ => var,
+        };
 
         if var == "CROSS_RUNNER" {
             bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
