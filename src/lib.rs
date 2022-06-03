@@ -230,6 +230,7 @@ impl Target {
 
     fn needs_docker_privileged(&self) -> bool {
         let arch_32bit = self.triple().starts_with("arm")
+            || self.triple().starts_with("thumb")
             || self.triple().starts_with("i586")
             || self.triple().starts_with("i686");
 
