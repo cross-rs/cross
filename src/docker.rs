@@ -15,6 +15,17 @@ const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 const DOCKER: &str = "docker";
 const PODMAN: &str = "podman";
 
+// determine if the container engine is docker. this fixes issues with
+// any aliases (#530), and doesn't fail if an executable suffix exists.
+fn get_is_docker(ce: std::path::PathBuf, verbose: bool) -> Result<bool> {
+    let stdout = Command::new(ce)
+        .arg("--help")
+        .run_and_get_stdout(verbose)?
+        .to_lowercase();
+
+    Ok(stdout.contains("docker") && !stdout.contains("emulate"))
+}
+
 fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
     if let Ok(ce) = env::var("CROSS_CONTAINER_ENGINE") {
         which::which(ce)
@@ -126,6 +137,7 @@ pub fn run(
     let runner = config.runner(target)?;
 
     let mut docker = docker_command("run")?;
+    let is_docker = get_is_docker(get_container_engine().unwrap(), verbose)?;
 
     for ref var in config.env_passthrough(target)? {
         validate_env_var(var)?;
@@ -179,17 +191,15 @@ pub fn run(
     }
 
     // We need to specify the user for Docker, but not for Podman.
-    if let Ok(ce) = get_container_engine() {
-        if ce.ends_with(DOCKER) {
-            docker.args(&[
-                "--user",
-                &format!(
-                    "{}:{}",
-                    env::var("CROSS_CONTAINER_UID").unwrap_or_else(|_| id::user().to_string()),
-                    env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string()),
-                ),
-            ]);
-        }
+    if is_docker {
+        docker.args(&[
+            "--user",
+            &format!(
+                "{}:{}",
+                env::var("CROSS_CONTAINER_UID").unwrap_or_else(|_| id::user().to_string()),
+                env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string()),
+            ),
+        ]);
     }
 
     docker
