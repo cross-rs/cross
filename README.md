@@ -56,7 +56,7 @@ default to `docker`.
 ## Installation
 
 ```
-$ cargo install cross
+$ cargo install cross --git https://github.com/cross-rs/cross
 ```
 
 ## Usage
