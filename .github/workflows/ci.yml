@@ -174,8 +174,7 @@ jobs:
             # Disabled for now, see https://github.com/rust-lang/rust/issues/85821
             #- { target: asmjs-unknown-emscripten,         os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
             #- { target: wasm32-unknown-emscripten,        os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-            # Disabled, see #396
-            #-{ target: x86_64-unknown-dragonfly,          os: ubuntu-latest,  cpp: 1, dylib: 1 }
+            - { target: x86_64-unknown-dragonfly,         os: ubuntu-latest,  cpp: 1, dylib: 1 }
             - { target: i686-unknown-freebsd,             os: ubuntu-latest,          dylib: 1, std: 1 }
             - { target: x86_64-unknown-freebsd,           os: ubuntu-latest,          dylib: 1, std: 1 }
             - { target: x86_64-unknown-netbsd,            os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
