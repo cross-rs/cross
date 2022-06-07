@@ -26,10 +26,11 @@ function retry {
 }
 
 workspace_test() {
-  cross build --target "${TARGET}" --workspace "${@}"
-  cross run --target "${TARGET}" -p binary "${@}"
+  # "${@}" is an unbound variable for bash 3.2, which is the installed version on macOS
+  cross build --target "${TARGET}" --workspace "$@"
+  cross run --target "${TARGET}" -p binary "$@"
   cross run --target "${TARGET}" --bin dependencies \
-    --features=dependencies "${@}"
+    --features=dependencies "$@"
 }
 
 main() {
