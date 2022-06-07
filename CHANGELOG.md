@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #543 - Added environment variables to control the UID and GID in the container
 - #524 - docker: Add Nix Store volume support
 - Added support for mounting volumes.
+- #684 - Enable cargo workspaces to work from any path in the workspace, and make path dependencies mount seamlessly.
 
 ### Changed
 
@@ -45,6 +46,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Re-enabled `sparc64-unknown-linux-gnu` image
 - #582 - Added `libprocstat.so` to FreeBSD images
 - #665 - when not using [env.volumes](https://github.com/cross-rs/cross#mounting-volumes-into-the-build-environment), mount project in /project
+- #494 - Parse Cargo's --manifest-path option to determine mounted docker root
 
 
 ### Removed

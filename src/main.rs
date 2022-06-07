@@ -25,7 +25,7 @@ use config::Config;
 use rustc_version::Channel;
 use serde::Deserialize;
 
-use self::cargo::{Root, Subcommand};
+use self::cargo::{CargoMetadata, Subcommand};
 use self::cross_toml::CrossToml;
 use self::errors::*;
 use self::extensions::OutputExt;
@@ -282,9 +282,10 @@ fn run() -> Result<ExitStatus> {
 
     let host_version_meta =
         rustc_version::version_meta().wrap_err("couldn't fetch the `rustc` version")?;
-    if let Some(root) = cargo::root()? {
+    let cwd = std::env::current_dir()?;
+    if let Some(metadata) = cargo::cargo_metadata_with_args(None, Some(&args), verbose)? {
         let host = host_version_meta.host();
-        let toml = toml(&root)?;
+        let toml = toml(&metadata)?;
         let config = Config::new(toml);
         let target = args
             .target
@@ -410,13 +411,13 @@ fn run() -> Result<ExitStatus> {
                 return docker::run(
                     &target,
                     &filtered_args,
-                    &args.target_dir,
-                    &root,
+                    &metadata,
                     &config,
                     uses_xargo,
                     &sysroot,
                     verbose,
                     args.docker_in_docker,
+                    &cwd,
                 );
             }
         }
@@ -489,10 +490,10 @@ pub(crate) fn warn_host_version_mismatch(
 
 /// Parses the `Cross.toml` at the root of the Cargo project or from the
 /// `CROSS_CONFIG` environment variable (if any exist in either location).
-fn toml(root: &Root) -> Result<Option<CrossToml>> {
+fn toml(metadata: &CargoMetadata) -> Result<Option<CrossToml>> {
     let path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),
-        Err(_) => root.path().join("Cross.toml"),
+        Err(_) => metadata.workspace_root.join("Cross.toml"),
     };
 
     if path.exists() {
@@ -505,7 +506,7 @@ fn toml(root: &Root) -> Result<Option<CrossToml>> {
         Ok(Some(config))
     } else {
         // Checks if there is a lowercase version of this file
-        if root.path().join("cross.toml").exists() {
+        if metadata.workspace_root.join("cross.toml").exists() {
             eprintln!("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.");
         }
         Ok(None)

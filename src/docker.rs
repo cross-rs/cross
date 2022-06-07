@@ -2,10 +2,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
-use crate::cargo::Root;
-use crate::errors::*;
+use crate::cargo::CargoMetadata;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::id;
+use crate::{errors::*, file};
 use crate::{Config, Target};
 use atty::Stream;
 use eyre::bail;
@@ -76,17 +76,38 @@ fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
     Ok((key, value))
 }
 
+#[allow(unused_variables)]
+pub fn mount(cmd: &mut Command, val: &Path, verbose: bool) -> Result<PathBuf> {
+    let host_path =
+        file::canonicalize(&val).wrap_err_with(|| format!("when canonicalizing path `{val:?}`"))?;
+    let mount_path: PathBuf;
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        mount_path = wslpath(&host_path, verbose)?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        mount_path = host_path.clone();
+    }
+    cmd.args(&[
+        "-v",
+        &format!("{}:{}", host_path.display(), mount_path.display()),
+    ]);
+    Ok(mount_path)
+}
+
 #[allow(clippy::too_many_arguments)] // TODO: refactor
 pub fn run(
     target: &Target,
     args: &[String],
-    target_dir: &Option<PathBuf>,
-    root: &Root,
+    metadata: &CargoMetadata,
     config: &Config,
     uses_xargo: bool,
     sysroot: &Path,
     verbose: bool,
     docker_in_docker: bool,
+    cwd: &Path,
 ) -> Result<ExitStatus> {
     let mount_finder = if docker_in_docker {
         MountFinder::new(docker_read_mount_paths()?)
@@ -94,14 +115,13 @@ pub fn run(
         MountFinder::default()
     };
 
-    let root = root.path();
     let home_dir = home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
     let cargo_dir = home::cargo_home()?;
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".xargo"));
     let nix_store_dir = env::var_os("NIX_STORE").map(PathBuf::from);
-    let target_dir = target_dir.clone().unwrap_or_else(|| root.join("target"));
+    let target_dir = &metadata.target_directory;
 
     // create the directories we are going to mount before we mount them,
     // otherwise `docker` will create them but they will be owned by `root`
@@ -113,7 +133,12 @@ pub fn run(
     let cargo_dir = mount_finder.find_mount_path(cargo_dir);
     let xargo_dir = mount_finder.find_mount_path(xargo_dir);
     let target_dir = mount_finder.find_mount_path(target_dir);
-    let host_root = mount_finder.find_mount_path(root);
+    // root is either workspace_root, or, if we're outside the workspace root, the current directory
+    let host_root = mount_finder.find_mount_path(if metadata.workspace_root.starts_with(cwd) {
+        cwd
+    } else {
+        &metadata.workspace_root
+    });
     let mount_root: PathBuf;
     #[cfg(target_os = "windows")]
     {
@@ -122,7 +147,17 @@ pub fn run(
     }
     #[cfg(not(target_os = "windows"))]
     {
-        mount_root = host_root.clone();
+        mount_root = mount_finder.find_mount_path(host_root.clone());
+    }
+    let mount_cwd: PathBuf;
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        mount_cwd = wslpath(cwd, verbose)?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        mount_cwd = mount_finder.find_mount_path(cwd);
     }
     let sysroot = mount_finder.find_mount_path(sysroot);
 
@@ -146,7 +181,13 @@ pub fn run(
         // flag forwards the value from the parent shell
         docker.args(&["-e", var]);
     }
-    let mut env_volumes = false;
+    let mut mount_volumes = false;
+    // FIXME(emilgardis 2022-04-07): This is a fallback so that if it's hard for us to do mounting logic, make it simple(r)
+    // Preferably we would not have to do this.
+    if cwd.strip_prefix(&metadata.workspace_root).is_err() {
+        mount_volumes = true;
+    }
+
     for ref var in config.env_volumes(target)? {
         let (var, value) = validate_env_var(var)?;
         let value = match value {
@@ -177,9 +218,15 @@ pub fn run(
                 "-v",
                 &format!("{}:{}", host_path.display(), mount_path.display()),
             ]);
+            let mount_path = mount(&mut docker, val.as_ref(), verbose)?;
             docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
-            env_volumes = true;
+            mount_volumes = true;
         }
+    }
+
+    for path in metadata.path_dependencies() {
+        mount(&mut docker, path, verbose)?;
+        mount_volumes = true;
     }
 
     docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
@@ -233,7 +280,7 @@ pub fn run(
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"]);
-    if env_volumes {
+    if mount_volumes {
         docker.args(&[
             "-v",
             &format!("{}:{}:Z", host_root.display(), mount_root.display()),
@@ -245,10 +292,21 @@ pub fn run(
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
         .args(&["-v", &format!("{}:/target:Z", target_dir.display())]);
 
-    if env_volumes {
-        docker.args(&["-w", &mount_root.display().to_string()]);
-    } else {
+    if mount_volumes {
+        docker.args(&["-w".as_ref(), mount_cwd.as_os_str()]);
+    } else if mount_cwd == metadata.workspace_root {
         docker.args(&["-w", "/project"]);
+    } else {
+        // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
+        let cwd = &cwd;
+        let working_dir = Path::new("project").join(cwd.strip_prefix(&metadata.workspace_root)?);
+        // No [T].join for OsStr
+        let mut mount_wd = std::ffi::OsString::new();
+        for part in working_dir.iter() {
+            mount_wd.push("/");
+            mount_wd.push(part);
+        }
+        docker.args(&["-w".as_ref(), mount_wd.as_os_str()]);
     }
 
     // When running inside NixOS or using Nix packaging we need to add the Nix

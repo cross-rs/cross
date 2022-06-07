@@ -25,6 +25,14 @@ function retry {
   return ${exit_code}
 }
 
+workspace_test() {
+  # "${@}" is an unbound variable for bash 3.2, which is the installed version on macOS
+  cross build --target "${TARGET}" --workspace "$@"
+  cross run --target "${TARGET}" -p binary "$@"
+  cross run --target "${TARGET}" --bin dependencies \
+    --features=dependencies "$@"
+}
+
 main() {
     local td=
 
@@ -135,6 +143,21 @@ EOF
                 popd
 
                 rm -rf "${td}"
+                td=$(mktemp -d)
+                git clone \
+                    --depth 1 \
+                    --recursive \
+                    https://github.com/cross-rs/test-workspace "${td}"
+                
+                pushd "${td}"
+                TARGET="${TARGET}" workspace_test --manifest-path="./workspace/Cargo.toml"
+                pushd "workspace"
+                TARGET="${TARGET}" workspace_test
+                pushd "binary"
+                cross run --target "${TARGET}"
+                popd
+                popd
+                popd
             ;;
         esac
 

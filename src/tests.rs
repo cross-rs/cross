@@ -7,7 +7,6 @@ use std::{
 
 use once_cell::sync::OnceCell;
 use rustc_version::VersionMeta;
-use serde::Deserialize;
 
 static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 
@@ -15,23 +14,10 @@ static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 pub fn get_cargo_workspace() -> &'static Path {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     WORKSPACE.get_or_init(|| {
-        #[derive(Deserialize)]
-        struct Manifest {
-            workspace_root: PathBuf,
-        }
-        let output = std::process::Command::new(
-            std::env::var("CARGO")
-                .ok()
-                .unwrap_or_else(|| "cargo".to_string()),
-        )
-        .arg("metadata")
-        .arg("--format-version=1")
-        .arg("--no-deps")
-        .current_dir(manifest_dir)
-        .output()
-        .unwrap();
-        let manifest: Manifest = serde_json::from_slice(&output.stdout).unwrap();
-        manifest.workspace_root
+        crate::cargo::cargo_metadata_with_args(Some(manifest_dir.as_ref()), None, true)
+            .unwrap()
+            .unwrap()
+            .workspace_root
     })
 }
 
