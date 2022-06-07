@@ -79,8 +79,16 @@ run() {
     build_args+=(--tag "${tag}")
   done
 
-  docker buildx build "${build_args[@]}" -f "${dockerfile}" --progress plain .
+  if [ -n "${LABELS:-}" ]; then
+    local labels
+    mapfile -t labels -d '' <<< "${LABELS}"
+    for label in "${labels[@]}"; do
+      build_args+=(--label "${label}")
+    done
+  fi
 
+  docker buildx build "${build_args[@]}" -f "${dockerfile}" --progress plain .
+  docker inspect "${tags[0]}" | jq -C .[0].Config.Labels
   if [[ -n "${GITHUB_ACTIONS-}" ]]; then
     echo "::set-output name=image::${tags[0]}"
   fi
