@@ -25,6 +25,13 @@ function retry {
   return ${exit_code}
 }
 
+workspace_test() {
+  cross build --target "${TARGET}" --workspace "${@}"
+  cross run --target "${TARGET}" -p binary "${@}"
+  cross run --target "${TARGET}" --bin dependencies \
+    --features=dependencies "${@}"
+}
+
 main() {
     local td=
 
@@ -142,9 +149,9 @@ EOF
                     https://github.com/cross-rs/test-workspace "${td}"
                 
                 pushd "${td}"
-      cross run --target "${TARGET}" -p binary --manifest-path="./workspace/Cargo.toml"
+                TARGET="${TARGET}" workspace_test --manifest-path="./workspace/Cargo.toml"
                 pushd "workspace"
-                cross run --target "${TARGET}" -p binary
+                TARGET="${TARGET}" workspace_test
                 pushd "binary"
                 cross run --target "${TARGET}"
                 popd
