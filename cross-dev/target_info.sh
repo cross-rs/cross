@@ -92,6 +92,9 @@ case "${target}" in
     *-*-netbsd)
         cc_regex=".*gcc \(.*\) ([0-9]+.[0-9]+.[0-9]+).*"
         ;;
+     *-*-dragonfly)
+        cc_regex=".*gcc \(GCC\) ([0-9]+.[0-9]+.[0-9]+).*"
+        ;;
     *-none-*)
         cc_regex=".*gcc \(.*\) ([0-9]+.[0-9]+.[0-9]+).*"
         ;;
@@ -259,6 +262,19 @@ case "${target}" in
             libc="${major_version}.${minor_version}.${patch_version}"
         else
             echo "Unable to get libc version for ${target}: invalid NetBSD release found." 1>&2
+            exit 1
+        fi
+        ;;
+    *-*-dragonfly)
+        # we write the Dragonfly version to /opt/dragonfly-version
+        version=$(cat /opt/dragonfly-version)
+        if [[ "${version}" =~ ([0-9]+)\.([0-9]+)\.([0-9]+)"_REL" ]]; then
+            major_version="${BASH_REMATCH[1]}"
+            minor_version="${BASH_REMATCH[2]}"
+            patch_version="${BASH_REMATCH[3]}"
+            libc="${major_version}.${minor_version}.${patch_version}"
+        else
+            echo "Unable to get libc version for ${target}: invalid Dragonfly release found." 1>&2
             exit 1
         fi
         ;;

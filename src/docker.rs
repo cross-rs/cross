@@ -26,7 +26,7 @@ fn get_is_docker(ce: std::path::PathBuf, verbose: bool) -> Result<bool> {
     Ok(stdout.contains("docker") && !stdout.contains("emulate"))
 }
 
-fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
+pub fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
     if let Ok(ce) = env::var("CROSS_CONTAINER_ENGINE") {
         which::which(ce)
     } else {
