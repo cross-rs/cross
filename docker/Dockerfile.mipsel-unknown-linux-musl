@@ -1,6 +1,7 @@
 FROM ubuntu:18.04
+ARG DEBIAN_FRONTEND=noninteractive
 
-COPY common.sh /
+COPY common.sh lib.sh /
 RUN /common.sh
 
 COPY cmake.sh /
@@ -21,10 +22,11 @@ RUN /musl.sh \
 RUN ln -sf \
     /usr/local/mipsel-linux-muslsf/lib/libc.so \
     /usr/local/mipsel-linux-muslsf/lib/ld-musl-mipsel-sf.so.1
-ENV QEMU_LD_PREFIX=/usr/local/mipsel-linux-muslsf
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER=mipsel-linux-muslsf-gcc \
     CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_RUNNER=qemu-mipsel \
     CC_mipsel_unknown_linux_musl=mipsel-linux-muslsf-gcc \
     CXX_mipsel_unknown_linux_musl=mipsel-linux-muslsf-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_mipsel_unknown_linux_musl="--sysroot=/usr/local/mipsel-linux-muslsf" \
+    QEMU_LD_PREFIX=/usr/local/mipsel-linux-muslsf \
     RUST_TEST_THREADS=1

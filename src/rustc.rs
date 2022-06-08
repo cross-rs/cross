@@ -3,12 +3,13 @@ use std::process::Command;
 
 use rustc_version::{Version, VersionMeta};
 
-use crate::{Host, Target};
 use crate::errors::*;
 use crate::extensions::CommandExt;
+use crate::{Host, Target};
 
+#[derive(Debug)]
 pub struct TargetList {
-    triples: Vec<String>,
+    pub triples: Vec<String>,
 }
 
 impl TargetList {
@@ -28,13 +29,7 @@ impl VersionMetaExt for VersionMeta {
     }
 
     fn needs_interpreter(&self) -> bool {
-        self.semver < Version {
-            major: 1,
-            minor: 19,
-            patch: 0,
-            pre: vec![],
-            build: vec![],
-        }
+        self.semver < Version::new(1, 19, 0)
     }
 }
 
@@ -42,21 +37,17 @@ pub fn target_list(verbose: bool) -> Result<TargetList> {
     Command::new("rustc")
         .args(&["--print", "target-list"])
         .run_and_get_stdout(verbose)
-        .map(|s| {
-            TargetList {
-                triples: s.lines().map(|l| l.to_owned()).collect(),
-            }
+        .map(|s| TargetList {
+            triples: s.lines().map(|l| l.to_owned()).collect(),
         })
 }
 
 pub fn sysroot(host: &Host, target: &Target, verbose: bool) -> Result<PathBuf> {
     let mut stdout = Command::new("rustc")
         .args(&["--print", "sysroot"])
-        .run_and_get_stdout(verbose)?;
-
-    if stdout.ends_with('\n') {
-        stdout.pop();
-    }
+        .run_and_get_stdout(verbose)?
+        .trim()
+        .to_owned();
 
     // On hosts other than Linux, specify the correct toolchain path.
     if host != &Host::X86_64UnknownLinuxGnu && target.needs_docker() {

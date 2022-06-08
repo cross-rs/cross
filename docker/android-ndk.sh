@@ -3,26 +3,16 @@
 set -x
 set -euo pipefail
 
-NDK_URL=https://dl.google.com/android/repository/android-ndk-r13b-linux-x86_64.zip
+# shellcheck disable=SC1091
+. lib.sh
+
+NDK_URL=https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip
 
 main() {
     local arch="${1}" \
           api="${2}"
 
-    local dependencies=(
-        curl
-        unzip
-        python
-    )
-
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+    install_packages curl unzip python
 
     local td
     td="$(mktemp -d)"
@@ -30,15 +20,38 @@ main() {
     pushd "${td}"
     curl --retry 3 -sSfL "${NDK_URL}" -O
     unzip -q android-ndk-*.zip
+    rm android-ndk-*.zip
     pushd android-ndk-*
     ./build/tools/make_standalone_toolchain.py \
       --install-dir /android-ndk \
       --arch "${arch}" \
       --api "${api}"
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    # clean up unused toolchains to reduce image size
+    local triple
+    local triples
+    local triple_arch="${arch}"
+    case "${arch}" in
+      arm64)
+        triple_arch="aarch64"
+        ;;
+      x86)
+        triple_arch="i686"
+        ;;
+    esac
+    triples=(
+      "aarch64-linux-android"
+      "arm-linux-androideabi"
+      "i686-linux-android"
+      "x86_64-linux-android"
+    )
+    for triple in "${triples[@]}"; do
+      if ! [[ "${triple}" =~ ^"${triple_arch}".* ]]; then
+        rm -rf "/android-ndk/sysroot/usr/lib/${triple}"
+      fi
+    done
+
+    purge_packages
 
     popd
     popd

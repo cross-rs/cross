@@ -1,6 +1,6 @@
 use std::borrow::Cow;
-use std::process::{Command, ExitStatus};
 use std::fmt;
+use std::process::{Command, ExitStatus};
 
 use crate::errors::*;
 
@@ -10,6 +10,7 @@ pub trait CommandExt {
     fn run(&mut self, verbose: bool) -> Result<()>;
     fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus>;
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String>;
+    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output>;
 }
 
 impl CommandExt for Command {
@@ -23,7 +24,7 @@ impl CommandExt for Command {
         if status.success() {
             Ok(())
         } else {
-            Err(format!("`{:?}` failed with exit code: {:?}", self, status.code()).into())
+            eyre::bail!("`{:?}` failed with exit code: {:?}", self, status.code())
         }
     }
 
@@ -37,19 +38,37 @@ impl CommandExt for Command {
     fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus> {
         self.print_verbose(verbose);
         self.status()
-            .chain_err(|| format!("couldn't execute `{:?}`", self))
+            .wrap_err_with(|| format!("couldn't execute `{:?}`", self))
     }
 
     /// Runs the command to completion and returns its stdout
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String> {
-        self.print_verbose(verbose);
-        let out = self.output()
-            .chain_err(|| format!("couldn't execute `{:?}`", self))?;
-
+        let out = self.run_and_get_output(verbose)?;
         self.status_result(out.status)?;
+        out.stdout()
+    }
 
-        Ok(String::from_utf8(out.stdout)
-            .chain_err(|| format!("`{:?}` output was not UTF-8", self))?)
+    /// Runs the command to completion and returns the status and its [output](std::process::Output).
+    ///
+    /// # Notes
+    ///
+    /// This command does not check the status.
+    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output> {
+        self.print_verbose(verbose);
+        self.output()
+            .wrap_err_with(|| format!("couldn't execute `{:?}`", self))
+            .map_err(Into::into)
+    }
+}
+
+pub trait OutputExt {
+    fn stdout(&self) -> Result<String>;
+}
+
+impl OutputExt for std::process::Output {
+    fn stdout(&self) -> Result<String> {
+        String::from_utf8(self.stdout.clone())
+            .wrap_err_with(|| format!("`{:?}` output was not UTF-8", self))
     }
 }
 
@@ -67,18 +86,18 @@ impl SafeCommand {
         }
     }
 
-    pub fn arg<'b, S>(&mut self, arg: &S) -> &mut Self
-        where
-            S: ToString,
+    pub fn arg<S>(&mut self, arg: &S) -> &mut Self
+    where
+        S: ToString,
     {
         self.args.push(arg.to_string());
         self
     }
 
     pub fn args<I, S>(&mut self, args: I) -> &mut Self
-        where
-            I: IntoIterator<Item = S>,
-            S: ToString,
+    where
+        I: IntoIterator<Item = S>,
+        S: ToString,
     {
         for arg in args {
             self.arg(&arg);

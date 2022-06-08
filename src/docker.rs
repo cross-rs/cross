@@ -2,41 +2,46 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
-use atty::Stream;
-use error_chain::bail;
-use serde_json;
-
-use crate::cargo::Root;
-use crate::errors::*;
+use crate::cargo::CargoMetadata;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::id;
-use crate::{Target, Toml};
+use crate::{errors::*, file};
+use crate::{Config, Target};
+use atty::Stream;
+use eyre::bail;
 
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
+const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 const DOCKER: &str = "docker";
 const PODMAN: &str = "podman";
 
-fn get_container_engine() -> Result<std::path::PathBuf> {
-    let container_engine = env::var("CROSS_CONTAINER_ENGINE").unwrap_or_default();
+// determine if the container engine is docker. this fixes issues with
+// any aliases (#530), and doesn't fail if an executable suffix exists.
+fn get_is_docker(ce: std::path::PathBuf, verbose: bool) -> Result<bool> {
+    let stdout = Command::new(ce)
+        .arg("--help")
+        .run_and_get_stdout(verbose)?
+        .to_lowercase();
 
-    if container_engine.is_empty() {
-        which::which(DOCKER)
-            .or_else(|_| which::which(PODMAN))
-            .map_err(|e| e.into())
+    Ok(stdout.contains("docker") && !stdout.contains("emulate"))
+}
+
+pub fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
+    if let Ok(ce) = env::var("CROSS_CONTAINER_ENGINE") {
+        which::which(ce)
     } else {
-        which::which(container_engine).map_err(|e| e.into())
+        which::which(DOCKER).or_else(|_| which::which(PODMAN))
     }
 }
 
 pub fn docker_command(subcommand: &str) -> Result<Command> {
-    if let Ok(ce) = get_container_engine() {
-        let mut command = Command::new(ce);
-        command.arg(subcommand);
-        command.args(&["--userns", "host"]);
-        Ok(command)
-    } else {
-        Err("no container engine found; install docker or podman".into())
-    }
+    let ce = get_container_engine()
+        .map_err(|_| eyre::eyre!("no container engine found"))
+        .with_suggestion(|| "is docker or podman installed?")?;
+    let mut command = Command::new(ce);
+    command.arg(subcommand);
+    command.args(&["--userns", "host"]);
+    Ok(command)
 }
 
 /// Register binfmt interpreters
@@ -58,29 +63,65 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         .run(verbose)
 }
 
-pub fn run(target: &Target,
-           args: &[String],
-           target_dir: &Option<PathBuf>,
-           root: &Root,
-           toml: Option<&Toml>,
-           uses_xargo: bool,
-           sysroot: &PathBuf,
-           verbose: bool,
-           docker_in_docker: bool)
-           -> Result<ExitStatus> {
+fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
+    let (key, value) = match var.split_once('=') {
+        Some((key, value)) => (key, Some(value)),
+        _ => (var, None),
+    };
+
+    if key == "CROSS_RUNNER" {
+        bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
+    }
+
+    Ok((key, value))
+}
+
+#[allow(unused_variables)]
+pub fn mount(cmd: &mut Command, val: &Path, verbose: bool) -> Result<PathBuf> {
+    let host_path =
+        file::canonicalize(&val).wrap_err_with(|| format!("when canonicalizing path `{val:?}`"))?;
+    let mount_path: PathBuf;
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        mount_path = wslpath(&host_path, verbose)?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        mount_path = host_path.clone();
+    }
+    cmd.args(&[
+        "-v",
+        &format!("{}:{}", host_path.display(), mount_path.display()),
+    ]);
+    Ok(mount_path)
+}
+
+#[allow(clippy::too_many_arguments)] // TODO: refactor
+pub fn run(
+    target: &Target,
+    args: &[String],
+    metadata: &CargoMetadata,
+    config: &Config,
+    uses_xargo: bool,
+    sysroot: &Path,
+    verbose: bool,
+    docker_in_docker: bool,
+    cwd: &Path,
+) -> Result<ExitStatus> {
     let mount_finder = if docker_in_docker {
         MountFinder::new(docker_read_mount_paths()?)
     } else {
         MountFinder::default()
     };
 
-    let root = root.path();
-    let home_dir = home::home_dir().ok_or_else(|| "could not find home directory")?;
+    let home_dir = home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
     let cargo_dir = home::cargo_home()?;
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir.join(".xargo"));
-    let target_dir = target_dir.clone().unwrap_or_else(|| root.join("target"));
+    let nix_store_dir = env::var_os("NIX_STORE").map(PathBuf::from);
+    let target_dir = &metadata.target_directory;
 
     // create the directories we are going to mount before we mount them,
     // otherwise `docker` will create them but they will be owned by `root`
@@ -89,11 +130,36 @@ pub fn run(target: &Target,
     fs::create_dir(&xargo_dir).ok();
 
     // update paths to the host mounts path.
-    let cargo_dir = mount_finder.find_mount_path(&cargo_dir);
-    let xargo_dir = mount_finder.find_mount_path(&xargo_dir);
-    let target_dir = mount_finder.find_mount_path(&target_dir);
-    let mount_root = mount_finder.find_mount_path(&root);
-    let sysroot = mount_finder.find_mount_path(&sysroot);
+    let cargo_dir = mount_finder.find_mount_path(cargo_dir);
+    let xargo_dir = mount_finder.find_mount_path(xargo_dir);
+    let target_dir = mount_finder.find_mount_path(target_dir);
+    // root is either workspace_root, or, if we're outside the workspace root, the current directory
+    let host_root = mount_finder.find_mount_path(if metadata.workspace_root.starts_with(cwd) {
+        cwd
+    } else {
+        &metadata.workspace_root
+    });
+    let mount_root: PathBuf;
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        mount_root = wslpath(&host_root, verbose)?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        mount_root = mount_finder.find_mount_path(host_root.clone());
+    }
+    let mount_cwd: PathBuf;
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        mount_cwd = wslpath(cwd, verbose)?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        mount_cwd = mount_finder.find_mount_path(cwd);
+    }
+    let sysroot = mount_finder.find_mount_path(sysroot);
 
     let mut cmd = if uses_xargo {
         SafeCommand::new("xargo")
@@ -103,68 +169,101 @@ pub fn run(target: &Target,
 
     cmd.args(args);
 
-    let runner = None;
+    let runner = config.runner(target)?;
 
     let mut docker = docker_command("run")?;
+    let is_docker = get_is_docker(get_container_engine().unwrap(), verbose)?;
 
-    if let Some(toml) = toml {
-        let validate_env_var = |var: &str| -> Result<()> {
-            if var.contains('=') {
-                bail!("environment variable names must not contain the '=' character");
-            }
+    for ref var in config.env_passthrough(target)? {
+        validate_env_var(var)?;
 
-            if var == "CROSS_RUNNER" {
-                bail!(
-                    "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
-                );
-            }
+        // Only specifying the environment variable name in the "-e"
+        // flag forwards the value from the parent shell
+        docker.args(&["-e", var]);
+    }
+    let mut mount_volumes = false;
+    // FIXME(emilgardis 2022-04-07): This is a fallback so that if it's hard for us to do mounting logic, make it simple(r)
+    // Preferably we would not have to do this.
+    if cwd.strip_prefix(&metadata.workspace_root).is_err() {
+        mount_volumes = true;
+    }
 
-            Ok(())
+    for ref var in config.env_volumes(target)? {
+        let (var, value) = validate_env_var(var)?;
+        let value = match value {
+            Some(v) => Ok(v.to_string()),
+            None => env::var(var),
         };
 
-        for var in toml.env_passthrough(target)? {
-            validate_env_var(var)?;
+        if let Ok(val) = value {
+            let host_path: PathBuf;
+            let mount_path: PathBuf;
 
-            // Only specifying the environment variable name in the "-e"
-            // flag forwards the value from the parent shell
-            docker.args(&["-e", var]);
-        }
-
-        for var in toml.env_volumes(target)? {
-            validate_env_var(var)?;
-
-            if let Ok(val) = env::var(var) {
-                let host_path = Path::new(&val).canonicalize()?;
-                let mount_path = &host_path;
-                docker.args(&["-v", &format!("{}:{}", host_path.display(), mount_path.display())]);
-                docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
+            #[cfg(target_os = "windows")]
+            {
+                // Docker does not support UNC paths, this will try to not use UNC paths
+                host_path = dunce::canonicalize(&val)
+                    .wrap_err_with(|| format!("when canonicalizing path `{val}`"))?;
+                // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+                mount_path = wslpath(&host_path, verbose)?;
             }
+            #[cfg(not(target_os = "windows"))]
+            {
+                host_path = Path::new(&val)
+                    .canonicalize()
+                    .wrap_err_with(|| format!("when canonicalizing path `{val}`"))?;
+                mount_path = host_path.clone();
+            }
+            docker.args(&[
+                "-v",
+                &format!("{}:{}", host_path.display(), mount_path.display()),
+            ]);
+            let mount_path = mount(&mut docker, val.as_ref(), verbose)?;
+            docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
+            mount_volumes = true;
         }
+    }
+
+    for path in metadata.path_dependencies() {
+        mount(&mut docker, path, verbose)?;
+        mount_volumes = true;
     }
 
     docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
 
     docker.arg("--rm");
 
+    if target.needs_docker_privileged() {
+        docker.arg("--privileged");
+    }
+
     // We need to specify the user for Docker, but not for Podman.
-    if let Ok(ce) = get_container_engine() {
-        if ce.ends_with(DOCKER) {
-            docker.args(&["--user", &format!("{}:{}", id::user(), id::group())]);
-        }
+    if is_docker {
+        docker.args(&[
+            "--user",
+            &format!(
+                "{}:{}",
+                env::var("CROSS_CONTAINER_UID").unwrap_or_else(|_| id::user().to_string()),
+                env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string()),
+            ),
+        ]);
     }
 
     docker
         .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-e", "CARGO_HOME=/cargo"])
-        .args(&["-e", "CARGO_TARGET_DIR=/target"])
-        .args(&["-e", &format!("USER={}", id::username().unwrap().unwrap())]);
+        .args(&["-e", "CARGO_TARGET_DIR=/target"]);
+
+    if let Some(username) = id::username().unwrap() {
+        docker.args(&["-e", &format!("USER={username}")]);
+    }
 
     if let Ok(value) = env::var("QEMU_STRACE") {
-        docker.args(&["-e", &format!("QEMU_STRACE={}", value)]);
+        docker.args(&["-e", &format!("QEMU_STRACE={value}")]);
     }
 
     if let Ok(value) = env::var("CROSS_DEBUG") {
-        docker.args(&["-e", &format!("CROSS_DEBUG={}", value)]);
+        docker.args(&["-e", &format!("CROSS_DEBUG={value}")]);
     }
 
     if let Ok(value) = env::var("DOCKER_OPTS") {
@@ -173,15 +272,51 @@ pub fn run(target: &Target,
     }
 
     docker
-        .args(&["-e", &format!("CROSS_RUNNER={}", runner.unwrap_or_else(String::new))])
+        .args(&[
+            "-e",
+            &format!("CROSS_RUNNER={}", runner.unwrap_or_default()),
+        ])
         .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
         .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
         // Prevent `bin` from being mounted inside the Docker container.
-        .args(&["-v", "/cargo/bin"])
-        .args(&["-v", &format!("{}:/{}:Z", mount_root.display(), mount_root.display())])
+        .args(&["-v", "/cargo/bin"]);
+    if mount_volumes {
+        docker.args(&[
+            "-v",
+            &format!("{}:{}:Z", host_root.display(), mount_root.display()),
+        ]);
+    } else {
+        docker.args(&["-v", &format!("{}:/project:Z", host_root.display())]);
+    }
+    docker
         .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
-        .args(&["-v", &format!("{}:/target:Z", target_dir.display())])
-        .args(&["-w", &mount_root.display().to_string()]);
+        .args(&["-v", &format!("{}:/target:Z", target_dir.display())]);
+
+    if mount_volumes {
+        docker.args(&["-w".as_ref(), mount_cwd.as_os_str()]);
+    } else if mount_cwd == metadata.workspace_root {
+        docker.args(&["-w", "/project"]);
+    } else {
+        // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
+        let cwd = &cwd;
+        let working_dir = Path::new("project").join(cwd.strip_prefix(&metadata.workspace_root)?);
+        // No [T].join for OsStr
+        let mut mount_wd = std::ffi::OsString::new();
+        for part in working_dir.iter() {
+            mount_wd.push("/");
+            mount_wd.push(part);
+        }
+        docker.args(&["-w".as_ref(), mount_wd.as_os_str()]);
+    }
+
+    // When running inside NixOS or using Nix packaging we need to add the Nix
+    // Store to the running container so it can load the needed binaries.
+    if let Some(nix_store) = nix_store_dir {
+        docker.args(&[
+            "-v",
+            &format!("{}:{}:Z", nix_store.display(), nix_store.display()),
+        ]);
+    }
 
     if atty::is(Stream::Stdin) {
         docker.arg("-i");
@@ -191,42 +326,56 @@ pub fn run(target: &Target,
     }
 
     docker
-        .arg(&image(toml, target)?)
+        .arg(&image(config, target)?)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
 }
 
-pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
-    if let Some(toml) = toml {
-        if let Some(image) = toml.image(target)?.map(|s| s.to_owned()) {
-            return Ok(image)
-        }
+pub fn image(config: &Config, target: &Target) -> Result<String> {
+    if let Some(image) = config.image(target)? {
+        return Ok(image);
     }
 
-    let triple = target.triple();
-
-    if !DOCKER_IMAGES.contains(&triple) {
-        bail!("`cross` does not provide a Docker image for target {}, \
-               specify a custom image in `Cross.toml`.", triple);
+    if !DOCKER_IMAGES.contains(&target.triple()) {
+        bail!(
+            "`cross` does not provide a Docker image for target {target}, \
+               specify a custom image in `Cross.toml`."
+        );
     }
 
-    let version = env!("CARGO_PKG_VERSION");
-
-    let image = if version.contains("alpha") || version.contains("dev") {
-        format!("rustembedded/cross:{}", triple)
+    let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
+        env!("CARGO_PKG_VERSION")
     } else {
-        format!("rustembedded/cross:{}-{}", triple, version)
+        "main"
     };
 
-    Ok(image)
+    Ok(format!("{CROSS_IMAGE}/{target}:{version}"))
+}
+
+#[cfg(target_os = "windows")]
+fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
+    let wslpath = which::which("wsl.exe")
+        .map_err(|_| eyre::eyre!("could not find wsl.exe"))
+        .warning("usage of `env.volumes` requires WSL on Windows")
+        .suggestion("is WSL installed on the host?")?;
+
+    Command::new(wslpath)
+        .arg("-e")
+        .arg("wslpath")
+        .arg("-a")
+        .arg(path)
+        .run_and_get_stdout(verbose)
+        .wrap_err_with(|| {
+            format!(
+                "could not get linux compatible path for `{}`",
+                path.display()
+            )
+        })
+        .map(|s| s.trim().into())
 }
 
 fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
-    let hostname = if let Ok(v) = env::var("HOSTNAME") {
-        Ok(v)
-    } else {
-        Err("HOSTNAME environment variable not found")
-    }?;
+    let hostname = env::var("HOSTNAME").wrap_err("HOSTNAME environment variable not found")?;
 
     let docker_path = which::which(DOCKER)?;
     let mut docker: Command = {
@@ -237,12 +386,7 @@ fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
     };
 
     let output = docker.run_and_get_stdout(false)?;
-    let info = if let Ok(val) = serde_json::from_str(&output) {
-        Ok(val)
-    } else {
-        Err("failed to parse docker inspect output")
-    }?;
-
+    let info = serde_json::from_str(&output).wrap_err("failed to parse docker inspect output")?;
     dockerinfo_parse_mounts(&info)
 }
 
@@ -257,20 +401,20 @@ fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDet
     let driver_name = info
         .pointer("/0/GraphDriver/Name")
         .and_then(|v| v.as_str())
-        .ok_or("No driver name found")?;
+        .ok_or_else(|| eyre::eyre!("no driver name found"))?;
 
     if driver_name == "overlay2" {
         let path = info
             .pointer("/0/GraphDriver/Data/MergedDir")
             .and_then(|v| v.as_str())
-            .ok_or("No merge directory found")?;
+            .ok_or_else(|| eyre::eyre!("No merge directory found"))?;
 
         Ok(MountDetail {
             source: PathBuf::from(&path),
             destination: PathBuf::from("/"),
         })
     } else {
-        Err(format!("want driver overlay2, got {}", driver_name).into())
+        eyre::bail!("want driver overlay2, got {driver_name}")
     }
 }
 
@@ -290,7 +434,7 @@ fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
             }
             mounts
         })
-        .unwrap_or_else(|| Vec::new())
+        .unwrap_or_else(Vec::new)
 }
 
 #[derive(Debug, Default)]
@@ -316,13 +460,16 @@ impl MountFinder {
         MountFinder { mounts }
     }
 
-    fn find_mount_path(&self, path: &Path) -> PathBuf {
+    fn find_mount_path(&self, path: impl AsRef<Path>) -> PathBuf {
+        let path = path.as_ref();
+
         for info in &self.mounts {
             if let Ok(stripped) = path.strip_prefix(&info.destination) {
                 return info.source.join(stripped);
             }
         }
-        return path.to_path_buf();
+
+        path.to_path_buf()
     }
 }
 
@@ -338,7 +485,7 @@ mod tests {
             let finder = MountFinder::default();
             assert_eq!(
                 PathBuf::from("/test/path"),
-                finder.find_mount_path(&PathBuf::from("/test/path")),
+                finder.find_mount_path("/test/path"),
             );
         }
 
@@ -356,7 +503,7 @@ mod tests {
             ]);
             assert_eq!(
                 PathBuf::from("/target/path/test"),
-                finder.find_mount_path(&PathBuf::from("/project/target/test"))
+                finder.find_mount_path("/project/target/test")
             )
         }
 
@@ -374,15 +521,15 @@ mod tests {
             ]);
             assert_eq!(
                 PathBuf::from("/var/lib/docker/overlay2/container-id/merged/container/path"),
-                finder.find_mount_path(&PathBuf::from("/container/path"))
+                finder.find_mount_path("/container/path")
             );
             assert_eq!(
                 PathBuf::from("/home/project/path"),
-                finder.find_mount_path(&PathBuf::from("/project"))
+                finder.find_mount_path("/project")
             );
             assert_eq!(
                 PathBuf::from("/home/project/path/target"),
-                finder.find_mount_path(&PathBuf::from("/project/target"))
+                finder.find_mount_path("/project/target")
             );
         }
     }

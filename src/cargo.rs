@@ -1,7 +1,8 @@
+use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
-use std::{env, fs};
 
+use crate::cli::Args;
 use crate::errors::*;
 use crate::extensions::CommandExt;
 
@@ -15,85 +16,135 @@ pub enum Subcommand {
     Rustc,
     Test,
     Bench,
-    Deb,
     Clippy,
     Metadata,
+    List,
 }
 
 impl Subcommand {
     pub fn needs_docker(self) -> bool {
-        match self {
-            Subcommand::Other => false,
-            _ => true,
-        }
+        !matches!(self, Subcommand::Other | Subcommand::List)
     }
 
     pub fn needs_interpreter(self) -> bool {
-        match self {
-            Subcommand::Run | Subcommand::Test | Subcommand::Bench => true,
-            _ => false,
-        }
+        matches!(self, Subcommand::Run | Subcommand::Test | Subcommand::Bench)
     }
 
     pub fn needs_target_in_command(self) -> bool {
-        match self {
-            Subcommand::Metadata => false,
-            _ => true,
-        }
+        !matches!(self, Subcommand::Metadata)
     }
 }
 
 impl<'a> From<&'a str> for Subcommand {
     fn from(s: &str) -> Subcommand {
         match s {
-            "build" => Subcommand::Build,
-            "check" => Subcommand::Check,
+            "b" | "build" => Subcommand::Build,
+            "c" | "check" => Subcommand::Check,
             "doc" => Subcommand::Doc,
-            "run" => Subcommand::Run,
+            "r" | "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,
-            "test" => Subcommand::Test,
+            "t" | "test" => Subcommand::Test,
             "bench" => Subcommand::Bench,
-            "deb" => Subcommand::Deb,
             "clippy" => Subcommand::Clippy,
             "metadata" => Subcommand::Metadata,
+            "--list" => Subcommand::List,
             _ => Subcommand::Other,
         }
     }
 }
 
-#[derive(Debug)]
-pub struct Root {
-    path: PathBuf,
+#[derive(Debug, Deserialize)]
+pub struct CargoMetadata {
+    pub workspace_root: PathBuf,
+    pub target_directory: PathBuf,
+    pub packages: Vec<Package>,
+    pub workspace_members: Vec<String>,
 }
 
-impl Root {
-    pub fn path(&self) -> &Path {
-        &self.path
+impl CargoMetadata {
+    fn non_workspace_members(&self) -> impl Iterator<Item = &Package> {
+        self.packages
+            .iter()
+            .filter(|p| !self.workspace_members.iter().any(|m| m == &p.id))
+    }
+
+    pub fn path_dependencies(&self) -> impl Iterator<Item = &Path> {
+        // TODO: Also filter out things that are in workspace, but not a workspace member
+        self.non_workspace_members().filter_map(|p| p.crate_path())
     }
 }
 
-/// Cargo project root
-pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
+#[derive(Debug, Deserialize)]
+pub struct Package {
+    id: String,
+    manifest_path: PathBuf,
+    source: Option<String>,
+}
 
-    let mut dir = &*cd;
-    loop {
-        let toml = dir.join("Cargo.toml");
-
-        if fs::metadata(&toml).is_ok() {
-            return Ok(Some(Root { path: dir.to_owned() }));
-        }
-
-        match dir.parent() {
-            Some(p) => dir = p,
-            None => break,
+impl Package {
+    /// Returns the absolute path to the packages manifest "folder"
+    fn crate_path(&self) -> Option<&Path> {
+        // when source is none, this package is a path dependency or a workspace member
+        if self.source.is_none() {
+            self.manifest_path.parent()
+        } else {
+            None
         }
     }
+}
 
-    Ok(None)
+/// Cargo metadata with specific invocation
+pub fn cargo_metadata_with_args(
+    cd: Option<&Path>,
+    args: Option<&Args>,
+    verbose: bool,
+) -> Result<Option<CargoMetadata>> {
+    let mut command = std::process::Command::new(
+        std::env::var("CARGO")
+            .ok()
+            .unwrap_or_else(|| "cargo".to_string()),
+    );
+    command.arg("metadata").arg("--format-version=1");
+    if let Some(cd) = cd {
+        command.current_dir(cd);
+    }
+    if let Some(config) = args {
+        if let Some(ref manifest_path) = config.manifest_path {
+            command.args(["--manifest-path".as_ref(), manifest_path.as_os_str()]);
+        }
+    } else {
+        command.arg("--no-deps");
+    }
+    if let Some(target) = args.and_then(|a| a.target.as_ref()) {
+        command.args(["--filter-platform", target.triple()]);
+    }
+    if let Some(features) = args.map(|a| &a.features).filter(|v| !v.is_empty()) {
+        command.args([String::from("--features"), features.join(",")]);
+    }
+    let output = command.run_and_get_output(verbose)?;
+    if !output.status.success() {
+        // TODO: logging
+        return Ok(None);
+    }
+    let manifest: Option<CargoMetadata> = serde_json::from_slice(&output.stdout)?;
+    manifest
+        .map(|m| -> Result<_> {
+            Ok(CargoMetadata {
+                target_directory: args
+                    .and_then(|a| a.target_dir.clone())
+                    .unwrap_or(m.target_directory),
+                ..m
+            })
+        })
+        .transpose()
 }
 
 /// Pass-through mode
 pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus> {
     Command::new("cargo").args(args).run_and_get_status(verbose)
+}
+
+/// run cargo and get the output, does not check the exit status
+pub fn run_and_get_output(args: &[String], verbose: bool) -> Result<std::process::Output> {
+    Command::new("cargo").args(args).run_and_get_output(verbose)
 }

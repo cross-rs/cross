@@ -2,12 +2,15 @@
 [![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
 [![Build Status](https://img.shields.io/azure-devops/build/rust-embedded/c0ce10ee-fd41-4551-b3e3-9612e8ab62f3/2/master)](https://dev.azure.com/rust-embedded/cross/_build?definitionId=2)
 [![Docker Pulls](https://img.shields.io/docker/pulls/rustembedded/cross)](https://hub.docker.com/r/rustembedded/cross)
+[![Matrix](https://img.shields.io/matrix/cross-rs:matrix.org)](https://matrix.to/#/#cross-rs:matrix.org)
 
 # `cross`
 
 > “Zero setup” cross compilation and “cross testing” of Rust crates
 
-This project is developed and maintained by the [Tools team][team].
+This project is developed and maintained by the [cross-rs] team.
+It was previously maintained by the Rust Embedded Working Group Tools team.
+New contributors are welcome! Please join our [Matrix room] and say hi.
 
 <p align="center">
 <img
@@ -53,7 +56,7 @@ default to `docker`.
 ## Installation
 
 ```
-$ cargo install cross
+$ cargo install cross --git https://github.com/cross-rs/cross
 ```
 
 ## Usage
@@ -79,8 +82,9 @@ $ cross rustc --target powerpc-unknown-linux-gnu --release -- -C lto
 
 ## Configuration
 
-You can place a `Cross.toml` file in the root of your Cargo project to tweak
-`cross`'s behavior:
+You can place a `Cross.toml` file in the root of your Cargo project or use a
+`CROSS_CONFIG` environment variable to tweak `cross`'s behavior. The format
+of `Cross.toml` is documented in [docs/cross_toml.md](docs/cross_toml.md).
 
 ### Custom Docker images
 
@@ -106,12 +110,12 @@ the default one. Normal Docker behavior applies, so:
 - If only `tag` is omitted, then Docker will use the `latest` tag.
 
 It's recommended to base your custom image on the default Docker image that
-cross uses: `rustembedded/cross:{{TARGET}}-{{VERSION}}` (where `{{VERSION}}` is cross's version).
+cross uses: `ghcr.io/cross-rs/{{TARGET}}:{{VERSION}}` (where `{{VERSION}}` is cross's version).
 This way you won't have to figure out how to install a cross C toolchain in your
 custom image. Example below:
 
 ``` Dockerfile
-FROM rustembedded/cross:aarch64-unknown-linux-gnu-0.2.1
+FROM ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest
 
 RUN dpkg --add-architecture arm64 && \
     apt-get update && \
@@ -203,6 +207,15 @@ passthrough = [
 ]
 ```
 
+### Unstable Features
+
+Certain unstable features can enable additional functionality useful to
+cross-compiling. Note that these are unstable, and may be removed at any
+time (particularly if the feature is stabilized or removed), and will
+only be used on a nightly channel.
+
+- `CROSS_UNSTABLE_ENABLE_DOCTESTS=true`: also run doctests.
+
 ### Mounting volumes into the build environment
 
 In addition to passing environment variables, you can also specify environment
@@ -222,7 +235,7 @@ non-standard targets (i.e. something not reported by rustc/rustup). However,
 you can use the `build.xargo` or `target.{{TARGET}}.xargo` field in
 `Cross.toml` to force the use of `xargo`:
 
-``` toml
+```toml
 # all the targets will use `xargo`
 [build]
 xargo = true
@@ -230,7 +243,7 @@ xargo = true
 
 Or,
 
-``` toml
+```toml
 # only this target will use `xargo`
 [target.aarch64-unknown-linux-gnu]
 xargo = true
@@ -260,45 +273,48 @@ terminate.
 | Target                               |  libc  |   GCC   | C++ | QEMU  | `test` |
 |--------------------------------------|-------:|--------:|:---:|------:|:------:|
 | `*-apple-ios` [1]                    | N/A    | N/A     | N/A | N/A   |   ✓    |
-| `aarch64-linux-android` [2]          | N/A    | 4.9     | ✓   | N/A   |   ✓    |
-| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 4.1.0 |   ✓    |
-| `aarch64-unknown-linux-musl`         | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
-| `arm-linux-androideabi` [2]          | N/A    | 4.9     | ✓   | N/A   |   ✓    |
-| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | ✓   | 4.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 4.1.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`       | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
-| `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 4.2.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`     | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
-| `armv7-linux-androideabi` [2]        | N/A    | 4.9     | ✓   | N/A   |   ✓    |
-| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 4.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.24 | 6.3.0   |     | 4.1.0 |   ✓    |
+| `aarch64-linux-android` [2]          | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
+| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
+| `aarch64-unknown-linux-musl`         | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `arm-linux-androideabi` [2]          | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabi`          | 2.17   | 8.3.0   | ✓   | 5.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 5.1.0 |   ✓    |
+| `arm-unknown-linux-musleabi`         | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`       | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`     | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `armv7-linux-androideabi` [2]        | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabi`        | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabi`       | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`     | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `asmjs-unknown-emscripten` [6]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-musl`            | 1.1.24 | 6.3.0   |     | N/A   |   ✓    |
 | `i686-unknown-freebsd` [4]           | 12.1   | 6.4.0   |     | N/A   |   ✓    |
-| `i686-linux-android` [2]             | N/A    | 4.9     | ✓   | N/A   |   ✓    |
+| `i686-linux-android` [2]             | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.24 | 6.3.0   |     | N/A   |   ✓    |
-| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mips-unknown-linux-musl`            | 1.1.24 | 6.3.0   | ✓   | 4.1.0 |   ✓    |
-| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | ✓   | 4.1.0 |   ✓    |
-| `mipsel-unknown-linux-musl`          | 1.1.24 | 6.3.0   | ✓   | 4.1.0 |   ✓    |
-| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
-| `powerpc64-unknown-linux-gnu`        | 2.31   | 10.2.0  | ✓   | 3.0.1 |   ✓    |
-| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | ✓   | 3.0.1 |   ✓    |
-| `riscv64gc-unknown-linux-gnu`        | 2.27   | 7.5.0   | ✓   | 4.2.0 |   ✓    |
-| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | ✓   | 4.1.0 |        |
-| `sparc64-unknown-linux-gnu`          | 2.31   | 10.2.0  | ✓   | 4.2.0 |   ✓    |
+| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
+| `mips-unknown-linux-musl`            | 1.1.24 | 6.3.0   | ✓   | 5.1.0 |   ✓    |
+| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
+| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
+| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
+| `mipsel-unknown-linux-musl`          | 1.1.24 | 6.3.0   | ✓   | 5.1.0 |   ✓    |
+| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
+| `powerpc64-unknown-linux-gnu`        | 2.31   | 10.2.0  | ✓   | 5.1.0 |   ✓    |
+| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
+| `riscv64gc-unknown-linux-gnu`        | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
+| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | ✓   | 5.1.0 |        |
+| `sparc64-unknown-linux-gnu`          | 2.31   | 10.2.0  | ✓   | 5.1.0 |   ✓    |
 | `sparcv9-sun-solaris` [4]            | 2.11   | 5.3.0   | ✓   | N/A   |        |
 | `thumbv6m-none-eabi` [5]             | 2.2.0  | 5.3.1   |     | N/A   |        |
 | `thumbv7em-none-eabi` [5]            | 2.2.0  | 5.3.1   |     | N/A   |        |
 | `thumbv7em-none-eabihf` [5]          | 2.2.0  | 5.3.1   |     | N/A   |        |
 | `thumbv7m-none-eabi` [5]             | 2.2.0  | 5.3.1   |     | N/A   |        |
-| `wasm32-unknown-emscripten` [6]      | 1.1.15 | 1.37.13 | ✓   | N/A   |   ✓    |
-| `x86_64-linux-android` [2]           | N/A    | 4.9     | ✓   | N/A   |   ✓    |
+| `wasm32-unknown-emscripten` [6]      | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |
+| `x86_64-linux-android` [2]           | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
 | `x86_64-sun-solaris` [4]             | 2.11   | 5.3.0   | ✓   | N/A   |        |
 | `x86_64-unknown-freebsd` [4]         | 12.1   | 6.4.0   |     | N/A   |   ✓    |
@@ -309,10 +325,10 @@ terminate.
 
 [1] iOS cross compilation is supported on macOS hosts.
 
-[2] Only works with native tests, that is, tests that do not depends on the
+[2] libc = bionic; Only works with native tests, that is, tests that do not depends on the
     Android Runtime. For i686 some tests may fails with the error `assertion
     failed: signal(libc::SIGPIPE, libc::SIG_IGN) != libc::SIG_ERR`, see
-    [issue #140](https://github.com/rust-embedded/cross/issues/140) for more
+    [issue #140](https://github.com/cross-rs/cross/issues/140) for more
     information.
 
 [4] For *BSD and Solaris targets, the libc column indicates the OS release version
@@ -322,8 +338,8 @@ terminate.
 
 [5] libc = newlib
 
-[6] libc = musl, gcc = emcc; Some projects that use libc may fail due to wrong
-    definitions (will be fixed by https://github.com/rust-lang/libc/pull/610)
+[6] libc = musl, gcc = emcc. The Docker images for these targets are currently not built automatically
+due to a [compiler bug](https://github.com/rust-lang/rust/issues/85821), you will have to build them yourself for now.
 
 ## Debugging
 
@@ -346,15 +362,9 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 9 exit_group(0)
 ```
 
-## Caveats
-
-- path dependencies (in Cargo.toml) that point outside the Cargo project won't
-  work because `cross` use docker containers only mounts the Cargo project so
-  the container doesn't have access to the rest of the filesystem.
-
 ## Minimum Supported Rust Version (MSRV)
 
-This crate is guaranteed to compile on stable Rust 1.42.0 and up. It *might*
+This crate is guaranteed to compile on stable Rust 1.58.1 and up. It *might*
 compile with older versions but that may change in any new patch release.
 
 Some cross-compilation targets require a later Rust version, and using Xargo
@@ -379,10 +389,11 @@ dual licensed as above, without any additional terms or conditions.
 ## Code of Conduct
 
 Contribution to this crate is organized under the terms of the [Rust Code of
-Conduct][CoC], the maintainer of this crate, the [Tools team][team], promises
+Conduct][CoC], the maintainer of this crate, the [cross-rs] team, promises
 to intervene to uphold that code of conduct.
 
 [CoC]: CODE_OF_CONDUCT.md
-[team]: https://github.com/rust-embedded/wg#the-tools-team
+[cross-rs]: https://github.com/cross-rs
 [Docker]: https://www.docker.com
 [Podman]: https://podman.io
+[Matrix room]: https://matrix.to/#/#cross-rs:matrix.org

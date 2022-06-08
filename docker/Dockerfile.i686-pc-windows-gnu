@@ -1,6 +1,7 @@
 FROM ubuntu:18.04
+ARG DEBIAN_FRONTEND=noninteractive
 
-COPY common.sh /
+COPY common.sh lib.sh /
 RUN /common.sh
 
 COPY cmake.sh /
@@ -10,11 +11,10 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 RUN dpkg --add-architecture i386 && apt-get update && \
-    apt-get install --assume-yes --no-install-recommends \
-        wine-stable \
-        wine64 \
-        wine32 \
-        libz-mingw-w64-dev
+    apt-get install --assume-yes --no-install-recommends libz-mingw-w64-dev
+
+COPY wine.sh /
+RUN /wine.sh
 
 # Build mingw tools using dwarf exceptions
 COPY mingw.sh /
@@ -37,4 +37,5 @@ ENTRYPOINT ["/windows-entry.sh"]
 ENV CARGO_TARGET_I686_PC_WINDOWS_GNU_LINKER=i686-w64-mingw32-gcc \
     CARGO_TARGET_I686_PC_WINDOWS_GNU_RUNNER=wine \
     CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix \
-    CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix
+    CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix \
+    BINDGEN_EXTRA_CLANG_ARGS_i686_pc_windows_gnu="--sysroot=/usr/i686-w64-mingw32"

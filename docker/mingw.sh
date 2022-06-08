@@ -3,6 +3,9 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 main() {
     # Ubuntu mingw packages for i686 uses sjlj exceptions, but rust target
     # i686-pc-windows-gnu uses dwarf exceptions. So we build mingw packages
@@ -20,13 +23,7 @@ main() {
     while IFS='' read -r dep; do dependencies+=("${dep}"); done < \
       <(apt-cache showsrc gcc-mingw-w64-i686 | grep Build | cut -d: -f2 | tr , '\n' | cut -d' ' -f2 | sort | uniq)
 
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}" > /dev/null; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+    install_packages "${dependencies[@]}"
 
     local td
     td="$(mktemp -d)"
@@ -118,9 +115,7 @@ EOF
     # Replace installed mingw packages with the new ones
     dpkg -i ../g*-mingw-w64-i686*.deb ../gcc-mingw-w64-base*.deb
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     popd
     popd

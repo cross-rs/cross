@@ -1,6 +1,13 @@
 FROM ubuntu:16.04
+ARG DEBIAN_FRONTEND=noninteractive
 
-COPY common.sh /
+COPY lib.sh /
+COPY linux-image.sh /
+RUN /linux-image.sh x86_64
+
+FROM centos:7
+
+COPY common.sh lib.sh /
 RUN /common.sh
 
 COPY cmake.sh /
@@ -15,8 +22,7 @@ RUN /qemu.sh x86_64 softmmu
 COPY dropbear.sh /
 RUN /dropbear.sh
 
-COPY linux-image.sh /
-RUN /linux-image.sh x86_64
+COPY --from=0 /qemu /qemu
 
 COPY linux-runner /
 

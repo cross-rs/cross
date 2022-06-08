@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question?
+    url: https://matrix.to/#/#cross-rs:matrix.org
+    about: Reach out to us on our Matrix room if you want!
+  - name: Question!
+    url: https://github.com/cross-rs/cross/discussions/categories/q-a
+    about: Or try the Q&A discussions
+  - name: FAQ
+    url: https://github.com/cross-rs/cross/wiki/FAQ
+    about: Frequently Asked Questions are compiled here.

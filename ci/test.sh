@@ -25,12 +25,16 @@ function retry {
   return ${exit_code}
 }
 
+workspace_test() {
+  # "${@}" is an unbound variable for bash 3.2, which is the installed version on macOS
+  cross build --target "${TARGET}" --workspace "$@"
+  cross run --target "${TARGET}" -p binary "$@"
+  cross run --target "${TARGET}" --bin dependencies \
+    --features=dependencies "$@"
+}
+
 main() {
     local td=
-
-    if [[ "${BRANCH-}" = master ]] || [[ "${TAG-}" =~ ^v.* ]]; then
-        return
-    fi
 
     retry cargo fetch
     cargo install --force --path .
@@ -139,6 +143,21 @@ EOF
                 popd
 
                 rm -rf "${td}"
+                td=$(mktemp -d)
+                git clone \
+                    --depth 1 \
+                    --recursive \
+                    https://github.com/cross-rs/test-workspace "${td}"
+                
+                pushd "${td}"
+                TARGET="${TARGET}" workspace_test --manifest-path="./workspace/Cargo.toml"
+                pushd "workspace"
+                TARGET="${TARGET}" workspace_test
+                pushd "binary"
+                cross run --target "${TARGET}"
+                popd
+                popd
+                popd
             ;;
         esac
 
@@ -148,10 +167,9 @@ EOF
     if (( ${CPP:-0} )); then
         td="$(mktemp -d)"
 
-        git clone --depth 1 https://github.com/japaric/hellopp "${td}"
+        git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"
 
         pushd "${td}"
-        cargo update -p gcc
         retry cargo fetch
         if (( ${RUN:-0} )); then
             cross_run --target "${TARGET}"

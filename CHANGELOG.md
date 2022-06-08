@@ -5,9 +5,74 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- #767 - added the `cross-util` and `cross-dev` commands.
+- #741 - added `armv7-unknown-linux-gnueabi` and `armv7-unknown-linux-musleabi` targets.
+- #721 - add support for running doctests on nightly if `CROSS_UNSTABLE_ENABLE_DOCTESTS=true`.
+- #719 - add `--list` to known subcommands.
+- #681 - Warn on unknown fields and confusable targets
+- #624 - Add `build.default-target`
+- #647 - Add `mips64-unknown-linux-muslabi64` and `mips64el-unknown-linux-muslabi64` support
+- #543 - Added environment variables to control the UID and GID in the container
+- #524 - docker: Add Nix Store volume support
 - Added support for mounting volumes.
+- #684 - Enable cargo workspaces to work from any path in the workspace, and make path dependencies mount seamlessly.
+
+### Changed
+
+- #762 - re-enabled `x86_64-unknown-dragonfly` target.
+- #747 - reduced android image sizes.
+- #377 - update WINE versions to 7.0.
+- #734 - patch `arm-unknown-linux-gnueabihf` to build for ARMv6, and add architecture for crosstool-ng-based images.
+- #709 - Update Emscripten targets to `emcc` version 3.1.10
+- #707, #708 - Set `BINDGEN_EXTRA_CLANG_ARGS` environment variable to pass sysroot to `rust-bindgen`
+- #696 - bump freebsd to 12.3
+- #629 - Update Android NDK version and API version
+- #497 - don't set RUSTFLAGS in aarch64-musl image
+- #492 - Add cmake to FreeBSD images
+- #748 - allow definitions in the environment variable passthrough
+
+### Fixed
+
+- #727 - add `PKG_CONFIG_PATH` to all `*-linux-gnu` images.
+- #722 - boolean environment variables are evaluated as truthy or falsey.
+- #720 - add android runner to preload `libc++_shared.so`.
+- #725 - support `CROSS_DEBUG` and `CROSS_RUNNER` on android images.
+- #714 - use host target directory when falling back to host cargo.
+- #713 - convert relative target directories to absolute paths.
+- #501 - x86_64-linux: lower glibc version requirement to 2.17 (compatible with centos 7)
+- #500 - use runner setting specified in Cross.toml
+- #498 - bump linux-image version to fix CI
 - Re-enabled `powerpc64-unknown-linux-gnu` image
 - Re-enabled `sparc64-unknown-linux-gnu` image
+- #582 - Added `libprocstat.so` to FreeBSD images
+- #665 - when not using [env.volumes](https://github.com/cross-rs/cross#mounting-volumes-into-the-build-environment), mount project in /project
+- #494 - Parse Cargo's --manifest-path option to determine mounted docker root
+
+
+### Removed
+
+- #718 - remove deb subcommand.
+
+### Internal
+
+- #730 - make FreeBSD builds more resilient.
+- #670 - Use serde for deserialization of Cross.toml
+- Change rust edition to 2021 and bump MSRV for the cross binary to 1.58.1
+- #654 - Use color-eyre for error reporting
+- #658 - Upgrade dependencies
+- #652 - Allow trying individual targets via bors.
+- #650 - Improve Docker caching.
+- #609 - Switch to Github Actions and GHCR.
+- #588 - fix ci: bump openssl version in freebsd again
+- #552 - Added CHANGELOG.md automation
+- #534 - fix image builds with update of dependencies
+- #502 - fix ci: bump openssl version in freebsd
+- #489 - Add support for more hosts and simplify/unify host support checks
+- #477 - Fix Docker/Podman links in README
+- #476 - Use Rustlang mirror for Sabotage linux tarbals
+- Bump nix dependency to `0.22.1`
 - Bump musl version to 1.1.24.
 
 ## [v0.2.1] - 2020-06-30
@@ -233,22 +298,22 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
-[Unreleased]: https://github.com/rust-embedded/cross/compare/v0.2.1...HEAD
-[v0.2.1]: https://github.com/rust-embedded/cross/compare/v0.2.0...v0.2.1
-[v0.2.0]: https://github.com/rust-embedded/cross/compare/v0.1.16...v0.2.0
-[v0.1.16]: https://github.com/rust-embedded/cross/compare/v0.1.15...v0.1.16
-[v0.1.15]: https://github.com/rust-embedded/cross/compare/v0.1.14...v0.1.15
-[v0.1.14]: https://github.com/rust-embedded/cross/compare/v0.1.13...v0.1.14
-[v0.1.13]: https://github.com/rust-embedded/cross/compare/v0.1.12...v0.1.13
-[v0.1.12]: https://github.com/rust-embedded/cross/compare/v0.1.11...v0.1.12
-[v0.1.11]: https://github.com/rust-embedded/cross/compare/v0.1.10...v0.1.11
-[v0.1.10]: https://github.com/rust-embedded/cross/compare/v0.1.9...v0.1.10
-[v0.1.9]: https://github.com/rust-embedded/cross/compare/v0.1.8...v0.1.9
-[v0.1.8]: https://github.com/rust-embedded/cross/compare/v0.1.7...v0.1.8
-[v0.1.7]: https://github.com/rust-embedded/cross/compare/v0.1.6...v0.1.7
-[v0.1.6]: https://github.com/rust-embedded/cross/compare/v0.1.5...v0.1.6
-[v0.1.5]: https://github.com/rust-embedded/cross/compare/v0.1.4...v0.1.5
-[v0.1.4]: https://github.com/rust-embedded/cross/compare/v0.1.3...v0.1.4
-[v0.1.3]: https://github.com/rust-embedded/cross/compare/v0.1.2...v0.1.3
-[v0.1.2]: https://github.com/rust-embedded/cross/compare/v0.1.1...v0.1.2
-[v0.1.1]: https://github.com/rust-embedded/cross/compare/v0.1.0...v0.1.1
+[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.1...HEAD
+[v0.2.1]: https://github.com/cross-rs/cross/compare/v0.2.0...v0.2.1
+[v0.2.0]: https://github.com/cross-rs/cross/compare/v0.1.16...v0.2.0
+[v0.1.16]: https://github.com/cross-rs/cross/compare/v0.1.15...v0.1.16
+[v0.1.15]: https://github.com/cross-rs/cross/compare/v0.1.14...v0.1.15
+[v0.1.14]: https://github.com/cross-rs/cross/compare/v0.1.13...v0.1.14
+[v0.1.13]: https://github.com/cross-rs/cross/compare/v0.1.12...v0.1.13
+[v0.1.12]: https://github.com/cross-rs/cross/compare/v0.1.11...v0.1.12
+[v0.1.11]: https://github.com/cross-rs/cross/compare/v0.1.10...v0.1.11
+[v0.1.10]: https://github.com/cross-rs/cross/compare/v0.1.9...v0.1.10
+[v0.1.9]: https://github.com/cross-rs/cross/compare/v0.1.8...v0.1.9
+[v0.1.8]: https://github.com/cross-rs/cross/compare/v0.1.7...v0.1.8
+[v0.1.7]: https://github.com/cross-rs/cross/compare/v0.1.6...v0.1.7
+[v0.1.6]: https://github.com/cross-rs/cross/compare/v0.1.5...v0.1.6
+[v0.1.5]: https://github.com/cross-rs/cross/compare/v0.1.4...v0.1.5
+[v0.1.4]: https://github.com/cross-rs/cross/compare/v0.1.3...v0.1.4
+[v0.1.3]: https://github.com/cross-rs/cross/compare/v0.1.2...v0.1.3
+[v0.1.2]: https://github.com/cross-rs/cross/compare/v0.1.1...v0.1.2
+[v0.1.1]: https://github.com/cross-rs/cross/compare/v0.1.0...v0.1.1

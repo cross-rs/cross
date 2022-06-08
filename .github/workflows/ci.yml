@@ -1,11 +1,315 @@
-on: [pull_request, push]
+on:
+  pull_request:
+  push:
+    branches: [main, staging, trying]
+    tags:
+      - "v*.*.*"
 
 name: CI
+
+env:
+  CARGO_NET_RETRY: 3
+  CARGO_HTTP_CHECK_REVOKE: false
 
 jobs:
   shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: ShellCheck
+      - uses: actions/checkout@v3
+
+      - name: Run ShellCheck
         uses: azohra/shell-linter@v0.3.0
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt
+
+      - name: Run rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+  clippy:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: clippy
+
+      - name: Run clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --locked -- -D warnings
+
+  test:
+    runs-on: ${{ matrix.os }}
+    needs: [fmt, clippy]
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+
+      - name: Run unit tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --locked --all-targets --workspace
+        timeout-minutes: 5
+
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+      - name: Generate matrix
+        id: generate-matrix
+        run: |
+          if [[ -z "${commit_message}" ]]; then
+            bors_args=()
+          else
+            bors_args="$(echo "${commit_message}" | sed -E 's/^Try #[0-9]+:\s+//')"
+            declare -a "bors_args=(${bors_args})"
+          fi
+
+          targets=()
+          index=0
+          while [[ "${bors_args[$index]-}" == --target ]]; do
+            index=$(expr $index + 1)
+            targets+=("${bors_args[$index]}")
+            index=$(expr $index + 1)
+          done
+
+          selects=()
+          for target in "${targets[@]}"; do
+            selects+=(".target == \"${target}\"")
+          done
+          query=$(printf " or %s" "${selects[@]}")
+          query="${query:4}"
+
+          if [[ "${#targets[@]}" != "0" ]]; then
+            echo "Only running targets matching '${targets[@]}'."
+            matrix=$(
+              yq --output-format json '[.[] | select('"${query}"')]' <<< "${matrix}"
+            )
+          else
+            echo 'Running all targets.'
+            matrix="$(yq --output-format json <<< "${matrix}")"
+          fi
+
+          jq -C <<< "${matrix}"
+
+          echo "::set-output name=matrix::$(jq -c <<< "${matrix}")"
+        env:
+          commit_message: >
+            ${{
+              ((
+                startsWith(github.event.head_commit.message, 'Try #') &&
+                github.event.head_commit.author.username == 'bors[bot]'
+              ) && github.event.head_commit.message) || ''
+            }}
+          matrix: |
+            - { target: x86_64-apple-darwin,              os: macos-10.15,    cpp: 1, dylib: 1, std: 1, run: 1,                                        deploy: true }
+            - { target: x86_64-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system, deploy: true }
+            - { target: x86_64-unknown-linux-musl,        os: ubuntu-latest,                    std: 1, run: 1,                                        deploy: true }
+            - { target: x86_64-pc-windows-msvc,           os: windows-2019,   cpp: 1,           std: 1, run: 1,                                        deploy: true }
+
+            - { target: aarch64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: arm-unknown-linux-gnueabi,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: arm-unknown-linux-gnueabihf,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: armv7-unknown-linux-gnueabi,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: armv7-unknown-linux-gnueabihf,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: i586-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: i686-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
+            - { target: mips-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: mipsel-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: mips64-unknown-linux-gnuabi64,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
+            - { target: mips64el-unknown-linux-gnuabi64,  os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: mips64-unknown-linux-muslabi64,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: mips64el-unknown-linux-muslabi64, os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: powerpc-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: powerpc64-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: powerpc64le-unknown-linux-gnu,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: riscv64gc-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: s390x-unknown-linux-gnu,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-system }
+            - { target: sparc64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-system }
+            - { target: aarch64-unknown-linux-musl,       os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: arm-unknown-linux-musleabihf,     os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: arm-unknown-linux-musleabi,       os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: armv5te-unknown-linux-gnueabi,    os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: armv5te-unknown-linux-musleabi,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: armv7-unknown-linux-musleabi,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: armv7-unknown-linux-musleabihf,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: i586-unknown-linux-musl,          os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: i686-unknown-linux-musl,          os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: mips-unknown-linux-musl,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: mipsel-unknown-linux-musl,        os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: aarch64-linux-android,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: arm-linux-androideabi,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: armv7-linux-androideabi,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: i686-linux-android,               os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: x86_64-linux-android,             os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: x86_64-pc-windows-gnu,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: i686-pc-windows-gnu,              os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            # Disabled for now, see https://github.com/rust-lang/rust/issues/85821
+            #- { target: asmjs-unknown-emscripten,         os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            #- { target: wasm32-unknown-emscripten,        os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
+            - { target: x86_64-unknown-dragonfly,         os: ubuntu-latest,  cpp: 1, dylib: 1 }
+            - { target: i686-unknown-freebsd,             os: ubuntu-latest,          dylib: 1, std: 1 }
+            - { target: x86_64-unknown-freebsd,           os: ubuntu-latest,          dylib: 1, std: 1 }
+            - { target: x86_64-unknown-netbsd,            os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
+            # Disabled, see #534
+            #-{ target: sparcv9-sun-solaris,              os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
+            #-{ target: x86_64-sun-solaris,               os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
+            - { target: thumbv6m-none-eabi,               os: ubuntu-latest,                    std: 1 }
+            - { target: thumbv7em-none-eabi,              os: ubuntu-latest,                    std: 1 }
+            - { target: thumbv7em-none-eabihf,            os: ubuntu-latest,                    std: 1 }
+            - { target: thumbv7m-none-eabi,               os: ubuntu-latest,                    std: 1 }
+
+  docker-image:
+    name: docker-image (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    needs: [shellcheck, test, generate-matrix]
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+
+      - name: Set up Docker Buildx
+        if: runner.os == 'Linux'
+        uses: docker/setup-buildx-action@v1
+      - name: Docker Meta
+        if: runner.os == 'Linux'
+        id: docker-meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            # This is only a placeholder name, we don't actually use this information.
+            name=cross
+          labels: |
+            org.opencontainers.image.title=cross (for ${{ matrix.target }})
+            org.opencontainers.image.licenses=MIT OR Apache-2.0
+      - name: Build and push Docker image
+        id: build-docker-image
+        if: runner.os == 'Linux'
+        timeout-minutes: 60
+        run: ./build-docker-image.sh "${TARGET}"
+        env:
+          TARGET: ${{ matrix.target }}
+          LABELS: ${{ steps.docker-meta.outputs.labels }}
+        shell: bash
+      - name: Set Docker image for test
+        if: steps.build-docker-image.outputs.image
+        run: |
+          TARGET_VAR="cross_target_${TARGET//-/_}_image"
+          echo "${TARGET_VAR^^}=${IMAGE}" | tee -a "${GITHUB_ENV}"
+        env:
+          TARGET: ${{ matrix.target }}
+          IMAGE: ${{ steps.build-docker-image.outputs.image }}
+        shell: bash
+      - name: Test
+        if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/trying'
+        run: ./ci/test.sh
+        env:
+          TARGET: ${{ matrix.target }}
+          CPP: ${{ matrix.cpp }}
+          DYLIB: ${{ matrix.dylib }}
+          STD: ${{ matrix.std }}
+          RUN: ${{ matrix.run }}
+          RUNNERS: ${{ matrix.runners }}
+        shell: bash
+
+      - name: Install cross
+        if: matrix.deploy
+        run: cargo install --path . --force
+
+      - name: Build cross-dev
+        run: cargo build --features=dev --bin cross-dev
+
+      - uses: ./.github/actions/cargo-install-upload-artifacts
+        if: matrix.deploy
+        with:
+          target: ${{ matrix.target }}
+
+      - name: Login to GitHub Container Registry
+        if: runner.os == 'Linux'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker Meta
+        if: >
+          runner.os == 'Linux' && (
+            github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+            startsWith(github.ref, 'refs/tags/v')
+          )
+        id: docker-meta2
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            name=${{ steps.build-docker-image.outputs.image }}
+          labels: |
+            org.opencontainers.image.title=cross (for ${{ matrix.target }})
+            org.opencontainers.image.licenses=MIT OR Apache-2.0
+      - name: Push image to GitHub Container Registry
+        if: >
+          runner.os == 'Linux' && (
+            github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+            startsWith(github.ref, 'refs/tags/v')
+          )
+        run: ./build-docker-image.sh --push "${TARGET}"
+        env:
+          TARGET: ${{ matrix.target }}
+          LABELS: ${{ steps.docker-meta2.outputs.labels }}
+        shell: bash
+
+  publish:
+    needs: [docker-image]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+      - uses: ./.github/actions/cargo-publish
+        with:
+          cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  conclusion:
+    needs: [shellcheck, fmt, clippy, test, generate-matrix, docker-image, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Result
+        run: |
+          jq -C <<< "${needs}"
+
+          # Check if all needs were successfull or skipped.
+          "$(jq -r 'all(.result as $result | (["success", "skipped"] | contains([$result])))' <<< "${needs}")"
+        env:
+          needs: ${{ toJson(needs) }}

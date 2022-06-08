@@ -1,0 +1,52 @@
+name: Publish crate
+description: Publish crate on crates.io and create release on github
+inputs:
+  cargo-registry-token:
+    description: 'API token for crates.io'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Read changelog
+      id: changelog-reader
+      uses: mindsers/changelog-reader-action@v2.0.0
+      with:
+        # validation_depth: 10
+        version: ${{ (github.ref_type == 'tag' && github.ref_name) || 'Unreleased' }}
+        path: ./CHANGELOG.md
+
+    - name: Download artifacts
+      id: download-artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path:
+          ${{ runner.temp }}/artifacts
+
+    - name: Log into crates.io
+      if: github.event_name != 'pull_request'
+      uses: actions-rs/cargo@v1
+      with:
+        command: login
+        args: -- ${{ inputs.cargo-registry-token }}
+
+    - name: Create GitHub release
+      if: >
+        github.event_name == 'push' && (
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+          startsWith(github.ref, 'refs/tags/v')
+        )
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.changelog-reader.outputs.version }}
+        body: ${{ steps.changelog-reader.outputs.changes }}
+        prerelease: ${{ steps.changelog-reader.outputs.status == 'prereleased' }}
+        draft: ${{ steps.changelog-reader.outputs.status == 'unreleased' }}
+        files: |
+          ${{ steps.download-artifacts.outputs.download-path }}/*/*
+
+    - name: Publish crate
+      uses: actions-rs/cargo@v1
+      with:
+        command: publish
+        args: ${{ !startsWith(github.ref, 'refs/tags/v') && '--dry-run' || '' }}
