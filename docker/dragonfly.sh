@@ -139,6 +139,9 @@ EOF
 
     purge_packages
 
+    # store the version info for the dragonfly release
+    echo "${dragonfly}" > /opt/dragonfly-version
+
     rm -rf "${td}"
     rm "${0}"
 }

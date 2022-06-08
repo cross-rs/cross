@@ -249,6 +249,9 @@ jobs:
         if: matrix.deploy
         run: cargo install --path . --force
 
+      - name: Build cross-dev
+        run: cargo build --features=dev --bin cross-dev
+
       - uses: ./.github/actions/cargo-install-upload-artifacts
         if: matrix.deploy
         with:
