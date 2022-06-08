@@ -1,9 +1,11 @@
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
 use crate::cargo::CargoMetadata;
 use crate::extensions::{CommandExt, SafeCommand};
+use crate::file::write_file;
 use crate::id;
 use crate::{errors::*, file};
 use crate::{Config, Target};
@@ -14,16 +16,34 @@ const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-image
 const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 const DOCKER: &str = "docker";
 const PODMAN: &str = "podman";
+// secured profile based off the docker documentation for denied syscalls:
+// https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
+// note that we've allow listed `clone` and `clone3`, which is necessary
+// to fork the process, and which podman allows by default.
+const SECCOMP: &str = include_str!("seccomp.json");
+
+#[derive(Debug, PartialEq, Eq)]
+enum EngineType {
+    Docker,
+    Podman,
+    Other,
+}
 
 // determine if the container engine is docker. this fixes issues with
 // any aliases (#530), and doesn't fail if an executable suffix exists.
-fn get_is_docker(ce: std::path::PathBuf, verbose: bool) -> Result<bool> {
+fn get_engine_type(ce: std::path::PathBuf, verbose: bool) -> Result<EngineType> {
     let stdout = Command::new(ce)
         .arg("--help")
         .run_and_get_stdout(verbose)?
         .to_lowercase();
 
-    Ok(stdout.contains("docker") && !stdout.contains("emulate"))
+    if stdout.contains("podman") {
+        Ok(EngineType::Podman)
+    } else if stdout.contains("docker") && !stdout.contains("emulate") {
+        Ok(EngineType::Docker)
+    } else {
+        Ok(EngineType::Other)
+    }
 }
 
 pub fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
@@ -172,7 +192,7 @@ pub fn run(
     let runner = config.runner(target)?;
 
     let mut docker = docker_command("run")?;
-    let is_docker = get_is_docker(get_container_engine().unwrap(), verbose)?;
+    let engine_type = get_engine_type(get_container_engine().unwrap(), verbose)?;
 
     for ref var in config.env_passthrough(target)? {
         validate_env_var(var)?;
@@ -233,12 +253,37 @@ pub fn run(
 
     docker.arg("--rm");
 
-    if target.needs_docker_privileged() {
-        docker.arg("--privileged");
+    // docker uses seccomp now on all installations
+    if target.needs_docker_seccomp() {
+        let seccomp = if engine_type == EngineType::Docker && cfg!(target_os = "windows") {
+            // docker on windows fails due to a bug in reading the profile
+            // https://github.com/docker/for-win/issues/12760
+            "unconfined".to_string()
+        } else {
+            #[allow(unused_mut)] // target_os = "windows"
+            let mut path = env::current_dir()
+                .wrap_err("couldn't get current directory")?
+                .canonicalize()
+                .wrap_err_with(|| "when canonicalizing current_dir".to_string())?
+                .join("target")
+                .join(target.triple())
+                .join("seccomp.json");
+            if !path.exists() {
+                write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
+            }
+            #[cfg(target_os = "windows")]
+            if engine_type == EngineType::Podman {
+                // podman weirdly expects a WSL path here, and fails otherwise
+                path = wslpath(&path, verbose)?;
+            }
+            path.display().to_string()
+        };
+
+        docker.args(&["--security-opt", &format!("seccomp={}", seccomp)]);
     }
 
     // We need to specify the user for Docker, but not for Podman.
-    if is_docker {
+    if engine_type == EngineType::Docker {
         docker.args(&[
             "--user",
             &format!(

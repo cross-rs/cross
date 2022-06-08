@@ -139,6 +139,7 @@ jobs:
             - { target: arm-unknown-linux-gnueabihf,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: armv7-unknown-linux-gnueabi,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: armv7-unknown-linux-gnueabihf,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: thumbv7neon-unknown-linux-gnueabihf, os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: i586-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: i686-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
             - { target: mips-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
@@ -167,6 +168,7 @@ jobs:
             - { target: aarch64-linux-android,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
             - { target: arm-linux-androideabi,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
             - { target: armv7-linux-androideabi,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: thumbv7neon-linux-androideabi,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
             - { target: i686-linux-android,               os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
             - { target: x86_64-linux-android,             os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
             - { target: x86_64-pc-windows-gnu,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }

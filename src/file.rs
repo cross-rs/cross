@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -34,4 +34,19 @@ fn _canonicalize(path: &Path) -> Result<PathBuf> {
     {
         Path::new(&path).canonicalize().map_err(Into::into)
     }
+}
+
+pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
+    let path = path.as_ref();
+    fs::create_dir_all(
+        &path.parent().ok_or_else(|| {
+            eyre::eyre!("could not find parent directory for `{}`", path.display())
+        })?,
+    )
+    .wrap_err_with(|| format!("couldn't create directory `{}`", path.display()))?;
+    fs::OpenOptions::new()
+        .write(true)
+        .create_new(!overwrite)
+        .open(&path)
+        .wrap_err(format!("could't write to file `{}`", path.display()))
 }

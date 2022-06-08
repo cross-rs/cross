@@ -1,0 +1,166 @@
+{
+    "defaultAction": "SCMP_ACT_ALLOW",
+    "syscalls": [
+        {
+            "names": [
+                "add_key",
+                "get_kernel_syms",
+                "keyctl",
+                "move_pages",
+                "nfsservctl",
+                "perf_event_open",
+                "pivot_root",
+                "query_module",
+                "request_key",
+                "sysfs",
+                "_sysctl",
+                "uselib",
+                "userfaultfd",
+                "ustat"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1
+        },
+        {
+            "names": [
+                "acct"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_SYS_PACCT"
+                ]
+            }
+        },
+        {
+            "names": [
+                "bpf",
+                "lookup_dcookie",
+                "mount",
+                "quotactl",
+                "quotactl_fd",
+                "setns",
+                "swapon",
+                "swapoff",
+                "umount",
+                "umount2",
+                "unshare",
+                "vm86",
+                "vm86old",
+                "pciconfig_read",
+                "pciconfig_write",
+                "salinfo_log_open",
+                "salinfo_event_open",
+                "sys_cacheflush",
+                "rtas"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_SYS_ADMIN"
+                ]
+            }
+        },
+        {
+            "names": [
+                "clock_adjtime",
+                "clock_settime",
+                "settimeofday",
+                "stime"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_SYS_TIME"
+                ]
+            }
+        },
+        {
+            "names": [
+                "create_module",
+                "delete_module",
+                "finit_module",
+                "init_module"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_SYS_MODULE"
+                ]
+            }
+        },
+        {
+            "names": [
+                "get_mempolicy",
+                "mbind",
+                "set_mempolicy"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_SYS_NICE"
+                ]
+            }
+        },
+        {
+            "names": [
+                "ioperm",
+                "iopl"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_SYS_RAWIO"
+                ]
+            }
+        },
+        {
+            "names": [
+                "kcmp",
+                "process_vm_readv",
+                "process_vm_writev",
+                "ptrace"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_SYS_PTRACE"
+                ]
+            }
+        },
+        {
+            "names": [
+                "kexec_file_load",
+                "kexec_load",
+                "reboot"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_SYS_BOOT"
+                ]
+            }
+        },
+        {
+            "names": [
+                "name_to_handle_at",
+                "open_by_handle_at"
+            ],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+            "excludes": {
+                "caps": [
+                    "CAP_DAC_READ_SEARCH"
+                ]
+            }
+        }
+    ]
+}

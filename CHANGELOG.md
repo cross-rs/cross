@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - #767 - added the `cross-util` and `cross-dev` commands.
+- #745 - added `thumbv7neon-*` targets.
 - #741 - added `armv7-unknown-linux-gnueabi` and `armv7-unknown-linux-musleabi` targets.
 - #721 - add support for running doctests on nightly if `CROSS_UNSTABLE_ENABLE_DOCTESTS=true`.
 - #719 - add `--list` to known subcommands.
@@ -23,6 +24,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - #762 - re-enabled `x86_64-unknown-dragonfly` target.
 - #747 - reduced android image sizes.
+- #746 - limit image permissions for android images.
 - #377 - update WINE versions to 7.0.
 - #734 - patch `arm-unknown-linux-gnueabihf` to build for ARMv6, and add architecture for crosstool-ng-based images.
 - #709 - Update Emscripten targets to `emcc` version 3.1.10
