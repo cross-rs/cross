@@ -228,7 +228,7 @@ impl Target {
         !native && (self.is_linux() || self.is_windows() || self.is_bare_metal())
     }
 
-    fn needs_docker_privileged(&self) -> bool {
+    fn needs_docker_seccomp(&self) -> bool {
         let arch_32bit = self.triple().starts_with("arm")
             || self.triple().starts_with("i586")
             || self.triple().starts_with("i686");
