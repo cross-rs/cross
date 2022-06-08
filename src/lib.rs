@@ -1,3 +1,17 @@
+//! [![crates.io](https://img.shields.io/crates/v/cross.svg)](https://crates.io/crates/cross)
+//! [![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
+//! [![Matrix](https://img.shields.io/matrix/cross-rs:matrix.org)](https://matrix.to/#/#cross-rs:matrix.org)
+//!
+//! # `cross`
+//!
+//! <p style="background:rgba(148,192,255,0.1);padding:0.5em;border-radius:0.2em">
+//! <strong>⚠️ Warning:</strong> The cross library is for internal
+//! use only: only the command-line interface is stable. The library
+//! may change at any point for any reason. For documentation on the
+//! CLI, please see the repository <a href="https://github.com/cross-rs/cross">README</a>
+//! or the <a href="https://github.com/cross-rs/cross/wiki">wiki</a>.
+//! </p>
+
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
 #[cfg(test)]
@@ -27,9 +41,12 @@ use serde::Deserialize;
 
 use self::cargo::{CargoMetadata, Subcommand};
 use self::cross_toml::CrossToml;
-use self::errors::*;
-use self::extensions::OutputExt;
+use self::errors::Context;
 use self::rustc::{TargetList, VersionMetaExt};
+
+pub use self::docker::get_container_engine;
+pub use self::errors::{install_panic_hook, Result};
+pub use self::extensions::{CommandExt, OutputExt};
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
@@ -258,13 +275,7 @@ impl From<&str> for Target {
     }
 }
 
-pub fn main() -> Result<()> {
-    install_panic_hook()?;
-    run()?;
-    Ok(())
-}
-
-fn run() -> Result<ExitStatus> {
+pub fn run() -> Result<ExitStatus> {
     let target_list = rustc::target_list(false)?;
     let args = cli::parse(&target_list)?;
 
