@@ -73,6 +73,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #477 - Fix Docker/Podman links in README
 - #476 - Use Rustlang mirror for Sabotage linux tarbals
 - Bump nix dependency to `0.22.1`
+- Bump musl version to 1.1.24.
 
 ## [v0.2.1] - 2020-06-30
 

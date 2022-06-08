@@ -209,7 +209,7 @@ passthrough = [
 
 ### Unstable Features
 
-Certain unstable features can enable additional functionality useful to 
+Certain unstable features can enable additional functionality useful to
 cross-compiling. Note that these are unstable, and may be removed at any
 time (particularly if the feature is stabilized or removed), and will
 only be used on a nightly channel.
@@ -275,33 +275,33 @@ terminate.
 | `*-apple-ios` [1]                    | N/A    | N/A     | N/A | N/A   |   ✓    |
 | `aarch64-linux-android` [2]          | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
 | `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
-| `aarch64-unknown-linux-musl`         | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `aarch64-unknown-linux-musl`         | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `arm-linux-androideabi` [2]          | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.17   | 8.3.0   | ✓   | 5.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabihf`        | 2.27   | 7.3.0   | ✓   | 5.1.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`       | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `arm-unknown-linux-musleabi`         | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`       | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`     | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`     | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `armv7-linux-androideabi` [2]        | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
 | `armv7-unknown-linux-gnueabi`        | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | ✓   | 5.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabi`       | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.20 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabi`       | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`     | 1.1.24 | 6.3.0   |     | 5.1.0 |   ✓    |
 | `asmjs-unknown-emscripten` [6]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | N/A   |   ✓    |
-| `i586-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `i586-unknown-linux-musl`            | 1.1.24 | 6.3.0   |     | N/A   |   ✓    |
 | `i686-unknown-freebsd` [4]           | 12.1   | 6.4.0   |     | N/A   |   ✓    |
 | `i686-linux-android` [2]             | 9.0.0  | 4.9     | ✓   | 5.1.0 |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 7.3.0   | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-musl`            | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `i686-unknown-linux-musl`            | 1.1.24 | 6.3.0   |     | N/A   |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
-| `mips-unknown-linux-musl`            | 1.1.20 | 6.3.0   | ✓   | 5.1.0 |   ✓    |
+| `mips-unknown-linux-musl`            | 1.1.24 | 6.3.0   | ✓   | 5.1.0 |   ✓    |
 | `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
 | `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
 | `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | ✓   | 5.1.0 |   ✓    |
-| `mipsel-unknown-linux-musl`          | 1.1.20 | 6.3.0   | ✓   | 5.1.0 |   ✓    |
+| `mipsel-unknown-linux-musl`          | 1.1.24 | 6.3.0   | ✓   | 5.1.0 |   ✓    |
 | `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
 | `powerpc64-unknown-linux-gnu`        | 2.31   | 10.2.0  | ✓   | 5.1.0 |   ✓    |
 | `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | ✓   | 5.1.0 |   ✓    |
@@ -320,7 +320,7 @@ terminate.
 | `x86_64-unknown-freebsd` [4]         | 12.1   | 6.4.0   |     | N/A   |   ✓    |
 | `x86_64-unknown-dragonfly` [4] [3]   | 4.6.0  | 5.3.0   | ✓   | N/A   |        |
 | `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | ✓   | N/A   |   ✓    |
-| `x86_64-unknown-linux-musl`          | 1.1.20 | 6.3.0   |     | N/A   |   ✓    |
+| `x86_64-unknown-linux-musl`          | 1.1.24 | 6.3.0   |     | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [4]          | 7.0    | 5.3.0   | ✓   | N/A   |        |
 
 [1] iOS cross compilation is supported on macOS hosts.
