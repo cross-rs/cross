@@ -164,11 +164,11 @@ jobs:
             - { target: i686-unknown-linux-musl,          os: ubuntu-latest,                    std: 1, run: 1 }
             - { target: mips-unknown-linux-musl,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
             - { target: mipsel-unknown-linux-musl,        os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-            - { target: aarch64-linux-android,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, cpp: 1, runners: qemu-user }
-            - { target: arm-linux-androideabi,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, cpp: 1, runners: qemu-user }
-            - { target: armv7-linux-androideabi,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, cpp: 1, runners: qemu-user }
-            - { target: i686-linux-android,               os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, cpp: 1, runners: qemu-user }
-            - { target: x86_64-linux-android,             os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, cpp: 1, runners: qemu-user }
+            - { target: aarch64-linux-android,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: arm-linux-androideabi,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: armv7-linux-androideabi,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: i686-linux-android,               os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
+            - { target: x86_64-linux-android,             os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
             - { target: x86_64-pc-windows-gnu,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
             - { target: i686-pc-windows-gnu,              os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
             # Disabled for now, see https://github.com/rust-lang/rust/issues/85821
