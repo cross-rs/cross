@@ -312,7 +312,8 @@ pub fn run(
     }
 
     if let Ok(value) = env::var("DOCKER_OPTS") {
-        let opts: Vec<&str> = value.split(' ').collect();
+        let opts = shell_words::split(&value)
+            .wrap_err_with(|| format!("could not parse docker opts of {}", value))?;
         docker.args(&opts);
     }
 
