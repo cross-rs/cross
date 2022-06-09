@@ -27,6 +27,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = { version = "0.8", optional = true }
 serde_ignored = "0.1.2"
+shell-words = "1.1.0"
 
 [target.'cfg(not(windows))'.dependencies]
 nix = { version = "0.24", default-features = false, features = ["user"] }
