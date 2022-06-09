@@ -66,42 +66,37 @@ impl CrossToml {
 
     /// Returns the `target.{}.image` part of `Cross.toml`
     pub fn image(&self, target: &Target) -> Option<String> {
-        self.get_target(target).and_then(|t| t.image.clone())
+        self.get_string(target, |t| &t.image)
     }
 
     /// Returns the `target.{}.runner` part of `Cross.toml`
     pub fn runner(&self, target: &Target) -> Option<String> {
-        self.get_target(target).and_then(|t| t.runner.clone())
+        self.get_string(target, |t| &t.runner)
     }
 
     /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
     pub fn xargo(&self, target: &Target) -> (Option<bool>, Option<bool>) {
-        let build_xargo = self.build.xargo;
-        let target_xargo = self.get_target(target).and_then(|t| t.xargo);
-
-        (build_xargo, target_xargo)
+        self.get_bool(target, |b| b.xargo, |t| t.xargo)
     }
 
     /// Returns the list of environment variables to pass through for `build`,
-    pub fn env_passthrough_build(&self) -> Vec<String> {
-        self.build.env.passthrough.clone()
+    pub fn env_passthrough_build(&self) -> &[String] {
+        &self.build.env.passthrough
     }
 
     /// Returns the list of environment variables to pass through for `target`,
-    pub fn env_passthrough_target(&self, target: &Target) -> Vec<String> {
-        self.get_target(target)
-            .map_or(Vec::new(), |t| t.env.passthrough.clone())
+    pub fn env_passthrough_target(&self, target: &Target) -> &[String] {
+        self.get_vec(target, |e| &e.passthrough)
     }
 
     /// Returns the list of environment variables to pass through for `build`,
-    pub fn env_volumes_build(&self) -> Vec<String> {
-        self.build.env.volumes.clone()
+    pub fn env_volumes_build(&self) -> &[String] {
+        &self.build.env.volumes
     }
 
     /// Returns the list of environment variables to pass through for `target`,
-    pub fn env_volumes_target(&self, target: &Target) -> Vec<String> {
-        self.get_target(target)
-            .map_or(Vec::new(), |t| t.env.volumes.clone())
+    pub fn env_volumes_target(&self, target: &Target) -> &[String] {
+        self.get_vec(target, |e| &e.volumes)
     }
 
     /// Returns the default target to build,
@@ -115,6 +110,30 @@ impl CrossToml {
     /// Returns a reference to the [`CrossTargetConfig`] of a specific `target`
     fn get_target(&self, target: &Target) -> Option<&CrossTargetConfig> {
         self.targets.get(target)
+    }
+
+    fn get_string(
+        &self,
+        target: &Target,
+        get: impl Fn(&CrossTargetConfig) -> &Option<String>,
+    ) -> Option<String> {
+        self.get_target(target).and_then(|t| get(t).clone())
+    }
+
+    fn get_bool(
+        &self,
+        target: &Target,
+        get_build: impl Fn(&CrossBuildConfig) -> Option<bool>,
+        get_target: impl Fn(&CrossTargetConfig) -> Option<bool>,
+    ) -> (Option<bool>, Option<bool>) {
+        let build = get_build(&self.build);
+        let target = self.get_target(target).and_then(get_target);
+
+        (build, target)
+    }
+
+    fn get_vec(&self, target: &Target, get: impl Fn(&CrossEnvConfig) -> &[String]) -> &[String] {
+        self.get_target(target).map_or(&[], |t| get(&t.env))
     }
 }
 

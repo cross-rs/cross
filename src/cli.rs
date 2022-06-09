@@ -1,7 +1,7 @@
-use std::str::FromStr;
 use std::{env, path::PathBuf};
 
 use crate::cargo::Subcommand;
+use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::rustc::TargetList;
 use crate::Target;
@@ -26,16 +26,6 @@ fn absolute_path(path: PathBuf) -> Result<PathBuf> {
     } else {
         env::current_dir()?.join(path)
     })
-}
-
-fn bool_from_envvar(envvar: &str) -> bool {
-    if let Ok(value) = bool::from_str(envvar) {
-        value
-    } else if let Ok(value) = i32::from_str(envvar) {
-        value != 0
-    } else {
-        !envvar.is_empty()
-    }
 }
 
 pub fn is_subcommand_list(stdout: &str) -> bool {

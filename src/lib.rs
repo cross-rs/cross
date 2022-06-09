@@ -350,7 +350,7 @@ pub fn run() -> Result<ExitStatus> {
 
             let available_targets = rustup::available_targets(&toolchain, verbose)?;
             let uses_xargo = config
-                .xargo(&target)?
+                .xargo(&target)
                 .unwrap_or_else(|| !target.is_builtin() || !available_targets.contains(&target));
 
             if !uses_xargo
