@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- #775 - forward Cargo exit code to host
 - #767 - added the `cross-util` and `cross-dev` commands.
 - #745 - added `thumbv7neon-*` targets.
 - #741 - added `armv7-unknown-linux-gnueabi` and `armv7-unknown-linux-musleabi` targets.
