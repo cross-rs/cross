@@ -1,5 +1,6 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -72,6 +73,15 @@ struct Env {
 #[derive(Debug, PartialEq, Deserialize)]
 struct Matrix {
     target: String,
+    #[serde(default)]
+    run: i64,
+}
+
+impl Matrix {
+    fn has_test(&self, target: &str) -> bool {
+        // bare-metal targets don't have unittests right now
+        self.run != 0 && !target.contains("-none-")
+    }
 }
 
 fn get_container_engine(engine: Option<&str>) -> Result<PathBuf, which::Error> {
@@ -117,6 +127,7 @@ fn image_info(
     image: &str,
     tag: &str,
     verbose: bool,
+    has_test: bool,
 ) -> cross::Result<()> {
     if !tag.starts_with("local") {
         pull_image(engine, image, verbose)?;
@@ -127,6 +138,9 @@ fn image_info(
     command.arg("-it");
     command.arg("--rm");
     command.args(&["-e", &format!("TARGET={target}")]);
+    if has_test {
+        command.args(&["-e", "HAS_TEST=1"]);
+    }
     command.arg(image);
     command.args(&["bash", "-c", TARGET_INFO_SCRIPT]);
 
@@ -145,10 +159,15 @@ fn target_info(
     repository: &str,
     tag: &str,
 ) -> cross::Result<()> {
+    let workflow: Workflow = serde_yaml::from_str(WORKFLOW)?;
+    let matrix = &workflow.jobs.generate_matrix.steps[0].env.matrix;
+    let matrix: Vec<Matrix> = serde_yaml::from_str(matrix)?;
+    let test_map: BTreeMap<&str, bool> = matrix
+        .iter()
+        .map(|i| (i.target.as_ref(), i.has_test(&i.target)))
+        .collect();
+
     if targets.is_empty() {
-        let workflow: Workflow = serde_yaml::from_str(WORKFLOW)?;
-        let matrix = &workflow.jobs.generate_matrix.steps[0].env.matrix;
-        let matrix: Vec<Matrix> = serde_yaml::from_str(matrix)?;
         targets = matrix
             .iter()
             .map(|t| t.target.clone())
@@ -157,8 +176,13 @@ fn target_info(
     }
 
     for target in targets {
-        let image = format_image(registry, repository, &target, tag);
-        image_info(engine, &target, &image, tag, verbose)?;
+        let target = target.as_ref();
+        let image = format_image(registry, repository, target, tag);
+        let has_test = test_map
+            .get(&target)
+            .cloned()
+            .ok_or_else(|| eyre::eyre!("invalid target name {}", target))?;
+        image_info(engine, target, &image, tag, verbose, has_test)?;
     }
 
     Ok(())

@@ -120,11 +120,7 @@ case "${arch}" in
         qarch="ppc64"
         ;;
     powerpc64le)
-        if [ "${CROSS_RUNNER}" = "qemu-user" ]; then
-            qarch="ppc64le"
-        else
-            qarch="ppc64"
-        fi
+        qarch="ppc64le"
         ;;
     riscv64*)
         qarch="riscv64"
@@ -324,5 +320,10 @@ if [ "$qemu" != "" ]; then
     printf " %-5s |" "${qemu}"
 else
     printf " N/A   |"
+fi
+if [ "${HAS_TEST}" != "" ]; then
+    printf "   ✓    |"
+else
+    printf "       |"
 fi
 printf "\n"
