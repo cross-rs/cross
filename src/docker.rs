@@ -31,7 +31,7 @@ enum EngineType {
 
 // determine if the container engine is docker. this fixes issues with
 // any aliases (#530), and doesn't fail if an executable suffix exists.
-fn get_engine_type(ce: std::path::PathBuf, verbose: bool) -> Result<EngineType> {
+fn get_engine_type(ce: &Path, verbose: bool) -> Result<EngineType> {
     let stdout = Command::new(ce)
         .arg("--help")
         .run_and_get_stdout(verbose)?
@@ -46,7 +46,7 @@ fn get_engine_type(ce: std::path::PathBuf, verbose: bool) -> Result<EngineType> 
     }
 }
 
-pub fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
+pub fn get_container_engine() -> Result<PathBuf, which::Error> {
     if let Ok(ce) = env::var("CROSS_CONTAINER_ENGINE") {
         which::which(ce)
     } else {
@@ -54,11 +54,8 @@ pub fn get_container_engine() -> Result<std::path::PathBuf, which::Error> {
     }
 }
 
-pub fn docker_command(subcommand: &str) -> Result<Command> {
-    let ce = get_container_engine()
-        .map_err(|_| eyre::eyre!("no container engine found"))
-        .with_suggestion(|| "is docker or podman installed?")?;
-    let mut command = Command::new(ce);
+pub fn docker_command(engine: &Path, subcommand: &str) -> Result<Command> {
+    let mut command = Command::new(engine);
     command.arg(subcommand);
     command.args(&["--userns", "host"]);
     Ok(command)
@@ -75,7 +72,8 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
             binfmt-support qemu-user-static"
     };
 
-    docker_command("run")?
+    let engine = get_container_engine()?;
+    docker_command(&engine, "run")?
         .arg("--privileged")
         .arg("--rm")
         .arg("ubuntu:16.04")
@@ -191,8 +189,12 @@ pub fn run(
 
     let runner = config.runner(target)?;
 
-    let mut docker = docker_command("run")?;
-    let engine_type = get_engine_type(get_container_engine().unwrap(), verbose)?;
+    let engine = get_container_engine()
+        .map_err(|_| eyre::eyre!("no container engine found"))
+        .with_suggestion(|| "is docker or podman installed?")?;
+    let engine_type = get_engine_type(&engine, verbose)?;
+
+    let mut docker = docker_command(&engine, "run")?;
 
     for ref var in config.env_passthrough(target)? {
         validate_env_var(var)?;
