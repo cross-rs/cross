@@ -134,6 +134,11 @@ EOF
     make install
     cd ..
 
+    # rust incorrectly adds link args to libgcc_pic, which is no longer
+    # a present target, and it should link to libgcc_s.
+    # https://github.com/rust-lang/rust/blob/60361f2/library/unwind/build.rs#L23-L38
+    ln -s "${destdir}"/lib/libgcc_s.so "${destdir}"/lib/libgcc_pic.so
+
     # clean up
     popd
 
