@@ -115,13 +115,17 @@ fn get_cross_images(engine: &Path, verbose: bool, local: bool) -> cross::Result<
 // the old rustembedded targets had the following format:
 //  repository = (${registry}/)?rustembedded/cross
 //  tag = ${target}(-${version})?
-// our target triple must match `[A-Za-z0-9_-]`
+// the last component must match `[A-Za-z0-9_-]` and
+// we must have at least 3 components. the first component
+// may contain other characters, such as `thumbv8m.main-none-eabi`.
 fn rustembedded_target(tag: &str) -> String {
     let is_target_char = |c: char| c == '_' || c.is_ascii_alphanumeric();
     let mut components = vec![];
-    for component in tag.split('-') {
-        if !component.is_empty() && component.chars().all(is_target_char) {
+    for (index, component) in tag.split('-').enumerate() {
+        if index <= 2 || (!component.is_empty() && component.chars().all(is_target_char)) {
             components.push(component)
+        } else {
+            break;
         }
     }
 
@@ -226,4 +230,23 @@ pub fn main() -> cross::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_rustembedded_target() {
+        let targets = [
+            "x86_64-unknown-linux-gnu",
+            "x86_64-apple-darwin",
+            "thumbv8m.main-none-eabi",
+        ];
+        for target in targets {
+            let versioned = format!("{target}-0.2.1");
+            assert_eq!(rustembedded_target(target), target.to_string());
+            assert_eq!(rustembedded_target(&versioned), target.to_string());
+        }
+    }
 }
