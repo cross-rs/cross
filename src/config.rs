@@ -1,8 +1,8 @@
 use crate::{CrossToml, Result, Target, TargetList};
 
-use crate::errors::*;
 use std::collections::HashMap;
 use std::env;
+use std::str::FromStr;
 
 #[derive(Debug)]
 struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
@@ -23,6 +23,19 @@ impl Environment {
             .or_else(|| env::var(name).ok())
     }
 
+    fn get_values_for<T>(
+        &self,
+        var: &str,
+        target: &Target,
+        convert: impl Fn(&str) -> T,
+    ) -> (Option<T>, Option<T>) {
+        let target_values = self.get_target_var(target, var).map(|ref s| convert(s));
+
+        let build_values = self.get_build_var(var).map(|ref s| convert(s));
+
+        (build_values, target_values)
+    }
+
     fn target_path(target: &Target, key: &str) -> String {
         format!("TARGET_{target}_{key}")
     }
@@ -39,27 +52,8 @@ impl Environment {
         self.get_var(&self.build_var_name(&Self::target_path(target, key)))
     }
 
-    fn xargo(&self, target: &Target) -> Result<(Option<bool>, Option<bool>)> {
-        let (build_xargo, target_xargo) = (
-            self.get_build_var("XARGO"),
-            self.get_target_var(target, "XARGO"),
-        );
-        let build_env = if let Some(value) = build_xargo {
-            Some(value.parse::<bool>().wrap_err_with(|| {
-                format!("error parsing {value} from XARGO environment variable")
-            })?)
-        } else {
-            None
-        };
-        let target_env = if let Some(value) = target_xargo {
-            Some(value.parse::<bool>().wrap_err_with(|| {
-                format!("error parsing {} from XARGO environment variable", value)
-            })?)
-        } else {
-            None
-        };
-
-        Ok((build_env, target_env))
+    fn xargo(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+        self.get_values_for("XARGO", target, bool_from_envvar)
     }
 
     fn image(&self, target: &Target) -> Option<String> {
@@ -71,36 +65,30 @@ impl Environment {
     }
 
     fn passthrough(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
-        self.get_values_for("ENV_PASSTHROUGH", target)
+        self.get_values_for("ENV_PASSTHROUGH", target, split_to_cloned_by_ws)
     }
 
     fn volumes(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
-        self.get_values_for("ENV_VOLUMES", target)
+        self.get_values_for("ENV_VOLUMES", target, split_to_cloned_by_ws)
     }
 
     fn target(&self) -> Option<String> {
         self.get_build_var("TARGET")
     }
-
-    fn get_values_for(
-        &self,
-        var: &str,
-        target: &Target,
-    ) -> (Option<Vec<String>>, Option<Vec<String>>) {
-        let target_values = self
-            .get_target_var(target, var)
-            .map(|ref s| split_to_cloned_by_ws(s));
-
-        let build_values = self
-            .get_build_var(var)
-            .map(|ref s| split_to_cloned_by_ws(s));
-
-        (build_values, target_values)
-    }
 }
 
 fn split_to_cloned_by_ws(string: &str) -> Vec<String> {
     string.split_whitespace().map(String::from).collect()
+}
+
+pub fn bool_from_envvar(envvar: &str) -> bool {
+    if let Ok(value) = bool::from_str(envvar) {
+        value
+    } else if let Ok(value) = i32::from_str(envvar) {
+        value != 0
+    } else {
+        !envvar.is_empty()
+    }
 }
 
 #[derive(Debug)]
@@ -136,72 +124,97 @@ impl Config {
         }
     }
 
-    #[cfg(test)]
-    fn new_with(toml: Option<CrossToml>, env: Environment) -> Self {
-        Config { toml, env }
-    }
-
-    pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
-        let (build_xargo, target_xargo) = self.env.xargo(target)?;
-        let (toml_build_xargo, toml_target_xargo) = if let Some(ref toml) = self.toml {
-            toml.xargo(target)
+    fn bool_from_config(
+        &self,
+        target: &Target,
+        env: impl Fn(&Environment, &Target) -> (Option<bool>, Option<bool>),
+        config: impl Fn(&CrossToml, &Target) -> (Option<bool>, Option<bool>),
+    ) -> Option<bool> {
+        let (env_build, env_target) = env(&self.env, target);
+        let (toml_build, toml_target) = if let Some(ref toml) = self.toml {
+            config(toml, target)
         } else {
             (None, None)
         };
 
-        match (build_xargo, toml_build_xargo) {
-            (xargo @ Some(_), _) => return Ok(xargo),
-            (None, xargo @ Some(_)) => return Ok(xargo),
+        match (env_build, toml_build) {
+            (Some(value), _) => return Some(value),
+            (None, Some(value)) => return Some(value),
             (None, None) => {}
         };
 
-        match (target_xargo, toml_target_xargo) {
-            (xargo @ Some(_), _) => return Ok(xargo),
-            (None, xargo @ Some(_)) => return Ok(xargo),
+        match (env_target, toml_target) {
+            (Some(value), _) => return Some(value),
+            (None, Some(value)) => return Some(value),
             (None, None) => {}
         };
-        Ok(None)
+
+        None
     }
 
-    pub fn image(&self, target: &Target) -> Result<Option<String>> {
-        let env_value = self.env.image(target);
-        if let Some(env_value) = env_value {
-            return Ok(Some(env_value));
-        }
-        self.toml.as_ref().map_or(Ok(None), |t| Ok(t.image(target)))
-    }
-
-    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
-        let env_value = self.env.runner(target);
+    fn string_from_config(
+        &self,
+        target: &Target,
+        env: impl Fn(&Environment, &Target) -> Option<String>,
+        config: impl Fn(&CrossToml, &Target) -> Option<String>,
+    ) -> Result<Option<String>> {
+        let env_value = env(&self.env, target);
         if let Some(env_value) = env_value {
             return Ok(Some(env_value));
         }
         self.toml
             .as_ref()
-            .map_or(Ok(None), |t| Ok(t.runner(target)))
+            .map_or(Ok(None), |t| Ok(config(t, target)))
+    }
+
+    fn vec_from_config(
+        &self,
+        target: &Target,
+        env: impl Fn(&Environment, &Target) -> (Option<Vec<String>>, Option<Vec<String>>),
+        config_build: impl for<'a> Fn(&'a CrossToml) -> &'a [String],
+        config_target: impl for<'a> Fn(&'a CrossToml, &Target) -> &'a [String],
+    ) -> Result<Vec<String>> {
+        let (env_build, env_target) = env(&self.env, target);
+
+        let mut collected = self.sum_of_env_toml_values(env_build, config_build)?;
+        collected.extend(self.sum_of_env_toml_values(env_target, |t| config_target(t, target))?);
+
+        Ok(collected)
+    }
+
+    #[cfg(test)]
+    fn new_with(toml: Option<CrossToml>, env: Environment) -> Self {
+        Config { toml, env }
+    }
+
+    pub fn xargo(&self, target: &Target) -> Option<bool> {
+        self.bool_from_config(target, Environment::xargo, CrossToml::xargo)
+    }
+
+    pub fn image(&self, target: &Target) -> Result<Option<String>> {
+        self.string_from_config(target, Environment::image, CrossToml::image)
+    }
+
+    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
+        self.string_from_config(target, Environment::runner, CrossToml::runner)
     }
 
     pub fn env_passthrough(&self, target: &Target) -> Result<Vec<String>> {
-        let (env_build, env_target) = self.env.passthrough(target);
-
-        let toml_getter = || self.toml.as_ref().map(|t| t.env_passthrough_build());
-        let mut collected = Self::sum_of_env_toml_values(toml_getter, env_build)?;
-
-        let toml_getter = || self.toml.as_ref().map(|t| t.env_passthrough_target(target));
-        collected.extend(Self::sum_of_env_toml_values(toml_getter, env_target)?);
-
-        Ok(collected)
+        self.vec_from_config(
+            target,
+            Environment::passthrough,
+            CrossToml::env_passthrough_build,
+            CrossToml::env_passthrough_target,
+        )
     }
 
     pub fn env_volumes(&self, target: &Target) -> Result<Vec<String>> {
-        let (env_build, env_target) = self.env.volumes(target);
-        let toml_getter = || self.toml.as_ref().map(|t| t.env_volumes_build());
-        let mut collected = Self::sum_of_env_toml_values(toml_getter, env_build)?;
-
-        let toml_getter = || self.toml.as_ref().map(|t| t.env_volumes_target(target));
-        collected.extend(Self::sum_of_env_toml_values(toml_getter, env_target)?);
-
-        Ok(collected)
+        self.vec_from_config(
+            target,
+            Environment::volumes,
+            CrossToml::env_volumes_build,
+            CrossToml::env_volumes_target,
+        )
     }
 
     pub fn target(&self, target_list: &TargetList) -> Option<Target> {
@@ -213,15 +226,16 @@ impl Config {
             .and_then(|t| t.default_target(target_list))
     }
 
-    fn sum_of_env_toml_values(
-        toml_getter: impl FnOnce() -> Option<Vec<String>>,
+    fn sum_of_env_toml_values<'a>(
+        &'a self,
         env_values: Option<Vec<String>>,
+        toml_getter: impl FnOnce(&'a CrossToml) -> &'a [String],
     ) -> Result<Vec<String>> {
         let mut collect = vec![];
         if let Some(mut vars) = env_values {
             collect.append(&mut vars);
-        } else if let Some(toml_values) = toml_getter() {
-            collect.extend(toml_values.into_iter());
+        } else if let Some(toml_values) = self.toml.as_ref().map(toml_getter) {
+            collect.extend(toml_values.iter().cloned());
         }
 
         Ok(collect)
@@ -231,6 +245,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::errors::*;
     use crate::{Target, TargetList};
 
     fn target_list() -> TargetList {
@@ -257,24 +272,17 @@ mod tests {
             map.insert("CROSS_BUILD_XARGO", "tru");
 
             let env = Environment::new(Some(map));
-
-            let res = env.xargo(&target());
-            if res.is_ok() {
-                panic!("invalid bool string parsing should fail");
-            }
+            assert_eq!(env.xargo(&target()), (Some(true), None));
         }
 
         #[test]
-        pub fn build_and_target_set_returns_tuple() -> Result<()> {
+        pub fn build_and_target_set_returns_tuple() {
             let mut map = std::collections::HashMap::new();
             map.insert("CROSS_BUILD_XARGO", "true");
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
 
             let env = Environment::new(Some(map));
-
-            assert_eq!(env.xargo(&target())?, (Some(true), Some(false)));
-
-            Ok(())
+            assert_eq!(env.xargo(&target()), (Some(true), Some(false)));
         }
 
         #[test]
@@ -329,7 +337,7 @@ mod tests {
 
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
-            assert!(matches!(config.xargo(&target()), Ok(Some(true))));
+            assert!(matches!(config.xargo(&target()), Some(true)));
 
             Ok(())
         }
@@ -341,7 +349,7 @@ mod tests {
             let env = Environment::new(Some(map));
 
             let config = Config::new_with(Some(toml(TOML_TARGET_XARGO_FALSE)?), env);
-            assert!(matches!(config.xargo(&target()), Ok(Some(true))));
+            assert!(matches!(config.xargo(&target()), Some(true)));
 
             Ok(())
         }
@@ -352,7 +360,7 @@ mod tests {
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
-            assert!(matches!(config.xargo(&target()), Ok(Some(false))));
+            assert!(matches!(config.xargo(&target()), Some(false)));
 
             Ok(())
         }
