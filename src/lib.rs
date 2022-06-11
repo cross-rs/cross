@@ -49,7 +49,7 @@ pub use self::errors::{install_panic_hook, Result};
 pub use self::extensions::{CommandExt, OutputExt};
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Host {
     Other(String),
 
@@ -456,7 +456,7 @@ pub fn run() -> Result<ExitStatus> {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub(crate) enum VersionMatch {
     Same,
     OlderTarget,

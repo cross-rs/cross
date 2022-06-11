@@ -37,7 +37,7 @@ pub fn group_subcommands(stdout: &str) -> (Vec<&str>, Vec<&str>) {
     let mut host = vec![];
     for line in stdout.lines().skip(1) {
         // trim all whitespace, then grab the command name
-        let first = line.trim().split_whitespace().next();
+        let first = line.split_whitespace().next();
         if let Some(command) = first {
             match Subcommand::from(command) {
                 Subcommand::Other => host.push(line),

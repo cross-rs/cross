@@ -6,7 +6,7 @@ use serde::Deserialize;
 use std::collections::{BTreeSet, HashMap};
 
 /// Environment configuration
-#[derive(Debug, Deserialize, PartialEq, Default)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Default)]
 pub struct CrossEnvConfig {
     #[serde(default)]
     volumes: Vec<String>,
@@ -15,7 +15,7 @@ pub struct CrossEnvConfig {
 }
 
 /// Build configuration
-#[derive(Debug, Deserialize, PartialEq, Default)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CrossBuildConfig {
     #[serde(default)]
@@ -25,7 +25,7 @@ pub struct CrossBuildConfig {
 }
 
 /// Target configuration
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct CrossTargetConfig {
     xargo: Option<bool>,
     image: Option<String>,
@@ -35,7 +35,7 @@ pub struct CrossTargetConfig {
 }
 
 /// Cross configuration
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct CrossToml {
     #[serde(default, rename = "target")]
     pub targets: HashMap<Target, CrossTargetConfig>,

@@ -490,7 +490,7 @@ struct MountFinder {
     mounts: Vec<MountDetail>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct MountDetail {
     source: PathBuf,
     destination: PathBuf,
