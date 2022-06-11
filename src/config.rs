@@ -137,13 +137,13 @@ impl Config {
             (None, None)
         };
 
-        match (env_build, toml_build) {
+        match (env_target, toml_target) {
             (Some(value), _) => return Some(value),
             (None, Some(value)) => return Some(value),
             (None, None) => {}
         };
 
-        match (env_target, toml_target) {
+        match (env_build, toml_build) {
             (Some(value), _) => return Some(value),
             (None, Some(value)) => return Some(value),
             (None, None) => {}
@@ -360,7 +360,7 @@ mod tests {
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
-            assert!(matches!(config.xargo(&target()), Some(false)));
+            assert!(matches!(config.xargo(&target()), Some(true)));
 
             Ok(())
         }
