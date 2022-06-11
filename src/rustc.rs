@@ -7,6 +7,7 @@ use crate::errors::*;
 use crate::extensions::CommandExt;
 use crate::{Host, Target};
 
+#[derive(Debug)]
 pub struct TargetList {
     pub triples: Vec<String>,
 }
@@ -44,11 +45,9 @@ pub fn target_list(verbose: bool) -> Result<TargetList> {
 pub fn sysroot(host: &Host, target: &Target, verbose: bool) -> Result<PathBuf> {
     let mut stdout = Command::new("rustc")
         .args(&["--print", "sysroot"])
-        .run_and_get_stdout(verbose)?;
-
-    if stdout.ends_with('\n') {
-        stdout.pop();
-    }
+        .run_and_get_stdout(verbose)?
+        .trim()
+        .to_owned();
 
     // On hosts other than Linux, specify the correct toolchain path.
     if host != &Host::X86_64UnknownLinuxGnu && target.needs_docker() {

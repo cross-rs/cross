@@ -1,4 +1,5 @@
 FROM ubuntu:16.04
+ARG DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -9,6 +10,7 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
+COPY freebsd-common.sh /
 COPY freebsd.sh /
 RUN /freebsd.sh i686
 
@@ -18,4 +20,5 @@ RUN /freebsd-extras.sh i686
 ENV CARGO_TARGET_I686_UNKNOWN_FREEBSD_LINKER=i686-unknown-freebsd12-gcc \
     CC_i686_unknown_freebsd=i686-unknown-freebsd12-gcc \
     CXX_i686_unknown_freebsd=i686-unknown-freebsd12-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_i686_unknown_freebsd="--sysroot=/usr/local/i686-unknown-freebsd12" \
     I686_UNKNOWN_FREEBSD_OPENSSL_DIR=/usr/local/i686-unknown-freebsd12/

@@ -58,6 +58,8 @@ build_static_libattr() {
 
     curl --retry 3 -sSfL "https://download.savannah.nongnu.org/releases/attr/attr-${version}.src.tar.gz" -O
     tar --strip-components=1 -xzf "attr-${version}.src.tar.gz"
+    cp /usr/share/automake*/config.* .
+
     ./configure
     make "-j$(nproc)"
     install -m 644 ./libattr/.libs/libattr.a /usr/lib64/
@@ -146,6 +148,9 @@ main() {
         libmount-devel \
         zlib-devel \
         zlib-static
+
+    if_centos 'curl --retry 3 -sSfL "https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD" -o /usr/share/automake*/config.guess'
+    if_centos 'curl --retry 3 -sSfL "https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD" -o /usr/share/automake*/config.sub'
 
     # these are not packaged as static libraries in centos; build them manually
     if_centos build_static_libffi

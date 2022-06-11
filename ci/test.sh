@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
 
 set -x
 set -euo pipefail
+
+# NOTE: "${@}" is an unbound variable for bash 3.2, which is the
+# installed version on macOS. likewise, "${var[@]}" is an unbound
+# error if var is an empty array.
 
 function retry {
   local tries="${TRIES-5}"
@@ -25,6 +30,13 @@ function retry {
   return ${exit_code}
 }
 
+workspace_test() {
+  "${CROSS[@]}" build --target "${TARGET}" --workspace "$@" ${CROSS_FLAGS}
+  "${CROSS[@]}" run --target "${TARGET}" -p binary "$@" ${CROSS_FLAGS}
+  "${CROSS[@]}" run --target "${TARGET}" --bin dependencies \
+    --features=dependencies "$@" ${CROSS_FLAGS}
+}
+
 main() {
     local td=
 
@@ -33,13 +45,28 @@ main() {
 
     export QEMU_STRACE=1
 
+    # ensure we have the proper toolchain and optional rust flags
+    export CROSS=(cross)
+    export CROSS_FLAGS=""
+    if (( ${BUILD_STD:-0} )); then
+        # use build-std instead of xargo, due to xargo being
+        # maintenance-only. build-std requires a nightly compiler
+        rustup toolchain add nightly
+        CROSS_FLAGS="${CROSS_FLAGS} -Zbuild-std"
+        CROSS+=("+nightly")
+    elif ! (( ${STD:-0} )); then
+        # don't use xargo: should have native support just from rustc
+        rustup toolchain add nightly
+        CROSS+=("+nightly")
+    fi
+
     if (( ${STD:-0} )); then
         # test `cross check`
         td=$(mktemp -d)
         cargo init --lib --name foo "${td}"
         pushd "${td}"
         echo '#![no_std]' > src/lib.rs
-        cross check --target "${TARGET}"
+        "${CROSS[@]}" check --target "${TARGET}" ${CROSS_FLAGS}
         popd
         rm -rf "${td}"
     else
@@ -52,12 +79,10 @@ main() {
             https://github.com/rust-lang-nursery/compiler-builtins "${td}"
 
         pushd "${td}"
-        cat > Cross.toml <<EOF
-[build]
-xargo = true
-EOF
         retry cargo fetch
-        cross build --lib --target "${TARGET}"
+        # don't use xargo: should have native support just from rustc
+        rustup toolchain add nightly
+        "${CROSS[@]}" build --lib --target "${TARGET}" ${CROSS_FLAGS}
         popd
 
         rm -rf "${td}"
@@ -72,7 +97,7 @@ EOF
         pushd "${td}"
         cargo init --lib --name foo .
         retry cargo fetch
-        cross build --target "${TARGET}"
+        "${CROSS[@]}" build --target "${TARGET}" ${CROSS_FLAGS}
         popd
 
         rm -rf "${td}"
@@ -83,7 +108,7 @@ EOF
         # test that linking works
         cargo init --bin --name hello .
         retry cargo fetch
-        cross build --target "${TARGET}"
+        "${CROSS[@]}" build --target "${TARGET}" ${CROSS_FLAGS}
         popd
 
         rm -rf "${td}"
@@ -135,6 +160,21 @@ EOF
                 popd
 
                 rm -rf "${td}"
+                td=$(mktemp -d)
+                git clone \
+                    --depth 1 \
+                    --recursive \
+                    https://github.com/cross-rs/test-workspace "${td}"
+                
+                pushd "${td}"
+                TARGET="${TARGET}" workspace_test --manifest-path="./workspace/Cargo.toml"
+                pushd "workspace"
+                TARGET="${TARGET}" workspace_test
+                pushd "binary"
+                "${CROSS[@]}" run --target "${TARGET}" ${CROSS_FLAGS}
+                popd
+                popd
+                popd
             ;;
         esac
 
@@ -144,15 +184,14 @@ EOF
     if (( ${CPP:-0} )); then
         td="$(mktemp -d)"
 
-        git clone --depth 1 https://github.com/japaric/hellopp "${td}"
+        git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"
 
         pushd "${td}"
-        cargo update -p gcc
         retry cargo fetch
         if (( ${RUN:-0} )); then
             cross_run --target "${TARGET}"
         else
-            cross build --target "${TARGET}"
+            "${CROSS[@]}" build --target "${TARGET}" ${CROSS_FLAGS}
         fi
         popd
 
@@ -162,33 +201,33 @@ EOF
 
 cross_run() {
     if [[ -z "${RUNNERS:-}" ]]; then
-        cross run "$@"
+        "${CROSS[@]}" run "$@" ${CROSS_FLAGS}
     else
         for runner in ${RUNNERS}; do
             echo -e "[target.${TARGET}]\nrunner = \"${runner}\"" > Cross.toml
-            cross run "$@"
+            "${CROSS[@]}" run "$@" ${CROSS_FLAGS}
         done
     fi
 }
 
 cross_test() {
     if [[ -z "${RUNNERS:-}" ]]; then
-        cross test "$@"
+        "${CROSS[@]}" test "$@" ${CROSS_FLAGS}
     else
         for runner in ${RUNNERS}; do
             echo -e "[target.${TARGET}]\nrunner = \"${runner}\"" > Cross.toml
-            cross test "$@"
+            "${CROSS[@]}" test "$@" ${CROSS_FLAGS}
         done
     fi
 }
 
 cross_bench() {
     if [[ -z "${RUNNERS:-}" ]]; then
-        cross bench "$@"
+        "${CROSS[@]}" bench "$@" ${CROSS_FLAGS}
     else
         for runner in ${RUNNERS}; do
             echo -e "[target.${TARGET}]\nrunner = \"${runner}\"" > Cross.toml
-            cross bench "$@"
+            "${CROSS[@]}" bench "$@" ${CROSS_FLAGS}
         done
     fi
 }

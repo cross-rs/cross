@@ -3,6 +3,9 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 hide_output() {
     set +x
     trap "
@@ -21,20 +24,7 @@ hide_output() {
 main() {
     local version=0.9.9
 
-    local dependencies=(
-        ca-certificates
-        curl
-        build-essential
-    )
-
-    apt-get update
-    local purge_list=()
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -L "${dep}"; then
-            apt-get install --assume-yes --no-install-recommends "${dep}"
-            purge_list+=( "${dep}" )
-        fi
-    done
+    install_packages ca-certificates curl build-essential
 
     local td
     td="$(mktemp -d)"
@@ -48,16 +38,14 @@ main() {
 
     hide_output make install "-j$(nproc)" \
         GCC_VER=9.2.0 \
-        MUSL_VER=1.2.0 \
+        MUSL_VER=1.1.24 \
         BINUTILS_VER=2.33.1 \
         DL_CMD='curl --retry 3 -sSfL -C - -o' \
         LINUX_HEADERS_SITE=$linux_headers_site \
         OUTPUT=/usr/local/ \
         "${@}"
 
-    if (( ${#purge_list[@]} )); then
-      apt-get purge --assume-yes --auto-remove "${purge_list[@]}"
-    fi
+    purge_packages
 
     popd
 

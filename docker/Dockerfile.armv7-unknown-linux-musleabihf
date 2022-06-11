@@ -1,4 +1,5 @@
 FROM ubuntu:20.04
+ARG DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -24,10 +25,11 @@ RUN /musl.sh \
 RUN ln -sf \
     /usr/local/arm-linux-musleabihf/lib/libc.so \
     /usr/local/arm-linux-musleabihf/lib/ld-musl-armhf.so.1
-ENV QEMU_LD_PREFIX=/usr/local/arm-linux-musleabihf
 
 ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-musleabihf-gcc \
     CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_RUNNER=qemu-arm \
     CC_armv7_unknown_linux_musleabihf=arm-linux-musleabihf-gcc \
     CXX_armv7_unknown_linux_musleabihf=arm-linux-musleabihf-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_armv7_unknown_linux_musleabihf="--sysroot=/usr/local/arm-linux-musleabihf" \
+    QEMU_LD_PREFIX=/usr/local/arm-linux-musleabihf \
     RUST_TEST_THREADS=1
