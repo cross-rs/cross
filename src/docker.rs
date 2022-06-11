@@ -94,6 +94,10 @@ fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
     Ok((key, value))
 }
 
+fn parse_docker_opts(value: &str) -> Result<Vec<String>> {
+    shell_words::split(value).wrap_err_with(|| format!("could not parse docker opts of {}", value))
+}
+
 #[allow(unused_variables)]
 pub fn mount(cmd: &mut Command, val: &Path, verbose: bool) -> Result<PathBuf> {
     let host_path = file::canonicalize(&val)
@@ -291,11 +295,15 @@ pub fn run(
         docker.args(&["-e", &format!("CROSS_DEBUG={value}")]);
     }
 
-    if let Ok(value) = env::var("DOCKER_OPTS") {
-        let opts = shell_words::split(&value)
-            .wrap_err_with(|| format!("could not parse docker opts of {}", value))?;
-        docker.args(&opts);
-    }
+    if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
+        if env::var("DOCKER_OPTS").is_ok() {
+            eprintln!("Warning: using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.");
+        }
+        docker.args(&parse_docker_opts(&value)?);
+    } else if let Ok(value) = env::var("DOCKER_OPTS") {
+        // FIXME: remove this when we deprecate DOCKER_OPTS.
+        docker.args(&parse_docker_opts(&value)?);
+    };
 
     docker
         .args(&[
