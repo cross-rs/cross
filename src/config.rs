@@ -41,7 +41,11 @@ impl Environment {
     }
 
     fn build_path(key: &str) -> String {
-        format!("BUILD_{key}")
+        if !key.starts_with("BUILD_") {
+            format!("BUILD_{key}")
+        } else {
+            key.to_string()
+        }
     }
 
     fn get_build_var(&self, key: &str) -> Option<String> {
@@ -54,6 +58,10 @@ impl Environment {
 
     fn xargo(&self, target: &Target) -> (Option<bool>, Option<bool>) {
         self.get_values_for("XARGO", target, bool_from_envvar)
+    }
+
+    fn build_std(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+        self.get_values_for("BUILD_STD", target, bool_from_envvar)
     }
 
     fn image(&self, target: &Target) -> Option<String> {
@@ -191,6 +199,10 @@ impl Config {
         self.bool_from_config(target, Environment::xargo, CrossToml::xargo)
     }
 
+    pub fn build_std(&self, target: &Target) -> Option<bool> {
+        self.bool_from_config(target, Environment::build_std, CrossToml::build_std)
+    }
+
     pub fn image(&self, target: &Target) -> Result<Option<String>> {
         self.string_from_config(target, Environment::image, CrossToml::image)
     }
@@ -270,9 +282,11 @@ mod tests {
         pub fn parse_error_in_env() {
             let mut map = std::collections::HashMap::new();
             map.insert("CROSS_BUILD_XARGO", "tru");
+            map.insert("CROSS_BUILD_STD", "false");
 
             let env = Environment::new(Some(map));
             assert_eq!(env.xargo(&target()), (Some(true), None));
+            assert_eq!(env.build_std(&target()), (Some(false), None));
         }
 
         #[test]
@@ -346,10 +360,12 @@ mod tests {
         pub fn env_target_and_toml_target_xargo_target_then_use_env() -> Result<()> {
             let mut map = HashMap::new();
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
+            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_BUILD_STD", "true");
             let env = Environment::new(Some(map));
 
             let config = Config::new_with(Some(toml(TOML_TARGET_XARGO_FALSE)?), env);
             assert!(matches!(config.xargo(&target()), Some(true)));
+            assert!(matches!(config.build_std(&target()), Some(true)));
 
             Ok(())
         }

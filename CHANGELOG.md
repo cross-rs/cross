@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- #782 - added `build-std` config option, which builds the rust standard library from source if enabled.
 - #775 - forward Cargo exit code to host
 - #767 - added the `cross-util` and `cross-dev` commands.
 - #745 - added `thumbv7neon-*` targets.
