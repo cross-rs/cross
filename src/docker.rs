@@ -96,8 +96,8 @@ fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
 
 #[allow(unused_variables)]
 pub fn mount(cmd: &mut Command, val: &Path, verbose: bool) -> Result<PathBuf> {
-    let host_path =
-        file::canonicalize(&val).wrap_err_with(|| format!("when canonicalizing path `{val:?}`"))?;
+    let host_path = file::canonicalize(&val)
+        .wrap_err_with(|| format!("when canonicalizing path `{}`", val.display()))?;
     let mount_path: PathBuf;
     #[cfg(target_os = "windows")]
     {
@@ -218,28 +218,6 @@ pub fn run(
         };
 
         if let Ok(val) = value {
-            let host_path: PathBuf;
-            let mount_path: PathBuf;
-
-            #[cfg(target_os = "windows")]
-            {
-                // Docker does not support UNC paths, this will try to not use UNC paths
-                host_path = dunce::canonicalize(&val)
-                    .wrap_err_with(|| format!("when canonicalizing path `{val}`"))?;
-                // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-                mount_path = wslpath(&host_path, verbose)?;
-            }
-            #[cfg(not(target_os = "windows"))]
-            {
-                host_path = Path::new(&val)
-                    .canonicalize()
-                    .wrap_err_with(|| format!("when canonicalizing path `{val}`"))?;
-                mount_path = host_path.clone();
-            }
-            docker.args(&[
-                "-v",
-                &format!("{}:{}", host_path.display(), mount_path.display()),
-            ]);
             let mount_path = mount(&mut docker, val.as_ref(), verbose)?;
             docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
             mount_volumes = true;
