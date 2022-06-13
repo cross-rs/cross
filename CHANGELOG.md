@@ -64,6 +64,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Internal
 
+- #787 - add installer for git hooks.
 - #786 - Migrate build script to rust: `cargo build-docker-image $TARGET`
 - #730 - make FreeBSD builds more resilient.
 - #670 - Use serde for deserialization of Cross.toml
