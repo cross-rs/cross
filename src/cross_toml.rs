@@ -21,13 +21,16 @@ pub struct CrossBuildConfig {
     #[serde(default)]
     env: CrossEnvConfig,
     xargo: Option<bool>,
+    build_std: Option<bool>,
     default_target: Option<String>,
 }
 
 /// Target configuration
 #[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
 pub struct CrossTargetConfig {
     xargo: Option<bool>,
+    build_std: Option<bool>,
     image: Option<String>,
     runner: Option<String>,
     #[serde(default)]
@@ -77,6 +80,11 @@ impl CrossToml {
     /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
     pub fn xargo(&self, target: &Target) -> (Option<bool>, Option<bool>) {
         self.get_bool(target, |b| b.xargo, |t| t.xargo)
+    }
+
+    /// Returns the `build.build-std` or the `target.{}.build-std` part of `Cross.toml`
+    pub fn build_std(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+        self.get_bool(target, |b| b.build_std, |t| t.build_std)
     }
 
     /// Returns the list of environment variables to pass through for `build`,
@@ -165,6 +173,7 @@ mod tests {
                     passthrough: vec!["VAR1".to_string(), "VAR2".to_string()],
                 },
                 xargo: Some(true),
+                build_std: None,
                 default_target: None,
             },
         };
@@ -198,6 +207,7 @@ mod tests {
                     volumes: vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()],
                 },
                 xargo: Some(false),
+                build_std: Some(true),
                 image: Some("test-image".to_string()),
                 runner: None,
             },
@@ -214,6 +224,7 @@ mod tests {
             passthrough = ["VAR1", "VAR2"]
             [target.aarch64-unknown-linux-gnu]
             xargo = false
+            build-std = true
             image = "test-image"
         "#;
         let (parsed_cfg, unused) = CrossToml::parse(test_str)?;

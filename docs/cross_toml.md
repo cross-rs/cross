@@ -6,6 +6,7 @@ The `build` key allows you to set global variables, e.g.:
 ```toml
 [build]
 xargo = true
+build-std = true
 default-target = "x86_64-unknown-linux-gnu"
 ```
 
@@ -26,6 +27,7 @@ The `target` key allows you to specify parameters for specific compilation targe
 ```toml
 [target.aarch64-unknown-linux-gnu]
 xargo = false
+build-std = false
 image = "test-image"
 runner = "custom-runner"
 ```

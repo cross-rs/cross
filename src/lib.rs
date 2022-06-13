@@ -349,10 +349,18 @@ pub fn run() -> Result<ExitStatus> {
                 is_nightly = channel == Channel::Nightly;
             }
 
+            // build-std overrides xargo, but only use it if it's a built-in
+            // tool but not an available target or doesn't have rust-std.
             let available_targets = rustup::available_targets(&toolchain, verbose)?;
-            let uses_xargo = config
-                .xargo(&target)
-                .unwrap_or_else(|| !target.is_builtin() || !available_targets.contains(&target));
+            let uses_build_std = config.build_std(&target).unwrap_or(false);
+            let uses_xargo =
+                !uses_build_std && config.xargo(&target).unwrap_or(!target.is_builtin());
+            if !is_nightly && uses_build_std {
+                eyre::bail!(
+                    "no rust-std component available for {}: must use nightly",
+                    target.triple()
+                );
+            }
 
             if !uses_xargo
                 && !available_targets.is_installed(&target)
@@ -409,6 +417,9 @@ pub fn run() -> Result<ExitStatus> {
                 .unwrap_or(false);
             if is_test && args.enable_doctests && is_nightly {
                 filtered_args.push("-Zdoctest-xcompile".to_string());
+            }
+            if uses_build_std {
+                filtered_args.push("-Zbuild-std".to_string());
             }
 
             if target.needs_docker() && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
