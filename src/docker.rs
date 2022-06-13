@@ -12,8 +12,8 @@ use crate::{Config, Target};
 use atty::Stream;
 use eyre::bail;
 
+pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
-const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 const DOCKER: &str = "docker";
 const PODMAN: &str = "podman";
 // secured profile based off the docker documentation for denied syscalls:

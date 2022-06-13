@@ -39,12 +39,13 @@ use config::Config;
 use rustc_version::Channel;
 use serde::Deserialize;
 
-use self::cargo::{CargoMetadata, Subcommand};
+pub use self::cargo::{cargo_metadata_with_args, CargoMetadata, Subcommand};
 use self::cross_toml::CrossToml;
 use self::errors::Context;
 use self::rustc::{TargetList, VersionMetaExt};
 
 pub use self::docker::get_container_engine;
+pub use self::docker::CROSS_IMAGE;
 pub use self::errors::{install_panic_hook, Result};
 pub use self::extensions::{CommandExt, OutputExt};
 
@@ -295,7 +296,7 @@ pub fn run() -> Result<ExitStatus> {
     let host_version_meta =
         rustc_version::version_meta().wrap_err("couldn't fetch the `rustc` version")?;
     let cwd = std::env::current_dir()?;
-    if let Some(metadata) = cargo::cargo_metadata_with_args(None, Some(&args), verbose)? {
+    if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), verbose)? {
         let host = host_version_meta.host();
         let toml = toml(&metadata)?;
         let config = Config::new(toml);

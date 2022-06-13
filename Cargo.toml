@@ -11,11 +11,12 @@ edition = "2021"
 
 [features]
 default = []
-dev = ["serde_yaml"]
+dev = ["serde_yaml", "walkdir"]
 
 [dependencies]
 atty = "0.2"
-clap = { version = "3.1.18", features = ["derive"] }
+# Pinned until further action to migrate to newer clap, see https://github.com/clap-rs/clap/issues/3822#issuecomment-1154069623
+clap = { version = "~3.1", features = ["derive", "env"] }
 color-eyre = "0.6"
 eyre = "0.6"
 home = "0.5"
@@ -28,6 +29,7 @@ serde_json = "1"
 serde_yaml = { version = "0.8", optional = true }
 serde_ignored = "0.1.2"
 shell-words = "1.1.0"
+walkdir = { version = "2", optional = true }
 
 [target.'cfg(not(windows))'.dependencies]
 nix = { version = "0.24", default-features = false, features = ["user"] }

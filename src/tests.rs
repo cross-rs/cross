@@ -14,7 +14,7 @@ static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 pub fn get_cargo_workspace() -> &'static Path {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     WORKSPACE.get_or_init(|| {
-        crate::cargo::cargo_metadata_with_args(Some(manifest_dir.as_ref()), None, true)
+        crate::cargo_metadata_with_args(Some(manifest_dir.as_ref()), None, true)
             .unwrap()
             .unwrap()
             .workspace_root
@@ -47,7 +47,7 @@ pub fn target_mismatch() {
         let mut split = input.split(' ');
         let version = split.next().unwrap();
         let hash_short = &split.next().unwrap().strip_prefix('(').unwrap();
-        let date = split.next().unwrap().strip_suffix(")").unwrap();
+        let date = split.next().unwrap().strip_suffix(')').unwrap();
         rustc_version::version_meta_for(&format!(
             r#"rustc {version} ({hash_short} {date})
 binary: rustc

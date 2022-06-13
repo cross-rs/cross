@@ -72,13 +72,20 @@ impl CargoMetadata {
         // TODO: Also filter out things that are in workspace, but not a workspace member
         self.non_workspace_members().filter_map(|p| p.crate_path())
     }
+
+    #[cfg(feature = "dev")]
+    pub fn get_package(&self, package: &str) -> Option<&Package> {
+        self.packages.iter().find(|p| p.name == package)
+    }
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Package {
-    id: String,
-    manifest_path: PathBuf,
-    source: Option<String>,
+    pub id: String,
+    pub name: String,
+    pub manifest_path: PathBuf,
+    pub source: Option<String>,
+    pub version: String,
 }
 
 impl Package {
