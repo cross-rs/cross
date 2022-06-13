@@ -63,6 +63,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Internal
 
+- #786 - Migrate build script to rust: `cargo build-docker-image $TARGET`
 - #730 - make FreeBSD builds more resilient.
 - #670 - Use serde for deserialization of Cross.toml
 - Change rust edition to 2021 and bump MSRV for the cross binary to 1.58.1
