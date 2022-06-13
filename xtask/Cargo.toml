@@ -1,0 +1,18 @@
+[package]
+documentation = "https://github.com/cross-rs/cross"
+license = "MIT OR Apache-2.0"
+name = "xtask"
+repository = "https://github.com/cross-rs/cross"
+version = "0.0.0-dev.0"
+edition = "2021"
+
+
+[dependencies]
+cross = { path = "..", features = ["dev"] }
+walkdir = { version = "2" }
+color-eyre = "0.6"
+eyre = "0.6"
+clap = { version = "~3.1", features = ["derive", "env"] }
+which = { version = "4", default_features = false }
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.8"

@@ -1,3 +1,4 @@
 [alias]
-cross-dev = ["run", "--bin", "cross-dev", "--features", "dev", "--"]
-build-docker-image = ["cross-dev", "build-docker-image"]
+xtask = ["run", "-p", "xtask", "--"]
+cross-dev = ["xtask"]
+build-docker-image = ["xtask", "build-docker-image"]
