@@ -15,7 +15,8 @@ dev = ["serde_yaml", "walkdir"]
 
 [dependencies]
 atty = "0.2"
-clap = { version = "3.1.18", features = ["derive", "env"] }
+# Pinned until further action to migrate to newer clap, see https://github.com/clap-rs/clap/issues/3822#issuecomment-1154069623
+clap = { version = "~3.1", features = ["derive", "env"] }
 color-eyre = "0.6"
 eyre = "0.6"
 home = "0.5"
