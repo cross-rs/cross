@@ -104,7 +104,7 @@ pub fn build_docker_image(
 
                 if ["staging", "trying"]
                     .iter()
-                    .any(|branch| branch == &ref_name)
+                    .any(|branch| branch != &ref_name)
                 {
                     tags.push(format!("{image_name}:edge"));
                 }
@@ -159,7 +159,7 @@ pub fn build_docker_image(
             println!("::set-output name=image::{}", &tags[0])
         }
     }
-    if (std::env::var("GITHUB_ACTIONS").is_ok() || !force) && push {
+    if !(std::env::var("GITHUB_ACTIONS").is_ok() || !push || force) {
         panic!("refusing to push, use --force to override");
     }
     Ok(())

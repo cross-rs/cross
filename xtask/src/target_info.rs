@@ -11,7 +11,7 @@ use serde::Deserialize;
 // Store raw text data in the binary so we don't need a data directory
 // when extracting all targets, or running our target info script.
 const TARGET_INFO_SCRIPT: &str = include_str!("target_info.sh");
-const WORKFLOW: &str = include_str!("../.github/workflows/ci.yml");
+const WORKFLOW: &str = include_str!("../../.github/workflows/ci.yml");
 
 #[derive(Args, Debug)]
 pub struct TargetInfo {
