@@ -1,4 +1,3 @@
 [alias]
 xtask = ["run", "-p", "xtask", "--"]
-cross-dev = ["xtask"]
 build-docker-image = ["xtask", "build-docker-image"]
