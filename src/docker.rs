@@ -132,8 +132,13 @@ pub fn run(
     docker_in_docker: bool,
     cwd: &Path,
 ) -> Result<ExitStatus> {
+    let engine = get_container_engine()
+        .map_err(|_| eyre::eyre!("no container engine found"))
+        .with_suggestion(|| "is docker or podman installed?")?;
+    let engine_type = get_engine_type(&engine, verbose)?;
+
     let mount_finder = if docker_in_docker {
-        MountFinder::new(docker_read_mount_paths()?)
+        MountFinder::new(docker_read_mount_paths(&engine)?)
     } else {
         MountFinder::default()
     };
@@ -193,11 +198,6 @@ pub fn run(
     cmd.args(args);
 
     let runner = config.runner(target)?;
-
-    let engine = get_container_engine()
-        .map_err(|_| eyre::eyre!("no container engine found"))
-        .with_suggestion(|| "is docker or podman installed?")?;
-    let engine_type = get_engine_type(&engine, verbose)?;
 
     let mut docker = docker_command(&engine, "run")?;
 
@@ -410,13 +410,11 @@ fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
         .map(|s| s.trim().into())
 }
 
-fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
+fn docker_read_mount_paths(engine: &Path) -> Result<Vec<MountDetail>> {
     let hostname = env::var("HOSTNAME").wrap_err("HOSTNAME environment variable not found")?;
 
-    let docker_path = which::which(DOCKER)?;
     let mut docker: Command = {
-        let mut command = Command::new(docker_path);
-        command.arg("inspect");
+        let mut command = docker_command(engine, "inspect")?;
         command.arg(hostname);
         command
     };

@@ -144,15 +144,15 @@ container used for cross compilation. This includes the original project directo
 well as the root path of the parent container to give access to the rust build
 tools.
 
-To inform `cross` that it is running inside a container set `CROSS_DOCKER_IN_DOCKER=true`.
+To inform `cross` that it is running inside a container set `CROSS_CONTAINER_IN_CONTAINER=true`.
 
 A development or CI container can be created like this:
 
 ```
 FROM rust:1
 
-# set CROSS_DOCKER_IN_DOCKER to inform `cross` that it is executed from within a container
-ENV CROSS_DOCKER_IN_DOCKER=true
+# set CROSS_CONTAINER_IN_CONTAINER to inform `cross` that it is executed from within a container
+ENV CROSS_CONTAINER_IN_CONTAINER=true
 
 # install `cross`
 RUN cargo install cross
