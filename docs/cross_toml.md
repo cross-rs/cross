@@ -1,4 +1,6 @@
-The `cross` configuration in the `Cross.toml` file, can contain the following elements:
+The `cross` configuration in the `Cross.toml` file, can contain the elements described below.
+
+If the configuration is given in the `Cargo.toml`, these table headers must be of the form `[package.metadata.cross.<KEY>]`.
 
 # `build`
 
