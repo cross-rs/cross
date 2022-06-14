@@ -52,6 +52,6 @@ fn get_container_engine(engine: Option<&str>) -> Result<PathBuf, which::Error> {
     if let Some(ce) = engine {
         which::which(ce)
     } else {
-        cross::get_container_engine()
+        cross::docker::get_container_engine()
     }
 }

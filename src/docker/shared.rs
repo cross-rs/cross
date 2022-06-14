@@ -1,68 +1,127 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus};
+use std::process::Command;
 use std::{env, fs};
 
+use super::engine::*;
 use crate::cargo::CargoMetadata;
+use crate::config::Config;
+use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
-use crate::file::write_file;
+use crate::file::{self, write_file};
 use crate::id;
-use crate::{errors::*, file};
-use crate::{Config, Target};
-use atty::Stream;
-use eyre::bail;
+use crate::Target;
 
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
-const DOCKER: &str = "docker";
-const PODMAN: &str = "podman";
+
 // secured profile based off the docker documentation for denied syscalls:
 // https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
 // note that we've allow listed `clone` and `clone3`, which is necessary
 // to fork the process, and which podman allows by default.
-const SECCOMP: &str = include_str!("seccomp.json");
+pub(crate) const SECCOMP: &str = include_str!("seccomp.json");
 
-#[derive(Debug, PartialEq, Eq)]
-enum EngineType {
-    Docker,
-    Podman,
-    Other,
+#[derive(Debug)]
+pub struct Directories {
+    pub cargo: PathBuf,
+    pub xargo: PathBuf,
+    pub target: PathBuf,
+    pub nix_store: Option<PathBuf>,
+    pub host_root: PathBuf,
+    pub mount_root: PathBuf,
+    pub mount_cwd: PathBuf,
+    pub sysroot: PathBuf,
 }
 
-// determine if the container engine is docker. this fixes issues with
-// any aliases (#530), and doesn't fail if an executable suffix exists.
-fn get_engine_type(ce: &Path, verbose: bool) -> Result<EngineType> {
-    let stdout = Command::new(ce)
-        .arg("--help")
-        .run_and_get_stdout(verbose)?
-        .to_lowercase();
+impl Directories {
+    #[allow(unused_variables)]
+    pub fn create(
+        engine: &Engine,
+        metadata: &CargoMetadata,
+        cwd: &Path,
+        sysroot: &Path,
+        docker_in_docker: bool,
+        verbose: bool,
+    ) -> Result<Self> {
+        let mount_finder = if docker_in_docker {
+            MountFinder::new(docker_read_mount_paths(engine)?)
+        } else {
+            MountFinder::default()
+        };
+        let home_dir =
+            home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
+        let cargo = home::cargo_home()?;
+        let xargo = env::var_os("XARGO_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| home_dir.join(".xargo"));
+        let nix_store = env::var_os("NIX_STORE").map(PathBuf::from);
+        let target = &metadata.target_directory;
 
-    if stdout.contains("podman") {
-        Ok(EngineType::Podman)
-    } else if stdout.contains("docker") && !stdout.contains("emulate") {
-        Ok(EngineType::Docker)
-    } else {
-        Ok(EngineType::Other)
+        // create the directories we are going to mount before we mount them,
+        // otherwise `docker` will create them but they will be owned by `root`
+        fs::create_dir(&cargo).ok();
+        fs::create_dir(&xargo).ok();
+        fs::create_dir(&target).ok();
+
+        let cargo = mount_finder.find_mount_path(cargo);
+        let xargo = mount_finder.find_mount_path(xargo);
+        let target = mount_finder.find_mount_path(target);
+
+        // root is either workspace_root, or, if we're outside the workspace root, the current directory
+        let host_root = mount_finder.find_mount_path(if metadata.workspace_root.starts_with(cwd) {
+            cwd
+        } else {
+            &metadata.workspace_root
+        });
+
+        // root is either workspace_root, or, if we're outside the workspace root, the current directory
+        let mount_root: PathBuf;
+        #[cfg(target_os = "windows")]
+        {
+            // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+            mount_root = wslpath(&host_root, verbose)?;
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            mount_root = mount_finder.find_mount_path(host_root.clone());
+        }
+        let mount_cwd: PathBuf;
+        #[cfg(target_os = "windows")]
+        {
+            // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+            mount_cwd = wslpath(cwd, verbose)?;
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            mount_cwd = mount_finder.find_mount_path(cwd);
+        }
+        let sysroot = mount_finder.find_mount_path(sysroot);
+
+        Ok(Directories {
+            cargo,
+            xargo,
+            target,
+            nix_store,
+            host_root,
+            mount_root,
+            mount_cwd,
+            sysroot,
+        })
     }
 }
 
-pub fn get_container_engine() -> Result<PathBuf, which::Error> {
-    if let Ok(ce) = env::var("CROSS_CONTAINER_ENGINE") {
-        which::which(ce)
-    } else {
-        which::which(DOCKER).or_else(|_| which::which(PODMAN))
-    }
+pub fn command(engine: &Engine) -> Command {
+    Command::new(&engine.path)
 }
 
-pub fn docker_command(engine: &Path, subcommand: &str) -> Result<Command> {
-    let mut command = Command::new(engine);
+pub fn subcommand(engine: &Engine, subcommand: &str) -> Command {
+    let mut command = command(engine);
     command.arg(subcommand);
-    command.args(&["--userns", "host"]);
-    Ok(command)
+    command
 }
 
 /// Register binfmt interpreters
-pub fn register(target: &Target, verbose: bool) -> Result<()> {
+pub(crate) fn register(target: &Target, verbose: bool) -> Result<()> {
     let cmd = if target.is_windows() {
         // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
         "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
@@ -72,8 +131,9 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
             binfmt-support qemu-user-static"
     };
 
-    let engine = get_container_engine()?;
-    docker_command(&engine, "run")?
+    let engine = Engine::new(verbose)?;
+    subcommand(&engine, "run")
+        .args(&["--userns", "host"])
         .arg("--privileged")
         .arg("--rm")
         .arg("ubuntu:16.04")
@@ -89,7 +149,9 @@ fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
     };
 
     if key == "CROSS_RUNNER" {
-        bail!("CROSS_RUNNER environment variable name is reserved and cannot be pass through");
+        eyre::bail!(
+            "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
+        );
     }
 
     Ok((key, value))
@@ -99,108 +161,30 @@ fn parse_docker_opts(value: &str) -> Result<Vec<String>> {
     shell_words::split(value).wrap_err_with(|| format!("could not parse docker opts of {}", value))
 }
 
-#[allow(unused_variables)]
-pub fn mount(cmd: &mut Command, val: &Path, verbose: bool) -> Result<PathBuf> {
-    let host_path = file::canonicalize(&val)
-        .wrap_err_with(|| format!("when canonicalizing path `{}`", val.display()))?;
-    let mount_path: PathBuf;
-    #[cfg(target_os = "windows")]
-    {
-        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-        mount_path = wslpath(&host_path, verbose)?;
+pub(crate) fn cargo_cmd(uses_xargo: bool) -> SafeCommand {
+    if uses_xargo {
+        SafeCommand::new("xargo")
+    } else {
+        SafeCommand::new("cargo")
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        mount_path = host_path.clone();
-    }
-    cmd.args(&[
+}
+
+pub(crate) fn mount(
+    docker: &mut Command,
+    val: &Path,
+    prefix: &str,
+    verbose: bool,
+) -> Result<PathBuf> {
+    let host_path = file::canonicalize(val)?;
+    let mount_path = canonicalize_mount_path(&host_path, verbose)?;
+    docker.args(&[
         "-v",
-        &format!("{}:{}", host_path.display(), mount_path.display()),
+        &format!("{}:{prefix}{}", host_path.display(), mount_path.display()),
     ]);
     Ok(mount_path)
 }
 
-#[allow(clippy::too_many_arguments)] // TODO: refactor
-pub fn run(
-    target: &Target,
-    args: &[String],
-    metadata: &CargoMetadata,
-    config: &Config,
-    uses_xargo: bool,
-    sysroot: &Path,
-    verbose: bool,
-    docker_in_docker: bool,
-    cwd: &Path,
-) -> Result<ExitStatus> {
-    let engine = get_container_engine()
-        .map_err(|_| eyre::eyre!("no container engine found"))
-        .with_suggestion(|| "is docker or podman installed?")?;
-    let engine_type = get_engine_type(&engine, verbose)?;
-
-    let mount_finder = if docker_in_docker {
-        MountFinder::new(docker_read_mount_paths(&engine)?)
-    } else {
-        MountFinder::default()
-    };
-
-    let home_dir = home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
-    let cargo_dir = home::cargo_home()?;
-    let xargo_dir = env::var_os("XARGO_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home_dir.join(".xargo"));
-    let nix_store_dir = env::var_os("NIX_STORE").map(PathBuf::from);
-    let target_dir = &metadata.target_directory;
-
-    // create the directories we are going to mount before we mount them,
-    // otherwise `docker` will create them but they will be owned by `root`
-    fs::create_dir(&target_dir).ok();
-    fs::create_dir(&cargo_dir).ok();
-    fs::create_dir(&xargo_dir).ok();
-
-    // update paths to the host mounts path.
-    let cargo_dir = mount_finder.find_mount_path(cargo_dir);
-    let xargo_dir = mount_finder.find_mount_path(xargo_dir);
-    let target_dir = mount_finder.find_mount_path(target_dir);
-    // root is either workspace_root, or, if we're outside the workspace root, the current directory
-    let host_root = mount_finder.find_mount_path(if metadata.workspace_root.starts_with(cwd) {
-        cwd
-    } else {
-        &metadata.workspace_root
-    });
-    let mount_root: PathBuf;
-    #[cfg(target_os = "windows")]
-    {
-        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-        mount_root = wslpath(&host_root, verbose)?;
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        mount_root = mount_finder.find_mount_path(host_root.clone());
-    }
-    let mount_cwd: PathBuf;
-    #[cfg(target_os = "windows")]
-    {
-        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-        mount_cwd = wslpath(cwd, verbose)?;
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        mount_cwd = mount_finder.find_mount_path(cwd);
-    }
-    let sysroot = mount_finder.find_mount_path(sysroot);
-
-    let mut cmd = if uses_xargo {
-        SafeCommand::new("xargo")
-    } else {
-        SafeCommand::new("cargo")
-    };
-
-    cmd.args(args);
-
-    let runner = config.runner(target)?;
-
-    let mut docker = docker_command(&engine, "run")?;
-
+pub(crate) fn docker_envvars(docker: &mut Command, config: &Config, target: &Target) -> Result<()> {
     for ref var in config.env_passthrough(target)? {
         validate_env_var(var)?;
 
@@ -208,81 +192,15 @@ pub fn run(
         // flag forwards the value from the parent shell
         docker.args(&["-e", var]);
     }
-    let mut mount_volumes = false;
-    // FIXME(emilgardis 2022-04-07): This is a fallback so that if it's hard for us to do mounting logic, make it simple(r)
-    // Preferably we would not have to do this.
-    if cwd.strip_prefix(&metadata.workspace_root).is_err() {
-        mount_volumes = true;
-    }
 
-    for ref var in config.env_volumes(target)? {
-        let (var, value) = validate_env_var(var)?;
-        let value = match value {
-            Some(v) => Ok(v.to_string()),
-            None => env::var(var),
-        };
-
-        if let Ok(val) = value {
-            let mount_path = mount(&mut docker, val.as_ref(), verbose)?;
-            docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
-            mount_volumes = true;
-        }
-    }
-
-    for path in metadata.path_dependencies() {
-        mount(&mut docker, path, verbose)?;
-        mount_volumes = true;
-    }
-
-    docker.args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"]);
-
-    docker.arg("--rm");
-
-    // docker uses seccomp now on all installations
-    if target.needs_docker_seccomp() {
-        let seccomp = if engine_type == EngineType::Docker && cfg!(target_os = "windows") {
-            // docker on windows fails due to a bug in reading the profile
-            // https://github.com/docker/for-win/issues/12760
-            "unconfined".to_string()
-        } else {
-            #[allow(unused_mut)] // target_os = "windows"
-            let mut path = env::current_dir()
-                .wrap_err("couldn't get current directory")?
-                .canonicalize()
-                .wrap_err_with(|| "when canonicalizing current_dir".to_string())?
-                .join("target")
-                .join(target.triple())
-                .join("seccomp.json");
-            if !path.exists() {
-                write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
-            }
-            #[cfg(target_os = "windows")]
-            if engine_type == EngineType::Podman {
-                // podman weirdly expects a WSL path here, and fails otherwise
-                path = wslpath(&path, verbose)?;
-            }
-            path.display().to_string()
-        };
-
-        docker.args(&["--security-opt", &format!("seccomp={}", seccomp)]);
-    }
-
-    // We need to specify the user for Docker, but not for Podman.
-    if engine_type == EngineType::Docker {
-        docker.args(&[
-            "--user",
-            &format!(
-                "{}:{}",
-                env::var("CROSS_CONTAINER_UID").unwrap_or_else(|_| id::user().to_string()),
-                env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string()),
-            ),
-        ]);
-    }
-
+    let runner = config.runner(target)?;
+    let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
     docker
+        .args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
         .args(&["-e", "XARGO_HOME=/xargo"])
         .args(&["-e", "CARGO_HOME=/cargo"])
-        .args(&["-e", "CARGO_TARGET_DIR=/target"]);
+        .args(&["-e", "CARGO_TARGET_DIR=/target"])
+        .args(&["-e", &cross_runner]);
 
     if let Some(username) = id::username().unwrap() {
         docker.args(&["-e", &format!("USER={username}")]);
@@ -306,30 +224,19 @@ pub fn run(
         docker.args(&parse_docker_opts(&value)?);
     };
 
-    docker
-        .args(&[
-            "-e",
-            &format!("CROSS_RUNNER={}", runner.unwrap_or_default()),
-        ])
-        .args(&["-v", &format!("{}:/xargo:Z", xargo_dir.display())])
-        .args(&["-v", &format!("{}:/cargo:Z", cargo_dir.display())])
-        // Prevent `bin` from being mounted inside the Docker container.
-        .args(&["-v", "/cargo/bin"]);
-    if mount_volumes {
-        docker.args(&[
-            "-v",
-            &format!("{}:{}:Z", host_root.display(), mount_root.display()),
-        ]);
-    } else {
-        docker.args(&["-v", &format!("{}:/project:Z", host_root.display())]);
-    }
-    docker
-        .args(&["-v", &format!("{}:/rust:Z,ro", sysroot.display())])
-        .args(&["-v", &format!("{}:/target:Z", target_dir.display())]);
+    Ok(())
+}
 
+pub(crate) fn docker_cwd(
+    docker: &mut Command,
+    metadata: &CargoMetadata,
+    dirs: &Directories,
+    cwd: &Path,
+    mount_volumes: bool,
+) -> Result<()> {
     if mount_volumes {
-        docker.args(&["-w".as_ref(), mount_cwd.as_os_str()]);
-    } else if mount_cwd == metadata.workspace_root {
+        docker.args(&["-w".as_ref(), dirs.mount_cwd.as_os_str()]);
+    } else if dirs.mount_cwd == metadata.workspace_root {
         docker.args(&["-w", "/project"]);
     } else {
         // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
@@ -344,48 +251,49 @@ pub fn run(
         docker.args(&["-w".as_ref(), mount_wd.as_os_str()]);
     }
 
-    // When running inside NixOS or using Nix packaging we need to add the Nix
-    // Store to the running container so it can load the needed binaries.
-    if let Some(nix_store) = nix_store_dir {
-        docker.args(&[
-            "-v",
-            &format!("{}:{}:Z", nix_store.display(), nix_store.display()),
-        ]);
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)] // TODO: refactor
+pub(crate) fn docker_mount(
+    docker: &mut Command,
+    metadata: &CargoMetadata,
+    config: &Config,
+    target: &Target,
+    cwd: &Path,
+    verbose: bool,
+    mount_cb: impl Fn(&mut Command, &Path, bool) -> Result<PathBuf>,
+    mut store_cb: impl FnMut((String, PathBuf)),
+) -> Result<bool> {
+    let mut mount_volumes = false;
+    // FIXME(emilgardis 2022-04-07): This is a fallback so that if it's hard for us to do mounting logic, make it simple(r)
+    // Preferably we would not have to do this.
+    if cwd.strip_prefix(&metadata.workspace_root).is_err() {
+        mount_volumes = true;
     }
 
-    if atty::is(Stream::Stdin) {
-        docker.arg("-i");
-        if atty::is(Stream::Stdout) && atty::is(Stream::Stderr) {
-            docker.arg("-t");
+    for ref var in config.env_volumes(target)? {
+        let (var, value) = validate_env_var(var)?;
+        let value = match value {
+            Some(v) => Ok(v.to_string()),
+            None => env::var(var),
+        };
+
+        if let Ok(val) = value {
+            let mount_path = mount_cb(docker, val.as_ref(), verbose)?;
+            docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
+            store_cb((val, mount_path));
+            mount_volumes = true;
         }
     }
 
-    docker
-        .arg(&image(config, target)?)
-        .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
-        .run_and_get_status(verbose)
-        .map_err(Into::into)
-}
-
-pub fn image(config: &Config, target: &Target) -> Result<String> {
-    if let Some(image) = config.image(target)? {
-        return Ok(image);
+    for path in metadata.path_dependencies() {
+        let mount_path = mount_cb(docker, path, verbose)?;
+        store_cb((path.display().to_string(), mount_path));
+        mount_volumes = true;
     }
 
-    if !DOCKER_IMAGES.contains(&target.triple()) {
-        bail!(
-            "`cross` does not provide a Docker image for target {target}, \
-               specify a custom image in `Cross.toml`."
-        );
-    }
-
-    let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
-        env!("CARGO_PKG_VERSION")
-    } else {
-        "main"
-    };
-
-    Ok(format!("{CROSS_IMAGE}/{target}:{version}"))
+    Ok(mount_volumes)
 }
 
 #[cfg(target_os = "windows")]
@@ -410,11 +318,99 @@ fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
         .map(|s| s.trim().into())
 }
 
-fn docker_read_mount_paths(engine: &Path) -> Result<Vec<MountDetail>> {
+#[allow(unused_variables)]
+pub(crate) fn canonicalize_mount_path(path: &Path, verbose: bool) -> Result<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        wslpath(path, verbose)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(path.to_path_buf())
+    }
+}
+
+pub(crate) fn user_id() -> String {
+    env::var("CROSS_CONTAINER_UID").unwrap_or_else(|_| id::user().to_string())
+}
+
+pub(crate) fn group_id() -> String {
+    env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string())
+}
+
+pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
+    // We need to specify the user for Docker, but not for Podman.
+    if engine_type == EngineType::Docker {
+        docker.args(&["--user", &format!("{}:{}", user_id(), group_id(),)]);
+    }
+}
+
+#[allow(unused_variables)]
+pub(crate) fn docker_seccomp(
+    docker: &mut Command,
+    engine_type: EngineType,
+    target: &Target,
+    verbose: bool,
+) -> Result<()> {
+    // docker uses seccomp now on all installations
+    if target.needs_docker_seccomp() {
+        let seccomp = if engine_type == EngineType::Docker && cfg!(target_os = "windows") {
+            // docker on windows fails due to a bug in reading the profile
+            // https://github.com/docker/for-win/issues/12760
+            "unconfined".to_string()
+        } else {
+            #[allow(unused_mut)] // target_os = "windows"
+            let mut path = env::current_dir()
+                .wrap_err("couldn't get current directory")?
+                .canonicalize()
+                .wrap_err_with(|| "when canonicalizing current_dir".to_string())?
+                .join("target")
+                .join(target.triple())
+                .join("seccomp.json");
+            if !path.exists() {
+                write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
+            }
+            #[cfg(target_os = "windows")]
+            if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
+                // podman weirdly expects a WSL path here, and fails otherwise
+                path = wslpath(&path, verbose)?;
+            }
+            path.display().to_string()
+        };
+
+        docker.args(&["--security-opt", &format!("seccomp={}", seccomp)]);
+    }
+
+    Ok(())
+}
+
+pub(crate) fn container_name(config: &Config, target: &Target) -> Result<String> {
+    if let Some(image) = config.image(target)? {
+        return Ok(image);
+    }
+
+    if !DOCKER_IMAGES.contains(&target.triple()) {
+        eyre::bail!(
+            "`cross` does not provide a Docker image for target {target}, \
+               specify a custom image in `Cross.toml`."
+        );
+    }
+
+    let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
+        env!("CARGO_PKG_VERSION")
+    } else {
+        "main"
+    };
+
+    Ok(format!("{CROSS_IMAGE}/{target}:{version}"))
+}
+
+fn docker_read_mount_paths(engine: &Engine) -> Result<Vec<MountDetail>> {
     let hostname = env::var("HOSTNAME").wrap_err("HOSTNAME environment variable not found")?;
 
     let mut docker: Command = {
-        let mut command = docker_command(engine, "inspect")?;
+        let mut command = subcommand(engine, "inspect");
         command.arg(hostname);
         command
     };
