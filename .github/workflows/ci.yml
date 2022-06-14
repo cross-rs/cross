@@ -117,9 +117,9 @@ jobs:
             matrix="$(yq --output-format json <<< "${matrix}")"
           fi
 
-          jq -C <<< "${matrix}"
+          jq -C '[.[] | . += {"pretty": ([.target] + [select(.sub != null).sub]) | join(":")}]' <<< "${matrix}"
 
-          echo "::set-output name=matrix::$(jq -c <<< "${matrix}")"
+          echo "::set-output name=matrix::$(jq -c '[.[] | . += {"pretty": ([.target] + [select(.sub != null).sub]) | join(":")}]' <<< "${matrix}")"
         env:
           commit_message: >
             ${{
@@ -190,7 +190,7 @@ jobs:
             - { target: thumbv7m-none-eabi,               os: ubuntu-latest,                    std: 1 }
 
   docker-image:
-    name: docker-image (${{ matrix.target }})
+    name: docker-image (${{ matrix.pretty }})
     runs-on: ${{ matrix.os }}
     needs: [shellcheck, test, generate-matrix]
     if: github.event_name == 'push'
