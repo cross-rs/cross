@@ -102,7 +102,7 @@ jobs:
 
           selects=()
           for target in "${targets[@]}"; do
-            selects+=(".target == \"${target}\"")
+            selects+=(".target + (if .sub then \".\" + .sub else \"\" end) == \"${target}\"")
           done
           query=$(printf " or %s" "${selects[@]}")
           query="${query:4}"
@@ -110,7 +110,7 @@ jobs:
           if [[ "${#targets[@]}" != "0" ]]; then
             echo "Only running targets matching '${targets[@]}'."
             matrix=$(
-              yq --output-format json '[.[] | select('"${query}"')]' <<< "${matrix}"
+              yq --output-format json <<< "${matrix}" | jq '[.[] | select('"${query}"')]'
             )
           else
             echo 'Running all targets.'
@@ -134,6 +134,7 @@ jobs:
             - { target: x86_64-unknown-linux-musl,        os: ubuntu-latest,                    std: 1, run: 1,                                        deploy: true }
             - { target: x86_64-pc-windows-msvc,           os: windows-2019,   cpp: 1,           std: 1, run: 1,                                        deploy: true }
 
+            - { target: x86_64-unknown-linux-gnu, sub: centos, os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
             - { target: aarch64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: arm-unknown-linux-gnueabi,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: arm-unknown-linux-gnueabihf,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
@@ -225,13 +226,14 @@ jobs:
           labels: |
             org.opencontainers.image.title=cross (for ${{ matrix.target }})
             org.opencontainers.image.licenses=MIT OR Apache-2.0
-      - name: Build and push Docker image
+      - name: Build Docker image
         id: build-docker-image
         if: runner.os == 'Linux'
         timeout-minutes: 60
-        run: cargo xtask build-docker-image -v "${TARGET}"
+        run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
         env:
           TARGET: ${{ matrix.target }}
+          SUB: ${{ matrix.sub }}
           LABELS: ${{ steps.docker-meta.outputs.labels }}
         shell: bash
       - name: Set Docker image for test
@@ -287,9 +289,10 @@ jobs:
             github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
             startsWith(github.ref, 'refs/tags/v')
           )
-        run: cargo xtask build-docker-image -v --push "${TARGET}"
+        run: cargo xtask build-docker-image -v --push "${TARGET}${SUB:+.$SUB}"
         env:
           TARGET: ${{ matrix.target }}
+          SUB: ${{ matrix.sub }}
           LABELS: ${{ steps.docker-meta2.outputs.labels }}
         shell: bash
 
