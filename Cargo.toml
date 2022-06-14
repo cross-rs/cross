@@ -18,10 +18,10 @@ members = ["xtask"]
 
 [dependencies]
 atty = "0.2"
-# Pinned until further action to migrate to newer clap, see https://github.com/clap-rs/clap/issues/3822#issuecomment-1154069623
-clap = { version = "~3.1", features = ["derive"] }
+clap = { version = "3.2.2", features = ["derive", "unstable-v4"] }
 color-eyre = "0.6"
 eyre = "0.6"
+thiserror = "1"
 home = "0.5"
 rustc_version = "0.4"
 toml = "0.5"

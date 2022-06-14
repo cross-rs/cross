@@ -12,7 +12,7 @@ cross = { path = "..", features = ["dev"] }
 walkdir = { version = "2" }
 color-eyre = "0.6"
 eyre = "0.6"
-clap = { version = "~3.1", features = ["derive", "env"] }
+clap = { version = "3.2.2", features = ["derive", "env", "unstable-v4"] }
 which = { version = "4", default_features = false }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.8"

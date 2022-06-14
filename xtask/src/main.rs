@@ -3,6 +3,7 @@
 pub mod build_docker_image;
 pub mod install_git_hooks;
 pub mod target_info;
+pub mod util;
 
 use std::path::PathBuf;
 

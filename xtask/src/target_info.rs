@@ -6,12 +6,10 @@ use std::{
 
 use clap::Args;
 use cross::CommandExt;
-use serde::Deserialize;
 
 // Store raw text data in the binary so we don't need a data directory
 // when extracting all targets, or running our target info script.
 const TARGET_INFO_SCRIPT: &str = include_str!("target_info.sh");
-const WORKFLOW: &str = include_str!("../../.github/workflows/ci.yml");
 
 #[derive(Args, Debug)]
 pub struct TargetInfo {
@@ -32,46 +30,6 @@ pub struct TargetInfo {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Workflow {
-    jobs: Jobs,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Jobs {
-    #[serde(rename = "generate-matrix")]
-    generate_matrix: GenerateMatrix,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct GenerateMatrix {
-    steps: Vec<Steps>,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Steps {
-    env: Env,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Env {
-    matrix: String,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Matrix {
-    target: String,
-    #[serde(default)]
-    run: i64,
-}
-
-impl Matrix {
-    fn has_test(&self, target: &str) -> bool {
-        // bare-metal targets don't have unittests right now
-        self.run != 0 && !target.contains("-none-")
-    }
 }
 
 fn target_has_image(target: &str) -> bool {
@@ -100,7 +58,7 @@ fn pull_image(engine: &Path, image: &str, verbose: bool) -> cross::Result<()> {
         command.stdout(Stdio::null());
         command.stderr(Stdio::null());
     }
-    command.run(verbose)
+    command.run(verbose).map_err(Into::into)
 }
 
 fn image_info(
@@ -130,7 +88,7 @@ fn image_info(
         // capture stderr to avoid polluting table
         command.stderr(Stdio::null());
     }
-    command.run(verbose)
+    command.run(verbose).map_err(Into::into)
 }
 
 pub fn target_info(
@@ -144,9 +102,7 @@ pub fn target_info(
     }: TargetInfo,
     engine: &Path,
 ) -> cross::Result<()> {
-    let workflow: Workflow = serde_yaml::from_str(WORKFLOW)?;
-    let matrix = &workflow.jobs.generate_matrix.steps[0].env.matrix;
-    let matrix: Vec<Matrix> = serde_yaml::from_str(matrix)?;
+    let matrix = crate::util::get_matrix()?;
     let test_map: BTreeMap<&str, bool> = matrix
         .iter()
         .map(|i| (i.target.as_ref(), i.has_test(&i.target)))

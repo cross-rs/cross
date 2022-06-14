@@ -147,11 +147,14 @@ pub fn cargo_metadata_with_args(
 }
 
 /// Pass-through mode
-pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus> {
+pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus, CommandError> {
     Command::new("cargo").args(args).run_and_get_status(verbose)
 }
 
 /// run cargo and get the output, does not check the exit status
-pub fn run_and_get_output(args: &[String], verbose: bool) -> Result<std::process::Output> {
+pub fn run_and_get_output(
+    args: &[String],
+    verbose: bool,
+) -> Result<std::process::Output, CommandError> {
     Command::new("cargo").args(args).run_and_get_output(verbose)
 }

@@ -6,11 +6,11 @@ use crate::errors::*;
 
 pub trait CommandExt {
     fn print_verbose(&self, verbose: bool);
-    fn status_result(&self, status: ExitStatus) -> Result<()>;
-    fn run(&mut self, verbose: bool) -> Result<()>;
-    fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus>;
-    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String>;
-    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output>;
+    fn status_result(&self, status: ExitStatus) -> Result<(), CommandError>;
+    fn run(&mut self, verbose: bool) -> Result<(), CommandError>;
+    fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus, CommandError>;
+    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String, CommandError>;
+    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output, CommandError>;
 }
 
 impl CommandExt for Command {
@@ -20,29 +20,29 @@ impl CommandExt for Command {
         }
     }
 
-    fn status_result(&self, status: ExitStatus) -> Result<()> {
+    fn status_result(&self, status: ExitStatus) -> Result<(), CommandError> {
         if status.success() {
             Ok(())
         } else {
-            eyre::bail!("`{:?}` failed with exit code: {:?}", self, status.code())
+            Err(CommandError::NonZeroExitCode(status, format!("{self:?}")))
         }
     }
 
     /// Runs the command to completion
-    fn run(&mut self, verbose: bool) -> Result<()> {
+    fn run(&mut self, verbose: bool) -> Result<(), CommandError> {
         let status = self.run_and_get_status(verbose)?;
         self.status_result(status)
     }
 
     /// Runs the command to completion
-    fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus> {
+    fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus, CommandError> {
         self.print_verbose(verbose);
         self.status()
-            .wrap_err_with(|| format!("couldn't execute `{:?}`", self))
+            .map_err(|e| CommandError::CouldNotExecute(Box::new(e), format!("{self:?}")))
     }
 
     /// Runs the command to completion and returns its stdout
-    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String> {
+    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String, CommandError> {
         let out = self.run_and_get_output(verbose)?;
         self.status_result(out.status)?;
         out.stdout()
@@ -53,22 +53,20 @@ impl CommandExt for Command {
     /// # Notes
     ///
     /// This command does not check the status.
-    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output> {
+    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output, CommandError> {
         self.print_verbose(verbose);
         self.output()
-            .wrap_err_with(|| format!("couldn't execute `{:?}`", self))
-            .map_err(Into::into)
+            .map_err(|e| CommandError::CouldNotExecute(Box::new(e), format!("{self:?}")))
     }
 }
 
 pub trait OutputExt {
-    fn stdout(&self) -> Result<String>;
+    fn stdout(&self) -> Result<String, CommandError>;
 }
 
 impl OutputExt for std::process::Output {
-    fn stdout(&self) -> Result<String> {
-        String::from_utf8(self.stdout.clone())
-            .wrap_err_with(|| format!("`{:?}` output was not UTF-8", self))
+    fn stdout(&self) -> Result<String, CommandError> {
+        String::from_utf8(self.stdout.clone()).map_err(|e| CommandError::Utf8Error(e, self.clone()))
     }
 }
 
