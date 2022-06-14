@@ -348,6 +348,8 @@ terminate.
 <!--[6] libc = musl, gcc = emcc. The Docker images for these targets are currently not built automatically
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/85821), you will have to build them yourself for now.-->
 
+Additional Dockerfiles for other targets can be found in [cross-toolchains](https://github.com/cross-rs/cross-toolchains).
+
 ## Debugging
 
 ### QEMU_STRACE (v0.1.9+)

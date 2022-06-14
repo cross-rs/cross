@@ -48,6 +48,23 @@ pub struct BuildDockerImage {
     targets: Vec<String>,
 }
 
+fn locate_dockerfile(
+    target: String,
+    docker_root: &Path,
+    cross_toolchain_root: &Path,
+) -> cross::Result<(String, String)> {
+    let dockerfile_name = format!("Dockerfile.{target}");
+    let dockerfile_root = if cross_toolchain_root.join(&dockerfile_name).exists() {
+        &cross_toolchain_root
+    } else if docker_root.join(&dockerfile_name).exists() {
+        &docker_root
+    } else {
+        eyre::bail!("unable to find dockerfile for target \"{target}\"");
+    };
+    let dockerfile = dockerfile_root.join(dockerfile_name).display().to_string();
+    Ok((target, dockerfile))
+}
+
 pub fn build_docker_image(
     BuildDockerImage {
         ref_type,
@@ -102,22 +119,27 @@ pub fn build_docker_image(
         }
     }
     let gha = std::env::var("GITHUB_ACTIONS").is_ok();
+    let docker_root = metadata.workspace_root.join("docker");
+    let cross_toolchains_root = docker_root.join("cross-toolchains").join("docker");
+    let targets = targets
+        .into_iter()
+        .map(|t| locate_dockerfile(t, &docker_root, &cross_toolchains_root))
+        .collect::<cross::Result<Vec<_>>>()?;
+
     let mut results = vec![];
-    for target in &targets {
+    for (target, dockerfile) in &targets {
         if gha && targets.len() > 1 {
             println!("::group::Build {target}");
         }
         let mut docker_build = Command::new(engine);
         docker_build.args(&["buildx", "build"]);
-        docker_build.current_dir(metadata.workspace_root.join("docker"));
+        docker_build.current_dir(&docker_root);
 
         if push {
             docker_build.arg("--push");
         } else {
             docker_build.arg("--load");
         }
-
-        let dockerfile = format!("Dockerfile.{target}");
 
         let (target, sub) = if let Some((t, sub)) = target.split_once('.') {
             (t.to_owned(), format!("-{sub}"))
@@ -192,7 +214,7 @@ pub fn build_docker_image(
             docker_build.args(&["--label", label]);
         }
 
-        docker_build.args(&["-f", &dockerfile]);
+        docker_build.args(&["-f", dockerfile]);
 
         if gha || progress == "plain" {
             docker_build.args(&["--progress", "plain"]);
@@ -207,7 +229,10 @@ pub fn build_docker_image(
             if gha && targets.len() > 1 {
                 if let Err(e) = &result {
                     // TODO: Determine what instruction errorred, and place warning on that line with appropriate warning
-                    println!("::error file=docker/{dockerfile},title=Build failed::{}", e)
+                    println!(
+                        "::error file=docker/{},title=Build failed::{}",
+                        dockerfile, e
+                    )
                 }
             }
             results.push(
