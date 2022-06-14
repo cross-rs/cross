@@ -79,6 +79,7 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         .arg("ubuntu:16.04")
         .args(&["sh", "-c", cmd])
         .run(verbose)
+        .map_err(Into::into)
 }
 
 fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
@@ -363,6 +364,7 @@ pub fn run(
         .arg(&image(config, target)?)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(verbose)
+        .map_err(Into::into)
 }
 
 pub fn image(config: &Config, target: &Target) -> Result<String> {

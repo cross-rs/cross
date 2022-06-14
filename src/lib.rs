@@ -22,7 +22,7 @@ mod cli;
 mod config;
 mod cross_toml;
 mod docker;
-mod errors;
+pub mod errors;
 mod extensions;
 mod file;
 mod id;
@@ -464,7 +464,7 @@ pub fn run() -> Result<ExitStatus> {
             }
             Ok(out.status)
         }
-        _ => cargo::run(&argv, verbose),
+        _ => cargo::run(&argv, verbose).map_err(Into::into),
     }
 }
 

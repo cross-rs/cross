@@ -22,6 +22,7 @@ atty = "0.2"
 clap = { version = "~3.1", features = ["derive"] }
 color-eyre = "0.6"
 eyre = "0.6"
+thiserror = "1"
 home = "0.5"
 rustc_version = "0.4"
 toml = "0.5"
