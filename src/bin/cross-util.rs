@@ -1,21 +1,15 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
 use clap::{Parser, Subcommand};
-use cross::CommandExt;
 
-// known image prefixes, with their registry
-// the docker.io registry can also be implicit
-const GHCR_IO: &str = "ghcr.io/cross-rs/";
-const RUST_EMBEDDED: &str = "rustembedded/cross:";
-const DOCKER_IO: &str = "docker.io/rustembedded/cross:";
-const IMAGE_PREFIXES: &[&str] = &[GHCR_IO, DOCKER_IO, RUST_EMBEDDED];
+mod commands;
 
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
 struct Cli {
+    /// Toolchain name/version to use (such as stable or 1.59.0).
+    #[clap(value_parser = is_toolchain)]
+    toolchain: Option<String>,
     #[clap(subcommand)]
     command: Commands,
 }
@@ -23,230 +17,48 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// List cross images in local storage.
-    ListImages {
-        /// Provide verbose diagnostic output.
-        #[clap(short, long)]
-        verbose: bool,
-        /// Container engine (such as docker or podman).
-        #[clap(long)]
-        engine: Option<String>,
-    },
+    ListImages(commands::ListImages),
     /// Remove cross images in local storage.
-    RemoveImages {
-        /// If not provided, remove all images.
-        targets: Vec<String>,
-        /// Remove images matching provided targets.
-        #[clap(short, long)]
-        verbose: bool,
-        /// Force removal of images.
-        #[clap(short, long)]
-        force: bool,
-        /// Remove local (development) images.
-        #[clap(short, long)]
-        local: bool,
-        /// Remove images. Default is a dry run.
-        #[clap(short, long)]
-        execute: bool,
-        /// Container engine (such as docker or podman).
-        #[clap(long)]
-        engine: Option<String>,
-    },
+    RemoveImages(commands::RemoveImages),
 }
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
-struct Image {
-    repository: String,
-    tag: String,
-    // need to remove images by ID, not just tag
-    id: String,
-}
-
-impl Image {
-    fn name(&self) -> String {
-        format!("{}:{}", self.repository, self.tag)
-    }
-}
-
-fn get_container_engine(engine: Option<&str>) -> Result<PathBuf, which::Error> {
-    if let Some(ce) = engine {
-        which::which(ce)
+fn is_toolchain(toolchain: &str) -> cross::Result<String> {
+    if toolchain.starts_with('+') {
+        Ok(toolchain.chars().skip(1).collect())
     } else {
-        cross::get_container_engine()
+        eyre::bail!("not a toolchain")
     }
 }
 
-fn parse_image(image: &str) -> Image {
-    // this cannot panic: we've formatted our image list as `${repo}:${tag} ${id}`
-    let (repository, rest) = image.split_once(':').unwrap();
-    let (tag, id) = rest.split_once(' ').unwrap();
-    Image {
-        repository: repository.to_string(),
-        tag: tag.to_string(),
-        id: id.to_string(),
-    }
-}
-
-fn is_cross_image(repository: &str) -> bool {
-    IMAGE_PREFIXES.iter().any(|i| repository.starts_with(i))
-}
-
-fn is_local_image(tag: &str) -> bool {
-    tag.starts_with("local")
-}
-
-fn get_cross_images(engine: &Path, verbose: bool, local: bool) -> cross::Result<Vec<Image>> {
-    let stdout = Command::new(engine)
-        .arg("images")
-        .arg("--format")
-        .arg("{{.Repository}}:{{.Tag}} {{.ID}}")
-        .run_and_get_stdout(verbose)?;
-
-    let mut images: Vec<Image> = stdout
-        .lines()
-        .map(parse_image)
-        .filter(|image| is_cross_image(&image.repository))
-        .filter(|image| local || !is_local_image(&image.tag))
-        .collect();
-    images.sort();
-
-    Ok(images)
-}
-
-// the old rustembedded targets had the following format:
-//  repository = (${registry}/)?rustembedded/cross
-//  tag = ${target}(-${version})?
-// the last component must match `[A-Za-z0-9_-]` and
-// we must have at least 3 components. the first component
-// may contain other characters, such as `thumbv8m.main-none-eabi`.
-fn rustembedded_target(tag: &str) -> String {
-    let is_target_char = |c: char| c == '_' || c.is_ascii_alphanumeric();
-    let mut components = vec![];
-    for (index, component) in tag.split('-').enumerate() {
-        if index <= 2 || (!component.is_empty() && component.chars().all(is_target_char)) {
-            components.push(component)
-        } else {
-            break;
-        }
-    }
-
-    components.join("-")
-}
-
-fn get_image_target(image: &Image) -> cross::Result<String> {
-    if let Some(stripped) = image.repository.strip_prefix(GHCR_IO) {
-        Ok(stripped.to_string())
-    } else if let Some(tag) = image.tag.strip_prefix(RUST_EMBEDDED) {
-        Ok(rustembedded_target(tag))
-    } else if let Some(tag) = image.tag.strip_prefix(DOCKER_IO) {
-        Ok(rustembedded_target(tag))
+fn get_container_engine(
+    engine: Option<&str>,
+    verbose: bool,
+) -> cross::Result<cross::docker::Engine> {
+    let engine = if let Some(ce) = engine {
+        which::which(ce)?
     } else {
-        eyre::bail!("cannot get target for image {}", image.name())
-    }
-}
-
-fn list_images(engine: &Path, verbose: bool) -> cross::Result<()> {
-    get_cross_images(engine, verbose, true)?
-        .iter()
-        .for_each(|line| println!("{}", line.name()));
-
-    Ok(())
-}
-
-fn remove_images(
-    engine: &Path,
-    images: &[&str],
-    verbose: bool,
-    force: bool,
-    execute: bool,
-) -> cross::Result<()> {
-    let mut command = Command::new(engine);
-    command.arg("rmi");
-    if force {
-        command.arg("--force");
-    }
-    command.args(images);
-    if execute {
-        command.run(verbose).map_err(Into::into)
-    } else {
-        println!("{:?}", command);
-        Ok(())
-    }
-}
-
-fn remove_all_images(
-    engine: &Path,
-    verbose: bool,
-    force: bool,
-    local: bool,
-    execute: bool,
-) -> cross::Result<()> {
-    let images = get_cross_images(engine, verbose, local)?;
-    let ids: Vec<&str> = images.iter().map(|i| i.id.as_ref()).collect();
-    remove_images(engine, &ids, verbose, force, execute)
-}
-
-fn remove_target_images(
-    engine: &Path,
-    targets: &[String],
-    verbose: bool,
-    force: bool,
-    local: bool,
-    execute: bool,
-) -> cross::Result<()> {
-    let images = get_cross_images(engine, verbose, local)?;
-    let mut ids = vec![];
-    for image in images.iter() {
-        let target = get_image_target(image)?;
-        if targets.contains(&target) {
-            ids.push(image.id.as_ref());
-        }
-    }
-    remove_images(engine, &ids, verbose, force, execute)
+        cross::docker::get_container_engine()?
+    };
+    cross::docker::Engine::from_path(engine, verbose)
 }
 
 pub fn main() -> cross::Result<()> {
     cross::install_panic_hook()?;
     let cli = Cli::parse();
-    match &cli.command {
-        Commands::ListImages { verbose, engine } => {
-            let engine = get_container_engine(engine.as_deref())?;
-            list_images(&engine, *verbose)?;
+    match cli.command {
+        Commands::ListImages(args) => {
+            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
+            commands::list_images(args, &engine)?;
         }
-        Commands::RemoveImages {
-            targets,
-            verbose,
-            force,
-            local,
-            execute,
-            engine,
-        } => {
-            let engine = get_container_engine(engine.as_deref())?;
-            if targets.is_empty() {
-                remove_all_images(&engine, *verbose, *force, *local, *execute)?;
+        Commands::RemoveImages(args) => {
+            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
+            if args.targets.is_empty() {
+                commands::remove_all_images(args, &engine)?;
             } else {
-                remove_target_images(&engine, targets, *verbose, *force, *local, *execute)?;
+                commands::remove_target_images(args, &engine)?;
             }
         }
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_rustembedded_target() {
-        let targets = [
-            "x86_64-unknown-linux-gnu",
-            "x86_64-apple-darwin",
-            "thumbv8m.main-none-eabi",
-        ];
-        for target in targets {
-            let versioned = format!("{target}-0.2.1");
-            assert_eq!(rustembedded_target(target), target.to_string());
-            assert_eq!(rustembedded_target(&versioned), target.to_string());
-        }
-    }
 }

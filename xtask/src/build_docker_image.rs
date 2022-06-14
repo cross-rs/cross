@@ -14,7 +14,7 @@ pub struct BuildDockerImage {
     /// Specify a tag to use instead of the derived one, eg `local`
     #[clap(long)]
     tag: Option<String>,
-    #[clap(long, default_value = cross::CROSS_IMAGE)]
+    #[clap(long, default_value = cross::docker::CROSS_IMAGE)]
     repository: String,
     /// Newline separated labels
     #[clap(long, env = "LABELS")]

@@ -21,7 +21,7 @@ mod cargo;
 mod cli;
 mod config;
 mod cross_toml;
-mod docker;
+pub mod docker;
 pub mod errors;
 mod extensions;
 mod file;
@@ -44,8 +44,6 @@ use self::cross_toml::CrossToml;
 use self::errors::Context;
 use self::rustc::{TargetList, VersionMetaExt};
 
-pub use self::docker::get_container_engine;
-pub use self::docker::CROSS_IMAGE;
 pub use self::errors::{install_panic_hook, Result};
 pub use self::extensions::{CommandExt, OutputExt};
 
@@ -306,7 +304,7 @@ pub fn run() -> Result<ExitStatus> {
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
         config.confusable_target(&target);
 
-        let image_exists = match docker::image(&config, &target) {
+        let image_exists = match docker::container_name(&config, &target) {
             Ok(_) => true,
             Err(err) => {
                 eprintln!("Warning: {}", err);
