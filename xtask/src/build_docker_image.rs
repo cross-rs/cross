@@ -28,7 +28,11 @@ pub struct BuildDockerImage {
     force: bool,
     #[clap(short, long)]
     push: bool,
-    #[clap(long, possible_values = ["auto", "plain", "tty"], default_value = "auto")]
+    #[clap(
+        long,
+        value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]), 
+        default_value = "auto"
+    )]
     progress: String,
     #[clap(long)]
     no_cache: bool,
