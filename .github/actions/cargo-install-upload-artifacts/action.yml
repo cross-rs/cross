@@ -8,15 +8,13 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Check if crate has binaries
+    - name: Setup
       id: metadata
       run: |
         metadata="$(cargo metadata --format-version 1 --no-deps)"
 
-        package_name="$(jq -r '.packages[0].name' <<< "${metadata}")"
-        has_binaries="$(jq '.packages[0].targets | any(.kind | contains(["bin"]))' <<< "${metadata}")"
+        package_name="cross"
         echo "::set-output name=package-name::${package_name}"
-        echo "::set-output name=has-binaries::${has_binaries}"
 
         out_dir="$(mktemp -d)"
         artifacts_dir="$(mktemp -d)"
@@ -31,7 +29,6 @@ runs:
       shell: bash
 
     - name: Build with all features
-      if: ${{ fromJson(steps.metadata.outputs.has-binaries) }}
       uses: actions-rs/cargo@v1
       with:
         command: install
@@ -45,7 +42,6 @@ runs:
         use-cross: true
 
     - name: Archive artifacts
-      if: ${{ fromJson(steps.metadata.outputs.has-binaries) }}
       id: archive
       run: |
         set -x
