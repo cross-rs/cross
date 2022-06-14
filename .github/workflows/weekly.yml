@@ -1,0 +1,25 @@
+on:
+  schedule:
+    - cron:  '0 0 * * 5'
+  workflow_dispatch:
+
+name: Check
+
+env:
+  CARGO_NET_RETRY: 3
+  CARGO_HTTP_CHECK_REVOKE: false
+
+jobs:
+  weekly:
+    name: Check All Targets - No Cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Build xtask
+        run: cargo build -p xtask
+      - name: Build Docker image
+        id: build-docker-image
+        run: cargo xtask build-docker-image -v --no-cache --from-ci --tag weekly
