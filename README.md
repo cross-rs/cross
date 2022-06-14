@@ -62,12 +62,13 @@ $ cargo install cross --git https://github.com/cross-rs/cross
 ## Usage
 
 `cross` has the exact same CLI as [Cargo](https://github.com/rust-lang/cargo)
-but as it relies on Docker you'll have to start the daemon before you can use
-it.
+but as it relies on Docker or Podman. For Docker, you'll have to start
+the daemon before you can use it.
 
 ```
-# (ONCE PER BOOT)
-# Start the Docker daemon, if it's not already running
+# (ONCE PER BOOT, on Linux)
+# Start the Docker daemon, if it's not already running using systemd
+# on WSL2 and other systems using SysVinit, use `sudo service docker start`.
 $ sudo systemctl start docker
 
 # MAGIC! This Just Works
@@ -79,6 +80,8 @@ $ cross test --target mips64-unknown-linux-gnuabi64
 # Obviously, this also Just Works
 $ cross rustc --target powerpc-unknown-linux-gnu --release -- -C lto
 ```
+
+Additional documentation can be found on the [wiki](https://github.com/cross-rs/cross/wiki).
 
 ## Configuration
 
@@ -128,7 +131,7 @@ $ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
 
 ### Docker in Docker
 
-When running `cross` from inside a docker container, `cross` needs access to
+When running `cross` from inside a container, `cross` needs access to
 the hosts docker daemon itself. This is normally achieved by mounting the
 docker daemons socket `/var/run/docker.sock`. For example:
 
