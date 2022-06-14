@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
+use super::custom::Dockerfile;
 use super::engine::*;
 use crate::cargo::CargoMetadata;
 use crate::config::Config;
@@ -138,7 +139,7 @@ pub(crate) fn register(target: &Target, verbose: bool) -> Result<()> {
         .arg("--rm")
         .arg("ubuntu:16.04")
         .args(&["sh", "-c", cmd])
-        .run(verbose)
+        .run(verbose, false)
         .map_err(Into::into)
 }
 
@@ -157,7 +158,7 @@ fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
     Ok((key, value))
 }
 
-fn parse_docker_opts(value: &str) -> Result<Vec<String>> {
+pub fn parse_docker_opts(value: &str) -> Result<Vec<String>> {
     shell_words::split(value).wrap_err_with(|| format!("could not parse docker opts of {}", value))
 }
 
@@ -185,7 +186,7 @@ pub(crate) fn mount(
 }
 
 pub(crate) fn docker_envvars(docker: &mut Command, config: &Config, target: &Target) -> Result<()> {
-    for ref var in config.env_passthrough(target)? {
+    for ref var in config.env_passthrough(target)?.unwrap_or_default() {
         validate_env_var(var)?;
 
         // Only specifying the environment variable name in the "-e"
@@ -272,7 +273,7 @@ pub(crate) fn docker_mount(
         mount_volumes = true;
     }
 
-    for ref var in config.env_volumes(target)? {
+    for ref var in config.env_volumes(target)?.unwrap_or_default() {
         let (var, value) = validate_env_var(var)?;
         let value = match value {
             Some(v) => Ok(v.to_string()),
@@ -351,6 +352,7 @@ pub(crate) fn docker_seccomp(
     docker: &mut Command,
     engine_type: EngineType,
     target: &Target,
+    metadata: &CargoMetadata,
     verbose: bool,
 ) -> Result<()> {
     // docker uses seccomp now on all installations
@@ -361,11 +363,8 @@ pub(crate) fn docker_seccomp(
             "unconfined".to_string()
         } else {
             #[allow(unused_mut)] // target_os = "windows"
-            let mut path = env::current_dir()
-                .wrap_err("couldn't get current directory")?
-                .canonicalize()
-                .wrap_err_with(|| "when canonicalizing current_dir".to_string())?
-                .join("target")
+            let mut path = metadata
+                .target_directory
                 .join(target.triple())
                 .join("seccomp.json");
             if !path.exists() {
@@ -385,7 +384,79 @@ pub(crate) fn docker_seccomp(
     Ok(())
 }
 
-pub(crate) fn container_name(config: &Config, target: &Target) -> Result<String> {
+pub fn needs_custom_image(target: &Target, config: &Config) -> bool {
+    config.dockerfile(target).unwrap_or_default().is_some()
+        || !config
+            .pre_build(target)
+            .unwrap_or_default()
+            .unwrap_or_default()
+            .is_empty()
+}
+
+pub(crate) fn custom_image_build(
+    target: &Target,
+    config: &Config,
+    metadata: &CargoMetadata,
+    Directories { host_root, .. }: Directories,
+    engine: &Engine,
+    verbose: bool,
+) -> Result<String> {
+    let mut image = image_name(config, target)?;
+
+    if let Some(path) = config.dockerfile(target)? {
+        let context = config.dockerfile_context(target)?;
+        let name = config.image(target)?;
+
+        let build = Dockerfile::File {
+            path: &path,
+            context: context.as_deref(),
+            name: name.as_deref(),
+        };
+
+        image = build
+            .build(
+                config,
+                metadata,
+                engine,
+                &host_root,
+                config.dockerfile_build_args(target)?.unwrap_or_default(),
+                target,
+                verbose,
+            )
+            .wrap_err("when building dockerfile")?;
+    }
+    let pre_build = config.pre_build(target)?;
+
+    if let Some(pre_build) = pre_build {
+        if !pre_build.is_empty() {
+            let custom = Dockerfile::Custom {
+                content: format!(
+                    r#"
+    FROM {image}
+    ARG CROSS_DEB_ARCH=
+    ARG CROSS_CMD
+    RUN eval "${{CROSS_CMD}}""#
+                ),
+            };
+            custom
+                .build(
+                    config,
+                    metadata,
+                    engine,
+                    &host_root,
+                    Some(("CROSS_CMD", pre_build.join("\n"))),
+                    target,
+                    verbose,
+                )
+                .wrap_err("when pre-building")
+                .with_note(|| format!("CROSS_CMD={}", pre_build.join("\n")))?;
+            image = custom.image_name(target, metadata);
+        }
+    }
+    Ok(image)
+}
+
+pub(crate) fn image_name(config: &Config, target: &Target) -> Result<String> {
     if let Some(image) = config.image(target)? {
         return Ok(image);
     }

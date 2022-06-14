@@ -7,8 +7,12 @@ use crate::errors::*;
 pub trait CommandExt {
     fn print_verbose(&self, verbose: bool);
     fn status_result(&self, status: ExitStatus) -> Result<(), CommandError>;
-    fn run(&mut self, verbose: bool) -> Result<(), CommandError>;
-    fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus, CommandError>;
+    fn run(&mut self, verbose: bool, silence_stdout: bool) -> Result<(), CommandError>;
+    fn run_and_get_status(
+        &mut self,
+        verbose: bool,
+        silence_stdout: bool,
+    ) -> Result<ExitStatus, CommandError>;
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String, CommandError>;
     fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output, CommandError>;
 }
@@ -16,7 +20,11 @@ pub trait CommandExt {
 impl CommandExt for Command {
     fn print_verbose(&self, verbose: bool) {
         if verbose {
-            println!("+ {:?}", self);
+            if let Some(cwd) = self.get_current_dir() {
+                println!("+ {:?} {:?}", cwd, self);
+            } else {
+                println!("+ {:?}", self);
+            }
         }
     }
 
@@ -29,16 +37,24 @@ impl CommandExt for Command {
     }
 
     /// Runs the command to completion
-    fn run(&mut self, verbose: bool) -> Result<(), CommandError> {
-        let status = self.run_and_get_status(verbose)?;
+    fn run(&mut self, verbose: bool, silence_stdout: bool) -> Result<(), CommandError> {
+        let status = self.run_and_get_status(verbose, silence_stdout)?;
         self.status_result(status)
     }
 
     /// Runs the command to completion
-    fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus, CommandError> {
+    fn run_and_get_status(
+        &mut self,
+        verbose: bool,
+        silence_stdout: bool,
+    ) -> Result<ExitStatus, CommandError> {
         self.print_verbose(verbose);
+        if silence_stdout && !verbose {
+            self.stdout(std::process::Stdio::null());
+        }
         self.status()
             .map_err(|e| CommandError::CouldNotExecute(Box::new(e), format!("{self:?}")))
+            .map_err(Into::into)
     }
 
     /// Runs the command to completion and returns its stdout

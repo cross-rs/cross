@@ -68,6 +68,23 @@ impl Environment {
         self.get_target_var(target, "IMAGE")
     }
 
+    fn dockerfile(&self, target: &Target) -> Option<String> {
+        let res = self.get_values_for("DOCKERFILE", target, |s| s.to_string());
+        res.0.or(res.1)
+    }
+
+    fn dockerfile_context(&self, target: &Target) -> Option<String> {
+        let res = self.get_values_for("DOCKERFILE_CONTEXT", target, |s| s.to_string());
+        res.0.or(res.1)
+    }
+
+    fn pre_build(&self, target: &Target) -> Option<Vec<String>> {
+        let res = self.get_values_for("PRE_BUILD", target, |v| {
+            v.split('\n').map(String::from).collect()
+        });
+        res.0.or(res.1)
+    }
+
     fn runner(&self, target: &Target) -> Option<String> {
         self.get_target_var(target, "RUNNER")
     }
@@ -178,16 +195,34 @@ impl Config {
     fn vec_from_config(
         &self,
         target: &Target,
-        env: impl Fn(&Environment, &Target) -> (Option<Vec<String>>, Option<Vec<String>>),
-        config_build: impl for<'a> Fn(&'a CrossToml) -> Option<&'a [String]>,
-        config_target: impl for<'a> Fn(&'a CrossToml, &Target) -> Option<&'a [String]>,
-    ) -> Result<Vec<String>> {
+        env: impl for<'a> Fn(&'a Environment, &Target) -> (Option<Vec<String>>, Option<Vec<String>>),
+        config: impl for<'a> Fn(&'a CrossToml, &Target) -> (Option<&'a [String]>, Option<&'a [String]>),
+        sum: bool,
+    ) -> Result<Option<Vec<String>>> {
         let (env_build, env_target) = env(&self.env, target);
 
-        let mut collected = self.sum_of_env_toml_values(env_build, config_build)?;
-        collected.extend(self.sum_of_env_toml_values(env_target, |t| config_target(t, target))?);
+        if sum {
+            return self.sum_of_env_toml_values(env_target, |t| config(t, target));
+        } else if let Some(env_target) = env_target {
+            return Ok(Some(env_target));
+        }
 
-        Ok(collected)
+        let (build, target) = self
+            .toml
+            .as_ref()
+            .map(|t| config(t, target))
+            .unwrap_or_default();
+
+        // FIXME: let expression
+        if target.is_none() && env_build.is_some() {
+            return Ok(env_build);
+        }
+
+        if target.is_none() {
+            Ok(build.map(ToOwned::to_owned))
+        } else {
+            Ok(target.map(ToOwned::to_owned))
+        }
     }
 
     #[cfg(test)]
@@ -211,22 +246,17 @@ impl Config {
         self.string_from_config(target, Environment::runner, CrossToml::runner)
     }
 
-    pub fn env_passthrough(&self, target: &Target) -> Result<Vec<String>> {
+    pub fn env_passthrough(&self, target: &Target) -> Result<Option<Vec<String>>> {
         self.vec_from_config(
             target,
             Environment::passthrough,
-            CrossToml::env_passthrough_build,
-            CrossToml::env_passthrough_target,
+            CrossToml::env_passthrough,
+            true,
         )
     }
 
-    pub fn env_volumes(&self, target: &Target) -> Result<Vec<String>> {
-        self.vec_from_config(
-            target,
-            Environment::volumes,
-            CrossToml::env_volumes_build,
-            CrossToml::env_volumes_target,
-        )
+    pub fn env_volumes(&self, target: &Target) -> Result<Option<Vec<String>>> {
+        self.vec_from_config(target, Environment::volumes, CrossToml::env_volumes, false)
     }
 
     pub fn target(&self, target_list: &TargetList) -> Option<Target> {
@@ -238,19 +268,78 @@ impl Config {
             .and_then(|t| t.default_target(target_list))
     }
 
+    pub fn dockerfile(&self, target: &Target) -> Result<Option<String>> {
+        self.string_from_config(target, Environment::dockerfile, CrossToml::dockerfile)
+    }
+
+    pub fn dockerfile_context(&self, target: &Target) -> Result<Option<String>> {
+        self.string_from_config(
+            target,
+            Environment::dockerfile_context,
+            CrossToml::dockerfile_context,
+        )
+    }
+
+    pub fn dockerfile_build_args(
+        &self,
+        target: &Target,
+    ) -> Result<Option<HashMap<String, String>>> {
+        // This value does not support env variables
+        self.toml
+            .as_ref()
+            .map_or(Ok(None), |t| Ok(t.dockerfile_build_args(target)))
+    }
+
+    pub fn pre_build(&self, target: &Target) -> Result<Option<Vec<String>>> {
+        self.vec_from_config(
+            target,
+            |e, t| (None, e.pre_build(t)),
+            CrossToml::pre_build,
+            false,
+        )
+    }
+
     fn sum_of_env_toml_values<'a>(
         &'a self,
-        env_values: Option<Vec<String>>,
-        toml_getter: impl FnOnce(&'a CrossToml) -> Option<&'a [String]>,
-    ) -> Result<Vec<String>> {
+        env_values: Option<impl AsRef<[String]>>,
+        toml_getter: impl FnOnce(&'a CrossToml) -> (Option<&'a [String]>, Option<&'a [String]>),
+    ) -> Result<Option<Vec<String>>> {
+        let mut defined = false;
         let mut collect = vec![];
-        if let Some(mut vars) = env_values {
-            collect.append(&mut vars);
-        } else if let Some(toml_values) = self.toml.as_ref().and_then(toml_getter) {
-            collect.extend(toml_values.iter().cloned());
+        if let Some(vars) = env_values {
+            collect.extend(vars.as_ref().iter().cloned());
+            defined = true;
+        } else if let Some((build, target)) = self.toml.as_ref().map(toml_getter) {
+            if let Some(build) = build {
+                collect.extend(build.iter().cloned());
+                defined = true;
+            }
+            if let Some(target) = target {
+                collect.extend(target.iter().cloned());
+                defined = true;
+            }
         }
+        if !defined {
+            Ok(None)
+        } else {
+            Ok(Some(collect))
+        }
+    }
+}
 
-        Ok(collect)
+pub fn opt_merge<I, T: Extend<I> + IntoIterator<Item = I>>(
+    opt1: Option<T>,
+    opt2: Option<T>,
+) -> Option<T> {
+    match (opt1, opt2) {
+        (None, None) => None,
+        (None, Some(opt2)) => Some(opt2),
+        (Some(opt1), None) => Some(opt1),
+        (Some(opt1), Some(opt2)) => {
+            let mut res = opt2;
+            res.extend(opt1);
+            Some(res)
+        }
     }
 }
 
@@ -389,7 +478,8 @@ mod tests {
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
             let expected = vec!["VOLUME1".to_string(), "VOLUME2".into()];
 
-            let result = config.env_volumes(&target()).unwrap();
+            let result = config.env_volumes(&target()).unwrap().unwrap_or_default();
+            dbg!(&result);
             assert!(result.len() == 2);
             assert!(result.contains(&expected[0]));
             assert!(result.contains(&expected[1]));
@@ -404,7 +494,8 @@ mod tests {
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
             let expected = vec!["VOLUME3".to_string(), "VOLUME4".into()];
 
-            let result = config.env_volumes(&target()).unwrap();
+            let result = config.env_volumes(&target()).unwrap().unwrap_or_default();
+            dbg!(&result);
             assert!(result.len() == 2);
             assert!(result.contains(&expected[0]));
             assert!(result.contains(&expected[1]));

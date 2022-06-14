@@ -10,7 +10,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #795 - added images for additional toolchains maintained by cross-rs.
 - #792 - added `CROSS_CONTAINER_IN_CONTAINER` environment variable to replace `CROSS_DOCKER_IN_DOCKER`.
 - #782 - added `build-std` config option, which builds the rust standard library from source if enabled.
-- #775 - forward Cargo exit code to host
+- #678 - Add optional `target.{target}.dockerfile[.file]`, `target.{target}.dockerfile.context` and `target.{target}.dockerfile.build-args` to invoke docker/podman build before using an image.
+- #678 - Add `target.{target}.pre-build` config for running commands before building the image.
 - #772 - added `CROSS_CONTAINER_OPTS` environment variable to replace `DOCKER_OPTS`.
 - #767, #788 - added the `cross-util` and `xtask` commands.
 - #745 - added `thumbv7neon-*` targets.
@@ -27,6 +28,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- #775 - forward Cargo exit code to host
 - #762 - re-enabled `x86_64-unknown-dragonfly` target.
 - #747 - reduced android image sizes.
 - #746 - limit image permissions for android images.

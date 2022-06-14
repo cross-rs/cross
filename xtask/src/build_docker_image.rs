@@ -214,6 +214,11 @@ pub fn build_docker_image(
             docker_build.args(&["--label", label]);
         }
 
+        docker_build.args([
+            "--label",
+            &format!("{}.for-cross-target={target}", cross::CROSS_LABEL_DOMAIN),
+        ]);
+
         docker_build.args(&["-f", dockerfile]);
 
         if gha || progress == "plain" {
@@ -225,7 +230,7 @@ pub fn build_docker_image(
         docker_build.arg(".");
 
         if !dry_run && (force || !push || gha) {
-            let result = docker_build.run(verbose);
+            let result = docker_build.run(verbose, false);
             if gha && targets.len() > 1 {
                 if let Err(e) = &result {
                     // TODO: Determine what instruction errorred, and place warning on that line with appropriate warning

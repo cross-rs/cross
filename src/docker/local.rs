@@ -8,6 +8,7 @@ use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::{Config, Target};
 use atty::Stream;
+use eyre::Context;
 
 #[allow(clippy::too_many_arguments)] // TODO: refactor
 pub(crate) fn run(
@@ -44,7 +45,7 @@ pub(crate) fn run(
 
     docker.arg("--rm");
 
-    docker_seccomp(&mut docker, engine.kind, target, verbose)?;
+    docker_seccomp(&mut docker, engine.kind, target, metadata, verbose)?;
     docker_user_id(&mut docker, engine.kind);
 
     docker
@@ -84,10 +85,15 @@ pub(crate) fn run(
             docker.arg("-t");
         }
     }
+    let mut image = image_name(config, target)?;
+    if needs_custom_image(target, config) {
+        image = custom_image_build(target, config, metadata, dirs, &engine, verbose)
+            .wrap_err("when building custom image")?
+    }
 
     docker
-        .arg(&container_name(config, target)?)
+        .arg(&image)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
-        .run_and_get_status(verbose)
+        .run_and_get_status(verbose, false)
         .map_err(Into::into)
 }

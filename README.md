@@ -112,10 +112,22 @@ the default one. Normal Docker behavior applies, so:
 
 - If only `tag` is omitted, then Docker will use the `latest` tag.
 
+#### Dockerfiles
+
+If you're using a custom Dockerfile, you can use `target.{{TARGET}}.dockerfile` to automatically build it
+
+``` toml
+[target.aarch64-unknown-linux-gnu.dockerfile]
+dockerfile = "./path/to/where/the/Dockerfile/resides"
+```
+
+`cross` will build and use the image that was built instead of the default image.
+
 It's recommended to base your custom image on the default Docker image that
 cross uses: `ghcr.io/cross-rs/{{TARGET}}:{{VERSION}}` (where `{{VERSION}}` is cross's version).
 This way you won't have to figure out how to install a cross C toolchain in your
-custom image. Example below:
+custom image.
+
 
 ``` Dockerfile
 FROM ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest
@@ -125,8 +137,23 @@ RUN dpkg --add-architecture arm64 && \
     apt-get install --assume-yes libfoo:arm64
 ```
 
+If you want cross to provide the `FROM` instruction, you can do the following
+
+``` Dockerfile
+ARG CROSS_BASE_IMAGE
+FROM $CROSS_BASE_IMAGE
+
+RUN ...
 ```
-$ docker build -t my/image:tag path/to/where/the/Dockerfile/resides
+
+#### Pre-build hook
+
+`cross` enables you to add dependencies and run other necessary commands in the image before using it.
+This action will be added to the used image, so it won't be ran/built every time you use `cross`.
+
+``` toml
+[target.x86_64-unknown-linux-gnu]
+pre-build = ["dpkg --add-architecture arm64 && apt-get update && apt-get install --assume-yes libfoo:arm64"]
 ```
 
 ### Docker in Docker

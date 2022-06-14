@@ -186,7 +186,7 @@ fn remove_images(
     }
     command.args(images);
     if execute {
-        command.run(verbose).map_err(Into::into)
+        command.run(verbose, false).map_err(Into::into)
     } else {
         println!("{:?}", command);
         Ok(())
