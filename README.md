@@ -321,11 +321,12 @@ terminate.
 | `x86_64-pc-windows-gnu`              | N/A    | 7.3     | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-freebsd`             | 1.5    | 6.4.0   | ✓   | N/A   |       |
 | `x86_64-unknown-dragonfly` [2] [3]   | 6.0.1  | 5.3.0   | ✓   | N/A   |       |
-| `x86_64-unknown-linux-gnu`           | 2.17   | 4.8.5   | ✓   | 4.2.1 |   ✓    |
+| `x86_64-unknown-linux-gnu`           | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
+| `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5   | ✓   | 4.2.1 |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.24  | 9.2.0   | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [3]          | 9.2.0  | 9.4.0   | ✓   | N/A   |       |
-<!--| `asmjs-unknown-emscripten` [5]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |-->
-<!--| `wasm32-unknown-emscripten` [5]      | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |-->
+<!--| `asmjs-unknown-emscripten` [6]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |-->
+<!--| `wasm32-unknown-emscripten` [6]      | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |-->
 <!--| `sparcv9-sun-solaris` [3]            | 2.11   | 5.3.0   | ✓   | N/A   |        |-->
 <!--| `x86_64-sun-solaris` [3]             | 2.11   | 5.3.0   | ✓   | N/A   |        |-->
 
@@ -342,7 +343,9 @@ terminate.
 
 [4] libc = newlib
 
-<!--[5] libc = musl, gcc = emcc. The Docker images for these targets are currently not built automatically
+[5] Must change `image = "x86_64-unknown-linux-gnu:centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
+
+<!--[6] libc = musl, gcc = emcc. The Docker images for these targets are currently not built automatically
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/85821), you will have to build them yourself for now.-->
 
 ## Debugging

@@ -30,7 +30,9 @@ max_glibc_version() {
     # glibc versions have the following format:
     #   `libc-$major-$minor.so.$abi`, where the `.$abi` may be optional.
     # shellcheck disable=SC2207
-    local -a paths=( $(ls "${1}"/libc-[0-9]*.[0-9]*.so*) )
+    local -a paths=( $(ls "${1}"/libc-[0-9]*.[0-9]*.so* 2>/dev/null)  )
+    # shellcheck disable=SC2128
+    [ -z "$paths" ] && return 0
     local major=0
     local minor=0
     local version
@@ -196,6 +198,10 @@ case "${target}" in
     x86_64-unknown-linux-gnu)
         libdir="/lib64/"
         libc=$(max_glibc_version "${libdir}")
+        if [ "$libc" == "" ]; then
+            libdir="/lib/x86_64-linux-gnu/"
+            libc=$(max_glibc_version "${libdir}")
+        fi
         ;;
     *-*-linux-gnu*)
         toolchain_prefix="${!cc_var//-gcc/}"

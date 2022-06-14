@@ -118,6 +118,13 @@ pub fn build_docker_image(
         }
 
         let dockerfile = format!("Dockerfile.{target}");
+
+        let (target, sub) = if let Some((t, sub)) = target.split_once('.') {
+            (t.to_owned(), format!("-{sub}"))
+        } else {
+            (target.to_owned(), "".to_owned())
+        };
+
         let image_name = format!("{}/{target}", repository);
         let mut tags = vec![];
 
@@ -129,28 +136,28 @@ pub fn build_docker_image(
                 if version != tag_version {
                     eyre::bail!("git tag does not match package version.")
                 }
-                tags.push(format!("{image_name}:{version}"));
+                tags.push(format!("{image_name}:{version}{sub}"));
                 // Check for unstable releases, tag stable releases as `latest`
                 if version.contains('-') {
                     // TODO: Don't tag if version is older than currently released version.
-                    tags.push(format!("{image_name}:latest"))
+                    tags.push(format!("{image_name}:latest{sub}"))
                 }
             }
             (Some(ref_type), Some(ref_name)) if ref_type == "branch" => {
-                tags.push(format!("{image_name}:{ref_name}"));
+                tags.push(format!("{image_name}:{ref_name}{sub}"));
 
                 if ["staging", "trying"]
                     .iter()
                     .any(|branch| branch != &ref_name)
                 {
-                    tags.push(format!("{image_name}:edge"));
+                    tags.push(format!("{image_name}:edge{sub}"));
                 }
             }
             _ => {
                 if push && tag_override.is_none() {
                     panic!("Refusing to push without tag or branch. Specify a repository and tag with `--repository <repository> --tag <tag>`")
                 }
-                tags.push(format!("{image_name}:local"))
+                tags.push(format!("{image_name}:local{sub}"))
             }
         }
 
@@ -164,7 +171,7 @@ pub fn build_docker_image(
         } else {
             docker_build.args(&[
                 "--cache-from",
-                &format!("type=registry,ref={image_name}:main"),
+                &format!("type=registry,ref={image_name}:main{sub}"),
             ]);
         }
 

@@ -50,7 +50,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #725 - support `CROSS_DEBUG` and `CROSS_RUNNER` on android images.
 - #714 - use host target directory when falling back to host cargo.
 - #713 - convert relative target directories to absolute paths.
-- #501 - x86_64-linux: lower glibc version requirement to 2.17 (compatible with centos 7)
+- #501 (reverted, see #764) - x86_64-linux: lower glibc version requirement to 2.17 (compatible with centos 7)
 - #500 - use runner setting specified in Cross.toml
 - #498 - bump linux-image version to fix CI
 - Re-enabled `powerpc64-unknown-linux-gnu` image
