@@ -133,9 +133,20 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         }
     }
 
-    let docker_in_docker = env::var("CROSS_DOCKER_IN_DOCKER")
-        .map(|s| bool_from_envvar(&s))
-        .unwrap_or_default();
+    let docker_in_docker = if let Ok(value) = env::var("CROSS_CONTAINER_IN_CONTAINER") {
+        if env::var("CROSS_DOCKER_IN_DOCKER").is_ok() {
+            eprintln!(
+                "Warning: using both `CROSS_CONTAINER_IN_CONTAINER` and `CROSS_DOCKER_IN_DOCKER`."
+            );
+        }
+        bool_from_envvar(&value)
+    } else if let Ok(value) = env::var("CROSS_DOCKER_IN_DOCKER") {
+        // FIXME: remove this when we deprecate CROSS_DOCKER_IN_DOCKER.
+        bool_from_envvar(&value)
+    } else {
+        false
+    };
+
     let enable_doctests = env::var("CROSS_UNSTABLE_ENABLE_DOCTESTS")
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();

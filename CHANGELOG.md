@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- #792 - added `CROSS_CONTAINER_IN_CONTAINER` environment variable to replace `CROSS_DOCKER_IN_DOCKER`.
 - #782 - added `build-std` config option, which builds the rust standard library from source if enabled.
 - #775 - forward Cargo exit code to host
 - #772 - added `CROSS_CONTAINER_OPTS` environment variable to replace `DOCKER_OPTS`.
@@ -40,6 +41,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- #792 - fixed container-in-container support when using podman.
 - #781 - ensure `target.$(...)` config options override `build` ones.
 - #771 - fix parsing of `DOCKER_OPTS`.
 - #727 - add `PKG_CONFIG_PATH` to all `*-linux-gnu` images.
