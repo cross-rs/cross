@@ -17,9 +17,8 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// List cross images in local storage.
-    ListImages(commands::ListImages),
-    /// Remove cross images in local storage.
-    RemoveImages(commands::RemoveImages),
+    #[clap(subcommand)]
+    Images(commands::Images),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<String> {
@@ -46,17 +45,9 @@ pub fn main() -> cross::Result<()> {
     cross::install_panic_hook()?;
     let cli = Cli::parse();
     match cli.command {
-        Commands::ListImages(args) => {
-            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
-            commands::list_images(args, &engine)?;
-        }
-        Commands::RemoveImages(args) => {
-            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
-            if args.targets.is_empty() {
-                commands::remove_all_images(args, &engine)?;
-            } else {
-                commands::remove_target_images(args, &engine)?;
-            }
+        Commands::Images(args) => {
+            let engine = get_container_engine(args.engine(), args.verbose())?;
+            args.run(engine)?;
         }
     }
 

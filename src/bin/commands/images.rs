@@ -1,4 +1,4 @@
-use clap::Args;
+use clap::{Args, Subcommand};
 use cross::CommandExt;
 
 // known image prefixes, with their registry
@@ -37,6 +37,43 @@ pub struct RemoveImages {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Images {
+    /// List cross images in local storage.
+    List(ListImages),
+    /// Remove cross images in local storage.
+    Remove(RemoveImages),
+}
+
+impl Images {
+    pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
+        match self {
+            Images::List(args) => list_images(args, &engine),
+            Images::Remove(args) => {
+                if args.targets.is_empty() {
+                    remove_all_images(args, &engine)
+                } else {
+                    remove_target_images(args, &engine)
+                }
+            }
+        }
+    }
+
+    pub fn engine(&self) -> Option<&str> {
+        match self {
+            Images::List(l) => l.engine.as_deref(),
+            Images::Remove(l) => l.engine.as_deref(),
+        }
+    }
+
+    pub fn verbose(&self) -> bool {
+        match self {
+            Images::List(l) => l.verbose,
+            Images::Remove(l) => l.verbose,
+        }
+    }
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
