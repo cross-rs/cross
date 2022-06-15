@@ -179,8 +179,8 @@ impl Config {
         &self,
         target: &Target,
         env: impl Fn(&Environment, &Target) -> (Option<Vec<String>>, Option<Vec<String>>),
-        config_build: impl for<'a> Fn(&'a CrossToml) -> &'a [String],
-        config_target: impl for<'a> Fn(&'a CrossToml, &Target) -> &'a [String],
+        config_build: impl for<'a> Fn(&'a CrossToml) -> Option<&'a [String]>,
+        config_target: impl for<'a> Fn(&'a CrossToml, &Target) -> Option<&'a [String]>,
     ) -> Result<Vec<String>> {
         let (env_build, env_target) = env(&self.env, target);
 
@@ -241,12 +241,12 @@ impl Config {
     fn sum_of_env_toml_values<'a>(
         &'a self,
         env_values: Option<Vec<String>>,
-        toml_getter: impl FnOnce(&'a CrossToml) -> &'a [String],
+        toml_getter: impl FnOnce(&'a CrossToml) -> Option<&'a [String]>,
     ) -> Result<Vec<String>> {
         let mut collect = vec![];
         if let Some(mut vars) = env_values {
             collect.append(&mut vars);
-        } else if let Some(toml_values) = self.toml.as_ref().map(toml_getter) {
+        } else if let Some(toml_values) = self.toml.as_ref().and_then(toml_getter) {
             collect.extend(toml_values.iter().cloned());
         }
 
