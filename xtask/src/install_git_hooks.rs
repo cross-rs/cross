@@ -22,6 +22,7 @@ pub fn install_git_hooks(InstallGitHooks { verbose }: InstallGitHooks) -> cross:
         cross_dev.join("pre-commit.sh"),
         git_hooks.join("pre-commit"),
     )?;
+    std::fs::copy(cross_dev.join("pre-push.sh"), git_hooks.join("pre-push"))?;
 
     Ok(())
 }
