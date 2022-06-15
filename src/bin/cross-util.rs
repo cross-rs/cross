@@ -26,6 +26,8 @@ enum Commands {
     /// List cross images in local storage.
     #[clap(subcommand)]
     Images(commands::Images),
+    /// Clean all cross data in local storage.
+    Clean(commands::Clean),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<String> {
@@ -55,6 +57,10 @@ pub fn main() -> cross::Result<()> {
     match cli.command {
         Commands::Images(args) => {
             let engine = get_container_engine(args.engine(), args.verbose())?;
+            args.run(engine)?;
+        }
+        Commands::Clean(args) => {
+            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
             args.run(engine)?;
         }
     }

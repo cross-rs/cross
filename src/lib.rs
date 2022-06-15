@@ -29,6 +29,7 @@ mod id;
 mod interpreter;
 mod rustc;
 mod rustup;
+pub mod temp;
 
 use std::env;
 use std::io::{self, Write};
@@ -44,7 +45,7 @@ use self::cross_toml::CrossToml;
 use self::errors::Context;
 use self::rustc::{TargetList, VersionMetaExt};
 
-pub use self::errors::{install_panic_hook, Result};
+pub use self::errors::{install_panic_hook, install_termination_hook, Result};
 pub use self::extensions::{CommandExt, OutputExt};
 pub use self::file::ToUtf8;
 

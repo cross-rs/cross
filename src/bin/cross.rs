@@ -2,6 +2,8 @@
 
 pub fn main() -> cross::Result<()> {
     cross::install_panic_hook()?;
+    cross::install_termination_hook()?;
+
     let status = cross::run()?;
     let code = status
         .code()
