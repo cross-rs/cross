@@ -44,9 +44,16 @@ pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
         })?,
     )
     .wrap_err_with(|| format!("couldn't create directory `{}`", path.display()))?;
-    fs::OpenOptions::new()
-        .write(true)
-        .create_new(!overwrite)
-        .open(&path)
-        .wrap_err(format!("could't write to file `{}`", path.display()))
+
+    let mut open = fs::OpenOptions::new();
+    open.write(true);
+
+    if overwrite {
+        open.truncate(true).create(true);
+    } else {
+        open.create_new(true);
+    }
+
+    open.open(&path)
+        .wrap_err(format!("couldn't write to file `{}`", path.display()))
 }

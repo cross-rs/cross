@@ -1,9 +1,10 @@
 #![doc = include_str!("../docs/cross_toml.md")]
 
-use crate::errors::*;
+use crate::{config, errors::*};
 use crate::{Target, TargetList};
 use serde::Deserialize;
 use std::collections::{BTreeSet, HashMap};
+use std::str::FromStr;
 
 /// Environment configuration
 #[derive(Debug, Deserialize, PartialEq, Eq, Default)]
@@ -21,6 +22,9 @@ pub struct CrossBuildConfig {
     xargo: Option<bool>,
     build_std: Option<bool>,
     default_target: Option<String>,
+    pre_build: Option<Vec<String>>,
+    #[serde(default, deserialize_with = "opt_string_or_struct")]
+    dockerfile: Option<CrossTargetDockerfileConfig>,
 }
 
 /// Target configuration
@@ -30,9 +34,33 @@ pub struct CrossTargetConfig {
     xargo: Option<bool>,
     build_std: Option<bool>,
     image: Option<String>,
+    #[serde(default, deserialize_with = "opt_string_or_struct")]
+    dockerfile: Option<CrossTargetDockerfileConfig>,
+    pre_build: Option<Vec<String>>,
     runner: Option<String>,
     #[serde(default)]
     env: CrossEnvConfig,
+}
+
+/// Dockerfile configuration
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct CrossTargetDockerfileConfig {
+    file: String,
+    context: Option<String>,
+    build_args: Option<HashMap<String, String>>,
+}
+
+impl FromStr for CrossTargetDockerfileConfig {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(CrossTargetDockerfileConfig {
+            file: s.to_string(),
+            context: None,
+            build_args: None,
+        })
+    }
 }
 
 /// Cross configuration
@@ -67,12 +95,55 @@ impl CrossToml {
 
     /// Returns the `target.{}.image` part of `Cross.toml`
     pub fn image(&self, target: &Target) -> Option<String> {
-        self.get_string(target, |t| &t.image)
+        self.get_string(target, |_| None, |t| t.image.as_ref())
+    }
+
+    /// Returns the `{}.dockerfile` or `{}.dockerfile.file` part of `Cross.toml`
+    pub fn dockerfile(&self, target: &Target) -> Option<String> {
+        self.get_string(
+            target,
+            |b| b.dockerfile.as_ref().map(|c| &c.file),
+            |t| t.dockerfile.as_ref().map(|c| &c.file),
+        )
+    }
+
+    /// Returns the `target.{}.dockerfile.context` part of `Cross.toml`
+    pub fn dockerfile_context(&self, target: &Target) -> Option<String> {
+        self.get_string(
+            target,
+            |b| b.dockerfile.as_ref().and_then(|c| c.context.as_ref()),
+            |t| t.dockerfile.as_ref().and_then(|c| c.context.as_ref()),
+        )
+    }
+
+    /// Returns the `target.{}.dockerfile.build_args` part of `Cross.toml`
+    pub fn dockerfile_build_args(&self, target: &Target) -> Option<HashMap<String, String>> {
+        let target = self
+            .get_target(target)
+            .and_then(|t| t.dockerfile.as_ref())
+            .and_then(|d| d.build_args.as_ref());
+
+        let build = self
+            .build
+            .dockerfile
+            .as_ref()
+            .and_then(|d| d.build_args.as_ref());
+
+        config::opt_merge(target.cloned(), build.cloned())
+    }
+
+    /// Returns the `build.dockerfile.pre-build` and `target.{}.dockerfile.pre-build` part of `Cross.toml`
+    pub fn pre_build(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+        self.get_vec(
+            target,
+            |b| b.pre_build.as_deref(),
+            |t| t.pre_build.as_deref(),
+        )
     }
 
     /// Returns the `target.{}.runner` part of `Cross.toml`
     pub fn runner(&self, target: &Target) -> Option<String> {
-        self.get_string(target, |t| &t.runner)
+        self.get_string(target, |_| None, |t| t.runner.as_ref())
     }
 
     /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
@@ -85,24 +156,18 @@ impl CrossToml {
         self.get_bool(target, |b| b.build_std, |t| t.build_std)
     }
 
-    /// Returns the list of environment variables to pass through for `build`,
-    pub fn env_passthrough_build(&self) -> Option<&[String]> {
-        self.build.env.passthrough.as_deref()
+    /// Returns the list of environment variables to pass through for `build` and `target`
+    pub fn env_passthrough(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+        self.get_vec(target, |_| None, |t| t.env.passthrough.as_deref())
     }
 
-    /// Returns the list of environment variables to pass through for `target`,
-    pub fn env_passthrough_target(&self, target: &Target) -> Option<&[String]> {
-        self.get_vec(target, |e| e.passthrough.as_deref())
-    }
-
-    /// Returns the list of environment variables to pass through for `build`,
-    pub fn env_volumes_build(&self) -> Option<&[String]> {
-        self.build.env.volumes.as_deref()
-    }
-
-    /// Returns the list of environment variables to pass through for `target`,
-    pub fn env_volumes_target(&self, target: &Target) -> Option<&[String]> {
-        self.get_vec(target, |e| e.volumes.as_deref())
+    /// Returns the list of environment variables to pass through for `build` and `target`
+    pub fn env_volumes(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+        self.get_vec(
+            target,
+            |build| build.env.volumes.as_deref(),
+            |t| t.env.volumes.as_deref(),
+        )
     }
 
     /// Returns the default target to build,
@@ -118,12 +183,16 @@ impl CrossToml {
         self.targets.get(target)
     }
 
-    fn get_string(
-        &self,
+    fn get_string<'a>(
+        &'a self,
         target: &Target,
-        get: impl Fn(&CrossTargetConfig) -> &Option<String>,
+        get_build: impl Fn(&'a CrossBuildConfig) -> Option<&'a String>,
+        get_target: impl Fn(&'a CrossTargetConfig) -> Option<&'a String>,
     ) -> Option<String> {
-        self.get_target(target).and_then(|t| get(t).clone())
+        self.get_target(target)
+            .and_then(get_target)
+            .or_else(|| get_build(&self.build))
+            .map(ToOwned::to_owned)
     }
 
     fn get_bool(
@@ -140,11 +209,58 @@ impl CrossToml {
 
     fn get_vec(
         &self,
-        target: &Target,
-        get: impl Fn(&CrossEnvConfig) -> Option<&[String]>,
-    ) -> Option<&[String]> {
-        self.get_target(target).and_then(|t| get(&t.env))
+        target_triple: &Target,
+        build: impl Fn(&CrossBuildConfig) -> Option<&[String]>,
+        target: impl Fn(&CrossTargetConfig) -> Option<&[String]>,
+    ) -> (Option<&[String]>, Option<&[String]>) {
+        let target = if let Some(t) = self.get_target(target_triple) {
+            target(t)
+        } else {
+            None
+        };
+        (build(&self.build), target)
     }
+}
+
+fn opt_string_or_struct<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: Deserialize<'de> + std::str::FromStr<Err = std::convert::Infallible>,
+    D: serde::Deserializer<'de>,
+{
+    use std::{fmt, marker::PhantomData};
+
+    use serde::de::{self, MapAccess, Visitor};
+
+    struct StringOrStruct<T>(PhantomData<fn() -> T>);
+
+    impl<'de, T> Visitor<'de> for StringOrStruct<T>
+    where
+        T: Deserialize<'de> + FromStr<Err = std::convert::Infallible>,
+    {
+        type Value = Option<T>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("string or map")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(FromStr::from_str(value).ok())
+        }
+
+        fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            let t: Result<T, _> =
+                Deserialize::deserialize(de::value::MapAccessDeserializer::new(map));
+            t.map(Some)
+        }
+    }
+
+    deserializer.deserialize_any(StringOrStruct(PhantomData))
 }
 
 #[cfg(test)]
@@ -177,12 +293,15 @@ mod tests {
                 xargo: Some(true),
                 build_std: None,
                 default_target: None,
+                pre_build: Some(vec!["echo 'Hello World!'".to_string()]),
+                dockerfile: None,
             },
         };
 
         let test_str = r#"
           [build]
           xargo = true
+          pre-build = ["echo 'Hello World!'"]
 
           [build.env]
           volumes = ["VOL1_ARG", "VOL2_ARG"]
@@ -212,6 +331,8 @@ mod tests {
                 build_std: Some(true),
                 image: Some("test-image".to_string()),
                 runner: None,
+                dockerfile: None,
+                pre_build: Some(vec![]),
             },
         );
 
@@ -228,6 +349,7 @@ mod tests {
             xargo = false
             build-std = true
             image = "test-image"
+            pre-build = []
         "#;
         let (parsed_cfg, unused) = CrossToml::parse(test_str)?;
 
@@ -245,14 +367,20 @@ mod tests {
                 triple: "aarch64-unknown-linux-gnu".to_string(),
             },
             CrossTargetConfig {
+                xargo: Some(false),
+                build_std: None,
+                image: None,
+                dockerfile: Some(CrossTargetDockerfileConfig {
+                    file: "Dockerfile.test".to_string(),
+                    context: None,
+                    build_args: None,
+                }),
+                pre_build: Some(vec!["echo 'Hello'".to_string()]),
+                runner: None,
                 env: CrossEnvConfig {
                     passthrough: None,
                     volumes: Some(vec!["VOL".to_string()]),
                 },
-                xargo: Some(false),
-                build_std: None,
-                image: None,
-                runner: None,
             },
         );
 
@@ -266,18 +394,23 @@ mod tests {
                 xargo: Some(true),
                 build_std: None,
                 default_target: None,
+                pre_build: Some(vec![]),
+                dockerfile: None,
             },
         };
 
         let test_str = r#"
             [build]
             xargo = true
+            pre-build = []
 
             [build.env]
             passthrough = []
 
             [target.aarch64-unknown-linux-gnu]
             xargo = false
+            dockerfile = "Dockerfile.test"
+            pre-build = ["echo 'Hello'"]
 
             [target.aarch64-unknown-linux-gnu.env]
             volumes = ["VOL"]

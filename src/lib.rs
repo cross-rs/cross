@@ -47,6 +47,8 @@ use self::rustc::{TargetList, VersionMetaExt};
 pub use self::errors::{install_panic_hook, Result};
 pub use self::extensions::{CommandExt, OutputExt};
 
+pub const CROSS_LABEL_DOMAIN: &str = "org.cross-rs";
+
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Host {
@@ -235,6 +237,73 @@ impl Target {
 
         arch_32bit && self.is_android()
     }
+
+    /// Returns the architecture name according to `dpkg` naming convention
+    ///
+    /// # Notes
+    ///
+    /// Some of these make no sense to use in our standard images
+    pub fn deb_arch(&self) -> Option<&'static str> {
+        match self.triple() {
+            "aarch64-unknown-linux-gnu" => Some("arm64"),
+            "aarch64-unknown-linux-musl" => Some("musl-linux-arm64"),
+            "aarch64-linux-android" => None,
+            "x86_64-unknown-linux-gnu" => Some("amd64"),
+            "x86_64-apple-darwin" => Some("darwin-amd64"),
+            "x86_64-unknown-linux-musl" => Some("musl-linux-amd64"),
+
+            "x86_64-pc-windows-msvc" => None,
+            "arm-unknown-linux-gnueabi" => Some("armel"),
+            "arm-unknown-linux-gnueabihf" => Some("armhf"),
+            "armv7-unknown-linux-gnueabi" => Some("armel"),
+            "armv7-unknown-linux-gnueabihf" => Some("armhf"),
+            "thumbv7neon-unknown-linux-gnueabihf" => Some("armhf"),
+            "i586-unknown-linux-gnu" => Some("i386"),
+            "i686-unknown-linux-gnu" => Some("i386"),
+            "mips-unknown-linux-gnu" => Some("mips"),
+            "mipsel-unknown-linux-gnu" => Some("mipsel"),
+            "mips64-unknown-linux-gnuabi64" => Some("mips64"),
+            "mips64el-unknown-linux-gnuabi64" => Some("mips64el"),
+            "mips64-unknown-linux-muslabi64" => Some("musl-linux-mips64"),
+            "mips64el-unknown-linux-muslabi64" => Some("musl-linux-mips64el"),
+            "powerpc-unknown-linux-gnu" => Some("powerpc"),
+            "powerpc64-unknown-linux-gnu" => Some("ppc64"),
+            "powerpc64le-unknown-linux-gnu" => Some("ppc64el"),
+            "riscv64gc-unknown-linux-gnu" => Some("riscv64"),
+            "s390x-unknown-linux-gnu" => Some("s390x"),
+            "sparc64-unknown-linux-gnu" => Some("sparc64"),
+            "arm-unknown-linux-musleabihf" => Some("musl-linux-armhf"),
+            "arm-unknown-linux-musleabi" => Some("musl-linux-arm"),
+            "armv5te-unknown-linux-gnueabi" => None,
+            "armv5te-unknown-linux-musleabi" => None,
+            "armv7-unknown-linux-musleabi" => Some("musl-linux-arm"),
+            "armv7-unknown-linux-musleabihf" => Some("musl-linux-armhf"),
+            "i586-unknown-linux-musl" => Some("musl-linux-i386"),
+            "i686-unknown-linux-musl" => Some("musl-linux-i386"),
+            "mips-unknown-linux-musl" => Some("musl-linux-mips"),
+            "mipsel-unknown-linux-musl" => Some("musl-linux-mipsel"),
+            "arm-linux-androideabi" => None,
+            "armv7-linux-androideabi" => None,
+            "thumbv7neon-linux-androideabi" => None,
+            "i686-linux-android" => None,
+            "x86_64-linux-android" => None,
+            "x86_64-pc-windows-gnu" => None,
+            "i686-pc-windows-gnu" => None,
+            "asmjs-unknown-emscripten" => None,
+            "wasm32-unknown-emscripten" => None,
+            "x86_64-unknown-dragonfly" => Some("dragonflybsd-amd64"),
+            "i686-unknown-freebsd" => Some("freebsd-i386"),
+            "x86_64-unknown-freebsd" => Some("freebsd-amd64"),
+            "x86_64-unknown-netbsd" => Some("netbsd-amd64"),
+            "sparcv9-sun-solaris" => Some("solaris-sparc"),
+            "x86_64-sun-solaris" => Some("solaris-amd64"),
+            "thumbv6m-none-eabi" => Some("arm"),
+            "thumbv7em-none-eabi" => Some("arm"),
+            "thumbv7em-none-eabihf" => Some("armhf"),
+            "thumbv7m-none-eabi" => Some("arm"),
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Display for Target {
@@ -304,7 +373,7 @@ pub fn run() -> Result<ExitStatus> {
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
         config.confusable_target(&target);
 
-        let image_exists = match docker::container_name(&config, &target) {
+        let image_exists = match docker::image_name(&config, &target) {
             Ok(_) => true,
             Err(err) => {
                 eprintln!("Warning: {}", err);

@@ -58,7 +58,7 @@ fn pull_image(engine: &Path, image: &str, verbose: bool) -> cross::Result<()> {
         command.stdout(Stdio::null());
         command.stderr(Stdio::null());
     }
-    command.run(verbose).map_err(Into::into)
+    command.run(verbose, false).map_err(Into::into)
 }
 
 fn image_info(
@@ -88,7 +88,7 @@ fn image_info(
         // capture stderr to avoid polluting table
         command.stderr(Stdio::null());
     }
-    command.run(verbose).map_err(Into::into)
+    command.run(verbose, false).map_err(Into::into)
 }
 
 pub fn target_info(

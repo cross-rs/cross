@@ -1,6 +1,7 @@
 The `cross` configuration in the `Cross.toml` file, can contain the following elements:
 
 # `build`
+
 The `build` key allows you to set global variables, e.g.:
 
 ```toml
@@ -11,6 +12,7 @@ default-target = "x86_64-unknown-linux-gnu"
 ```
 
 # `build.env`
+
 With the `build.env` key you can globally set volumes that should be mounted
 in the Docker container or environment variables that should be passed through.
 For example:
@@ -22,6 +24,7 @@ passthrough = ["IMPORTANT_ENV_VARIABLES"]
 ```
 
 # `target.TARGET`
+
 The `target` key allows you to specify parameters for specific compilation targets.
 
 ```toml
@@ -29,10 +32,12 @@ The `target` key allows you to specify parameters for specific compilation targe
 xargo = false
 build-std = false
 image = "test-image"
+pre-build = ["apt-get update"]
 runner = "custom-runner"
 ```
 
 # `target.TARGET.env`
+
 The `target` key allows you to specify environment variables that should be used for a specific compilation target.
 This is similar to `build.env`, but allows you to be more specific per target.
 
@@ -40,4 +45,20 @@ This is similar to `build.env`, but allows you to be more specific per target.
 [target.x86_64-unknown-linux-gnu.env]
 volumes = ["VOL1_ARG", "VOL2_ARG"]
 passthrough = ["IMPORTANT_ENV_VARIABLES"]
+```
+
+# `target.TARGET.dockerfile`
+
+```toml
+[target.x86_64-unknown-linux-gnu.dockerfile]
+file = "./Dockerfile" # The dockerfile to use relative to the `Cargo.toml`
+context = "." # What folder to run the build script in
+build-args = { ARG1 = "foo" } # https://docs.docker.com/engine/reference/builder/#arg
+```
+
+also supports
+
+```toml
+[target.x86_64-unknown-linux-gnu]
+dockerfile = "./Dockerfile"
 ```

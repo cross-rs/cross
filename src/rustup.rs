@@ -73,7 +73,7 @@ pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTarg
 pub fn install_toolchain(toolchain: &str, verbose: bool) -> Result<()> {
     Command::new("rustup")
         .args(&["toolchain", "add", toolchain, "--profile", "minimal"])
-        .run(verbose)
+        .run(verbose, false)
         .wrap_err_with(|| format!("couldn't install toolchain `{toolchain}`"))
 }
 
@@ -82,14 +82,14 @@ pub fn install(target: &Target, toolchain: &str, verbose: bool) -> Result<()> {
 
     Command::new("rustup")
         .args(&["target", "add", target, "--toolchain", toolchain])
-        .run(verbose)
+        .run(verbose, false)
         .wrap_err_with(|| format!("couldn't install `std` for {target}"))
 }
 
 pub fn install_component(component: &str, toolchain: &str, verbose: bool) -> Result<()> {
     Command::new("rustup")
         .args(&["component", "add", component, "--toolchain", toolchain])
-        .run(verbose)
+        .run(verbose, false)
         .wrap_err_with(|| format!("couldn't install the `{component}` component"))
 }
 
