@@ -62,7 +62,7 @@ $ cargo install cross --git https://github.com/cross-rs/cross
 ## Usage
 
 `cross` has the exact same CLI as [Cargo](https://github.com/rust-lang/cargo)
-but as it relies on Docker or Podman. For Docker, you'll have to start
+but relies on Docker or Podman. For Docker, you'll have to start
 the daemon before you can use it.
 
 ```
@@ -343,7 +343,7 @@ terminate.
 
 [4] libc = newlib
 
-[5] Must change `image = "x86_64-unknown-linux-gnu:centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
+[5] Must change `image = "x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
 
 <!--[6] libc = musl, gcc = emcc. The Docker images for these targets are currently not built automatically
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/85821), you will have to build them yourself for now.-->
