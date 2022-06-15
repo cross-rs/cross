@@ -18,7 +18,10 @@ pub fn install_git_hooks(InstallGitHooks { verbose }: InstallGitHooks) -> cross:
     .ok_or_else(|| eyre::eyre!("could not find cross workspace"))?;
     let git_hooks = metadata.workspace_root.join(".git").join("hooks");
     let cross_dev = metadata.workspace_root.join("xtask").join("src");
-    std::fs::copy(cross_dev.join("pre-commit"), git_hooks.join("pre-commit"))?;
+    std::fs::copy(
+        cross_dev.join("pre-commit.sh"),
+        git_hooks.join("pre-commit"),
+    )?;
 
     Ok(())
 }
