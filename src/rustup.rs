@@ -4,7 +4,7 @@ use std::process::Command;
 use rustc_version::{Channel, Version};
 
 use crate::errors::*;
-use crate::extensions::CommandExt;
+pub use crate::extensions::{CommandExt, OutputExt};
 use crate::Target;
 
 #[derive(Debug)]
@@ -43,10 +43,17 @@ pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
 }
 
 pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTargets> {
-    let out = Command::new("rustup")
-        .args(&["target", "list", "--toolchain", toolchain])
-        .run_and_get_stdout(verbose)?;
+    let mut cmd = Command::new("rustup");
+    cmd.args(&["target", "list", "--toolchain", toolchain]);
+    let output = cmd.run_and_get_output(verbose)?;
 
+    if !output.status.success() {
+        if String::from_utf8_lossy(&output.stderr).contains("is a custom toolchain") {
+            eyre::bail!("{toolchain} is a custom toolchain. To use it, you'll need to set the environment variable `CROSS_CUSTOM_TOOLCHAIN=1`")
+        }
+        return Err(cmd.status_result(output.status).unwrap_err().into());
+    }
+    let out = output.stdout()?;
     let mut default = String::new();
     let mut installed = vec![];
     let mut not_installed = vec![];
