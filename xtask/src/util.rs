@@ -31,6 +31,7 @@ struct Env {
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct Matrix {
     pub target: String,
+    pub sub: Option<String>,
     #[serde(default)]
     pub run: i64,
     pub os: String,
