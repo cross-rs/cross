@@ -4,10 +4,13 @@ use std::process::{Command, ExitStatus, Output};
 
 use crate::errors::*;
 
+pub const STRIPPED_BINS: &[&str] = &[crate::docker::DOCKER, crate::docker::PODMAN, "cargo"];
+
 pub trait CommandExt {
     fn print_verbose(&self, verbose: bool);
     fn status_result(
         &self,
+        verbose: bool,
         status: ExitStatus,
         output: Option<&Output>,
     ) -> Result<(), CommandError>;
@@ -19,44 +22,57 @@ pub trait CommandExt {
     ) -> Result<ExitStatus, CommandError>;
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String>;
     fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output>;
-    fn command_pretty(&self) -> String;
+    fn command_pretty(&self, verbose: bool, strip: impl for<'a> Fn(&'a str) -> bool) -> String;
 }
 
 impl CommandExt for Command {
-    fn command_pretty(&self) -> String {
+    fn command_pretty(&self, verbose: bool, strip: impl for<'a> Fn(&'a str) -> bool) -> String {
         // a dummy implementor of display to avoid using unwraps
-        struct C<'c>(&'c Command);
-        impl std::fmt::Display for C<'_> {
+        struct C<'c, F>(&'c Command, bool, F);
+        impl<F> std::fmt::Display for C<'_, F>
+        where
+            F: for<'a> Fn(&'a str) -> bool,
+        {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 let cmd = self.0;
-                write!(f, "{}", cmd.get_program().to_string_lossy())?;
+                write!(
+                    f,
+                    "{}",
+                    // if verbose, never strip, if not, let user choose
+                    crate::file::pretty_path(cmd.get_program(), move |c| if self.1 {
+                        false
+                    } else {
+                        self.2(c)
+                    })
+                )?;
                 let args = cmd.get_args();
                 if args.len() > 1 {
-                    write!(f, " ")?;
                     write!(
                         f,
-                        "{}",
+                        " {}",
                         shell_words::join(args.map(|o| o.to_string_lossy()))
                     )?;
                 }
                 Ok(())
             }
         }
-        format!("{}", C(self))
+        format!("{}", C(self, verbose, strip))
     }
 
     fn print_verbose(&self, verbose: bool) {
+        // TODO: introduce verbosity levels, v = 1, strip cmd, v > 1, don't strip cmd
         if verbose {
             if let Some(cwd) = self.get_current_dir() {
-                println!("+ {:?} {}", cwd, self.command_pretty());
+                println!("+ {:?} {}", cwd, self.command_pretty(true, |_| false));
             } else {
-                println!("+ {}", self.command_pretty());
+                println!("+ {}", self.command_pretty(true, |_| false));
             }
         }
     }
 
     fn status_result(
         &self,
+        verbose: bool,
         status: ExitStatus,
         output: Option<&Output>,
     ) -> Result<(), CommandError> {
@@ -65,7 +81,8 @@ impl CommandExt for Command {
         } else {
             Err(CommandError::NonZeroExitCode {
                 status,
-                command: self.command_pretty(),
+                command: self
+                    .command_pretty(verbose, |ref cmd| STRIPPED_BINS.iter().any(|f| f == cmd)),
                 stderr: output.map(|out| out.stderr.clone()).unwrap_or_default(),
                 stdout: output.map(|out| out.stdout.clone()).unwrap_or_default(),
             })
@@ -75,7 +92,7 @@ impl CommandExt for Command {
     /// Runs the command to completion
     fn run(&mut self, verbose: bool, silence_stdout: bool) -> Result<(), CommandError> {
         let status = self.run_and_get_status(verbose, silence_stdout)?;
-        self.status_result(status, None)
+        self.status_result(verbose, status, None)
     }
 
     /// Runs the command to completion
@@ -91,7 +108,8 @@ impl CommandExt for Command {
         self.status()
             .map_err(|e| CommandError::CouldNotExecute {
                 source: Box::new(e),
-                command: self.command_pretty(),
+                command: self
+                    .command_pretty(verbose, |ref cmd| STRIPPED_BINS.iter().any(|f| f == cmd)),
             })
             .map_err(Into::into)
     }
@@ -99,7 +117,7 @@ impl CommandExt for Command {
     /// Runs the command to completion and returns its stdout
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String> {
         let out = self.run_and_get_output(verbose)?;
-        self.status_result(out.status, Some(&out))
+        self.status_result(verbose, out.status, Some(&out))
             .map_err(CommandError::to_section_report)?;
         out.stdout().map_err(Into::into)
     }
@@ -114,7 +132,8 @@ impl CommandExt for Command {
         self.output().map_err(|e| {
             CommandError::CouldNotExecute {
                 source: Box::new(e),
-                command: self.command_pretty(),
+                command: self
+                    .command_pretty(verbose, |ref cmd| STRIPPED_BINS.iter().any(|f| f == cmd)),
             }
             .to_section_report()
         })

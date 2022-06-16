@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -36,6 +38,55 @@ fn _canonicalize(path: &Path) -> Result<PathBuf> {
     }
 }
 
+/// Pretty format a file path. Also removes the path prefix from a command if wanted
+pub fn pretty_path(path: impl AsRef<Path>, strip: impl for<'a> Fn(&'a str) -> bool) -> String {
+    let path = path.as_ref();
+    // TODO: Use Path::file_prefix
+    let file_stem = path.file_stem();
+    let file_name = path.file_name();
+    let path = if let (Some(file_stem), Some(file_name)) = (file_stem, file_name) {
+        if let Some(file_name) = file_name.to_str() {
+            if strip(file_name) {
+                Cow::Borrowed(file_stem)
+            } else {
+                Cow::Borrowed(path.as_os_str())
+            }
+        } else {
+            Cow::Borrowed(path.as_os_str())
+        }
+    } else {
+        maybe_canonicalize(path)
+    };
+
+    if let Some(path) = path.to_str() {
+        shell_escape(path).to_string()
+    } else {
+        format!("{path:?}")
+    }
+}
+
+pub fn shell_escape(string: &str) -> Cow<'_, str> {
+    let escape: &[char] = if cfg!(target_os = "windows") {
+        &['%', '$', '`', '!', '"']
+    } else {
+        &['$', '\'', '\\', '!', '"']
+    };
+
+    if string.contains(escape) {
+        Cow::Owned(format!("{string:?}"))
+    } else if string.contains(' ') {
+        Cow::Owned(format!("\"{string}\""))
+    } else {
+        Cow::Borrowed(string)
+    }
+}
+
+pub fn maybe_canonicalize(path: &Path) -> Cow<'_, OsStr> {
+    canonicalize(path)
+        .map(|p| Cow::Owned(p.as_os_str().to_owned()))
+        .unwrap_or_else(|_| path.as_os_str().into())
+}
+
 pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
     let path = path.as_ref();
     fs::create_dir_all(
@@ -56,4 +107,56 @@ pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
 
     open.open(&path)
         .wrap_err(format!("couldn't write to file `{}`", path.display()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(target_family = "windows")]
+    fn pretty_path_windows() {
+        assert_eq!(
+            pretty_path("C:\\path\\bin\\cargo.exe", |f| f.contains("cargo")),
+            "cargo".to_string()
+        );
+        assert_eq!(
+            pretty_path("C:\\Program Files\\Docker\\bin\\docker.exe", |_| false),
+            "\"C:\\Program Files\\Docker\\bin\\docker.exe\"".to_string()
+        );
+        assert_eq!(
+            pretty_path("C:\\Program Files\\single'quote\\cargo.exe", |c| c
+                .contains("cargo")),
+            "cargo".to_string()
+        );
+        assert_eq!(
+            pretty_path("C:\\Program Files\\single'quote\\cargo.exe", |_| false),
+            "\"C:\\Program Files\\single'quote\\cargo.exe\"".to_string()
+        );
+        assert_eq!(
+            pretty_path("C:\\Program Files\\%not_var%\\cargo.exe", |_| false),
+            "\"C:\\\\Program Files\\\\%not_var%\\\\cargo.exe\"".to_string()
+        );
+    }
+
+    #[test]
+    #[cfg(target_family = "unix")]
+    fn pretty_path_linux() {
+        assert_eq!(
+            pretty_path("/usr/bin/cargo", |f| f.contains("cargo")),
+            "cargo".to_string()
+        );
+        assert_eq!(
+            pretty_path("/home/user/my rust/bin/cargo", |_| false),
+            "\"/home/user/my rust/bin/cargo\"".to_string(),
+        );
+        assert_eq!(
+            pretty_path("/home/user/single'quote/cargo", |c| c.contains("cargo")),
+            "cargo".to_string()
+        );
+        assert_eq!(
+            pretty_path("/home/user/single'quote/cargo", |_| false),
+            "\"/home/user/single'quote/cargo\"".to_string()
+        );
+    }
 }

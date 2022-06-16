@@ -28,7 +28,7 @@ pub enum CommandError {
 }
 
 impl CommandError {
-    /// Attach valuable information to this CommandError
+    /// Attach valuable information to this [`CommandError`](Self)
     pub fn to_section_report(self) -> eyre::Report {
         match &self {
             CommandError::NonZeroExitCode { stderr, stdout, .. } => {

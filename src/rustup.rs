@@ -54,7 +54,7 @@ pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTarg
             eyre::bail!("{toolchain} is a custom toolchain. To use it, you'll need to set the environment variable `CROSS_CUSTOM_TOOLCHAIN=1`")
         }
         return Err(cmd
-            .status_result(output.status, Some(&output))
+            .status_result(verbose, output.status, Some(&output))
             .unwrap_err()
             .to_section_report());
     }

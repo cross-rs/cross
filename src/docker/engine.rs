@@ -5,8 +5,8 @@ use std::process::Command;
 use crate::errors::*;
 use crate::extensions::CommandExt;
 
-const DOCKER: &str = "docker";
-const PODMAN: &str = "podman";
+pub const DOCKER: &str = "docker";
+pub const PODMAN: &str = "podman";
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EngineType {
