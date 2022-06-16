@@ -101,7 +101,17 @@ pub fn build_docker_image(
             targets = crate::util::get_matrix()?
                 .iter()
                 .filter(|m| m.os.starts_with("ubuntu"))
-                .map(|m| m.target.clone())
+                .map(|m| {
+                    format!(
+                        "{}{}",
+                        m.target,
+                        if let Some(sub) = &m.sub {
+                            format!(".{sub}")
+                        } else {
+                            <_>::default()
+                        }
+                    )
+                })
                 .collect();
         } else {
             targets = walkdir::WalkDir::new(metadata.workspace_root.join("docker"))
