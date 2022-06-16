@@ -9,6 +9,7 @@ pub mod util;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use util::ImageTarget;
 
 use self::build_docker_image::BuildDockerImage;
 use self::hooks::{Check, Test};
