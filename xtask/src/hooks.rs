@@ -26,7 +26,7 @@ pub struct Test {
 }
 
 fn has_nightly(verbose: bool) -> cross::Result<bool> {
-    Command::new("cargo")
+    cross::cargo_command()
         .arg("+nightly")
         .run_and_get_output(verbose)
         .map(|o| o.status.success())
@@ -47,7 +47,7 @@ fn get_channel_prefer_nightly(
 }
 
 fn cargo(channel: Option<&str>) -> Command {
-    let mut command = Command::new("cargo");
+    let mut command = cross::cargo_command();
     if let Some(channel) = channel {
         command.arg(&format!("+{channel}"));
     }

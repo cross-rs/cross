@@ -39,7 +39,7 @@ use config::Config;
 use rustc_version::Channel;
 use serde::Deserialize;
 
-pub use self::cargo::{cargo_metadata_with_args, CargoMetadata, Subcommand};
+pub use self::cargo::{cargo_command, cargo_metadata_with_args, CargoMetadata, Subcommand};
 use self::cross_toml::CrossToml;
 use self::errors::Context;
 use self::rustc::{TargetList, VersionMetaExt};

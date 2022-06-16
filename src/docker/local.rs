@@ -25,7 +25,7 @@ pub(crate) fn run(
     let engine = Engine::new(verbose)?;
     let dirs = Directories::create(&engine, metadata, cwd, sysroot, docker_in_docker, verbose)?;
 
-    let mut cmd = cargo_cmd(uses_xargo);
+    let mut cmd = cargo_safe_command(uses_xargo);
     cmd.args(args);
 
     let mut docker = subcommand(&engine, "run");

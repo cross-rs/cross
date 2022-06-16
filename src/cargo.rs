@@ -4,7 +4,7 @@ use std::process::{Command, ExitStatus};
 
 use crate::cli::Args;
 use crate::errors::*;
-use crate::extensions::CommandExt;
+use crate::extensions::{env_program, CommandExt};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subcommand {
@@ -100,17 +100,17 @@ impl Package {
     }
 }
 
+pub fn cargo_command() -> Command {
+    Command::new(env_program("CARGO", "cargo"))
+}
+
 /// Cargo metadata with specific invocation
 pub fn cargo_metadata_with_args(
     cd: Option<&Path>,
     args: Option<&Args>,
     verbose: bool,
 ) -> Result<Option<CargoMetadata>> {
-    let mut command = std::process::Command::new(
-        std::env::var("CARGO")
-            .ok()
-            .unwrap_or_else(|| "cargo".to_string()),
-    );
+    let mut command = cargo_command();
     command.arg("metadata").args(&["--format-version", "1"]);
     if let Some(cd) = cd {
         command.current_dir(cd);
@@ -148,12 +148,12 @@ pub fn cargo_metadata_with_args(
 
 /// Pass-through mode
 pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus, CommandError> {
-    Command::new("cargo")
+    cargo_command()
         .args(args)
         .run_and_get_status(verbose, false)
 }
 
 /// run cargo and get the output, does not check the exit status
 pub fn run_and_get_output(args: &[String], verbose: bool) -> Result<std::process::Output> {
-    Command::new("cargo").args(args).run_and_get_output(verbose)
+    cargo_command().args(args).run_and_get_output(verbose)
 }

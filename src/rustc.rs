@@ -4,7 +4,7 @@ use std::process::Command;
 use rustc_version::{Version, VersionMeta};
 
 use crate::errors::*;
-use crate::extensions::CommandExt;
+use crate::extensions::{env_program, CommandExt};
 use crate::{Host, Target};
 
 #[derive(Debug)]
@@ -33,8 +33,12 @@ impl VersionMetaExt for VersionMeta {
     }
 }
 
+pub fn rustc_command() -> Command {
+    Command::new(env_program("RUSTC", "rustc"))
+}
+
 pub fn target_list(verbose: bool) -> Result<TargetList> {
-    Command::new("rustc")
+    rustc_command()
         .args(&["--print", "target-list"])
         .run_and_get_stdout(verbose)
         .map(|s| TargetList {
@@ -43,7 +47,7 @@ pub fn target_list(verbose: bool) -> Result<TargetList> {
 }
 
 pub fn sysroot(host: &Host, target: &Target, verbose: bool) -> Result<PathBuf> {
-    let mut stdout = Command::new("rustc")
+    let mut stdout = rustc_command()
         .args(&["--print", "sysroot"])
         .run_and_get_stdout(verbose)?
         .trim()
