@@ -170,6 +170,15 @@ main() {
         libpixman-1-dev \
         libselinux1-dev \
         zlib1g-dev
+
+    # if we have python3.6+, we can install qemu 6.1.0, which needs ninja-build
+    # ubuntu 16.04 only provides python3.5, so remove when we have a newer qemu.
+    is_ge_python36=$(python3 -c "import sys; print(int(sys.version_info >= (3, 6)))")
+    if [[ "${is_ge_python36}" == "1" ]]; then
+        if_ubuntu version=6.1.0
+        if_ubuntu install_packages ninja-build
+    fi
+
     local td
     td="$(mktemp -d)"
 

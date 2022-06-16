@@ -29,6 +29,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- #807 - update Qemu to 6.1.0 on images using Ubuntu 18.04+ with python3.6+.
 - #775 - forward Cargo exit code to host
 - #762 - re-enabled `x86_64-unknown-dragonfly` target.
 - #747 - reduced android image sizes.
