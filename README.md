@@ -96,7 +96,7 @@ can't cover every single use case out there. For other targets, or when the
 default image is not enough, you can use the `target.{{TARGET}}.image` field in
 `Cross.toml` to use custom Docker image for a specific target:
 
-``` toml
+```toml
 [target.aarch64-unknown-linux-gnu]
 image = "my/image:tag"
 ```
@@ -116,8 +116,8 @@ the default one. Normal Docker behavior applies, so:
 
 If you're using a custom Dockerfile, you can use `target.{{TARGET}}.dockerfile` to automatically build it
 
-``` toml
-[target.aarch64-unknown-linux-gnu.dockerfile]
+```toml
+[target.aarch64-unknown-linux-gnu]
 dockerfile = "./path/to/where/the/Dockerfile/resides"
 ```
 
@@ -151,7 +151,7 @@ RUN ...
 `cross` enables you to add dependencies and run other necessary commands in the image before using it.
 This action will be added to the used image, so it won't be ran/built every time you use `cross`.
 
-``` toml
+```toml
 [target.x86_64-unknown-linux-gnu]
 pre-build = ["dpkg --add-architecture arm64 && apt-get update && apt-get install --assume-yes libfoo:arm64"]
 ```
