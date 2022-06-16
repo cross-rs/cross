@@ -1,20 +1,24 @@
 use std::borrow::Cow;
 use std::fmt;
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Output};
 
 use crate::errors::*;
 
 pub trait CommandExt {
     fn print_verbose(&self, verbose: bool);
-    fn status_result(&self, status: ExitStatus) -> Result<(), CommandError>;
+    fn status_result(
+        &self,
+        status: ExitStatus,
+        output: Option<&Output>,
+    ) -> Result<(), CommandError>;
     fn run(&mut self, verbose: bool, silence_stdout: bool) -> Result<(), CommandError>;
     fn run_and_get_status(
         &mut self,
         verbose: bool,
         silence_stdout: bool,
     ) -> Result<ExitStatus, CommandError>;
-    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String, CommandError>;
-    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output, CommandError>;
+    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String>;
+    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output>;
 }
 
 impl CommandExt for Command {
@@ -28,18 +32,27 @@ impl CommandExt for Command {
         }
     }
 
-    fn status_result(&self, status: ExitStatus) -> Result<(), CommandError> {
+    fn status_result(
+        &self,
+        status: ExitStatus,
+        output: Option<&Output>,
+    ) -> Result<(), CommandError> {
         if status.success() {
             Ok(())
         } else {
-            Err(CommandError::NonZeroExitCode(status, format!("{self:?}")))
+            Err(CommandError::NonZeroExitCode {
+                status,
+                command: format!("{self:?}"),
+                stderr: output.map(|out| out.stderr.clone()).unwrap_or_default(),
+                stdout: output.map(|out| out.stdout.clone()).unwrap_or_default(),
+            })
         }
     }
 
     /// Runs the command to completion
     fn run(&mut self, verbose: bool, silence_stdout: bool) -> Result<(), CommandError> {
         let status = self.run_and_get_status(verbose, silence_stdout)?;
-        self.status_result(status)
+        self.status_result(status, None)
     }
 
     /// Runs the command to completion
@@ -53,15 +66,19 @@ impl CommandExt for Command {
             self.stdout(std::process::Stdio::null());
         }
         self.status()
-            .map_err(|e| CommandError::CouldNotExecute(Box::new(e), format!("{self:?}")))
+            .map_err(|e| CommandError::CouldNotExecute {
+                source: Box::new(e),
+                command: format!("{self:?}"),
+            })
             .map_err(Into::into)
     }
 
     /// Runs the command to completion and returns its stdout
-    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String, CommandError> {
+    fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String> {
         let out = self.run_and_get_output(verbose)?;
-        self.status_result(out.status)?;
-        out.stdout()
+        self.status_result(out.status, Some(&out))
+            .map_err(CommandError::to_section_report)?;
+        out.stdout().map_err(Into::into)
     }
 
     /// Runs the command to completion and returns the status and its [output](std::process::Output).
@@ -69,20 +86,30 @@ impl CommandExt for Command {
     /// # Notes
     ///
     /// This command does not check the status.
-    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output, CommandError> {
+    fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output> {
         self.print_verbose(verbose);
-        self.output()
-            .map_err(|e| CommandError::CouldNotExecute(Box::new(e), format!("{self:?}")))
+        self.output().map_err(|e| {
+            CommandError::CouldNotExecute {
+                source: Box::new(e),
+                command: format!("{self:?}"),
+            }
+            .to_section_report()
+        })
     }
 }
 
 pub trait OutputExt {
     fn stdout(&self) -> Result<String, CommandError>;
+    fn stderr(&self) -> Result<String, CommandError>;
 }
 
 impl OutputExt for std::process::Output {
     fn stdout(&self) -> Result<String, CommandError> {
         String::from_utf8(self.stdout.clone()).map_err(|e| CommandError::Utf8Error(e, self.clone()))
+    }
+
+    fn stderr(&self) -> Result<String, CommandError> {
+        String::from_utf8(self.stderr.clone()).map_err(|e| CommandError::Utf8Error(e, self.clone()))
     }
 }
 

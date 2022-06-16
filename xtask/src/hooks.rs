@@ -87,7 +87,6 @@ fn staged_files(verbose: bool) -> cross::Result<Vec<String>> {
         .args(&["diff", "--cached", "--name-only", "--diff-filter=ACM"])
         .run_and_get_stdout(verbose)
         .map(splitlines)
-        .map_err(Into::into)
 }
 
 fn all_files(verbose: bool) -> cross::Result<Vec<String>> {
@@ -95,7 +94,6 @@ fn all_files(verbose: bool) -> cross::Result<Vec<String>> {
         .arg("ls-files")
         .run_and_get_stdout(verbose)
         .map(splitlines)
-        .map_err(Into::into)
 }
 
 fn is_shell_script(path: impl AsRef<Path>) -> cross::Result<bool> {

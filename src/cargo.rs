@@ -154,9 +154,6 @@ pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus, CommandError> {
 }
 
 /// run cargo and get the output, does not check the exit status
-pub fn run_and_get_output(
-    args: &[String],
-    verbose: bool,
-) -> Result<std::process::Output, CommandError> {
+pub fn run_and_get_output(args: &[String], verbose: bool) -> Result<std::process::Output> {
     Command::new("cargo").args(args).run_and_get_output(verbose)
 }
