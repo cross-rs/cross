@@ -302,49 +302,49 @@ terminate.
 
 | Target                               |  libc  |   GCC   | C++ | QEMU  | `test` |
 |--------------------------------------|-------:|--------:|:---:|------:|:------:|
-| `aarch64-linux-android` [1]          | 9.0.8  | 9.0.8   | ✓   | 5.1.0 |   ✓    |
+| `aarch64-linux-android` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `aarch64-unknown-linux-gnu`          | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `aarch64-unknown-linux-musl`         | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
-| `arm-linux-androideabi` [1]          | 9.0.8  | 9.0.8   | ✓   | 5.1.0 |   ✓    |
+| `aarch64-unknown-linux-musl`         | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `arm-linux-androideabi` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabihf`        | 2.17   | 8.3.0   | ✓   | 5.1.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`       | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
-| `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`     | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
-| `armv7-linux-androideabi` [1]        | 9.0.8  | 9.0.8   | ✓   | 5.1.0 |   ✓    |
-| `armv7-unknown-linux-gnueabi`        | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabihf`        | 2.17   | 8.3.0   | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-musleabi`         | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`       | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `armv5te-unknown-linux-gnueabi`      | 2.27   | 7.5.0   | ✓   | 6.1.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`     | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `armv7-linux-androideabi` [1]        | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabi`        | 2.27   | 7.5.0   | ✓   | 6.1.0 |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabi`       | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabi`       | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`     | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.23   | 5.4.0   | ✓   | N/A   |   ✓    |
 | `i586-unknown-linux-musl`            | 1.1.24  | 9.2.0   | ✓   | N/A   |   ✓    |
 | `i686-unknown-freebsd`               | 1.5    | 6.4.0   | ✓   | N/A   |       |
-| `i686-linux-android` [1]             | 9.0.8  | 9.0.8   | ✓   | 5.1.0 |   ✓    |
+| `i686-linux-android` [1]             | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 7.5     | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`             | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
 | `i686-unknown-linux-musl`            | 1.1.24  | 9.2.0   | ✓   | N/A   |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `mips-unknown-linux-musl`            | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
+| `mips-unknown-linux-musl`            | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `mips64-unknown-linux-muslabi64`     | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
+| `mips64-unknown-linux-muslabi64`     | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `mips64el-unknown-linux-muslabi64`   | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
+| `mips64el-unknown-linux-muslabi64`   | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `mipsel-unknown-linux-gnu`           | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `mipsel-unknown-linux-musl`          | 1.1.24  | 9.2.0   | ✓   | 5.1.0 |   ✓    |
+| `mipsel-unknown-linux-musl`          | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `powerpc-unknown-linux-gnu`          | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
 | `powerpc64-unknown-linux-gnu`        | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
 | `powerpc64le-unknown-linux-gnu`      | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `riscv64gc-unknown-linux-gnu`        | 2.27   | 7.5.0   | ✓   | 5.1.0 |   ✓    |
+| `riscv64gc-unknown-linux-gnu`        | 2.27   | 7.5.0   | ✓   | 6.1.0 |   ✓    |
 | `s390x-unknown-linux-gnu`            | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
 | `sparc64-unknown-linux-gnu`          | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
 | `thumbv6m-none-eabi` [4]             | 2.2.0  | 4.9.3   |     | N/A   |       |
 | `thumbv7em-none-eabi` [4]            | 2.2.0  | 4.9.3   |     | N/A   |       |
 | `thumbv7em-none-eabihf` [4]          | 2.2.0  | 4.9.3   |     | N/A   |       |
 | `thumbv7m-none-eabi` [4]             | 2.2.0  | 4.9.3   |     | N/A   |       |
-| `thumbv7neon-linux-androideabi` [1]  | 9.0.8  | 9.0.8   | ✓   | 5.1.0 |   ✓    |
+| `thumbv7neon-linux-androideabi` [1]  | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `thumbv7neon-unknown-linux-gnueabihf`| 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `x86_64-linux-android` [1]           | 9.0.8  | 9.0.8   | ✓   | 5.1.0 |   ✓    |
+| `x86_64-linux-android` [1]           | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 7.3     | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-freebsd`             | 1.5    | 6.4.0   | ✓   | N/A   |       |
 | `x86_64-unknown-dragonfly` [2] [3]   | 6.0.1  | 5.3.0   | ✓   | N/A   |       |
