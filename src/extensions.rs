@@ -19,15 +19,38 @@ pub trait CommandExt {
     ) -> Result<ExitStatus, CommandError>;
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String>;
     fn run_and_get_output(&mut self, verbose: bool) -> Result<std::process::Output>;
+    fn command_pretty(&self) -> String;
 }
 
 impl CommandExt for Command {
+    fn command_pretty(&self) -> String {
+        // a dummy implementor of display to avoid using unwraps
+        struct C<'c>(&'c Command);
+        impl std::fmt::Display for C<'_> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let cmd = self.0;
+                write!(f, "{}", cmd.get_program().to_string_lossy())?;
+                let args = cmd.get_args();
+                if args.len() > 1 {
+                    write!(f, " ")?;
+                    write!(
+                        f,
+                        "{}",
+                        shell_words::join(args.map(|o| o.to_string_lossy()))
+                    )?;
+                }
+                Ok(())
+            }
+        }
+        format!("{}", C(self))
+    }
+
     fn print_verbose(&self, verbose: bool) {
         if verbose {
             if let Some(cwd) = self.get_current_dir() {
-                println!("+ {:?} {:?}", cwd, self);
+                println!("+ {:?} {}", cwd, self.command_pretty());
             } else {
-                println!("+ {:?}", self);
+                println!("+ {}", self.command_pretty());
             }
         }
     }
@@ -42,7 +65,7 @@ impl CommandExt for Command {
         } else {
             Err(CommandError::NonZeroExitCode {
                 status,
-                command: format!("{self:?}"),
+                command: self.command_pretty(),
                 stderr: output.map(|out| out.stderr.clone()).unwrap_or_default(),
                 stdout: output.map(|out| out.stdout.clone()).unwrap_or_default(),
             })
@@ -68,7 +91,7 @@ impl CommandExt for Command {
         self.status()
             .map_err(|e| CommandError::CouldNotExecute {
                 source: Box::new(e),
-                command: format!("{self:?}"),
+                command: self.command_pretty(),
             })
             .map_err(Into::into)
     }
@@ -91,7 +114,7 @@ impl CommandExt for Command {
         self.output().map_err(|e| {
             CommandError::CouldNotExecute {
                 source: Box::new(e),
-                command: format!("{self:?}"),
+                command: self.command_pretty(),
             }
             .to_section_report()
         })

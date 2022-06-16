@@ -10,7 +10,7 @@ pub fn install_panic_hook() -> Result<()> {
 
 #[derive(Debug, thiserror::Error)]
 pub enum CommandError {
-    #[error("`{command}` failed with exit code: {status}")]
+    #[error("`{command}` failed with {status}")]
     NonZeroExitCode {
         status: std::process::ExitStatus,
         command: String,
