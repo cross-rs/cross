@@ -1,5 +1,10 @@
+use std::collections::BTreeSet;
+
 use clap::{Args, Subcommand};
-use cross::{docker, CommandExt};
+use cross::{
+    docker::{self, CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX},
+    CommandExt, TargetList,
+};
 
 // known image prefixes, with their registry
 // the docker.io registry can also be implicit
@@ -16,6 +21,8 @@ pub struct ListImages {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
+    /// Only list images for a specific target
+    pub target: String,
 }
 
 impl ListImages {
@@ -94,6 +101,16 @@ struct Image {
     id: String,
 }
 
+impl std::fmt::Display for Image {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.repository == "<none>" {
+            f.write_str(&self.id)
+        } else {
+            f.write_str(&self.name())
+        }
+    }
+}
+
 impl Image {
     fn name(&self) -> String {
         format!("{}:{}", self.repository, self.tag)
@@ -124,20 +141,31 @@ fn get_cross_images(
     verbose: bool,
     local: bool,
 ) -> cross::Result<Vec<Image>> {
-    let stdout = docker::subcommand(engine, "images")
-        .arg("--format")
-        .arg("{{.Repository}}:{{.Tag}} {{.ID}}")
-        .run_and_get_stdout(verbose)?;
-
-    let mut images: Vec<Image> = stdout
+    let mut images: BTreeSet<_> = cross::docker::subcommand(engine, "images")
+        .args(&["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
+        .args(&[
+            "--filter",
+            &format!("label={}.for-cross-target", cross::CROSS_LABEL_DOMAIN),
+        ])
+        .run_and_get_stdout(verbose)?
         .lines()
         .map(parse_image)
-        .filter(|image| is_cross_image(&image.repository))
-        .filter(|image| local || !is_local_image(&image.tag))
         .collect();
-    images.sort();
 
-    Ok(images)
+    let stdout = cross::docker::subcommand(engine, "images")
+        .args(&["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
+        .run_and_get_stdout(verbose)?;
+    let ids: Vec<_> = images.iter().map(|i| i.id.to_string()).collect();
+    images.extend(
+        stdout
+            .lines()
+            .map(parse_image)
+            .filter(|i| !ids.iter().any(|id| id == &i.id))
+            .filter(|image| is_cross_image(&image.repository))
+            .filter(|image| local || !is_local_image(&image.tag)),
+    );
+
+    Ok(images.into_iter().collect())
 }
 
 // the old rustembedded targets had the following format:
@@ -160,16 +188,46 @@ fn rustembedded_target(tag: &str) -> String {
     components.join("-")
 }
 
-fn get_image_target(image: &Image) -> cross::Result<String> {
-    if let Some(stripped) = image.repository.strip_prefix(GHCR_IO) {
-        Ok(stripped.to_string())
+fn get_image_target(
+    engine: &cross::docker::Engine,
+    image: &Image,
+    target_list: &TargetList,
+) -> cross::Result<String> {
+    if let Some(stripped) = image.repository.strip_prefix(&format!("{GHCR_IO}/")) {
+        return Ok(stripped.to_string());
     } else if let Some(tag) = image.tag.strip_prefix(RUST_EMBEDDED) {
-        Ok(rustembedded_target(tag))
+        return Ok(rustembedded_target(tag));
     } else if let Some(tag) = image.tag.strip_prefix(DOCKER_IO) {
-        Ok(rustembedded_target(tag))
-    } else {
-        eyre::bail!("cannot get target for image {}", image.name())
+        return Ok(rustembedded_target(tag));
+    } else if image
+        .repository
+        .starts_with(CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX)
+    {
+        if let Some(target) = target_list
+            .triples
+            .iter()
+            .find(|target| image.tag.starts_with(target.as_str()))
+            .cloned()
+        {
+            return Ok(target);
+        }
     }
+    let mut command = cross::docker::subcommand(engine, "inspect");
+    command.args(&[
+        "--format",
+        &format!(
+            r#"{{{{index .Config.Labels "{}.for-cross-target"}}}}"#,
+            cross::CROSS_LABEL_DOMAIN
+        ),
+    ]);
+    command.arg(&image.id);
+
+    // TODO: verbosity = 3?
+    let target = command.run_and_get_stdout(true)?;
+    if target.trim().is_empty() {
+        eyre::bail!("cannot get target for image {}", image)
+    }
+    Ok(target.trim().to_string())
 }
 
 pub fn list_images(
@@ -178,14 +236,14 @@ pub fn list_images(
 ) -> cross::Result<()> {
     get_cross_images(engine, verbose, true)?
         .iter()
-        .for_each(|line| println!("{}", line.name()));
+        .for_each(|image| println!("{}", image));
 
     Ok(())
 }
 
 fn remove_images(
     engine: &docker::Engine,
-    images: &[&str],
+    images: &[Image],
     verbose: bool,
     force: bool,
     execute: bool,
@@ -194,7 +252,7 @@ fn remove_images(
     if force {
         command.arg("--force");
     }
-    command.args(images);
+    command.args(images.iter().map(|i| &i.id));
     if images.is_empty() {
         Ok(())
     } else if execute {
@@ -217,8 +275,7 @@ pub fn remove_all_images(
     engine: &docker::Engine,
 ) -> cross::Result<()> {
     let images = get_cross_images(engine, verbose, local)?;
-    let ids: Vec<&str> = images.iter().map(|i| i.id.as_ref()).collect();
-    remove_images(engine, &ids, verbose, force, execute)
+    remove_images(engine, &images, verbose, force, execute)
 }
 
 pub fn remove_target_images(
@@ -232,15 +289,16 @@ pub fn remove_target_images(
     }: RemoveImages,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let images = get_cross_images(engine, verbose, local)?;
-    let mut ids = vec![];
-    for image in images.iter() {
-        let target = get_image_target(image)?;
+    let cross_images = get_cross_images(engine, verbose, local)?;
+    let target_list = cross::rustc::target_list(false)?;
+    let mut images = vec![];
+    for image in cross_images {
+        let target = dbg!(get_image_target(engine, &image, &target_list)?);
         if targets.contains(&target) {
-            ids.push(image.id.as_ref());
+            images.push(image);
         }
     }
-    remove_images(engine, &ids, verbose, force, execute)
+    remove_images(engine, &images, verbose, force, execute)
 }
 
 #[cfg(test)]
