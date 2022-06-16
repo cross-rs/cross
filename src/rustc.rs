@@ -40,7 +40,6 @@ pub fn target_list(verbose: bool) -> Result<TargetList> {
         .map(|s| TargetList {
             triples: s.lines().map(|l| l.to_owned()).collect(),
         })
-        .map_err(Into::into)
 }
 
 pub fn sysroot(host: &Host, target: &Target, verbose: bool) -> Result<PathBuf> {

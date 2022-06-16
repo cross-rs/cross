@@ -45,13 +45,18 @@ pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
 pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTargets> {
     let mut cmd = Command::new("rustup");
     cmd.args(&["target", "list", "--toolchain", toolchain]);
-    let output = cmd.run_and_get_output(verbose)?;
+    let output = cmd
+        .run_and_get_output(verbose)
+        .suggestion("is rustup installed?")?;
 
     if !output.status.success() {
         if String::from_utf8_lossy(&output.stderr).contains("is a custom toolchain") {
             eyre::bail!("{toolchain} is a custom toolchain. To use it, you'll need to set the environment variable `CROSS_CUSTOM_TOOLCHAIN=1`")
         }
-        return Err(cmd.status_result(output.status).unwrap_err().into());
+        return Err(cmd
+            .status_result(verbose, output.status, Some(&output))
+            .unwrap_err()
+            .to_section_report());
     }
     let out = output.stdout()?;
     let mut default = String::new();
