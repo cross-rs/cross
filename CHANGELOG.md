@@ -44,6 +44,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- #804 - allow usage of env `CARGO_BUILD_TARGET` as an alias for `CROSS_BUILD_TARGET`
 - #792 - fixed container-in-container support when using podman.
 - #781 - ensure `target.$(...)` config options override `build` ones.
 - #771 - fix parsing of `DOCKER_OPTS`.

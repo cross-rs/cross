@@ -99,6 +99,7 @@ impl Environment {
 
     fn target(&self) -> Option<String> {
         self.get_build_var("TARGET")
+            .or_else(|| std::env::var("CARGO_BUILD_TARGET").ok())
     }
 }
 
