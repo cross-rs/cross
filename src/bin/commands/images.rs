@@ -4,8 +4,8 @@ use cross::CommandExt;
 // known image prefixes, with their registry
 // the docker.io registry can also be implicit
 const GHCR_IO: &str = cross::docker::CROSS_IMAGE;
-const RUST_EMBEDDED: &str = "rustembedded/cross:";
-const DOCKER_IO: &str = "docker.io/rustembedded/cross:";
+const RUST_EMBEDDED: &str = "rustembedded/cross";
+const DOCKER_IO: &str = "docker.io/rustembedded/cross";
 const IMAGE_PREFIXES: &[&str] = &[GHCR_IO, DOCKER_IO, RUST_EMBEDDED];
 
 #[derive(Args, Debug)]
@@ -16,6 +16,12 @@ pub struct ListImages {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
+}
+
+impl ListImages {
+    pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
+        list_images(self, &engine)
+    }
 }
 
 #[derive(Args, Debug)]
@@ -39,6 +45,16 @@ pub struct RemoveImages {
     pub engine: Option<String>,
 }
 
+impl RemoveImages {
+    pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
+        if self.targets.is_empty() {
+            remove_all_images(self, &engine)
+        } else {
+            remove_target_images(self, &engine)
+        }
+    }
+}
+
 #[derive(Subcommand, Debug)]
 pub enum Images {
     /// List cross images in local storage.
@@ -50,14 +66,8 @@ pub enum Images {
 impl Images {
     pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
         match self {
-            Images::List(args) => list_images(args, &engine),
-            Images::Remove(args) => {
-                if args.targets.is_empty() {
-                    remove_all_images(args, &engine)
-                } else {
-                    remove_target_images(args, &engine)
-                }
-            }
+            Images::List(args) => args.run(engine),
+            Images::Remove(args) => args.run(engine),
         }
     }
 
@@ -185,10 +195,12 @@ fn remove_images(
         command.arg("--force");
     }
     command.args(images);
-    if execute {
+    if images.is_empty() {
+        Ok(())
+    } else if execute {
         command.run(verbose, false).map_err(Into::into)
     } else {
-        println!("{:?}", command);
+        command.print_verbose(true);
         Ok(())
     }
 }
