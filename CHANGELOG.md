@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- #803 - added `CROSS_CUSTOM_TOOLCHAIN` to disable automatic installation of components for use with tools like `cargo-bisect-rustc`
 - #795 - added images for additional toolchains maintained by cross-rs.
 - #792 - added `CROSS_CONTAINER_IN_CONTAINER` environment variable to replace `CROSS_DOCKER_IN_DOCKER`.
 - #782 - added `build-std` config option, which builds the rust standard library from source if enabled.

@@ -416,35 +416,37 @@ pub fn run() -> Result<ExitStatus> {
                 is_nightly = channel == Channel::Nightly;
             }
 
-            // build-std overrides xargo, but only use it if it's a built-in
-            // tool but not an available target or doesn't have rust-std.
-            let available_targets = rustup::available_targets(&toolchain, verbose)?;
             let uses_build_std = config.build_std(&target).unwrap_or(false);
             let uses_xargo =
                 !uses_build_std && config.xargo(&target).unwrap_or(!target.is_builtin());
-            if !is_nightly && uses_build_std {
-                eyre::bail!(
-                    "no rust-std component available for {}: must use nightly",
-                    target.triple()
-                );
-            }
+            if std::env::var("CROSS_CUSTOM_TOOLCHAIN").is_err() {
+                // build-std overrides xargo, but only use it if it's a built-in
+                // tool but not an available target or doesn't have rust-std.
+                let available_targets = rustup::available_targets(&toolchain, verbose)?;
 
-            if !uses_xargo
-                && !available_targets.is_installed(&target)
-                && available_targets.contains(&target)
-            {
-                rustup::install(&target, &toolchain, verbose)?;
-            } else if !rustup::component_is_installed("rust-src", &toolchain, verbose)? {
-                rustup::install_component("rust-src", &toolchain, verbose)?;
-            }
+                if !is_nightly && uses_build_std {
+                    eyre::bail!(
+                        "no rust-std component available for {}: must use nightly",
+                        target.triple()
+                    );
+                }
 
-            if args
-                .subcommand
-                .map(|sc| sc == Subcommand::Clippy)
-                .unwrap_or(false)
-                && !rustup::component_is_installed("clippy", &toolchain, verbose)?
-            {
-                rustup::install_component("clippy", &toolchain, verbose)?;
+                if !uses_xargo
+                    && !available_targets.is_installed(&target)
+                    && available_targets.contains(&target)
+                {
+                    rustup::install(&target, &toolchain, verbose)?;
+                } else if !rustup::component_is_installed("rust-src", &toolchain, verbose)? {
+                    rustup::install_component("rust-src", &toolchain, verbose)?;
+                }
+                if args
+                    .subcommand
+                    .map(|sc| sc == Subcommand::Clippy)
+                    .unwrap_or(false)
+                    && !rustup::component_is_installed("clippy", &toolchain, verbose)?
+                {
+                    rustup::install_component("clippy", &toolchain, verbose)?;
+                }
             }
 
             let needs_interpreter = args
