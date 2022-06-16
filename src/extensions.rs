@@ -207,3 +207,9 @@ impl From<SafeCommand> for Command {
         cmd
     }
 }
+
+pub(crate) fn env_program(envvar: &str, program: &str) -> String {
+    std::env::var(envvar)
+        .ok()
+        .unwrap_or_else(|| program.to_string())
+}

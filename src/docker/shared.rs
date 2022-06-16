@@ -162,7 +162,7 @@ pub fn parse_docker_opts(value: &str) -> Result<Vec<String>> {
     shell_words::split(value).wrap_err_with(|| format!("could not parse docker opts of {}", value))
 }
 
-pub(crate) fn cargo_cmd(uses_xargo: bool) -> SafeCommand {
+pub(crate) fn cargo_safe_command(uses_xargo: bool) -> SafeCommand {
     if uses_xargo {
         SafeCommand::new("xargo")
     } else {
