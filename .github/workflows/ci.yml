@@ -102,7 +102,9 @@ jobs:
 
           selects=()
           for target in "${targets[@]}"; do
-            selects+=(".target + (if .sub then \".\" + .sub else \"\" end) == \"${target}\"")
+            base=$(echo "${target}" | cut -d '.' -f 1)
+            sub=$(echo "${target}" | cut -d '.' -sf 2)
+            selects+=("select(.target | test(\"${base}\")) and if \"${sub}\" != \"\" then .sub == \"${sub}\" else .sub == null end")
           done
           query=$(printf " or %s" "${selects[@]}")
           query="${query:4}"
