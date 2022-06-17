@@ -28,6 +28,9 @@ pub struct BuildDockerImage {
     force: bool,
     #[clap(short, long)]
     push: bool,
+    /// Set output to /dev/null
+    #[clap(short, long)]
+    no_output: bool,
     #[clap(
         long,
         value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]), 
@@ -76,6 +79,7 @@ pub fn build_docker_image(
         dry_run,
         force,
         push,
+        no_output,
         progress,
         no_cache,
         no_fastfail,
@@ -147,6 +151,8 @@ pub fn build_docker_image(
 
         if push {
             docker_build.arg("--push");
+        } else if no_output {
+            docker_build.args(&["--output", "type=tar,dest=/dev/null"]);
         } else {
             docker_build.arg("--load");
         }
