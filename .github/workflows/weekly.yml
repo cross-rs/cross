@@ -22,4 +22,4 @@ jobs:
         run: cargo build -p xtask
       - name: Build Docker image
         id: build-docker-image
-        run: cargo xtask build-docker-image -v --no-cache --from-ci --tag weekly
+        run: cargo xtask build-docker-image -v --no-cache --no-output --from-ci --tag weekly
