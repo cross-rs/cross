@@ -93,7 +93,11 @@ pub(crate) fn run(
 
     docker
         .arg(&image)
-        .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
+        .args(&[
+            "sh",
+            "-c",
+            &format!("export PATH=$PATH:/rust/bin; {:?}", cmd),
+        ])
         .run_and_get_status(verbose, false)
         .map_err(Into::into)
 }
