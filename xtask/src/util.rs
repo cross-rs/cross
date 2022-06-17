@@ -50,6 +50,10 @@ impl Matrix {
             sub: self.sub.clone(),
         }
     }
+
+    fn builds_image(&self) -> bool {
+        self.os == "ubuntu-latest"
+    }
 }
 
 static MATRIX: OnceCell<Vec<Matrix>> = OnceCell::new();
@@ -87,11 +91,12 @@ impl ImageTarget {
         }
     }
 
+    /// Determines if this target has a ci image
     pub fn has_ci_image(&self) -> bool {
         let matrix = get_matrix();
         matrix
             .iter()
-            .any(|m| m.target == self.triplet && m.sub == self.sub)
+            .any(|m| m.builds_image() && m.target == self.triplet && m.sub == self.sub)
     }
 }
 

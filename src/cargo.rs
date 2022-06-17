@@ -86,6 +86,7 @@ pub struct Package {
     pub manifest_path: PathBuf,
     pub source: Option<String>,
     pub version: String,
+    pub license: Option<String>,
 }
 
 impl Package {

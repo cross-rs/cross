@@ -145,30 +145,13 @@ pub fn build_docker_image(
         let mut tags = vec![];
 
         match (ref_type.as_deref(), ref_name.as_deref()) {
-            (Some(ref_type), Some(ref_name)) if ref_type == "tag" && ref_name.starts_with('v') => {
-                let tag_version = ref_name
-                    .strip_prefix('v')
-                    .expect("tag name should start with v");
-                if version != tag_version {
-                    eyre::bail!("git tag does not match package version.")
-                }
-                tags.push(target.image_name(&repository, &version));
-                // Check for unstable releases, tag stable releases as `latest`
-                if version.contains('-') {
-                    // TODO: Don't tag if version is older than currently released version.
-                    tags.push(target.image_name(&repository, "latest"))
-                }
-            }
-            (Some(ref_type), Some(ref_name)) if ref_type == "branch" => {
-                tags.push(target.image_name(&repository, ref_name));
-
-                if ["staging", "trying"]
-                    .iter()
-                    .any(|branch| branch != &ref_name)
-                {
-                    tags.push(target.image_name(&repository, "edge"));
-                }
-            }
+            (Some(ref_type), Some(ref_name)) => tags.extend(determine_image_name(
+                target,
+                &repository,
+                ref_type,
+                ref_name,
+                &version,
+            )?),
             _ => {
                 if push && tag_override.is_none() {
                     panic!("Refusing to push without tag or branch. Specify a repository and tag with `--repository <repository> --tag <tag>`")
@@ -253,6 +236,10 @@ pub fn build_docker_image(
         }
         if gha {
             println!("::set-output name=image::{}", &tags[0]);
+            println!(
+                "::set-output name=images::'{}'",
+                serde_json::to_string(&tags)?
+            );
             if targets.len() > 1 {
                 println!("::endgroup::");
             }
@@ -268,6 +255,44 @@ pub fn build_docker_image(
         )?;
     }
     Ok(())
+}
+
+pub fn determine_image_name(
+    target: &crate::ImageTarget,
+    repository: &str,
+    ref_type: &str,
+    ref_name: &str,
+    version: &str,
+) -> cross::Result<Vec<String>> {
+    let mut tags = vec![];
+    match (ref_type, ref_name) {
+        (ref_type, ref_name) if ref_type == "tag" && ref_name.starts_with('v') => {
+            let tag_version = ref_name
+                .strip_prefix('v')
+                .expect("tag name should start with v");
+            if version != tag_version {
+                eyre::bail!("git tag does not match package version.")
+            }
+            tags.push(target.image_name(repository, version));
+            // Check for unstable releases, tag stable releases as `latest`
+            if version.contains('-') {
+                // TODO: Don't tag if version is older than currently released version.
+                tags.push(target.image_name(repository, "latest"))
+            }
+        }
+        (ref_type, ref_name) if ref_type == "branch" => {
+            tags.push(target.image_name(repository, ref_name));
+
+            if ["staging", "trying"]
+                .iter()
+                .any(|branch| branch != &ref_name)
+            {
+                tags.push(target.image_name(repository, "edge"));
+            }
+        }
+        _ => eyre::bail!("no valid choice to pick for image name"),
+    }
+    Ok(tags)
 }
 
 pub fn job_summary(

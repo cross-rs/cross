@@ -1,6 +1,7 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
 pub mod build_docker_image;
+pub mod ci;
 pub mod hooks;
 pub mod install_git_hooks;
 pub mod target_info;
@@ -8,6 +9,7 @@ pub mod util;
 
 use std::path::PathBuf;
 
+use ci::CiJob;
 use clap::{Parser, Subcommand};
 use util::ImageTarget;
 
@@ -38,6 +40,9 @@ enum Commands {
     Check(Check),
     /// Run unittest suite.
     Test(Test),
+    /// CI tasks
+    #[clap(subcommand, hide = true)]
+    CiJob(CiJob),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<String> {
@@ -69,6 +74,7 @@ pub fn main() -> cross::Result<()> {
         Commands::Test(args) => {
             hooks::test(args, cli.toolchain.as_deref())?;
         }
+        Commands::CiJob(args) => ci::ci(args)?,
     }
 
     Ok(())
