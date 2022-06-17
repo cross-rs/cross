@@ -1,3 +1,4 @@
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
 const WORKFLOW: &str = include_str!("../../.github/workflows/ci.yml");
@@ -42,10 +43,87 @@ impl Matrix {
         // bare-metal targets don't have unittests right now
         self.run != 0 && !target.contains("-none-")
     }
+
+    pub fn to_image_target(&self) -> crate::ImageTarget {
+        crate::ImageTarget {
+            triplet: self.target.clone(),
+            sub: self.sub.clone(),
+        }
+    }
+
+    fn builds_image(&self) -> bool {
+        self.os == "ubuntu-latest"
+    }
 }
 
-pub fn get_matrix() -> cross::Result<Vec<Matrix>> {
-    let workflow: Workflow = serde_yaml::from_str(WORKFLOW)?;
-    let matrix = &workflow.jobs.generate_matrix.steps[0].env.matrix;
-    serde_yaml::from_str(matrix).map_err(Into::into)
+static MATRIX: OnceCell<Vec<Matrix>> = OnceCell::new();
+
+pub fn get_matrix() -> &'static Vec<Matrix> {
+    MATRIX
+        .get_or_try_init::<_, eyre::Report>(|| {
+            let workflow: Workflow = serde_yaml::from_str(WORKFLOW)?;
+            let matrix = &workflow.jobs.generate_matrix.steps[0].env.matrix;
+            serde_yaml::from_str(matrix).map_err(Into::into)
+        })
+        .unwrap()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ImageTarget {
+    pub triplet: String,
+    pub sub: Option<String>,
+}
+
+impl ImageTarget {
+    pub fn image_name(&self, repository: &str, tag: &str) -> String {
+        if let Some(sub) = &self.sub {
+            format!("{repository}/{}:{tag}-{sub}", self.triplet)
+        } else {
+            format!("{repository}/{}:{tag}", self.triplet)
+        }
+    }
+
+    pub fn alt(&self) -> String {
+        if let Some(sub) = &self.sub {
+            format!("{}:{sub}", self.triplet,)
+        } else {
+            self.triplet.to_string()
+        }
+    }
+
+    /// Determines if this target has a ci image
+    pub fn has_ci_image(&self) -> bool {
+        let matrix = get_matrix();
+        matrix
+            .iter()
+            .any(|m| m.builds_image() && m.target == self.triplet && m.sub == self.sub)
+    }
+}
+
+impl std::str::FromStr for ImageTarget {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((target, sub)) = s.split_once('.') {
+            Ok(ImageTarget {
+                triplet: target.to_string(),
+                sub: Some(sub.to_string()),
+            })
+        } else {
+            Ok(ImageTarget {
+                triplet: s.to_string(),
+                sub: None,
+            })
+        }
+    }
+}
+
+impl std::fmt::Display for ImageTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(sub) = &self.sub {
+            write!(f, "{}.{sub}", self.triplet,)
+        } else {
+            write!(f, "{}", self.triplet)
+        }
+    }
 }

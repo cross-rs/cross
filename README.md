@@ -1,7 +1,6 @@
 [![crates.io](https://img.shields.io/crates/v/cross.svg)](https://crates.io/crates/cross)
 [![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
-[![Build Status](https://img.shields.io/azure-devops/build/rust-embedded/c0ce10ee-fd41-4551-b3e3-9612e8ab62f3/2/master)](https://dev.azure.com/rust-embedded/cross/_build?definitionId=2)
-[![Docker Pulls](https://img.shields.io/docker/pulls/rustembedded/cross)](https://hub.docker.com/r/rustembedded/cross)
+[![CI](https://github.com/cross-rs/cross/actions/workflows/ci.yml/badge.svg?query=branch%3Amain)](https://github.com/cross-rs/cross/actions/workflows/ci.yml?query=branch)
 [![Matrix](https://img.shields.io/matrix/cross-rs:matrix.org)](https://matrix.to/#/#cross-rs:matrix.org)
 
 # `cross`

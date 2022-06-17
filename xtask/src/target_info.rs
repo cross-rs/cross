@@ -14,7 +14,7 @@ const TARGET_INFO_SCRIPT: &str = include_str!("target_info.sh");
 #[derive(Args, Debug)]
 pub struct TargetInfo {
     /// If not provided, get info for all targets.
-    targets: Vec<String>,
+    targets: Vec<crate::ImageTarget>,
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
     verbose: bool,
@@ -32,15 +32,10 @@ pub struct TargetInfo {
     pub engine: Option<String>,
 }
 
-fn target_has_image(target: &str) -> bool {
-    let imageless = ["-msvc", "-darwin", "-apple-ios"];
-    !imageless.iter().any(|t| target.ends_with(t))
-}
-
-fn format_image(registry: &str, repository: &str, target: &str, tag: &str) -> String {
-    let mut output = format!("{target}:{tag}");
+fn format_repo(registry: &str, repository: &str) -> String {
+    let mut output = String::new();
     if !repository.is_empty() {
-        output = format!("{repository}/{output}");
+        output = repository.to_string();
     }
     if !registry.is_empty() {
         output = format!("{registry}/{output}");
@@ -63,7 +58,7 @@ fn pull_image(engine: &Path, image: &str, verbose: bool) -> cross::Result<()> {
 
 fn image_info(
     engine: &Path,
-    target: &str,
+    target: &crate::ImageTarget,
     image: &str,
     tag: &str,
     verbose: bool,
@@ -77,7 +72,7 @@ fn image_info(
     command.arg("run");
     command.arg("-it");
     command.arg("--rm");
-    command.args(&["-e", &format!("TARGET={target}")]);
+    command.args(&["-e", &format!("TARGET={}", target.triplet)]);
     if has_test {
         command.args(&["-e", "HAS_TEST=1"]);
     }
@@ -102,28 +97,27 @@ pub fn target_info(
     }: TargetInfo,
     engine: &Path,
 ) -> cross::Result<()> {
-    let matrix = crate::util::get_matrix()?;
-    let test_map: BTreeMap<&str, bool> = matrix
+    let matrix = crate::util::get_matrix();
+    let test_map: BTreeMap<crate::ImageTarget, bool> = matrix
         .iter()
-        .map(|i| (i.target.as_ref(), i.has_test(&i.target)))
+        .map(|i| (i.to_image_target(), i.has_test(&i.target)))
         .collect();
 
     if targets.is_empty() {
         targets = matrix
             .iter()
-            .map(|t| t.target.clone())
-            .filter(|t| target_has_image(t))
+            .map(|t| t.to_image_target())
+            .filter(|t| t.has_ci_image())
             .collect();
     }
 
     for target in targets {
-        let target = target.as_ref();
-        let image = format_image(&registry, &repository, target, &tag);
+        let image = target.image_name(&format_repo(&registry, &repository), &tag);
         let has_test = test_map
             .get(&target)
             .cloned()
             .ok_or_else(|| eyre::eyre!("invalid target name {}", target))?;
-        image_info(engine, target, &image, &tag, verbose, has_test)?;
+        image_info(engine, &target, &image, &tag, verbose, has_test)?;
     }
 
     Ok(())

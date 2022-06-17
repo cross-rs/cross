@@ -48,14 +48,14 @@ pub struct BuildDockerImage {
     from_ci: bool,
     /// Targets to build for
     #[clap()]
-    targets: Vec<String>,
+    targets: Vec<crate::ImageTarget>,
 }
 
 fn locate_dockerfile(
-    target: String,
+    target: crate::ImageTarget,
     docker_root: &Path,
     cross_toolchain_root: &Path,
-) -> cross::Result<(String, String)> {
+) -> cross::Result<(crate::ImageTarget, String)> {
     let dockerfile_name = format!("Dockerfile.{target}");
     let dockerfile_root = if cross_toolchain_root.join(&dockerfile_name).exists() {
         &cross_toolchain_root
@@ -102,20 +102,10 @@ pub fn build_docker_image(
         .clone();
     if targets.is_empty() {
         if from_ci {
-            targets = crate::util::get_matrix()?
+            targets = crate::util::get_matrix()
                 .iter()
                 .filter(|m| m.os.starts_with("ubuntu"))
-                .map(|m| {
-                    format!(
-                        "{}{}",
-                        m.target,
-                        if let Some(sub) = &m.sub {
-                            format!(".{sub}")
-                        } else {
-                            <_>::default()
-                        }
-                    )
-                })
+                .map(|m| m.to_image_target())
                 .collect();
         } else {
             targets = walkdir::WalkDir::new(metadata.workspace_root.join("docker"))
@@ -128,6 +118,7 @@ pub fn build_docker_image(
                         .to_string_lossy()
                         .strip_prefix("Dockerfile.")
                         .map(ToOwned::to_owned)
+                        .map(|s| s.parse().unwrap())
                 })
                 .collect();
         }
@@ -157,50 +148,26 @@ pub fn build_docker_image(
             docker_build.arg("--load");
         }
 
-        let (target, sub) = if let Some((t, sub)) = target.split_once('.') {
-            (t.to_owned(), format!("-{sub}"))
-        } else {
-            (target.to_owned(), "".to_owned())
-        };
-
-        let image_name = format!("{}/{target}", repository);
         let mut tags = vec![];
 
         match (ref_type.as_deref(), ref_name.as_deref()) {
-            (Some(ref_type), Some(ref_name)) if ref_type == "tag" && ref_name.starts_with('v') => {
-                let tag_version = ref_name
-                    .strip_prefix('v')
-                    .expect("tag name should start with v");
-                if version != tag_version {
-                    eyre::bail!("git tag does not match package version.")
-                }
-                tags.push(format!("{image_name}:{version}{sub}"));
-                // Check for unstable releases, tag stable releases as `latest`
-                if version.contains('-') {
-                    // TODO: Don't tag if version is older than currently released version.
-                    tags.push(format!("{image_name}:latest{sub}"))
-                }
-            }
-            (Some(ref_type), Some(ref_name)) if ref_type == "branch" => {
-                tags.push(format!("{image_name}:{ref_name}{sub}"));
-
-                if ["staging", "trying"]
-                    .iter()
-                    .any(|branch| branch != &ref_name)
-                {
-                    tags.push(format!("{image_name}:edge{sub}"));
-                }
-            }
+            (Some(ref_type), Some(ref_name)) => tags.extend(determine_image_name(
+                target,
+                &repository,
+                ref_type,
+                ref_name,
+                &version,
+            )?),
             _ => {
                 if push && tag_override.is_none() {
                     panic!("Refusing to push without tag or branch. Specify a repository and tag with `--repository <repository> --tag <tag>`")
                 }
-                tags.push(format!("{image_name}:local{sub}"))
+                tags.push(target.image_name(&repository, "local"));
             }
         }
 
         if let Some(ref tag) = tag_override {
-            tags = vec![format!("{image_name}:{tag}")];
+            tags = vec![target.image_name(&repository, tag)];
         }
 
         docker_build.arg("--pull");
@@ -209,7 +176,10 @@ pub fn build_docker_image(
         } else {
             docker_build.args(&[
                 "--cache-from",
-                &format!("type=registry,ref={image_name}:main{sub}"),
+                &format!(
+                    "type=registry,ref={}",
+                    target.image_name(&repository, "main")
+                ),
             ]);
         }
 
@@ -272,6 +242,10 @@ pub fn build_docker_image(
         }
         if gha {
             println!("::set-output name=image::{}", &tags[0]);
+            println!(
+                "::set-output name=images::'{}'",
+                serde_json::to_string(&tags)?
+            );
             if targets.len() > 1 {
                 println!("::endgroup::");
             }
@@ -289,8 +263,46 @@ pub fn build_docker_image(
     Ok(())
 }
 
+pub fn determine_image_name(
+    target: &crate::ImageTarget,
+    repository: &str,
+    ref_type: &str,
+    ref_name: &str,
+    version: &str,
+) -> cross::Result<Vec<String>> {
+    let mut tags = vec![];
+    match (ref_type, ref_name) {
+        (ref_type, ref_name) if ref_type == "tag" && ref_name.starts_with('v') => {
+            let tag_version = ref_name
+                .strip_prefix('v')
+                .expect("tag name should start with v");
+            if version != tag_version {
+                eyre::bail!("git tag does not match package version.")
+            }
+            tags.push(target.image_name(repository, version));
+            // Check for unstable releases, tag stable releases as `latest`
+            if version.contains('-') {
+                // TODO: Don't tag if version is older than currently released version.
+                tags.push(target.image_name(repository, "latest"))
+            }
+        }
+        (ref_type, ref_name) if ref_type == "branch" => {
+            tags.push(target.image_name(repository, ref_name));
+
+            if ["staging", "trying"]
+                .iter()
+                .any(|branch| branch != &ref_name)
+            {
+                tags.push(target.image_name(repository, "edge"));
+            }
+        }
+        _ => eyre::bail!("no valid choice to pick for image name"),
+    }
+    Ok(tags)
+}
+
 pub fn job_summary(
-    results: &[Result<String, (String, cross::errors::CommandError)>],
+    results: &[Result<crate::ImageTarget, (crate::ImageTarget, cross::errors::CommandError)>],
 ) -> cross::Result<String> {
     let mut summary = "# SUMMARY\n\n".to_string();
     let success: Vec<_> = results.iter().filter_map(|r| r.as_ref().ok()).collect();
@@ -301,7 +313,7 @@ pub fn job_summary(
     }
 
     for target in success {
-        writeln!(summary, "| {target} |")?;
+        writeln!(summary, "| {} |", target.alt())?;
     }
 
     if !errors.is_empty() {
