@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2086
+# shellcheck disable=SC2086,SC1091,SC1090
 
 set -x
 set -eo pipefail
@@ -20,6 +20,9 @@ if [[ -z "${CROSS_TARGET_CROSS_IMAGE}" ]]; then
     CROSS_TARGET_CROSS_IMAGE="ghcr.io/cross-rs/cross:main"
 fi
 
+ci_dir=$(dirname "${BASH_SOURCE[0]}")
+ci_dir=$(realpath "${ci_dir}")
+. "${ci_dir}"/shared.sh
 
 main() {
 

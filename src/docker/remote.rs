@@ -14,11 +14,10 @@ use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::file::{self, PathExt, ToUtf8};
-use crate::rustc::{self, VersionMetaExt};
-use crate::rustup;
+use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
 use crate::shell::{ColorChoice, MessageInfo, Stream, Verbosity};
 use crate::temp;
-use crate::{Host, Target};
+use crate::{Target, TargetTriple};
 
 // the mount directory for the data volume.
 pub const MOUNT_PREFIX: &str = "/cross";
@@ -448,20 +447,21 @@ fn copy_volume_container_rust_manifest(
 pub fn copy_volume_container_rust_triple(
     engine: &Engine,
     container: &str,
-    sysroot: &Path,
-    triple: &str,
+    toolchain: &QualifiedToolchain,
+    target_triple: &TargetTriple,
     mount_prefix: &Path,
     skip_exists: bool,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
+    let sysroot = toolchain.get_sysroot();
     // copy over the files for a specific triple
     let dst = mount_prefix.join("rust");
     let rustlib = Path::new("lib").join("rustlib");
     let dst_rustlib = dst.join(&rustlib);
-    let src_toolchain = sysroot.join(&rustlib).join(triple);
-    let dst_toolchain = dst_rustlib.join(triple);
+    let src_toolchain = sysroot.join(&rustlib).join(target_triple.triple());
+    let dst_toolchain = dst_rustlib.join(target_triple.triple());
 
-    // skip if the toolchain already exists. for the host toolchain
+    // skip if the toolchain target component already exists. for the host toolchain
     // or the first run of the target toolchain, we know it doesn't exist.
     let mut skip = false;
     if skip_exists {
@@ -482,36 +482,47 @@ pub fn copy_volume_container_rust_triple(
 pub fn copy_volume_container_rust(
     engine: &Engine,
     container: &str,
-    sysroot: &Path,
-    target: &Target,
+    toolchain: &QualifiedToolchain,
+    target_triple: Option<&TargetTriple>,
     mount_prefix: &Path,
-    skip_target: bool,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
-    let target_triple = target.triple();
-    let image_triple = Host::X86_64UnknownLinuxGnu.triple();
-
-    copy_volume_container_rust_base(engine, container, sysroot, mount_prefix, msg_info)?;
-    copy_volume_container_rust_manifest(engine, container, sysroot, mount_prefix, msg_info)?;
+    copy_volume_container_rust_base(
+        engine,
+        container,
+        toolchain.get_sysroot(),
+        mount_prefix,
+        msg_info,
+    )?;
+    copy_volume_container_rust_manifest(
+        engine,
+        container,
+        toolchain.get_sysroot(),
+        mount_prefix,
+        msg_info,
+    )?;
     copy_volume_container_rust_triple(
         engine,
         container,
-        sysroot,
-        image_triple,
+        toolchain,
+        &toolchain.host().target,
         mount_prefix,
         false,
         msg_info,
     )?;
-    if !skip_target && target_triple != image_triple {
-        copy_volume_container_rust_triple(
-            engine,
-            container,
-            sysroot,
-            target_triple,
-            mount_prefix,
-            false,
-            msg_info,
-        )?;
+    // TODO: impl Eq
+    if let Some(target_triple) = target_triple {
+        if target_triple.triple() != toolchain.host().target.triple() {
+            copy_volume_container_rust_triple(
+                engine,
+                container,
+                toolchain,
+                target_triple,
+                mount_prefix,
+                false,
+                msg_info,
+            )?;
+        }
     }
 
     Ok(())
@@ -798,23 +809,26 @@ pub fn container_state(
     ContainerState::new(stdout.trim())
 }
 
-pub fn unique_toolchain_identifier(sysroot: &Path) -> Result<String> {
-    // try to get the commit hash for the currently toolchain, if possible
-    // if not, get the default rustc and use the path hash for uniqueness
-    let commit_hash = if let Some(version) = rustup::rustc_version_string(sysroot)? {
-        rustc::hash_from_version_string(&version, 1)
-    } else {
-        rustc::version_meta()?.commit_hash()
-    };
+impl QualifiedToolchain {
+    pub fn unique_toolchain_identifier(&self) -> Result<String> {
+        // try to get the commit hash for the currently toolchain, if possible
+        // if not, get the default rustc and use the path hash for uniqueness
+        let commit_hash = if let Some(version) = self.rustc_version_string()? {
+            rustc::hash_from_version_string(&version, 1)
+        } else {
+            rustc::version_meta()?.commit_hash()
+        };
 
-    let toolchain_name = sysroot
-        .file_name()
-        .expect("should be able to get toolchain name")
-        .to_utf8()?;
-    let toolchain_hash = path_hash(sysroot)?;
-    Ok(format!(
-        "cross-{toolchain_name}-{toolchain_hash}-{commit_hash}"
-    ))
+        let toolchain_name = self
+            .get_sysroot()
+            .file_name()
+            .expect("should be able to get toolchain name")
+            .to_utf8()?;
+        let toolchain_hash = path_hash(self.get_sysroot())?;
+        Ok(format!(
+            "cross-{toolchain_name}-{toolchain_hash}-{commit_hash}"
+        ))
+    }
 }
 
 // unique identifier for a given project
@@ -842,7 +856,7 @@ pub fn unique_container_identifier(
 
     let name = &package.name;
     let triple = target.triple();
-    let toolchain_id = unique_toolchain_identifier(&dirs.sysroot)?;
+    let toolchain_id = dirs.toolchain.unique_toolchain_identifier()?;
     let project_hash = path_hash(&package.manifest_path)?;
     Ok(format!("{toolchain_id}-{triple}-{name}-{project_hash}"))
 }
@@ -886,7 +900,7 @@ pub(crate) fn run(
     // this can happen if we didn't gracefully exit before
     // note that since we use `docker run --rm`, it's very
     // unlikely the container state existed before.
-    let toolchain_id = unique_toolchain_identifier(&dirs.sysroot)?;
+    let toolchain_id = dirs.toolchain.unique_toolchain_identifier()?;
     let container = unique_container_identifier(target, &paths.metadata, dirs)?;
     let volume = VolumeId::create(engine, &toolchain_id, msg_info)?;
     let state = container_state(engine, &container, msg_info)?;
@@ -906,6 +920,10 @@ pub(crate) fn run(
     // 3. create our start container command here
     let mut docker = subcommand(engine, "run");
     docker_userns(&mut docker);
+    options
+        .image
+        .platform
+        .specify_platform(&options.engine, &mut docker);
     docker.args(&["--name", &container]);
     docker.arg("--rm");
     let volume_mount = match volume {
@@ -943,14 +961,16 @@ pub(crate) fn run(
         docker.arg("-t");
     }
 
-    let mut image = options.image_name()?;
+    let mut image_name = options.image.name.clone();
+
     if options.needs_custom_image() {
-        image = options
+        image_name = options
             .custom_image_build(&paths, msg_info)
             .wrap_err("when building custom image")?;
     }
 
-    docker.arg(&image);
+    docker.arg(&image_name);
+
     if !is_tty {
         // ensure the process never exits until we stop it
         // we only need this infinite loop if we don't allocate
@@ -998,10 +1018,9 @@ pub(crate) fn run(
         copy_volume_container_rust(
             engine,
             &container,
-            &dirs.sysroot,
-            target,
+            &dirs.toolchain,
+            Some(target.target()),
             mount_prefix_path,
-            false,
             msg_info,
         )
         .wrap_err("when copying rust")?;
@@ -1010,8 +1029,8 @@ pub(crate) fn run(
         copy_volume_container_rust_triple(
             engine,
             &container,
-            &dirs.sysroot,
-            target.triple(),
+            &dirs.toolchain,
+            target.target(),
             mount_prefix_path,
             true,
             msg_info,
@@ -1045,11 +1064,11 @@ pub(crate) fn run(
         msg_info,
     )
     .wrap_err("when copying project")?;
-
+    let sysroot = dirs.get_sysroot().to_owned();
     let mut copied = vec![
         (&dirs.xargo, mount_prefix_path.join("xargo")),
         (&dirs.cargo, mount_prefix_path.join("cargo")),
-        (&dirs.sysroot, mount_prefix_path.join("rust")),
+        (&sysroot, mount_prefix_path.join("rust")),
         (&dirs.host_root, mount_root.clone()),
     ];
     let mut to_symlink = vec![];

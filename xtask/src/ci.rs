@@ -40,14 +40,19 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
             // Set labels
             let mut labels = vec![];
 
-            let image_title = match target.triplet.as_ref() {
-                "cross" => target.triplet.to_string(),
-                _ => format!("cross (for {})", target.triplet),
+            let image_title = match target.name.as_ref() {
+                "cross" => target.name.to_string(),
+                // TODO: Mention platform?
+                _ => format!("cross (for {})", target.name),
             };
             labels.push(format!("org.opencontainers.image.title={image_title}"));
             labels.push(format!(
                 "org.opencontainers.image.licenses={}",
                 cross_meta.license.as_deref().unwrap_or_default()
+            ));
+            labels.push(format!(
+                "org.opencontainers.image.created={}",
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
             ));
 
             gha_output("labels", &serde_json::to_string(&labels.join("\n"))?);
@@ -70,10 +75,10 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
             if target.has_ci_image() {
                 gha_output("has-image", "true")
             }
-            if target.is_default_test_image() {
+            if target.is_standard_target_image() {
                 gha_output("test-variant", "default")
             } else {
-                gha_output("test-variant", &target.triplet)
+                gha_output("test-variant", &target.name)
             }
         }
         CiJob::Check { ref_type, ref_name } => {

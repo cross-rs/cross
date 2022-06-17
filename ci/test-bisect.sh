@@ -13,7 +13,7 @@ fi
 ci_dir=$(dirname "${BASH_SOURCE[0]}")
 ci_dir=$(realpath "${ci_dir}")
 . "${ci_dir}"/shared.sh
-project_home=$(dirname "${ci_dir}")
+
 
 main() {
     local td=
@@ -22,7 +22,7 @@ main() {
     retry cargo fetch
     cargo build
     cargo install cargo-bisect-rustc --debug
-    export CROSS="${project_home}/target/debug/cross"
+    export CROSS="${PROJECT_HOME}/target/debug/cross"
 
     td="$(mktemp -d)"
     git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"

@@ -1,8 +1,8 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
 use clap::{CommandFactory, Parser, Subcommand};
-use cross::docker;
 use cross::shell::MessageInfo;
+use cross::{docker, rustc::Toolchain};
 
 mod commands;
 
@@ -11,7 +11,7 @@ mod commands;
 struct Cli {
     /// Toolchain name/version to use (such as stable or 1.59.0).
     #[clap(value_parser = is_toolchain)]
-    toolchain: Option<String>,
+    toolchain: Option<Toolchain>,
     #[clap(subcommand)]
     command: Commands,
 }
@@ -88,7 +88,7 @@ pub fn main() -> cross::Result<()> {
         Commands::Volumes(args) => {
             let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, args.docker_in_docker(), msg_info)?;
-            args.run(engine, cli.toolchain.as_deref(), &mut msg_info)?;
+            args.run(engine, cli.toolchain.as_ref(), &mut msg_info)?;
         }
         Commands::Containers(args) => {
             let mut msg_info = get_msg_info!(args)?;

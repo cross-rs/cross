@@ -30,27 +30,30 @@
 #[cfg(test)]
 mod tests;
 
-mod cargo;
-mod cli;
-mod config;
+pub mod cargo;
+pub mod cli;
+pub mod config;
 mod cross_toml;
 pub mod docker;
 pub mod errors;
 mod extensions;
-mod file;
+pub mod file;
 mod id;
 mod interpreter;
 pub mod rustc;
-mod rustup;
+pub mod rustup;
 pub mod shell;
 pub mod temp;
 
 use std::env;
-use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
+use cli::Args;
+use color_eyre::owo_colors::OwoColorize;
+use color_eyre::{Help, SectionExt};
 use config::Config;
+use rustc::{QualifiedToolchain, Toolchain};
 use rustc_version::Channel;
 use serde::{Deserialize, Serialize, Serializer};
 
@@ -67,8 +70,10 @@ pub use self::rustc::{TargetList, VersionMetaExt};
 pub const CROSS_LABEL_DOMAIN: &str = "org.cross-rs";
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Host {
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash, Serialize)]
+#[serde(from = "&str")]
+#[serde(rename_all = "snake_case")]
+pub enum TargetTriple {
     Other(String),
 
     // OSX
@@ -92,7 +97,75 @@ pub enum Host {
     X86_64PcWindowsMsvc,
 }
 
-impl Host {
+impl TargetTriple {
+    pub const DEFAULT: Self = Self::X86_64UnknownLinuxGnu;
+    /// Returns the architecture name according to `dpkg` naming convention
+    ///
+    /// # Notes
+    ///
+    /// Some of these make no sense to use in our standard images
+    pub fn deb_arch(&self) -> Option<&'static str> {
+        match self.triple() {
+            "aarch64-unknown-linux-gnu" => Some("arm64"),
+            "aarch64-unknown-linux-musl" => Some("musl-linux-arm64"),
+            "aarch64-linux-android" => None,
+            "x86_64-unknown-linux-gnu" => Some("amd64"),
+            "x86_64-apple-darwin" => Some("darwin-amd64"),
+            "x86_64-unknown-linux-musl" => Some("musl-linux-amd64"),
+
+            "x86_64-pc-windows-msvc" => None,
+            "arm-unknown-linux-gnueabi" => Some("armel"),
+            "arm-unknown-linux-gnueabihf" => Some("armhf"),
+            "armv7-unknown-linux-gnueabi" => Some("armel"),
+            "armv7-unknown-linux-gnueabihf" => Some("armhf"),
+            "thumbv7neon-unknown-linux-gnueabihf" => Some("armhf"),
+            "i586-unknown-linux-gnu" => Some("i386"),
+            "i686-unknown-linux-gnu" => Some("i386"),
+            "mips-unknown-linux-gnu" => Some("mips"),
+            "mipsel-unknown-linux-gnu" => Some("mipsel"),
+            "mips64-unknown-linux-gnuabi64" => Some("mips64"),
+            "mips64el-unknown-linux-gnuabi64" => Some("mips64el"),
+            "mips64-unknown-linux-muslabi64" => Some("musl-linux-mips64"),
+            "mips64el-unknown-linux-muslabi64" => Some("musl-linux-mips64el"),
+            "powerpc-unknown-linux-gnu" => Some("powerpc"),
+            "powerpc64-unknown-linux-gnu" => Some("ppc64"),
+            "powerpc64le-unknown-linux-gnu" => Some("ppc64el"),
+            "riscv64gc-unknown-linux-gnu" => Some("riscv64"),
+            "s390x-unknown-linux-gnu" => Some("s390x"),
+            "sparc64-unknown-linux-gnu" => Some("sparc64"),
+            "arm-unknown-linux-musleabihf" => Some("musl-linux-armhf"),
+            "arm-unknown-linux-musleabi" => Some("musl-linux-arm"),
+            "armv5te-unknown-linux-gnueabi" => None,
+            "armv5te-unknown-linux-musleabi" => None,
+            "armv7-unknown-linux-musleabi" => Some("musl-linux-arm"),
+            "armv7-unknown-linux-musleabihf" => Some("musl-linux-armhf"),
+            "i586-unknown-linux-musl" => Some("musl-linux-i386"),
+            "i686-unknown-linux-musl" => Some("musl-linux-i386"),
+            "mips-unknown-linux-musl" => Some("musl-linux-mips"),
+            "mipsel-unknown-linux-musl" => Some("musl-linux-mipsel"),
+            "arm-linux-androideabi" => None,
+            "armv7-linux-androideabi" => None,
+            "thumbv7neon-linux-androideabi" => None,
+            "i686-linux-android" => None,
+            "x86_64-linux-android" => None,
+            "x86_64-pc-windows-gnu" => None,
+            "i686-pc-windows-gnu" => None,
+            "asmjs-unknown-emscripten" => None,
+            "wasm32-unknown-emscripten" => None,
+            "x86_64-unknown-dragonfly" => Some("dragonflybsd-amd64"),
+            "i686-unknown-freebsd" => Some("freebsd-i386"),
+            "x86_64-unknown-freebsd" => Some("freebsd-amd64"),
+            "x86_64-unknown-netbsd" => Some("netbsd-amd64"),
+            "sparcv9-sun-solaris" => Some("solaris-sparc"),
+            "x86_64-sun-solaris" => Some("solaris-amd64"),
+            "thumbv6m-none-eabi" => Some("arm"),
+            "thumbv7em-none-eabi" => Some("arm"),
+            "thumbv7em-none-eabihf" => Some("armhf"),
+            "thumbv7m-none-eabi" => Some("arm"),
+            _ => None,
+        }
+    }
+
     /// Checks if this `(host, target)` pair is supported by `cross`
     ///
     /// `target == None` means `target == host`
@@ -104,17 +177,19 @@ impl Host {
             // Old behavior (up to cross version 0.2.1) can be activated on demand using environment
             // variable `CROSS_COMPATIBILITY_VERSION`.
             Ok("0.2.1") => match self {
-                Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => {
+                TargetTriple::X86_64AppleDarwin | TargetTriple::Aarch64AppleDarwin => {
                     target.map_or(false, |t| t.needs_docker())
                 }
-                Host::X86_64UnknownLinuxGnu
-                | Host::Aarch64UnknownLinuxGnu
-                | Host::X86_64UnknownLinuxMusl
-                | Host::Aarch64UnknownLinuxMusl => target.map_or(true, |t| t.needs_docker()),
-                Host::X86_64PcWindowsMsvc => target.map_or(false, |t| {
-                    t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()
+                TargetTriple::X86_64UnknownLinuxGnu
+                | TargetTriple::Aarch64UnknownLinuxGnu
+                | TargetTriple::X86_64UnknownLinuxMusl
+                | TargetTriple::Aarch64UnknownLinuxMusl => {
+                    target.map_or(true, |t| t.needs_docker())
+                }
+                TargetTriple::X86_64PcWindowsMsvc => target.map_or(false, |t| {
+                    t.triple() != TargetTriple::X86_64PcWindowsMsvc.triple() && t.needs_docker()
                 }),
-                Host::Other(_) => false,
+                TargetTriple::Other(_) => false,
             },
             // New behaviour, if a target is provided (--target ...) then always run with docker
             // image unless the target explicitly opts-out (i.e. unless needs_docker() returns false).
@@ -133,54 +208,85 @@ impl Host {
     /// Returns the [`Target`] as target triple string
     pub fn triple(&self) -> &str {
         match self {
-            Host::X86_64AppleDarwin => "x86_64-apple-darwin",
-            Host::Aarch64AppleDarwin => "aarch64-apple-darwin",
-            Host::X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
-            Host::Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
-            Host::X86_64UnknownLinuxMusl => "x86_64-unknown-linux-musl",
-            Host::Aarch64UnknownLinuxMusl => "aarch64-unknown-linux-musl",
-            Host::X86_64PcWindowsMsvc => "x86_64-pc-windows-msvc",
-            Host::Other(s) => s.as_str(),
+            TargetTriple::X86_64AppleDarwin => "x86_64-apple-darwin",
+            TargetTriple::Aarch64AppleDarwin => "aarch64-apple-darwin",
+            TargetTriple::X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
+            TargetTriple::Aarch64UnknownLinuxGnu => "aarch64-unknown-linux-gnu",
+            TargetTriple::X86_64UnknownLinuxMusl => "x86_64-unknown-linux-musl",
+            TargetTriple::Aarch64UnknownLinuxMusl => "aarch64-unknown-linux-musl",
+            TargetTriple::X86_64PcWindowsMsvc => "x86_64-pc-windows-msvc",
+            TargetTriple::Other(s) => s.as_str(),
         }
     }
 }
 
-impl<'a> From<&'a str> for Host {
-    fn from(s: &str) -> Host {
+impl<'a> From<&'a str> for TargetTriple {
+    fn from(s: &str) -> TargetTriple {
         match s {
-            "x86_64-apple-darwin" => Host::X86_64AppleDarwin,
-            "x86_64-unknown-linux-gnu" => Host::X86_64UnknownLinuxGnu,
-            "x86_64-unknown-linux-musl" => Host::X86_64UnknownLinuxMusl,
-            "x86_64-pc-windows-msvc" => Host::X86_64PcWindowsMsvc,
-            "aarch64-apple-darwin" => Host::Aarch64AppleDarwin,
-            "aarch64-unknown-linux-gnu" => Host::Aarch64UnknownLinuxGnu,
-            "aarch64-unknown-linux-musl" => Host::Aarch64UnknownLinuxMusl,
-            s => Host::Other(s.to_owned()),
+            "x86_64-apple-darwin" => TargetTriple::X86_64AppleDarwin,
+            "x86_64-unknown-linux-gnu" => TargetTriple::X86_64UnknownLinuxGnu,
+            "x86_64-unknown-linux-musl" => TargetTriple::X86_64UnknownLinuxMusl,
+            "x86_64-pc-windows-msvc" => TargetTriple::X86_64PcWindowsMsvc,
+            "aarch64-apple-darwin" => TargetTriple::Aarch64AppleDarwin,
+            "aarch64-unknown-linux-gnu" => TargetTriple::Aarch64UnknownLinuxGnu,
+            "aarch64-unknown-linux-musl" => TargetTriple::Aarch64UnknownLinuxMusl,
+            s => TargetTriple::Other(s.to_owned()),
         }
+    }
+}
+
+impl std::str::FromStr for TargetTriple {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(s.into())
+    }
+}
+
+impl std::fmt::Display for TargetTriple {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.triple())
+    }
+}
+
+impl From<String> for TargetTriple {
+    fn from(s: String) -> TargetTriple {
+        s.as_str().into()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 #[serde(from = "String")]
 pub enum Target {
-    BuiltIn { triple: String },
-    Custom { triple: String },
+    BuiltIn { triple: TargetTriple },
+    Custom { triple: TargetTriple },
 }
 
 impl Target {
+    pub const DEFAULT: Self = Self::BuiltIn {
+        triple: TargetTriple::DEFAULT,
+    };
+
     fn new_built_in(triple: &str) -> Self {
         Target::BuiltIn {
-            triple: triple.to_owned(),
+            triple: triple.into(),
         }
     }
 
     fn new_custom(triple: &str) -> Self {
         Target::Custom {
-            triple: triple.to_owned(),
+            triple: triple.into(),
         }
     }
 
-    fn triple(&self) -> &str {
+    pub fn triple(&self) -> &str {
+        match *self {
+            Target::BuiltIn { ref triple } => triple.triple(),
+            Target::Custom { ref triple } => triple.triple(),
+        }
+    }
+
+    pub fn target(&self) -> &TargetTriple {
         match *self {
             Target::BuiltIn { ref triple } => triple,
             Target::Custom { ref triple } => triple,
@@ -259,73 +365,6 @@ impl Target {
 
         arch_32bit && self.is_android()
     }
-
-    /// Returns the architecture name according to `dpkg` naming convention
-    ///
-    /// # Notes
-    ///
-    /// Some of these make no sense to use in our standard images
-    pub fn deb_arch(&self) -> Option<&'static str> {
-        match self.triple() {
-            "aarch64-unknown-linux-gnu" => Some("arm64"),
-            "aarch64-unknown-linux-musl" => Some("musl-linux-arm64"),
-            "aarch64-linux-android" => None,
-            "x86_64-unknown-linux-gnu" => Some("amd64"),
-            "x86_64-apple-darwin" => Some("darwin-amd64"),
-            "x86_64-unknown-linux-musl" => Some("musl-linux-amd64"),
-
-            "x86_64-pc-windows-msvc" => None,
-            "arm-unknown-linux-gnueabi" => Some("armel"),
-            "arm-unknown-linux-gnueabihf" => Some("armhf"),
-            "armv7-unknown-linux-gnueabi" => Some("armel"),
-            "armv7-unknown-linux-gnueabihf" => Some("armhf"),
-            "thumbv7neon-unknown-linux-gnueabihf" => Some("armhf"),
-            "i586-unknown-linux-gnu" => Some("i386"),
-            "i686-unknown-linux-gnu" => Some("i386"),
-            "mips-unknown-linux-gnu" => Some("mips"),
-            "mipsel-unknown-linux-gnu" => Some("mipsel"),
-            "mips64-unknown-linux-gnuabi64" => Some("mips64"),
-            "mips64el-unknown-linux-gnuabi64" => Some("mips64el"),
-            "mips64-unknown-linux-muslabi64" => Some("musl-linux-mips64"),
-            "mips64el-unknown-linux-muslabi64" => Some("musl-linux-mips64el"),
-            "powerpc-unknown-linux-gnu" => Some("powerpc"),
-            "powerpc64-unknown-linux-gnu" => Some("ppc64"),
-            "powerpc64le-unknown-linux-gnu" => Some("ppc64el"),
-            "riscv64gc-unknown-linux-gnu" => Some("riscv64"),
-            "s390x-unknown-linux-gnu" => Some("s390x"),
-            "sparc64-unknown-linux-gnu" => Some("sparc64"),
-            "arm-unknown-linux-musleabihf" => Some("musl-linux-armhf"),
-            "arm-unknown-linux-musleabi" => Some("musl-linux-arm"),
-            "armv5te-unknown-linux-gnueabi" => None,
-            "armv5te-unknown-linux-musleabi" => None,
-            "armv7-unknown-linux-musleabi" => Some("musl-linux-arm"),
-            "armv7-unknown-linux-musleabihf" => Some("musl-linux-armhf"),
-            "i586-unknown-linux-musl" => Some("musl-linux-i386"),
-            "i686-unknown-linux-musl" => Some("musl-linux-i386"),
-            "mips-unknown-linux-musl" => Some("musl-linux-mips"),
-            "mipsel-unknown-linux-musl" => Some("musl-linux-mipsel"),
-            "arm-linux-androideabi" => None,
-            "armv7-linux-androideabi" => None,
-            "thumbv7neon-linux-androideabi" => None,
-            "i686-linux-android" => None,
-            "x86_64-linux-android" => None,
-            "x86_64-pc-windows-gnu" => None,
-            "i686-pc-windows-gnu" => None,
-            "asmjs-unknown-emscripten" => None,
-            "wasm32-unknown-emscripten" => None,
-            "x86_64-unknown-dragonfly" => Some("dragonflybsd-amd64"),
-            "i686-unknown-freebsd" => Some("freebsd-i386"),
-            "x86_64-unknown-freebsd" => Some("freebsd-amd64"),
-            "x86_64-unknown-netbsd" => Some("netbsd-amd64"),
-            "sparcv9-sun-solaris" => Some("solaris-sparc"),
-            "x86_64-sun-solaris" => Some("solaris-amd64"),
-            "thumbv6m-none-eabi" => Some("arm"),
-            "thumbv7em-none-eabi" => Some("arm"),
-            "thumbv7em-none-eabihf" => Some("armhf"),
-            "thumbv7m-none-eabi" => Some("arm"),
-            _ => None,
-        }
-    }
 }
 
 impl std::fmt::Display for Target {
@@ -344,17 +383,23 @@ impl Target {
     }
 }
 
-impl From<Host> for Target {
-    fn from(host: Host) -> Target {
+impl From<TargetTriple> for Target {
+    fn from(host: TargetTriple) -> Target {
         match host {
-            Host::X86_64UnknownLinuxGnu => Target::new_built_in("x86_64-unknown-linux-gnu"),
-            Host::X86_64UnknownLinuxMusl => Target::new_built_in("x86_64-unknown-linux-musl"),
-            Host::X86_64AppleDarwin => Target::new_built_in("x86_64-apple-darwin"),
-            Host::X86_64PcWindowsMsvc => Target::new_built_in("x86_64-pc-windows-msvc"),
-            Host::Aarch64AppleDarwin => Target::new_built_in("aarch64-apple-darwin"),
-            Host::Aarch64UnknownLinuxGnu => Target::new_built_in("aarch64-unknown-linux-gnu"),
-            Host::Aarch64UnknownLinuxMusl => Target::new_built_in("aarch64-unknown-linux-musl"),
-            Host::Other(s) => Target::from(
+            TargetTriple::X86_64UnknownLinuxGnu => Target::new_built_in("x86_64-unknown-linux-gnu"),
+            TargetTriple::X86_64UnknownLinuxMusl => {
+                Target::new_built_in("x86_64-unknown-linux-musl")
+            }
+            TargetTriple::X86_64AppleDarwin => Target::new_built_in("x86_64-apple-darwin"),
+            TargetTriple::X86_64PcWindowsMsvc => Target::new_built_in("x86_64-pc-windows-msvc"),
+            TargetTriple::Aarch64AppleDarwin => Target::new_built_in("aarch64-apple-darwin"),
+            TargetTriple::Aarch64UnknownLinuxGnu => {
+                Target::new_built_in("aarch64-unknown-linux-gnu")
+            }
+            TargetTriple::Aarch64UnknownLinuxMusl => {
+                Target::new_built_in("aarch64-unknown-linux-musl")
+            }
+            TargetTriple::Other(s) => Target::from(
                 s.as_str(),
                 &rustc::target_list(&mut Verbosity::Quiet.into())
                     .expect("should be able to query rustc"),
@@ -365,21 +410,22 @@ impl From<Host> for Target {
 
 impl From<String> for Target {
     fn from(target_str: String) -> Target {
-        let target_host: Host = target_str.as_str().into();
+        let target_host: TargetTriple = target_str.as_str().into();
         target_host.into()
     }
 }
 
 impl Serialize for Target {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match self {
-            Target::BuiltIn { triple } => serializer.serialize_str(triple),
-            Target::Custom { triple } => serializer.serialize_str(triple),
-        }
+        serializer.serialize_str(self.triple())
     }
 }
 
-fn warn_on_failure(target: &Target, toolchain: &str, msg_info: &mut MessageInfo) -> Result<()> {
+fn warn_on_failure(
+    target: &Target,
+    toolchain: &QualifiedToolchain,
+    msg_info: &mut MessageInfo,
+) -> Result<()> {
     let rust_std = format!("rust-std-{target}");
     if target.is_builtin() {
         let component = rustup::check_component(&rust_std, toolchain, msg_info)?;
@@ -395,12 +441,11 @@ fn warn_on_failure(target: &Target, toolchain: &str, msg_info: &mut MessageInfo)
     }
     Ok(())
 }
-
-pub fn run() -> Result<ExitStatus> {
-    let target_list = rustc::target_list(&mut Verbosity::Quiet.into())?;
-    let args = cli::parse(&target_list)?;
-    let mut msg_info = shell::MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
-
+pub fn run(
+    args: Args,
+    target_list: TargetList,
+    msg_info: &mut MessageInfo,
+) -> Result<Option<ExitStatus>> {
     if args.version && args.subcommand.is_none() {
         let commit_info = include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt"));
         msg_info.print(format!(
@@ -410,54 +455,110 @@ pub fn run() -> Result<ExitStatus> {
     }
 
     let host_version_meta = rustc::version_meta()?;
+
     let cwd = std::env::current_dir()?;
-    if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), &mut msg_info)? {
+    if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), msg_info)? {
         let host = host_version_meta.host();
-        let toml = toml(&metadata, &mut msg_info)?;
+        let toml = toml(&metadata, msg_info)?;
         let config = Config::new(toml);
         let target = args
             .target
             .or_else(|| config.target(&target_list))
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
-        config.confusable_target(&target, &mut msg_info)?;
+        config.confusable_target(&target, msg_info)?;
 
-        let image_exists = match docker::image_name(&config, &target) {
-            Ok(_) => true,
+        // Get the image we're supposed to base all our next actions on.
+        // The image we actually run in might get changed with
+        // `target.{{TARGET}}.dockerfile` or `target.{{TARGET}}.pre-build`
+        let image = match docker::get_image(&config, &target) {
+            Ok(i) => i,
             Err(err) => {
                 msg_info.warn(err)?;
-                false
+
+                return Ok(None);
             }
         };
 
-        if image_exists && host.is_supported(Some(&target)) {
-            let (toolchain, sysroot) =
-                rustc::get_sysroot(&host, &target, args.channel.as_deref(), &mut msg_info)?;
-            let mut is_nightly = toolchain.contains("nightly");
+        // Grab the current toolchain, this might be the one we mount in the image later
+        let default_toolchain = QualifiedToolchain::default(&config, msg_info)?;
 
-            let installed_toolchains = rustup::installed_toolchains(&mut msg_info)?;
+        // `cross +channel`, where channel can be `+channel[-YYYY-MM-DD]`
+        let mut toolchain = if let Some(channel) = args.channel {
+            let picked_toolchain: Toolchain = channel.parse()?;
 
-            if !installed_toolchains.into_iter().any(|t| t == toolchain) {
-                rustup::install_toolchain(&toolchain, &mut msg_info)?;
+            if let Some(picked_host) = &picked_toolchain.host {
+                return Err(eyre::eyre!("the specified toolchain `{picked_toolchain}` can't be used"))
+                    .with_suggestion(|| {
+                        format!(
+                            "try `cross +{}` instead",
+                            Toolchain {
+                                host: None,
+                                ..picked_toolchain
+                            }
+                        )
+                    }).with_section(|| format!(
+r#"Overriding the toolchain in cross is only possible in CLI by specifying a channel and optional date: `+channel[-YYYY-MM-DD]`.
+To override the toolchain mounted in the image, set `target.{}.image.toolchain = "{picked_host}"`"#, target).header("Note:".bright_cyan()));
             }
-            // TODO: Provide a way to pick/match the toolchain version as a consumer of `cross`.
-            if let Some((rustc_version, channel, rustc_commit)) = rustup::rustc_version(&sysroot)? {
-                warn_host_version_mismatch(
-                    &host_version_meta,
-                    &toolchain,
-                    &rustc_version,
-                    &rustc_commit,
-                    &mut msg_info,
-                )?;
+
+            default_toolchain.with_picked(&config, picked_toolchain, msg_info)?
+        } else {
+            default_toolchain
+        };
+
+        let is_remote = docker::Engine::is_remote();
+        let engine = docker::Engine::new(None, Some(is_remote), msg_info)?;
+
+        let image = image.to_definite_with(&engine, msg_info);
+
+        toolchain.replace_host(&image.platform);
+
+        if image.platform.target.is_supported(Some(&target)) {
+            if image.platform.architecture != toolchain.host().architecture {
+                msg_info.warn(format_args!(
+                    "toolchain `{toolchain}` may not run on image `{image}`"
+                ))?;
+            }
+            // set the sysroot explicitly to the toolchain
+            let mut is_nightly = toolchain.channel.contains("nightly");
+
+            let installed_toolchains = rustup::installed_toolchains(msg_info)?;
+
+            if !installed_toolchains
+                .into_iter()
+                .any(|t| t == toolchain.to_string())
+            {
+                rustup::install_toolchain(&toolchain, msg_info)?;
+            }
+            let available_targets = if !toolchain.is_custom {
+                rustup::available_targets(&toolchain.full, msg_info)?
+            } else {
+                rustup::AvailableTargets {
+                    default: String::new(),
+                    installed: vec![],
+                    not_installed: vec![],
+                }
+            };
+
+            if let Some((rustc_version, channel, rustc_commit)) = toolchain.rustc_version()? {
+                if toolchain.date.is_none() {
+                    warn_host_version_mismatch(
+                        &host_version_meta,
+                        &toolchain,
+                        &rustc_version,
+                        &rustc_commit,
+                        msg_info,
+                    )?;
+                }
                 is_nightly = channel == Channel::Nightly;
             }
 
             let uses_build_std = config.build_std(&target).unwrap_or(false);
             let uses_xargo =
                 !uses_build_std && config.xargo(&target).unwrap_or(!target.is_builtin());
-            if !config.custom_toolchain() {
+            if !toolchain.is_custom {
                 // build-std overrides xargo, but only use it if it's a built-in
                 // tool but not an available target or doesn't have rust-std.
-                let available_targets = rustup::available_targets(&toolchain, &mut msg_info)?;
 
                 if !is_nightly && uses_build_std {
                     eyre::bail!(
@@ -470,14 +571,14 @@ pub fn run() -> Result<ExitStatus> {
                     && !available_targets.is_installed(&target)
                     && available_targets.contains(&target)
                 {
-                    rustup::install(&target, &toolchain, &mut msg_info)?;
-                } else if !rustup::component_is_installed("rust-src", &toolchain, &mut msg_info)? {
-                    rustup::install_component("rust-src", &toolchain, &mut msg_info)?;
+                    rustup::install(&target, &toolchain, msg_info)?;
+                } else if !rustup::component_is_installed("rust-src", &toolchain, msg_info)? {
+                    rustup::install_component("rust-src", &toolchain, msg_info)?;
                 }
                 if args.subcommand.map_or(false, |sc| sc == Subcommand::Clippy)
-                    && !rustup::component_is_installed("clippy", &toolchain, &mut msg_info)?
+                    && !rustup::component_is_installed("clippy", &toolchain, msg_info)?
                 {
-                    rustup::install_component("clippy", &toolchain, &mut msg_info)?;
+                    rustup::install_component("clippy", &toolchain, msg_info)?;
                 }
             }
 
@@ -517,55 +618,34 @@ pub fn run() -> Result<ExitStatus> {
                 filtered_args.push("-Zbuild-std".to_owned());
             }
 
-            let is_remote = docker::Engine::is_remote();
             let needs_docker = args
                 .subcommand
                 .map_or(false, |sc| sc.needs_docker(is_remote));
             if target.needs_docker() && needs_docker {
-                let engine = docker::Engine::new(None, Some(is_remote), &mut msg_info)?;
                 if host_version_meta.needs_interpreter()
                     && needs_interpreter
                     && target.needs_interpreter()
                     && !interpreter::is_registered(&target)?
                 {
-                    docker::register(&engine, &target, &mut msg_info)?;
+                    docker::register(&engine, &target, msg_info)?;
                 }
 
-                let paths = docker::DockerPaths::create(&engine, metadata, cwd, sysroot)?;
+                let paths = docker::DockerPaths::create(&engine, metadata, cwd, toolchain.clone())?;
                 let options =
-                    docker::DockerOptions::new(engine, target.clone(), config, uses_xargo);
-                let status = docker::run(options, paths, &filtered_args, &mut msg_info)
+                    docker::DockerOptions::new(engine, target.clone(), config, image, uses_xargo);
+                let status = docker::run(options, paths, &filtered_args, msg_info)
                     .wrap_err("could not run container")?;
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
                 if !status.success() {
-                    warn_on_failure(&target, &toolchain, &mut msg_info)?;
+                    warn_on_failure(&target, &toolchain, msg_info)?;
                 }
                 if !(status.success() && needs_host) {
-                    return Ok(status);
+                    return Ok(Some(status));
                 }
             }
         }
     }
-
-    // if we fallback to the host cargo, use the same invocation that was made to cross
-    let argv: Vec<String> = env::args().skip(1).collect();
-    msg_info.note("Falling back to `cargo` on the host.")?;
-    match args.subcommand {
-        Some(Subcommand::List) => {
-            // this won't print in order if we have both stdout and stderr.
-            let out = cargo::run_and_get_output(&argv, &mut msg_info)?;
-            let stdout = out.stdout()?;
-            if out.status.success() && cli::is_subcommand_list(&stdout) {
-                cli::fmt_subcommands(&stdout, &mut msg_info)?;
-            } else {
-                // Not a list subcommand, which can happen with weird edge-cases.
-                print!("{}", stdout);
-                io::stdout().flush().expect("could not flush");
-            }
-            Ok(out.status)
-        }
-        _ => cargo::run(&argv, &mut msg_info).map_err(Into::into),
-    }
+    Ok(None)
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -578,7 +658,7 @@ pub(crate) enum VersionMatch {
 
 pub(crate) fn warn_host_version_mismatch(
     host_version_meta: &rustc_version::VersionMeta,
-    toolchain: &str,
+    toolchain: &QualifiedToolchain,
     rustc_version: &rustc_version::Version,
     rustc_commit: &str,
     msg_info: &mut MessageInfo,
@@ -588,7 +668,6 @@ pub(crate) fn warn_host_version_mismatch(
         .split_once(' ')
         .and_then(|x| x.1.strip_suffix(')'));
 
-    // This should only hit on non Host::X86_64UnknownLinuxGnu hosts
     if rustc_version != &host_version_meta.semver || (Some(rustc_commit) != host_commit) {
         let versions = rustc_version.cmp(&host_version_meta.semver);
         let dates = rustc_commit_date.cmp(&host_version_meta.commit_date.as_deref());

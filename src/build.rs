@@ -1,7 +1,7 @@
 use std::env;
 use std::error::Error;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -22,11 +22,6 @@ fn main() {
     File::create(out_dir.join("commit-info.txt"))
         .unwrap()
         .write_all(commit_info().as_bytes())
-        .unwrap();
-
-    File::create(out_dir.join("docker-images.rs"))
-        .unwrap()
-        .write_all(docker_images().as_bytes())
         .unwrap();
 }
 
@@ -59,27 +54,4 @@ fn commit_date() -> Result<String, Some> {
     } else {
         Err(Some {})
     }
-}
-
-fn docker_images() -> String {
-    let mut images = String::from("[");
-    let mut dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
-    dir.push("docker");
-
-    let dir = dir.read_dir().unwrap();
-    let mut paths = dir.collect::<io::Result<Vec<_>>>().unwrap();
-    paths.sort_by_key(|e| e.path());
-
-    for entry in paths {
-        let path = entry.path();
-        let file_name = path.file_name().unwrap().to_str().unwrap();
-        if file_name.starts_with("Dockerfile.") {
-            images.push('"');
-            images.push_str(&file_name.replacen("Dockerfile.", "", 1));
-            images.push_str("\", ");
-        }
-    }
-
-    images.push(']');
-    images
 }

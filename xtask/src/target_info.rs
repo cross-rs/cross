@@ -51,7 +51,7 @@ fn image_info(
     let mut command = docker::command(engine);
     command.arg("run");
     command.arg("--rm");
-    command.args(&["-e", &format!("TARGET={}", target.triplet)]);
+    command.args(&["-e", &format!("TARGET={}", target.name)]);
     if msg_info.is_verbose() {
         command.args(&["-e", "VERBOSE=1"]);
     }

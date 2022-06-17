@@ -1,0 +1,10 @@
+[
+  {
+    "description": "Images can now specify a certain toolchain via `target.{target}.image.toolchain`",
+    "type": "changed"
+  },
+  {
+    "description": "made `cross +channel` parsing more compliant to parsing a toolchain",
+    "type": "fixed"
+  }
+]

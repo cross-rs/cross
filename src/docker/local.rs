@@ -22,6 +22,11 @@ pub(crate) fn run(
 
     let mut docker = subcommand(engine, "run");
     docker_userns(&mut docker);
+
+    options
+        .image
+        .platform
+        .specify_platform(&options.engine, &mut docker);
     docker_envvars(&mut docker, &options.config, &options.target, msg_info)?;
 
     docker_mount(
@@ -48,7 +53,10 @@ pub(crate) fn run(
         &format!("{}:{}:Z", dirs.host_root.to_utf8()?, dirs.mount_root),
     ]);
     docker
-        .args(&["-v", &format!("{}:/rust:Z,ro", dirs.sysroot.to_utf8()?)])
+        .args(&[
+            "-v",
+            &format!("{}:/rust:Z,ro", paths.get_sysroot().to_utf8()?),
+        ])
         .args(&["-v", &format!("{}:/target:Z", dirs.target.to_utf8()?)]);
     docker_cwd(&mut docker, &paths)?;
 
@@ -67,15 +75,15 @@ pub(crate) fn run(
             docker.arg("-t");
         }
     }
-    let mut image = options.image_name()?;
+    let mut image_name = options.image.name.clone();
     if options.needs_custom_image() {
-        image = options
+        image_name = options
             .custom_image_build(&paths, msg_info)
             .wrap_err("when building custom image")?;
     }
 
     docker
-        .arg(&image)
+        .arg(&image_name)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
         .run_and_get_status(msg_info, false)
         .map_err(Into::into)

@@ -341,7 +341,6 @@ jobs:
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
-        id: remote-cov
         uses: ./.github/actions/cargo-llvm-cov
         with:
           name: integration-remote
@@ -361,7 +360,6 @@ jobs:
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
-        id: bisect-cov
         uses: ./.github/actions/cargo-llvm-cov
         with:
           name: integration-bisect
@@ -370,6 +368,23 @@ jobs:
         env:
           TARGET: aarch64-unknown-linux-gnu
         run: ./ci/test-bisect.sh
+        shell: bash
+
+  foreign:
+    needs: [shellcheck, test, check]
+    runs-on: ubuntu-latest
+    if: github.actor == 'bors[bot]'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: LLVM instrument coverage
+        uses: ./.github/actions/cargo-llvm-cov
+        with:
+          name: integration-bisect
+
+      - name: Run Foreign toolchain test
+        run: ./ci/test-foreign-toolchain.sh
         shell: bash
 
   docker-in-docker:
@@ -381,7 +396,6 @@ jobs:
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
-        id: docker-in-docker-cov
         uses: ./.github/actions/cargo-llvm-cov
         with:
           name: integration-docker-in-docker
@@ -405,7 +419,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker]
+    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker, foreign]
     if: always()
     runs-on: ubuntu-latest
     steps:

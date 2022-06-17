@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1004
+# shellcheck disable=SC1004,SC1091,SC1090
 
 # test to see that running docker-in-docker works
 
@@ -18,17 +18,17 @@ if [[ "${IMAGE}" ]]; then
     export "CROSS_TARGET_${TARGET_UPPER//-/_}_IMAGE"="${IMAGE}"
 fi
 
-source=$(dirname "${BASH_SOURCE[0]}")
-source=$(realpath "${source}")
-home=$(dirname "${source}")
+ci_dir=$(dirname "${BASH_SOURCE[0]}")
+ci_dir=$(realpath "${ci_dir}")
+. "${ci_dir}"/shared.sh
 
 main() {
-    docker run -v "${home}":"${home}" -w "${home}" \
+    docker run -v "${PROJECT_HOME}":"${PROJECT_HOME}" -w "${PROJECT_HOME}" \
         --rm -e TARGET -e RUSTFLAGS -e RUST_TEST_THREADS \
         -e LLVM_PROFILE_FILE -e CARGO_INCREMENTAL \
         -e "CROSS_TARGET_${TARGET_UPPER//-/_}_IMAGE" \
         -v /var/run/docker.sock:/var/run/docker.sock \
-        docker:18.09-dind sh -c '
+        docker:20.10-dind sh -c '
 #!/usr/bin/env sh
 set -x
 set -euo pipefail
