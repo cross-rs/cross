@@ -4,6 +4,7 @@ pub mod build_docker_image;
 pub mod ci;
 pub mod hooks;
 pub mod install_git_hooks;
+pub mod readelf;
 pub mod target_info;
 pub mod util;
 
@@ -16,6 +17,7 @@ use util::ImageTarget;
 use self::build_docker_image::BuildDockerImage;
 use self::hooks::{Check, Test};
 use self::install_git_hooks::InstallGitHooks;
+use self::readelf::Readelf;
 use self::target_info::TargetInfo;
 
 #[derive(Parser, Debug)]
@@ -40,6 +42,8 @@ enum Commands {
     Check(Check),
     /// Run unittest suite.
     Test(Test),
+    /// Read target architecture information from compiled binary.
+    Readelf(Readelf),
     /// CI tasks
     #[clap(subcommand, hide = true)]
     CiJob(CiJob),
@@ -73,6 +77,10 @@ pub fn main() -> cross::Result<()> {
         }
         Commands::Test(args) => {
             hooks::test(args, cli.toolchain.as_deref())?;
+        }
+        Commands::Readelf(args) => {
+            let engine = get_container_engine(args.engine.as_deref())?;
+            readelf::readelf(args, &engine)?;
         }
         Commands::CiJob(args) => ci::ci(args)?,
     }

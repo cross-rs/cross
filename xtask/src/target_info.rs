@@ -4,6 +4,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+use crate::util::{format_repo, pull_image};
 use clap::Args;
 use cross::CommandExt;
 
@@ -32,30 +33,6 @@ pub struct TargetInfo {
     pub engine: Option<String>,
 }
 
-fn format_repo(registry: &str, repository: &str) -> String {
-    let mut output = String::new();
-    if !repository.is_empty() {
-        output = repository.to_string();
-    }
-    if !registry.is_empty() {
-        output = format!("{registry}/{output}");
-    }
-
-    output
-}
-
-fn pull_image(engine: &Path, image: &str, verbose: bool) -> cross::Result<()> {
-    let mut command = Command::new(engine);
-    command.arg("pull");
-    command.arg(image);
-    if !verbose {
-        // capture output to avoid polluting table
-        command.stdout(Stdio::null());
-        command.stderr(Stdio::null());
-    }
-    command.run(verbose, false).map_err(Into::into)
-}
-
 fn image_info(
     engine: &Path,
     target: &crate::ImageTarget,
@@ -70,7 +47,6 @@ fn image_info(
 
     let mut command = Command::new(engine);
     command.arg("run");
-    command.arg("-it");
     command.arg("--rm");
     command.args(&["-e", &format!("TARGET={}", target.triplet)]);
     if has_test {

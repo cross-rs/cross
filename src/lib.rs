@@ -27,7 +27,7 @@ mod extensions;
 mod file;
 mod id;
 mod interpreter;
-mod rustc;
+pub mod rustc;
 mod rustup;
 
 use std::env;
@@ -163,7 +163,7 @@ impl Target {
         }
     }
 
-    fn triple(&self) -> &str {
+    pub fn triple(&self) -> &str {
         match *self {
             Target::BuiltIn { ref triple } => triple,
             Target::Custom { ref triple } => triple,
