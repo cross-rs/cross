@@ -62,6 +62,13 @@ max_glibc_version() {
     echo "${major}.${minor}"
 }
 
+readelf_all() {
+    # weirdly, readelf -a can produce a non-zero error code.
+    set +e
+    readelf -a "$1"
+    set -e
+}
+
 # output variables
 libc=
 cc=
@@ -256,7 +263,7 @@ case "${target}" in
         # The output follows:
         #  NetBSD                0x00000004      IDENT 902000000 (9.2.0)
         libdir="/usr/local/${target}/lib"
-        version=$(readelf -a "${libdir}"/libc.so | grep NetBSD | head -n 1)
+        version=$(readelf_all "${libdir}"/libc.so | grep NetBSD | head -n 1)
         if [[ "${version}" =~ .+" ("([0-9]+)"."([0-9]+)"."([0-9]+)")" ]]; then
             major_version="${BASH_REMATCH[1]}"
             minor_version="${BASH_REMATCH[2]}"
@@ -285,13 +292,13 @@ case "${target}" in
         pkg=$(dpkg --get-selections | grep -v deinstall | grep newlib | head -n 1)
         pkg=$(echo "${pkg}" | cut -f 1)
         version=$(dpkg-query --showformat='${Version}' --show "${pkg}")
-        if [[ "${version}" =~ ([0-9]+)"."([0-9]+)"."([0-9]+)"+".* ]]; then
+        if [[ "${version}" =~ ([0-9]+)"."([0-9]+)"."([0-9]+)[^0-9].* ]]; then
             major_version="${BASH_REMATCH[1]}"
             minor_version="${BASH_REMATCH[2]}"
             patch_version="${BASH_REMATCH[3]}"
             libc="${major_version}.${minor_version}.${patch_version}"
         else
-            echo "Unable to get libc version for ${target}: invalid NetBSD release found." 1>&2
+            echo "Unable to get libc version for ${target}: invalid THUMB release found." 1>&2
             exit 1
         fi
         ;;

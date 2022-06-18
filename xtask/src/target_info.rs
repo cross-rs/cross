@@ -75,6 +75,8 @@ fn image_info(
     command.args(&["-e", &format!("TARGET={}", target.triplet)]);
     if has_test {
         command.args(&["-e", "HAS_TEST=1"]);
+    } else {
+        command.args(&["-e", "HAS_TEST="]);
     }
     command.arg(image);
     command.args(&["bash", "-c", TARGET_INFO_SCRIPT]);
