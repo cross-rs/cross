@@ -14,6 +14,7 @@ pub struct BuildDockerImage {
     /// Specify a tag to use instead of the derived one, eg `local`
     #[clap(long)]
     tag: Option<String>,
+    /// Repository name for image.
     #[clap(long, default_value = cross::docker::CROSS_IMAGE)]
     repository: String,
     /// Newline separated labels
@@ -22,28 +23,35 @@ pub struct BuildDockerImage {
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
     verbose: bool,
+    /// Print but do not execute the build commands.
     #[clap(long)]
     dry_run: bool,
-    #[clap(long)]
+    /// Force a push when `--push` is set, but not `--tag`
+    #[clap(long, hide = true)]
     force: bool,
+    /// Push build to registry.
     #[clap(short, long)]
     push: bool,
     /// Set output to /dev/null
     #[clap(short, long)]
     no_output: bool,
+    /// Docker build progress output type.
     #[clap(
         long,
         value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]), 
         default_value = "auto"
     )]
     progress: String,
+    /// Do not load from cache when building the image.
     #[clap(long)]
     no_cache: bool,
+    /// Continue building images even if an image fails to build.
     #[clap(long)]
     no_fastfail: bool,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
+    /// If no target list is provided, parse list from CI.
     #[clap(long)]
     from_ci: bool,
     /// Targets to build for
