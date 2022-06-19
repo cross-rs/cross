@@ -1,3 +1,7 @@
+use std::path::Path;
+use std::process::Command;
+
+use cross::CommandExt;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
@@ -66,6 +70,27 @@ pub fn get_matrix() -> &'static Vec<Matrix> {
             serde_yaml::from_str(matrix).map_err(Into::into)
         })
         .unwrap()
+}
+
+pub fn format_repo(registry: &str, repository: &str) -> String {
+    let mut output = String::new();
+    if !repository.is_empty() {
+        output = repository.to_string();
+    }
+    if !registry.is_empty() {
+        output = format!("{registry}/{output}");
+    }
+
+    output
+}
+
+pub fn pull_image(engine: &Path, image: &str, verbose: bool) -> cross::Result<()> {
+    let mut command = Command::new(engine);
+    command.arg("pull");
+    command.arg(image);
+    let out = command.run_and_get_output(verbose)?;
+    command.status_result(verbose, out.status, Some(&out))?;
+    Ok(())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
