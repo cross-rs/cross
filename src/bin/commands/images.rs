@@ -200,6 +200,7 @@ fn remove_images(
     } else if execute {
         command.run(verbose, false).map_err(Into::into)
     } else {
+        eprintln!("note: this is a dry run. to remove the images, pass the `--execute` flag.");
         command.print_verbose(true);
         Ok(())
     }
