@@ -22,4 +22,9 @@ jobs:
         run: cargo build -p xtask
       - name: Build Docker image
         id: build-docker-image
-        run: cargo xtask build-docker-image -v --no-cache --no-output --from-ci --tag weekly
+        run: cargo xtask build-docker-image -v --no-cache --no-output --from-ci --no-fastfail --tag weekly
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: EmbarkStudios/cargo-deny-action@v1

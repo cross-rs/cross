@@ -1,0 +1,34 @@
+
+# only check for the targets we currently publish
+targets = [
+  { triple = "x86_64-apple-darwin" },
+  { triple = "x86_64-unknown-linux-gnu" },
+  { triple = "x86_64-unknown-linux-musl" },
+  { triple = "x86_64-pc-windows-msvc" },
+]
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+notice = "deny"
+unsound = "deny"
+ignore = []
+
+[bans]
+multiple-versions = "deny"
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = []
+
+[licenses]
+unlicensed = "deny"
+allow-osi-fsf-free = "neither"
+copyleft = "deny"
+confidence-threshold = 0.93
+allow = ["Apache-2.0", "MIT", "CC0-1.0"]
+
+[licenses.private]
+ignore = true
