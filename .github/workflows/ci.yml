@@ -301,6 +301,7 @@ jobs:
       - uses: ./.github/actions/cargo-publish
         with:
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   conclusion:
     needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish]
