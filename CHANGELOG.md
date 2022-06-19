@@ -3,7 +3,9 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+<!-- next-header -->
+
+## [Unreleased] - ReleaseDate
 
 ### Added
 
@@ -64,7 +66,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #582 - Added `libprocstat.so` to FreeBSD images
 - #665 - when not using [env.volumes](https://github.com/cross-rs/cross#mounting-volumes-into-the-build-environment), mount project in /project
 - #494 - Parse Cargo's --manifest-path option to determine mounted docker root
-
 
 ### Removed
 
@@ -143,8 +144,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 [`deb`]: https://github.com/mmstick/cargo-deb
 
-- Partial `test` / `run` support for android targets. Using the android API via `cross run` / `cross
-  test` is *not* supported because Cross is using QEMU instead of the official Android emulator.
+- Partial `test` / `run` support for android targets. Using the android API via `cross run` / `cross test` is _not_ supported because Cross is using QEMU instead of the official Android emulator.
 
 - Partial support for the `sparcv9-sun-solaris` and `x86_64-sun-solaris` targets. `cross test` and
   `cross run` doesn't work for these new targets.
@@ -165,7 +165,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - `binfmt_misc` is not required on the host for toolchain v1.19.0 and newer.
   With these toolchains `binfmt_misc` interpreters don't need to be installed
-  on the host saving a *privileged* docker run which some systems don't allow.
+  on the host saving a _privileged_ docker run which some systems don't allow.
 
 ## [v0.1.11] - 2017-06-10
 
@@ -262,9 +262,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Building older versions (<0.7.0) of the `openssl` crate is now supported.
 
-- Before Docker is invoked, `cross` will *always* (re)generate the lockfile to
+- Before Docker is invoked, `cross` will _always_ (re)generate the lockfile to
   avoid errors later on due to read/write permissions. This removes the need to
-  call `cargo generate-lockfile` before `cross` in *all* cases.
+  call `cargo generate-lockfile` before `cross` in _all_ cases.
 
 ## [v0.1.4] - 2017-01-07
 
@@ -315,6 +315,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release. Supports 12 targets.
 
+<!-- prettier-ignore-start -->
+<!-- next-url -->
+
 [Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.1...HEAD
 [v0.2.1]: https://github.com/cross-rs/cross/compare/v0.2.0...v0.2.1
 [v0.2.0]: https://github.com/cross-rs/cross/compare/v0.1.16...v0.2.0
@@ -334,3 +337,4 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 [v0.1.3]: https://github.com/cross-rs/cross/compare/v0.1.2...v0.1.3
 [v0.1.2]: https://github.com/cross-rs/cross/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/cross-rs/cross/compare/v0.1.0...v0.1.1
+<!-- prettier-ignore-end -->
