@@ -1,5 +1,5 @@
 [package]
-build = "build.rs"
+build = "src/build.rs"
 description = "Zero setup cross compilation and cross testing"
 documentation = "https://github.com/cross-rs/cross"
 keywords = ["cross", "compilation", "testing", "tool"]
@@ -8,6 +8,17 @@ name = "cross"
 repository = "https://github.com/cross-rs/cross"
 version = "0.2.1"
 edition = "2021"
+include = [
+  "src/**/*",
+  "docker/Dockerfile.*",
+  "docker/*.sh",
+  "docs/*.md",
+  "Cargo.toml",
+  "Cargo.lock",
+  "LICENSE*",
+  "README.md",
+  "assets/*",
+]
 
 [features]
 default = []
@@ -48,3 +59,38 @@ lto = true
 regex = "1"
 once_cell = "1"
 walkdir = "2"
+
+[package.metadata.release]
+dev-version = false
+push = false
+publish = false
+tag = false
+pre-release-commit-message = "release version {{version}}"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "Unreleased"
+replace = "v{{version}}"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "\\.\\.\\.HEAD"
+replace = "...{{tag_name}}"
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "ReleaseDate"
+replace = "{{date}}"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "<!-- next-header -->"
+replace = "<!-- next-header -->\n\n## [Unreleased] - ReleaseDate"
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "<!-- next-url -->"
+replace = "<!-- next-url -->\n\n[Unreleased]: https://github.com/cross-rs/{{crate_name}}/compare/{{tag_name}}...HEAD"
+exactly = 1

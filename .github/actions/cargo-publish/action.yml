@@ -4,6 +4,9 @@ inputs:
   cargo-registry-token:
     description: 'API token for crates.io'
     required: true
+  github-token:
+    description: 'Github API token'
+    required: true
 
 runs:
   using: composite
@@ -13,7 +16,7 @@ runs:
       uses: mindsers/changelog-reader-action@v2.0.0
       with:
         # validation_depth: 10
-        version: ${{ (github.ref_type == 'tag' && github.ref_name) || 'Unreleased' }}
+        version: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, '-') && github.ref_name) || 'Unreleased' }}
         path: ./CHANGELOG.md
 
     - name: Download artifacts
@@ -30,6 +33,14 @@ runs:
         command: login
         args: -- ${{ inputs.cargo-registry-token }}
 
+    - run: gh release delete --yes Unreleased || exit 0
+      if: >
+        github.event_name == 'push' &&
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        
     - name: Create GitHub release
       if: >
         github.event_name == 'push' && (
@@ -38,10 +49,10 @@ runs:
         )
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ steps.changelog-reader.outputs.version }}
+        tag_name: ${{ (github.ref_type == 'tag' && github.ref_name) || 'Unreleased' }}
         body: ${{ steps.changelog-reader.outputs.changes }}
-        prerelease: ${{ steps.changelog-reader.outputs.status == 'prereleased' }}
-        draft: ${{ steps.changelog-reader.outputs.status == 'unreleased' }}
+        prerelease: ${{ startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-') }}
+        draft: ${{ !startsWith(github.ref, 'refs/tags/v') && steps.changelog-reader.outputs.status == 'unreleased' }}
         files: |
           ${{ steps.download-artifacts.outputs.download-path }}/*/*
 
