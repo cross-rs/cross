@@ -5,6 +5,7 @@ name = "xtask"
 repository = "https://github.com/cross-rs/cross"
 version = "0.0.0-dev.0"
 edition = "2021"
+publish = false
 
 
 [dependencies]

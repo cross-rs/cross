@@ -114,12 +114,14 @@ impl<'a> Dockerfile<'a> {
                     .file_name()
                     .expect("workspace_root can't end in `..`")
                     .to_string_lossy(),
-                path_hash =
-                    sha1_smol::Sha1::from(&metadata.workspace_root.to_string_lossy().as_bytes())
-                        .digest()
-                        .to_string()
-                        .get(..5)
-                        .expect("sha1 is expected to be at least 5 characters long"),
+                path_hash = format!(
+                    "{}",
+                    const_sha1::sha1(&const_sha1::ConstBuffer::from_slice(
+                        metadata.workspace_root.to_string_lossy().as_bytes()
+                    ))
+                )
+                .get(..5)
+                .expect("sha1 is expected to be at least 5 characters long"),
                 custom = if matches!(self, Self::File { .. }) {
                     ""
                 } else {
