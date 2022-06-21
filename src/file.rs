@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use crate::errors::*;
 
@@ -20,6 +20,40 @@ impl ToUtf8 for OsStr {
 impl ToUtf8 for Path {
     fn to_utf8(&self) -> Result<&str> {
         self.as_os_str().to_utf8()
+    }
+}
+
+pub trait PathExt {
+    fn as_posix(&self) -> Result<String>;
+}
+
+fn push_posix_path(path: &mut String, component: &str) {
+    if !path.is_empty() {
+        path.push('/');
+    }
+    path.push_str(component);
+}
+
+impl PathExt for Path {
+    fn as_posix(&self) -> Result<String> {
+        if cfg!(target_os = "windows") {
+            // iterate over components to join them
+            let mut output = String::new();
+            for component in self.components() {
+                match component {
+                    Component::Prefix(prefix) => {
+                        eyre::bail!("unix paths cannot handle windows prefix {prefix:?}.")
+                    }
+                    Component::RootDir => output = "/".to_string(),
+                    Component::CurDir => push_posix_path(&mut output, "."),
+                    Component::ParentDir => push_posix_path(&mut output, ".."),
+                    Component::Normal(path) => push_posix_path(&mut output, path.to_utf8()?),
+                }
+            }
+            Ok(output)
+        } else {
+            self.to_utf8().map(|x| x.to_string())
+        }
     }
 }
 
