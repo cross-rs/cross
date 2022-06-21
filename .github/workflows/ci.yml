@@ -220,7 +220,7 @@ jobs:
 
       - name: Install cross
         if: matrix.deploy
-        run: cargo install --path . --force
+        run: cargo install --path . --force --debug
 
       - name: Build xtask
         run: cargo build -p xtask

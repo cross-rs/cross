@@ -19,6 +19,7 @@ include = [
   "README.md",
   "assets/*",
 ]
+default-run = "cross"
 
 [features]
 default = []
@@ -54,6 +55,7 @@ dunce = "1"
 
 [profile.release]
 lto = true
+strip = true
 
 [dev-dependencies]
 regex = "1"
