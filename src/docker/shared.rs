@@ -242,7 +242,7 @@ pub(crate) fn docker_cwd(
     } else {
         // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
         let cwd = &cwd;
-        let working_dir = Path::new("project").join(cwd.strip_prefix(&metadata.workspace_root)?);
+        let working_dir = Path::new("/project").join(cwd.strip_prefix(&metadata.workspace_root)?);
         docker.args(&["-w", &working_dir.as_posix()?]);
     }
 
