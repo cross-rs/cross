@@ -28,7 +28,7 @@ pub trait PathExt {
 }
 
 fn push_posix_path(path: &mut String, component: &str) {
-    if !path.is_empty() {
+    if !path.is_empty() && path != "/" {
         path.push('/');
     }
     path.push_str(component);
@@ -163,6 +163,35 @@ pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fmt::Debug;
+
+    fn result_eq<T: PartialEq + Eq + Debug>(x: Result<T>, y: Result<T>) {
+        match (x, y) {
+            (Ok(x), Ok(y)) => assert_eq!(x, y),
+            (x, y) => panic!("assertion failed: `(left == right)`\nleft: {x:?}\nright: {y:?}"),
+        }
+    }
+
+    #[test]
+    fn as_posix() {
+        result_eq(Path::new(".").join("..").as_posix(), Ok("./..".to_string()));
+        result_eq(Path::new(".").join("/").as_posix(), Ok("/".to_string()));
+        result_eq(
+            Path::new("foo").join("bar").as_posix(),
+            Ok("foo/bar".to_string()),
+        );
+        result_eq(
+            Path::new("/foo").join("bar").as_posix(),
+            Ok("/foo/bar".to_string()),
+        );
+    }
+
+    #[test]
+    #[cfg(target_family = "windows")]
+    fn as_posix_prefix() {
+        assert_eq!(Path::new("C:").join(".."), Path::new("C:.."));
+        assert!(Path::new("C:").join("..").as_posix().is_err());
+    }
 
     #[test]
     #[cfg(target_family = "windows")]
