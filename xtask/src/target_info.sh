@@ -74,6 +74,9 @@ libc=
 cc=
 cxx=
 qemu=
+libc_is_newlib=
+libc_os=
+bionic=
 
 # select toolchain information
 compiler_suffix="${target//-/_}"
@@ -177,6 +180,7 @@ fi
 case "${target}" in
     *-*-android*)
         libc="${cc}"
+        bionic="1"
         ;;
     *-*-*-musl*)
         toolchain_prefix="${!cc_var//-gcc/}"
@@ -226,6 +230,7 @@ case "${target}" in
         if [[ "${version}" =~ ([0-9]+)\.([0-9]+)" ("[A-Za-z]+")" ]]; then
             major_version="${BASH_REMATCH[1]}"
             minor_version="${BASH_REMATCH[2]}"
+            libc_os="1"
             case "${major_version}" in
                 7)
                     libc="1.0"
@@ -269,6 +274,7 @@ case "${target}" in
             minor_version="${BASH_REMATCH[2]}"
             patch_version="${BASH_REMATCH[3]}"
             libc="${major_version}.${minor_version}.${patch_version}"
+            libc_os="1"
         else
             echo "Unable to get libc version for ${target}: invalid NetBSD release found." 1>&2
             exit 1
@@ -282,6 +288,7 @@ case "${target}" in
             minor_version="${BASH_REMATCH[2]}"
             patch_version="${BASH_REMATCH[3]}"
             libc="${major_version}.${minor_version}.${patch_version}"
+            libc_os="1"
         else
             echo "Unable to get libc version for ${target}: invalid Dragonfly release found." 1>&2
             exit 1
@@ -297,6 +304,7 @@ case "${target}" in
             minor_version="${BASH_REMATCH[2]}"
             patch_version="${BASH_REMATCH[3]}"
             libc="${major_version}.${minor_version}.${patch_version}"
+            libc_is_newlib="1"
         else
             echo "Unable to get libc version for ${target}: invalid THUMB release found." 1>&2
             exit 1
@@ -313,30 +321,4 @@ if command -v "qemu-${qarch}" &>/dev/null; then
 fi
 
 # format our output
-printf "| %-36s |" "\`${target}\`"
-if [ "$libc" != "" ]; then
-    printf " %-6s |" "${libc}"
-else
-    printf " N/A    |"
-fi
-if [ "$cc" != "" ]; then
-    printf " %-7s |" "${cc}"
-else
-    printf " N/A     |"
-fi
-if [ "$cxx" != "" ]; then
-    printf " ✓   |"
-else
-    printf "     |"
-fi
-if [ "$qemu" != "" ]; then
-    printf " %-5s |" "${qemu}"
-else
-    printf " N/A   |"
-fi
-if [ "${HAS_TEST}" != "" ]; then
-    printf "   ✓    |"
-else
-    printf "       |"
-fi
-printf "\n"
+printf '{"libc":"%s","cc":"%s","cxx":"%s","qemu":"%s","libc_is_newlib":"%s","has_test":"%s","libc_os":"%s","bionic":"%s"}\n' "$libc" "$cc" "$cxx" "$qemu" "$libc_is_newlib" "${HAS_TEST}" "$libc_os" "$bionic"
