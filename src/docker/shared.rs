@@ -9,7 +9,7 @@ use crate::cargo::CargoMetadata;
 use crate::config::Config;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
-use crate::file::{self, write_file, ToUtf8};
+use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
 use crate::Target;
 
@@ -236,20 +236,14 @@ pub(crate) fn docker_cwd(
     mount_volumes: bool,
 ) -> Result<()> {
     if mount_volumes {
-        docker.args(&["-w".as_ref(), dirs.mount_cwd.as_os_str()]);
+        docker.args(&["-w", dirs.mount_cwd.to_utf8()?]);
     } else if dirs.mount_cwd == metadata.workspace_root {
         docker.args(&["-w", "/project"]);
     } else {
         // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
         let cwd = &cwd;
         let working_dir = Path::new("project").join(cwd.strip_prefix(&metadata.workspace_root)?);
-        // No [T].join for OsStr
-        let mut mount_wd = std::ffi::OsString::new();
-        for part in working_dir.iter() {
-            mount_wd.push("/");
-            mount_wd.push(part);
-        }
-        docker.args(&["-w".as_ref(), mount_wd.as_os_str()]);
+        docker.args(&["-w", &working_dir.as_posix()?]);
     }
 
     Ok(())
