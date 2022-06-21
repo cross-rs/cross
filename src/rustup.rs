@@ -126,8 +126,8 @@ fn rustc_channel(version: &Version) -> Result<Channel> {
 pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Channel, String)>> {
     let path = toolchain_path.join("lib/rustlib/multirust-channel-manifest.toml");
     if path.exists() {
-        let contents = std::fs::read(&path)
-            .wrap_err_with(|| format!("couldn't open file `{}`", path.display()))?;
+        let contents =
+            std::fs::read(&path).wrap_err_with(|| format!("couldn't open file `{path:?}`"))?;
         let manifest: toml::value::Table = toml::from_slice(&contents)?;
         if let Some(rust_version) = manifest
             .get("pkg")
@@ -137,9 +137,8 @@ pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Channel, 
         {
             // Field is `"{version} ({commit} {date})"`
             if let Some((version, meta)) = rust_version.split_once(' ') {
-                let version = Version::parse(version).wrap_err_with(|| {
-                    format!("invalid rust version found in {}", path.display())
-                })?;
+                let version = Version::parse(version)
+                    .wrap_err_with(|| format!("invalid rust version found in {path:?}"))?;
                 let channel = rustc_channel(&version)?;
                 return Ok(Some((version, channel, meta.to_owned())));
             }

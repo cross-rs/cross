@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::docker::Engine;
 use crate::{config::Config, docker, CargoMetadata, Target};
-use crate::{errors::*, file, CommandExt};
+use crate::{errors::*, file, CommandExt, ToUtf8};
 
 use super::{image_name, parse_docker_opts};
 
@@ -47,7 +47,7 @@ impl<'a> Dockerfile<'a> {
             &format!(
                 "{}.workspace_root={}",
                 crate::CROSS_LABEL_DOMAIN,
-                metadata.workspace_root.display()
+                metadata.workspace_root.to_utf8()?
             ),
         ]);
 

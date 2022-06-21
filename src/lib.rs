@@ -46,6 +46,7 @@ use self::rustc::{TargetList, VersionMetaExt};
 
 pub use self::errors::{install_panic_hook, Result};
 pub use self::extensions::{CommandExt, OutputExt};
+pub use self::file::ToUtf8;
 
 pub const CROSS_LABEL_DOMAIN: &str = "org.cross-rs";
 
@@ -590,11 +591,11 @@ fn toml(metadata: &CargoMetadata) -> Result<Option<CrossToml>> {
     };
 
     if path.exists() {
-        let content = file::read(&path)
-            .wrap_err_with(|| format!("could not read file `{}`", path.display()))?;
+        let content =
+            file::read(&path).wrap_err_with(|| format!("could not read file `{path:?}`"))?;
 
         let (config, _) = CrossToml::parse(&content)
-            .wrap_err_with(|| format!("failed to parse file `{}` as TOML", path.display()))?;
+            .wrap_err_with(|| format!("failed to parse file `{path:?}` as TOML"))?;
 
         Ok(Some(config))
     } else {

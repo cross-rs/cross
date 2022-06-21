@@ -9,7 +9,7 @@ use crate::cargo::CargoMetadata;
 use crate::config::Config;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
-use crate::file::{self, write_file};
+use crate::file::{self, write_file, ToUtf8};
 use crate::id;
 use crate::Target;
 
@@ -180,7 +180,7 @@ pub(crate) fn mount(
     let mount_path = canonicalize_mount_path(&host_path, verbose)?;
     docker.args(&[
         "-v",
-        &format!("{}:{prefix}{}", host_path.display(), mount_path.display()),
+        &format!("{}:{prefix}{}", host_path.to_utf8()?, mount_path.to_utf8()?),
     ]);
     Ok(mount_path)
 }
@@ -282,7 +282,7 @@ pub(crate) fn docker_mount(
 
         if let Ok(val) = value {
             let mount_path = mount_cb(docker, val.as_ref(), verbose)?;
-            docker.args(&["-e", &format!("{}={}", var, mount_path.display())]);
+            docker.args(&["-e", &format!("{}={}", var, mount_path.to_utf8()?)]);
             store_cb((val, mount_path));
             mount_volumes = true;
         }
@@ -290,7 +290,7 @@ pub(crate) fn docker_mount(
 
     for path in metadata.path_dependencies() {
         let mount_path = mount_cb(docker, path, verbose)?;
-        store_cb((path.display().to_string(), mount_path));
+        store_cb((path.to_utf8()?.to_string(), mount_path));
         mount_volumes = true;
     }
 
@@ -310,12 +310,7 @@ fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
         .arg("-a")
         .arg(path)
         .run_and_get_stdout(verbose)
-        .wrap_err_with(|| {
-            format!(
-                "could not get linux compatible path for `{}`",
-                path.display()
-            )
-        })
+        .wrap_err_with(|| format!("could not get linux compatible path for `{path:?}`"))
         .map(|s| s.trim().into())
 }
 
@@ -375,7 +370,7 @@ pub(crate) fn docker_seccomp(
                 // podman weirdly expects a WSL path here, and fails otherwise
                 path = wslpath(&path, verbose)?;
             }
-            path.display().to_string()
+            path.to_utf8()?.to_string()
         };
 
         docker.args(&["--security-opt", &format!("seccomp={}", seccomp)]);

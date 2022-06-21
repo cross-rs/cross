@@ -6,6 +6,23 @@ use std::path::{Path, PathBuf};
 
 use crate::errors::*;
 
+pub trait ToUtf8 {
+    fn to_utf8(&self) -> Result<&str>;
+}
+
+impl ToUtf8 for OsStr {
+    fn to_utf8(&self) -> Result<&str> {
+        self.to_str()
+            .ok_or_else(|| eyre::eyre!("unable to convert `{self:?}` to UTF-8 string"))
+    }
+}
+
+impl ToUtf8 for Path {
+    fn to_utf8(&self) -> Result<&str> {
+        self.as_os_str().to_utf8()
+    }
+}
+
 pub fn read<P>(path: P) -> Result<String>
 where
     P: AsRef<Path>,
@@ -16,9 +33,9 @@ where
 fn read_(path: &Path) -> Result<String> {
     let mut s = String::new();
     File::open(path)
-        .wrap_err_with(|| format!("couldn't open {}", path.display()))?
+        .wrap_err_with(|| format!("couldn't open {path:?}"))?
         .read_to_string(&mut s)
-        .wrap_err_with(|| format!("couldn't read {}", path.display()))?;
+        .wrap_err_with(|| format!("couldn't read {path:?}"))?;
     Ok(s)
 }
 
@@ -90,11 +107,11 @@ pub fn maybe_canonicalize(path: &Path) -> Cow<'_, OsStr> {
 pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
     let path = path.as_ref();
     fs::create_dir_all(
-        &path.parent().ok_or_else(|| {
-            eyre::eyre!("could not find parent directory for `{}`", path.display())
-        })?,
+        &path
+            .parent()
+            .ok_or_else(|| eyre::eyre!("could not find parent directory for `{path:?}`"))?,
     )
-    .wrap_err_with(|| format!("couldn't create directory `{}`", path.display()))?;
+    .wrap_err_with(|| format!("couldn't create directory `{path:?}`"))?;
 
     let mut open = fs::OpenOptions::new();
     open.write(true);
@@ -106,7 +123,7 @@ pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
     }
 
     open.open(&path)
-        .wrap_err(format!("couldn't write to file `{}`", path.display()))
+        .wrap_err(format!("couldn't write to file `{path:?}`"))
 }
 
 #[cfg(test)]
