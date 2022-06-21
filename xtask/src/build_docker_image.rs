@@ -2,7 +2,7 @@ use std::{path::Path, process::Command};
 
 use clap::Args;
 use color_eyre::Section;
-use cross::CommandExt;
+use cross::{CommandExt, ToUtf8};
 use std::fmt::Write;
 
 #[derive(Args, Debug)]
@@ -72,7 +72,7 @@ fn locate_dockerfile(
     } else {
         eyre::bail!("unable to find dockerfile for target \"{target}\"");
     };
-    let dockerfile = dockerfile_root.join(dockerfile_name).display().to_string();
+    let dockerfile = dockerfile_root.join(dockerfile_name).to_utf8()?.to_string();
     Ok((target, dockerfile))
 }
 

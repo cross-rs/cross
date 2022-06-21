@@ -2,9 +2,60 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use crate::errors::*;
+
+pub trait ToUtf8 {
+    fn to_utf8(&self) -> Result<&str>;
+}
+
+impl ToUtf8 for OsStr {
+    fn to_utf8(&self) -> Result<&str> {
+        self.to_str()
+            .ok_or_else(|| eyre::eyre!("unable to convert `{self:?}` to UTF-8 string"))
+    }
+}
+
+impl ToUtf8 for Path {
+    fn to_utf8(&self) -> Result<&str> {
+        self.as_os_str().to_utf8()
+    }
+}
+
+pub trait PathExt {
+    fn as_posix(&self) -> Result<String>;
+}
+
+fn push_posix_path(path: &mut String, component: &str) {
+    if !path.is_empty() && path != "/" {
+        path.push('/');
+    }
+    path.push_str(component);
+}
+
+impl PathExt for Path {
+    fn as_posix(&self) -> Result<String> {
+        if cfg!(target_os = "windows") {
+            // iterate over components to join them
+            let mut output = String::new();
+            for component in self.components() {
+                match component {
+                    Component::Prefix(prefix) => {
+                        eyre::bail!("unix paths cannot handle windows prefix {prefix:?}.")
+                    }
+                    Component::RootDir => output = "/".to_string(),
+                    Component::CurDir => push_posix_path(&mut output, "."),
+                    Component::ParentDir => push_posix_path(&mut output, ".."),
+                    Component::Normal(path) => push_posix_path(&mut output, path.to_utf8()?),
+                }
+            }
+            Ok(output)
+        } else {
+            self.to_utf8().map(|x| x.to_string())
+        }
+    }
+}
 
 pub fn read<P>(path: P) -> Result<String>
 where
@@ -16,9 +67,9 @@ where
 fn read_(path: &Path) -> Result<String> {
     let mut s = String::new();
     File::open(path)
-        .wrap_err_with(|| format!("couldn't open {}", path.display()))?
+        .wrap_err_with(|| format!("couldn't open {path:?}"))?
         .read_to_string(&mut s)
-        .wrap_err_with(|| format!("couldn't read {}", path.display()))?;
+        .wrap_err_with(|| format!("couldn't read {path:?}"))?;
     Ok(s)
 }
 
@@ -90,11 +141,11 @@ pub fn maybe_canonicalize(path: &Path) -> Cow<'_, OsStr> {
 pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
     let path = path.as_ref();
     fs::create_dir_all(
-        &path.parent().ok_or_else(|| {
-            eyre::eyre!("could not find parent directory for `{}`", path.display())
-        })?,
+        &path
+            .parent()
+            .ok_or_else(|| eyre::eyre!("could not find parent directory for `{path:?}`"))?,
     )
-    .wrap_err_with(|| format!("couldn't create directory `{}`", path.display()))?;
+    .wrap_err_with(|| format!("couldn't create directory `{path:?}`"))?;
 
     let mut open = fs::OpenOptions::new();
     open.write(true);
@@ -106,12 +157,41 @@ pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
     }
 
     open.open(&path)
-        .wrap_err(format!("couldn't write to file `{}`", path.display()))
+        .wrap_err(format!("couldn't write to file `{path:?}`"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fmt::Debug;
+
+    fn result_eq<T: PartialEq + Eq + Debug>(x: Result<T>, y: Result<T>) {
+        match (x, y) {
+            (Ok(x), Ok(y)) => assert_eq!(x, y),
+            (x, y) => panic!("assertion failed: `(left == right)`\nleft: {x:?}\nright: {y:?}"),
+        }
+    }
+
+    #[test]
+    fn as_posix() {
+        result_eq(Path::new(".").join("..").as_posix(), Ok("./..".to_string()));
+        result_eq(Path::new(".").join("/").as_posix(), Ok("/".to_string()));
+        result_eq(
+            Path::new("foo").join("bar").as_posix(),
+            Ok("foo/bar".to_string()),
+        );
+        result_eq(
+            Path::new("/foo").join("bar").as_posix(),
+            Ok("/foo/bar".to_string()),
+        );
+    }
+
+    #[test]
+    #[cfg(target_family = "windows")]
+    fn as_posix_prefix() {
+        assert_eq!(Path::new("C:").join(".."), Path::new("C:.."));
+        assert!(Path::new("C:").join("..").as_posix().is_err());
+    }
 
     #[test]
     #[cfg(target_family = "windows")]

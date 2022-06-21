@@ -73,6 +73,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Internal
 
+- #828 - assume paths are Unicode and provide better error messages for path encoding errors.
 - #787 - add installer for git hooks.
 - #786, #791 - Migrate build script to rust: `cargo build-docker-image $TARGET`
 - #730 - make FreeBSD builds more resilient.

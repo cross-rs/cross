@@ -30,15 +30,15 @@ fn toml_check() -> Result<(), Box<dyn std::error::Error>> {
         if dir_entry.file_type().is_dir() {
             continue;
         }
-        eprintln!("File: {:?}", dir_entry.path().display());
+        eprintln!("File: {:?}", dir_entry.path());
         let mut file = std::fs::File::open(dir_entry.path()).unwrap();
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
         for matches in TOML_REGEX.captures_iter(&contents) {
             let fence = matches.get(1).unwrap();
             eprintln!(
-                "testing snippet at: {}:{:?}",
-                dir_entry.path().display(),
+                "testing snippet at: {:?}:{:?}",
+                dir_entry.path(),
                 text_line_no(&contents, fence.range().start),
             );
             assert!(crate::cross_toml::CrossToml::parse(fence.as_str())?
