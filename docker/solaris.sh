@@ -10,7 +10,7 @@ main() {
     local arch="${1}"
 
     local binutils=2.28.1 \
-          gcc=6.4.0 \
+          gcc=8.4.0 \
           target="${arch}-sun-solaris2.10"
 
     install_packages bzip2 \
@@ -58,18 +58,21 @@ main() {
     add-apt-repository -y 'deb http://apt.dilos.org/dilos dilos2-testing main'
     dpkg --add-architecture "${apt_arch}"
     apt-get update
-    apt-cache depends --recurse --no-replaces \
-      "libc:${apt_arch}"           \
-      "libdl-dev:${apt_arch}"      \
-      "libm-dev:${apt_arch}"       \
-      "libnsl-dev:${apt_arch}"     \
-      "libpthread-dev:${apt_arch}" \
-      "libresolv-dev:${apt_arch}"  \
-      "librt:${apt_arch}"          \
-      "libsocket-dev:${apt_arch}"  \
-      "system-crt:${apt_arch}"     \
-      "system-header:${apt_arch}"  \
-      | grep "^\w" | xargs apt-get download
+    # shellcheck disable=SC2046
+    apt-get download $(apt-cache depends --recurse --no-replaces \
+      "libc:${apt_arch}"            \
+      "liblgrp-dev:${apt_arch}"     \
+      "liblgrp:${apt_arch}"         \
+      "libm-dev:${apt_arch}"        \
+      "libpthread:${apt_arch}"      \
+      "libresolv:${apt_arch}"       \
+      "librt:${apt_arch}"           \
+      "libsendfile-dev:${apt_arch}" \
+      "libsendfile:${apt_arch}"     \
+      "libsocket:${apt_arch}"       \
+      "system-crt:${apt_arch}"      \
+      "system-header:${apt_arch}"   \
+      | grep "^\w")
 
     for deb in *"${apt_arch}.deb"; do
       dpkg -x "${deb}" "${td}/solaris"
@@ -102,6 +105,8 @@ EOF
     ln -s usr/include "${destdir}/sys-include"
     ln -s usr/include "${destdir}/include"
 
+    # note: solaris2.10 is obsolete, so we can't upgrade to GCC 10 till then.
+    # for gcc 9.4.0, need `--enable-obsolete`
     cd gcc-build
     ../gcc/configure \
         --disable-libada \
