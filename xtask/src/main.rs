@@ -10,7 +10,7 @@ pub mod util;
 use std::path::PathBuf;
 
 use ci::CiJob;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use util::ImageTarget;
 
 use self::build_docker_image::BuildDockerImage;
@@ -24,6 +24,13 @@ struct Cli {
     /// Toolchain name/version to use (such as stable or 1.59.0).
     #[clap(value_parser = is_toolchain)]
     toolchain: Option<String>,
+    #[clap(subcommand)]
+    command: Commands,
+}
+
+// hidden implied parser so we can get matches without recursion.
+#[derive(Parser, Debug)]
+struct CliHidden {
     #[clap(subcommand)]
     command: Commands,
 }
@@ -49,7 +56,8 @@ fn is_toolchain(toolchain: &str) -> cross::Result<String> {
     if toolchain.starts_with('+') {
         Ok(toolchain.chars().skip(1).collect())
     } else {
-        eyre::bail!("not a toolchain")
+        let _ = <CliHidden as CommandFactory>::command().get_matches();
+        unreachable!();
     }
 }
 
