@@ -48,6 +48,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- #836 - write a `CACHEDIR.TAG` when creating the target directory, similar to `cargo`.
 - #804 - allow usage of env `CARGO_BUILD_TARGET` as an alias for `CROSS_BUILD_TARGET`
 - #792 - fixed container-in-container support when using podman.
 - #781 - ensure `target.$(...)` config options override `build` ones.
