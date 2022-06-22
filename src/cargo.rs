@@ -19,11 +19,20 @@ pub enum Subcommand {
     Clippy,
     Metadata,
     List,
+    Clean,
 }
 
 impl Subcommand {
-    pub fn needs_docker(self) -> bool {
-        !matches!(self, Subcommand::Other | Subcommand::List)
+    pub fn needs_docker(self, is_remote: bool) -> bool {
+        match self {
+            Subcommand::Other | Subcommand::List => false,
+            Subcommand::Clean if !is_remote => false,
+            _ => true,
+        }
+    }
+
+    pub fn needs_host(self, is_remote: bool) -> bool {
+        self == Subcommand::Clean && is_remote
     }
 
     pub fn needs_interpreter(self) -> bool {
@@ -40,6 +49,7 @@ impl<'a> From<&'a str> for Subcommand {
         match s {
             "b" | "build" => Subcommand::Build,
             "c" | "check" => Subcommand::Check,
+            "clean" => Subcommand::Clean,
             "doc" => Subcommand::Doc,
             "r" | "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,

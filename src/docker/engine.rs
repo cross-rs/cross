@@ -25,18 +25,16 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(verbose: bool) -> Result<Engine> {
+    pub fn new(is_remote: Option<bool>, verbose: bool) -> Result<Engine> {
         let path = get_container_engine()
             .map_err(|_| eyre::eyre!("no container engine found"))
             .with_suggestion(|| "is docker or podman installed?")?;
-        Self::from_path(path, verbose)
+        Self::from_path(path, is_remote, verbose)
     }
 
-    pub fn from_path(path: PathBuf, verbose: bool) -> Result<Engine> {
+    pub fn from_path(path: PathBuf, is_remote: Option<bool>, verbose: bool) -> Result<Engine> {
         let kind = get_engine_type(&path, verbose)?;
-        let is_remote = env::var("CROSS_REMOTE")
-            .map(|s| bool_from_envvar(&s))
-            .unwrap_or_default();
+        let is_remote = is_remote.unwrap_or_else(Self::is_remote);
         Ok(Engine {
             path,
             kind,
@@ -46,6 +44,12 @@ impl Engine {
 
     pub fn needs_remote(&self) -> bool {
         self.is_remote && self.kind == EngineType::Podman
+    }
+
+    pub fn is_remote() -> bool {
+        env::var("CROSS_REMOTE")
+            .map(|s| bool_from_envvar(&s))
+            .unwrap_or_default()
     }
 }
 

@@ -478,9 +478,13 @@ pub fn run() -> Result<ExitStatus> {
                 filtered_args.push("-Zbuild-std".to_string());
             }
 
-            if target.needs_docker() && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
-            {
-                let engine = docker::Engine::new(verbose)?;
+            let is_remote = docker::Engine::is_remote();
+            let needs_docker = args
+                .subcommand
+                .map(|sc| sc.needs_docker(is_remote))
+                .unwrap_or(false);
+            if target.needs_docker() && needs_docker {
+                let engine = docker::Engine::new(Some(is_remote), verbose)?;
                 if host_version_meta.needs_interpreter()
                     && needs_interpreter
                     && target.needs_interpreter()
@@ -489,7 +493,7 @@ pub fn run() -> Result<ExitStatus> {
                     docker::register(&engine, &target, verbose)?
                 }
 
-                return docker::run(
+                let status = docker::run(
                     &engine,
                     &target,
                     &filtered_args,
@@ -500,7 +504,14 @@ pub fn run() -> Result<ExitStatus> {
                     verbose,
                     args.docker_in_docker,
                     &cwd,
-                );
+                )?;
+                let needs_host = args
+                    .subcommand
+                    .map(|sc| sc.needs_host(is_remote))
+                    .unwrap_or(false);
+                if !(status.success() && needs_host) {
+                    return Ok(status);
+                }
             }
         }
     }

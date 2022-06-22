@@ -93,5 +93,5 @@ fn get_container_engine(engine: Option<&str>, verbose: bool) -> cross::Result<do
     } else {
         docker::get_container_engine()?
     };
-    docker::Engine::from_path(engine, verbose)
+    docker::Engine::from_path(engine, None, verbose)
 }

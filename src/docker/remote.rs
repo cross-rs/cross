@@ -146,6 +146,19 @@ fn is_cachedir(entry: &fs::DirEntry) -> bool {
     }
 }
 
+fn container_path_exists(
+    engine: &Engine,
+    container: &str,
+    path: &Path,
+    verbose: bool,
+) -> Result<bool> {
+    Ok(subcommand(engine, "exec")
+        .arg(container)
+        .args(&["bash", "-c", &format!("[[ -d '{}' ]]", path.as_posix()?)])
+        .run_and_get_status(verbose, true)?
+        .success())
+}
+
 // copy files for a docker volume, for remote host support
 fn copy_volume_files_nocache(
     engine: &Engine,
@@ -329,15 +342,7 @@ pub fn copy_volume_container_rust_triple(
     // or the first run of the target toolchain, we know it doesn't exist.
     let mut skip = false;
     if skip_exists {
-        skip = subcommand(engine, "exec")
-            .arg(container)
-            .args(&[
-                "bash",
-                "-c",
-                &format!("[[ -d '{}' ]]", dst_toolchain.as_posix()?),
-            ])
-            .run_and_get_status(verbose, true)?
-            .success();
+        skip = container_path_exists(engine, container, &dst_toolchain, verbose)?;
     }
     if !skip {
         copy_volume_files(engine, container, &src_toolchain, &dst_rustlib, verbose)?;
@@ -489,9 +494,6 @@ pub(crate) fn run(
     cwd: &Path,
 ) -> Result<ExitStatus> {
     let dirs = Directories::create(engine, metadata, cwd, sysroot, docker_in_docker, verbose)?;
-
-    let mut cmd = cargo_safe_command(uses_xargo);
-    cmd.args(args);
 
     let mount_prefix = MOUNT_PREFIX;
 
@@ -654,10 +656,7 @@ pub(crate) fn run(
     let mut to_symlink = vec![];
     let target_dir = file::canonicalize(&dirs.target)?;
     let target_dir = if let Ok(relpath) = target_dir.strip_prefix(&dirs.host_root) {
-        // target dir is in the project, just symlink it in
-        let target_dir = mount_root.join(relpath);
-        to_symlink.push((target_dir.clone(), "/target".to_string()));
-        target_dir
+        mount_root.join(relpath)
     } else {
         // outside project, need to copy the target data over
         // only do if we're copying over cached files.
@@ -687,13 +686,43 @@ pub(crate) fn run(
         }
     }
 
+    // `clean` doesn't handle symlinks: it will just unlink the target
+    // directory, so we should just substitute it our target directory
+    // for it. we'll still have the same end behavior
+    let mut final_args = vec![];
+    let mut iter = args.iter().cloned();
+    let mut has_target_dir = false;
+    let target_dir_string = target_dir.to_utf8()?.to_string();
+    while let Some(arg) = iter.next() {
+        if arg == "--target-dir" {
+            has_target_dir = true;
+            final_args.push(arg);
+            if iter.next().is_some() {
+                final_args.push(target_dir_string.clone());
+            }
+        } else if arg.starts_with("--target-dir=") {
+            has_target_dir = true;
+            if arg.split_once('=').is_some() {
+                final_args.push(format!("--target-dir={target_dir_string}"));
+            }
+        } else {
+            final_args.push(arg);
+        }
+    }
+    if !has_target_dir {
+        final_args.push("--target-dir".to_string());
+        final_args.push(target_dir_string);
+    }
+    let mut cmd = cargo_safe_command(uses_xargo);
+    cmd.args(final_args);
+
     // 5. create symlinks for copied data
     let mut symlink = vec!["set -e pipefail".to_string()];
     if verbose {
         symlink.push("set -x".to_string());
     }
     symlink.push(format!(
-        "chown -R {uid}:{gid} {mount_prefix}/*",
+        "chown -R {uid}:{gid} {mount_prefix}",
         uid = user_id(),
         gid = group_id(),
     ));
@@ -738,12 +767,15 @@ symlink_recurse \"${{prefix}}\"
         .map_err(Into::into);
 
     // 7. copy data from our target dir back to host
-    subcommand(engine, "cp")
-        .arg("-a")
-        .arg(&format!("{container}:{}", target_dir.as_posix()?))
-        .arg(&dirs.target.parent().unwrap())
-        .run_and_get_status(verbose, false)
-        .map_err::<eyre::ErrReport, _>(Into::into)?;
+    // this might not exist if we ran `clean`.
+    if container_path_exists(engine, &container, &target_dir, verbose)? {
+        subcommand(engine, "cp")
+            .arg("-a")
+            .arg(&format!("{container}:{}", target_dir.as_posix()?))
+            .arg(&dirs.target.parent().unwrap())
+            .run_and_get_status(verbose, false)
+            .map_err::<eyre::ErrReport, _>(Into::into)?;
+    }
 
     status
 }
