@@ -82,7 +82,15 @@ pub fn main() -> cross::Result<()> {
         Commands::Test(args) => {
             hooks::test(args, cli.toolchain.as_deref())?;
         }
-        Commands::CiJob(args) => ci::ci(args)?,
+        Commands::CiJob(args) => {
+            let metadata = cross::cargo_metadata_with_args(
+                Some(std::path::Path::new(env!("CARGO_MANIFEST_DIR"))),
+                None,
+                true,
+            )?
+            .ok_or_else(|| eyre::eyre!("could not find cross workspace"))?;
+            ci::ci(args, metadata)?
+        }
     }
 
     Ok(())

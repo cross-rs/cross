@@ -38,7 +38,7 @@ pub struct BuildDockerImage {
     /// Docker build progress output type.
     #[clap(
         long,
-        value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]), 
+        value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]),
         default_value = "auto"
     )]
     progress: String,
@@ -289,7 +289,7 @@ pub fn determine_image_name(
             }
             tags.push(target.image_name(repository, version));
             // Check for unstable releases, tag stable releases as `latest`
-            if version.contains('-') {
+            if !version.contains('-') {
                 // TODO: Don't tag if version is older than currently released version.
                 tags.push(target.image_name(repository, "latest"))
             }

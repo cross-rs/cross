@@ -1,9 +1,9 @@
-use std::path::Path;
-
 use clap::Subcommand;
+use cross::CargoMetadata;
 
 #[derive(Subcommand, Debug)]
 pub enum CiJob {
+    /// Return needed metadata for building images
     PrepareMeta {
         // tag, branch
         #[clap(long, env = "GITHUB_REF_TYPE")]
@@ -13,25 +13,28 @@ pub enum CiJob {
         ref_name: String,
         target: crate::ImageTarget,
     },
+    /// Check workspace metadata.
+    Check {
+        // tag, branch
+        #[clap(long, env = "GITHUB_REF_TYPE")]
+        ref_type: String,
+        // main, v0.1.0
+        #[clap(long, env = "GITHUB_REF_NAME")]
+        ref_name: String,
+    },
 }
 
-pub fn ci(args: CiJob) -> cross::Result<()> {
+pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
+    let cross_meta = metadata
+        .get_package("cross")
+        .expect("cross expected in workspace");
+
     match args {
         CiJob::PrepareMeta {
             ref_type,
             ref_name,
             target,
         } => {
-            let metadata = cross::cargo_metadata_with_args(
-                Some(Path::new(env!("CARGO_MANIFEST_DIR"))),
-                None,
-                true,
-            )?
-            .ok_or_else(|| eyre::eyre!("could not find cross workspace and its current version"))?;
-            let cross_meta = metadata
-                .get_package("cross")
-                .expect("cross expected in workspace");
-
             // Set labels
             let mut labels = vec![];
 
@@ -62,6 +65,12 @@ pub fn ci(args: CiJob) -> cross::Result<()> {
 
             if target.has_ci_image() {
                 gha_output("has-image", "true")
+            }
+        }
+        CiJob::Check { ref_type, ref_name } => {
+            let version = cross_meta.version.clone();
+            if ref_type == "tag" && ref_name.starts_with('v') && ref_name != format!("v{version}") {
+                eyre::bail!("a version tag was published, but the tag does not match the current version in Cargo.toml");
             }
         }
     }

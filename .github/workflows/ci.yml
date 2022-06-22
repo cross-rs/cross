@@ -82,7 +82,13 @@ jobs:
           command: test
           args: --locked --all-targets --workspace --all-features
         timeout-minutes: 10
-
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+      - run: cargo xtask ci-job check
+        shell: bash
   generate-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -200,7 +206,7 @@ jobs:
   build:
     name: target (${{ matrix.pretty }},${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: [shellcheck, test, generate-matrix]
+    needs: [shellcheck, test, generate-matrix, check]
     if: github.event_name == 'push'
     strategy:
       fail-fast: false
@@ -299,7 +305,7 @@ jobs:
         shell: bash
 
   publish:
-    needs: [build]
+    needs: [build, check]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -310,7 +316,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish]
+    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check]
     if: always()
     runs-on: ubuntu-latest
     steps:
