@@ -62,7 +62,7 @@ impl Directories {
         // otherwise `docker` will create them but they will be owned by `root`
         fs::create_dir(&cargo).ok();
         fs::create_dir(&xargo).ok();
-        fs::create_dir(&target).ok();
+        create_target_dir(target)?;
 
         let cargo = mount_finder.find_mount_path(cargo);
         let xargo = mount_finder.find_mount_path(xargo);
@@ -109,6 +109,24 @@ impl Directories {
             sysroot,
         })
     }
+}
+
+const CACHEDIR_TAG: &str = "Signature: 8a477f597d28d172789f06886806bc55
+# This file is a cache directory tag created by cross.
+# For information about cache directory tags see https://bford.info/cachedir/";
+
+fn create_target_dir(path: &Path) -> Result<()> {
+    // cargo creates all paths to the target directory, and writes
+    // a cache dir tag only if the path doesn't previously exist.
+    if !path.exists() {
+        fs::create_dir_all(&path)?;
+        fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path.join("CACHEDIR.TAG"))?
+            .write_all(CACHEDIR_TAG.as_bytes())?;
+    }
+    Ok(())
 }
 
 pub fn command(engine: &Engine) -> Command {
