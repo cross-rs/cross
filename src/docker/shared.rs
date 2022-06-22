@@ -5,15 +5,18 @@ use std::{env, fs};
 
 use super::custom::Dockerfile;
 use super::engine::*;
-use crate::cargo::CargoMetadata;
+use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
 use crate::config::Config;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
+use crate::rustc::{self, VersionMetaExt};
 use crate::Target;
 
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
+// note: this is the most common base image for our images
+pub const UBUNTU_BASE: &str = "ubuntu:16.04";
 const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 
 // secured profile based off the docker documentation for denied syscalls:
@@ -29,6 +32,7 @@ pub struct Directories {
     pub target: PathBuf,
     pub nix_store: Option<PathBuf>,
     pub host_root: PathBuf,
+    // both mount fields are WSL paths on windows: they already are POSIX paths
     pub mount_root: PathBuf,
     pub mount_cwd: PathBuf,
     pub sysroot: PathBuf,
@@ -130,7 +134,12 @@ fn create_target_dir(path: &Path) -> Result<()> {
 }
 
 pub fn command(engine: &Engine) -> Command {
-    Command::new(&engine.path)
+    let mut command = Command::new(&engine.path);
+    if engine.needs_remote() {
+        // if we're using podman and not podman-remote, need `--remote`.
+        command.arg("--remote");
+    }
+    command
 }
 
 pub fn subcommand(engine: &Engine, subcommand: &str) -> Command {
@@ -139,8 +148,28 @@ pub fn subcommand(engine: &Engine, subcommand: &str) -> Command {
     command
 }
 
+pub fn get_package_info(
+    engine: &Engine,
+    target: &str,
+    channel: Option<&str>,
+    docker_in_docker: bool,
+    verbose: bool,
+) -> Result<(Target, CargoMetadata, Directories)> {
+    let target_list = rustc::target_list(false)?;
+    let target = Target::from(target, &target_list);
+    let metadata = cargo_metadata_with_args(None, None, verbose)?
+        .ok_or(eyre::eyre!("unable to get project metadata"))?;
+    let cwd = std::env::current_dir()?;
+    let host_meta = rustc::version_meta()?;
+    let host = host_meta.host();
+    let sysroot = rustc::get_sysroot(&host, &target, channel, verbose)?.1;
+    let dirs = Directories::create(engine, &metadata, &cwd, &sysroot, docker_in_docker, verbose)?;
+
+    Ok((target, metadata, dirs))
+}
+
 /// Register binfmt interpreters
-pub(crate) fn register(target: &Target, verbose: bool) -> Result<()> {
+pub(crate) fn register(engine: &Engine, target: &Target, verbose: bool) -> Result<()> {
     let cmd = if target.is_windows() {
         // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
         "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
@@ -150,12 +179,11 @@ pub(crate) fn register(target: &Target, verbose: bool) -> Result<()> {
             binfmt-support qemu-user-static"
     };
 
-    let engine = Engine::new(verbose)?;
-    subcommand(&engine, "run")
+    subcommand(engine, "run")
         .args(&["--userns", "host"])
         .arg("--privileged")
         .arg("--rm")
-        .arg("ubuntu:16.04")
+        .arg(UBUNTU_BASE)
         .args(&["sh", "-c", cmd])
         .run(verbose, false)
         .map_err(Into::into)
@@ -457,7 +485,7 @@ pub(crate) fn custom_image_build(
                 )
                 .wrap_err("when pre-building")
                 .with_note(|| format!("CROSS_CMD={}", pre_build.join("\n")))?;
-            image = custom.image_name(target, metadata);
+            image = custom.image_name(target, metadata)?;
         }
     }
     Ok(image)
@@ -579,6 +607,19 @@ impl MountFinder {
 
         path.to_path_buf()
     }
+}
+
+fn path_digest(path: &Path) -> Result<const_sha1::Digest> {
+    let buffer = const_sha1::ConstBuffer::from_slice(path.to_utf8()?.as_bytes());
+    Ok(const_sha1::sha1(&buffer))
+}
+
+pub fn path_hash(path: &Path) -> Result<String> {
+    Ok(path_digest(path)?
+        .to_string()
+        .get(..5)
+        .expect("sha1 is expected to be at least 5 characters long")
+        .to_string())
 }
 
 #[cfg(test)]

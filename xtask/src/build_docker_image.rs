@@ -1,8 +1,8 @@
-use std::{path::Path, process::Command};
+use std::path::Path;
 
 use clap::Args;
 use color_eyre::Section;
-use cross::{CommandExt, ToUtf8};
+use cross::{docker, CommandExt, ToUtf8};
 use std::fmt::Write;
 
 #[derive(Args, Debug)]
@@ -15,14 +15,14 @@ pub struct BuildDockerImage {
     #[clap(long)]
     tag: Option<String>,
     /// Repository name for image.
-    #[clap(long, default_value = cross::docker::CROSS_IMAGE)]
+    #[clap(long, default_value = docker::CROSS_IMAGE)]
     repository: String,
     /// Newline separated labels
     #[clap(long, env = "LABELS")]
     labels: Option<String>,
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
-    verbose: bool,
+    pub verbose: bool,
     /// Print but do not execute the build commands.
     #[clap(long)]
     dry_run: bool,
@@ -95,7 +95,7 @@ pub fn build_docker_image(
         mut targets,
         ..
     }: BuildDockerImage,
-    engine: &Path,
+    engine: &docker::Engine,
 ) -> cross::Result<()> {
     let metadata = cross::cargo_metadata_with_args(
         Some(Path::new(env!("CARGO_MANIFEST_DIR"))),
@@ -144,7 +144,7 @@ pub fn build_docker_image(
         if gha && targets.len() > 1 {
             println!("::group::Build {target}");
         }
-        let mut docker_build = Command::new(engine);
+        let mut docker_build = docker::command(engine);
         docker_build.args(&["buildx", "build"]);
         docker_build.current_dir(&docker_root);
 

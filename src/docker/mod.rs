@@ -1,6 +1,7 @@
 mod custom;
 mod engine;
 mod local;
+pub mod remote;
 mod shared;
 
 pub use self::engine::*;
@@ -15,6 +16,7 @@ use crate::{Config, Target};
 
 #[allow(clippy::too_many_arguments)] // TODO: refactor
 pub fn run(
+    engine: &Engine,
     target: &Target,
     args: &[String],
     metadata: &CargoMetadata,
@@ -25,15 +27,31 @@ pub fn run(
     docker_in_docker: bool,
     cwd: &Path,
 ) -> Result<ExitStatus> {
-    local::run(
-        target,
-        args,
-        metadata,
-        config,
-        uses_xargo,
-        sysroot,
-        verbose,
-        docker_in_docker,
-        cwd,
-    )
+    if engine.is_remote {
+        remote::run(
+            engine,
+            target,
+            args,
+            metadata,
+            config,
+            uses_xargo,
+            sysroot,
+            verbose,
+            docker_in_docker,
+            cwd,
+        )
+    } else {
+        local::run(
+            engine,
+            target,
+            args,
+            metadata,
+            config,
+            uses_xargo,
+            sysroot,
+            verbose,
+            docker_in_docker,
+            cwd,
+        )
+    }
 }

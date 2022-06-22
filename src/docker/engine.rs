@@ -2,6 +2,7 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::config::bool_from_envvar;
 use crate::errors::*;
 use crate::extensions::CommandExt;
 
@@ -20,6 +21,7 @@ pub enum EngineType {
 pub struct Engine {
     pub kind: EngineType,
     pub path: PathBuf,
+    pub is_remote: bool,
 }
 
 impl Engine {
@@ -32,7 +34,18 @@ impl Engine {
 
     pub fn from_path(path: PathBuf, verbose: bool) -> Result<Engine> {
         let kind = get_engine_type(&path, verbose)?;
-        Ok(Engine { path, kind })
+        let is_remote = env::var("CROSS_REMOTE")
+            .map(|s| bool_from_envvar(&s))
+            .unwrap_or_default();
+        Ok(Engine {
+            path,
+            kind,
+            is_remote,
+        })
+    }
+
+    pub fn needs_remote(&self) -> bool {
+        self.is_remote && self.kind == EngineType::Podman
     }
 }
 

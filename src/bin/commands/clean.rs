@@ -1,6 +1,7 @@
 use std::fs;
 
-use super::images::RemoveImages;
+use super::containers::*;
+use super::images::*;
 use clap::Args;
 
 #[derive(Args, Debug)]
@@ -31,8 +32,20 @@ impl Clean {
                     fs::remove_dir_all(tempdir)?;
                 }
             }
-            false => println!("fs::remove_dir_all({})", tempdir.display()),
+            false => println!(
+                "fs::remove_dir_all({})",
+                cross::pretty_path(&tempdir, |_| false)
+            ),
         }
+
+        // containers -> images -> volumes -> prune to ensure no conflicts.
+        let remove_containers = RemoveAllContainers {
+            verbose: self.verbose,
+            force: self.force,
+            execute: self.execute,
+            engine: None,
+        };
+        remove_containers.run(engine.clone())?;
 
         let remove_images = RemoveImages {
             targets: vec![],
@@ -42,7 +55,22 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        remove_images.run(engine)?;
+        remove_images.run(engine.clone())?;
+
+        let remove_volumes = RemoveAllVolumes {
+            verbose: self.verbose,
+            force: self.force,
+            execute: self.execute,
+            engine: None,
+        };
+        remove_volumes.run(engine.clone())?;
+
+        let prune_volumes = PruneVolumes {
+            verbose: self.verbose,
+            execute: self.execute,
+            engine: None,
+        };
+        prune_volumes.run(engine)?;
 
         Ok(())
     }

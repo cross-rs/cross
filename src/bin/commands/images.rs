@@ -1,9 +1,9 @@
 use clap::{Args, Subcommand};
-use cross::CommandExt;
+use cross::{docker, CommandExt};
 
 // known image prefixes, with their registry
 // the docker.io registry can also be implicit
-const GHCR_IO: &str = cross::docker::CROSS_IMAGE;
+const GHCR_IO: &str = docker::CROSS_IMAGE;
 const RUST_EMBEDDED: &str = "rustembedded/cross";
 const DOCKER_IO: &str = "docker.io/rustembedded/cross";
 const IMAGE_PREFIXES: &[&str] = &[GHCR_IO, DOCKER_IO, RUST_EMBEDDED];
@@ -19,7 +19,7 @@ pub struct ListImages {
 }
 
 impl ListImages {
-    pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
+    pub fn run(self, engine: docker::Engine) -> cross::Result<()> {
         list_images(self, &engine)
     }
 }
@@ -46,7 +46,7 @@ pub struct RemoveImages {
 }
 
 impl RemoveImages {
-    pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
+    pub fn run(self, engine: docker::Engine) -> cross::Result<()> {
         if self.targets.is_empty() {
             remove_all_images(self, &engine)
         } else {
@@ -64,7 +64,7 @@ pub enum Images {
 }
 
 impl Images {
-    pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
+    pub fn run(self, engine: docker::Engine) -> cross::Result<()> {
         match self {
             Images::List(args) => args.run(engine),
             Images::Remove(args) => args.run(engine),
@@ -120,11 +120,11 @@ fn is_local_image(tag: &str) -> bool {
 }
 
 fn get_cross_images(
-    engine: &cross::docker::Engine,
+    engine: &docker::Engine,
     verbose: bool,
     local: bool,
 ) -> cross::Result<Vec<Image>> {
-    let stdout = cross::docker::subcommand(engine, "images")
+    let stdout = docker::subcommand(engine, "images")
         .arg("--format")
         .arg("{{.Repository}}:{{.Tag}} {{.ID}}")
         .run_and_get_stdout(verbose)?;
@@ -174,7 +174,7 @@ fn get_image_target(image: &Image) -> cross::Result<String> {
 
 pub fn list_images(
     ListImages { verbose, .. }: ListImages,
-    engine: &cross::docker::Engine,
+    engine: &docker::Engine,
 ) -> cross::Result<()> {
     get_cross_images(engine, verbose, true)?
         .iter()
@@ -184,13 +184,13 @@ pub fn list_images(
 }
 
 fn remove_images(
-    engine: &cross::docker::Engine,
+    engine: &docker::Engine,
     images: &[&str],
     verbose: bool,
     force: bool,
     execute: bool,
 ) -> cross::Result<()> {
-    let mut command = cross::docker::subcommand(engine, "rmi");
+    let mut command = docker::subcommand(engine, "rmi");
     if force {
         command.arg("--force");
     }
@@ -200,7 +200,7 @@ fn remove_images(
     } else if execute {
         command.run(verbose, false).map_err(Into::into)
     } else {
-        eprintln!("note: this is a dry run. to remove the images, pass the `--execute` flag.");
+        eprintln!("Note: this is a dry run. to remove the images, pass the `--execute` flag.");
         command.print_verbose(true);
         Ok(())
     }
@@ -214,7 +214,7 @@ pub fn remove_all_images(
         execute,
         ..
     }: RemoveImages,
-    engine: &cross::docker::Engine,
+    engine: &docker::Engine,
 ) -> cross::Result<()> {
     let images = get_cross_images(engine, verbose, local)?;
     let ids: Vec<&str> = images.iter().map(|i| i.id.as_ref()).collect();
@@ -230,7 +230,7 @@ pub fn remove_target_images(
         execute,
         ..
     }: RemoveImages,
-    engine: &cross::docker::Engine,
+    engine: &docker::Engine,
 ) -> cross::Result<()> {
     let images = get_cross_images(engine, verbose, local)?;
     let mut ids = vec![];
