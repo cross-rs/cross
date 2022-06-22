@@ -1,7 +1,8 @@
-use std::io::Read;
+use std::collections::BTreeMap;
+use std::io::{self, BufRead, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
-use std::{env, fs};
+use std::{env, fs, time};
 
 use super::engine::Engine;
 use super::shared::*;
@@ -394,6 +395,209 @@ pub fn copy_volume_container_rust(
     Ok(())
 }
 
+type FingerprintMap = BTreeMap<String, time::SystemTime>;
+
+fn parse_project_fingerprint(path: &Path) -> Result<FingerprintMap> {
+    let epoch = time::SystemTime::UNIX_EPOCH;
+    let file = fs::OpenOptions::new().read(true).open(path)?;
+    let reader = io::BufReader::new(file);
+    let mut result = BTreeMap::new();
+    for line in reader.lines() {
+        let line = line?;
+        let (timestamp, relpath) = line
+            .split_once('\t')
+            .ok_or_else(|| eyre::eyre!("unable to parse fingerprint line '{line}'"))?;
+        let modified = epoch + time::Duration::from_millis(timestamp.parse::<u64>()?);
+        result.insert(relpath.to_string(), modified);
+    }
+
+    Ok(result)
+}
+
+fn write_project_fingerprint(path: &Path, fingerprint: &FingerprintMap) -> Result<()> {
+    let epoch = time::SystemTime::UNIX_EPOCH;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(path)?;
+    for (relpath, modified) in fingerprint {
+        let timestamp = modified.duration_since(epoch)?.as_millis() as u64;
+        writeln!(file, "{timestamp}\t{relpath}")?;
+    }
+
+    Ok(())
+}
+
+fn read_dir_fingerprint(
+    home: &Path,
+    path: &Path,
+    map: &mut FingerprintMap,
+    copy_cache: bool,
+) -> Result<()> {
+    let epoch = time::SystemTime::UNIX_EPOCH;
+    for entry in fs::read_dir(path)? {
+        let file = entry?;
+        let file_type = file.file_type()?;
+        // only parse known files types: 0 or 1 of these tests can pass.
+        if file_type.is_dir() {
+            if copy_cache || !is_cachedir(&file) {
+                read_dir_fingerprint(home, &path.join(file.file_name()), map, copy_cache)?;
+            }
+        } else if file_type.is_file() || file_type.is_symlink() {
+            // we're mounting to the same location, so this should fine
+            // we need to round the modified date to millis.
+            let modified = file.metadata()?.modified()?;
+            let millis = modified.duration_since(epoch)?.as_millis() as u64;
+            let rounded = epoch + time::Duration::from_millis(millis);
+            let relpath = file.path().strip_prefix(home)?.as_posix()?;
+            map.insert(relpath, rounded);
+        }
+    }
+
+    Ok(())
+}
+
+fn get_project_fingerprint(home: &Path, copy_cache: bool) -> Result<FingerprintMap> {
+    let mut result = BTreeMap::new();
+    read_dir_fingerprint(home, home, &mut result, copy_cache)?;
+    Ok(result)
+}
+
+fn get_fingerprint_difference<'a, 'b>(
+    previous: &'a FingerprintMap,
+    current: &'b FingerprintMap,
+) -> (Vec<&'b str>, Vec<&'a str>) {
+    // this can be added or updated
+    let changed: Vec<&str> = current
+        .iter()
+        .filter(|(ref k, ref v1)| {
+            previous
+                .get(&k.to_string())
+                .map(|ref v2| v1 != v2)
+                .unwrap_or(true)
+        })
+        .map(|(k, _)| k.as_str())
+        .collect();
+    let removed: Vec<&str> = previous
+        .iter()
+        .filter(|(ref k, _)| !current.contains_key(&k.to_string()))
+        .map(|(k, _)| k.as_str())
+        .collect();
+    (changed, removed)
+}
+
+// copy files for a docker volume, for remote host support
+// provides a list of files relative to src.
+fn copy_volume_file_list(
+    engine: &Engine,
+    container: &str,
+    src: &Path,
+    dst: &Path,
+    files: &[&str],
+    verbose: bool,
+) -> Result<ExitStatus> {
+    // SAFETY: safe, single-threaded execution.
+    let tempdir = unsafe { temp::TempDir::new()? };
+    let temppath = tempdir.path();
+    for file in files {
+        let src_path = src.join(file);
+        let dst_path = temppath.join(file);
+        fs::create_dir_all(dst_path.parent().expect("must have parent"))?;
+        fs::copy(&src_path, &dst_path)?;
+    }
+    copy_volume_files(engine, container, temppath, dst, verbose)
+}
+
+// removed files from a docker volume, for remote host support
+// provides a list of files relative to src.
+fn remove_volume_file_list(
+    engine: &Engine,
+    container: &str,
+    dst: &Path,
+    files: &[&str],
+    verbose: bool,
+) -> Result<ExitStatus> {
+    const PATH: &str = "/tmp/remove_list";
+    let mut script = vec![];
+    if verbose {
+        script.push("set -x".to_string());
+    }
+    script.push(format!(
+        "cat \"{PATH}\" | while read line; do
+    rm -f \"${{line}}\"
+done
+
+rm \"{PATH}\"
+"
+    ));
+
+    // SAFETY: safe, single-threaded execution.
+    let mut tempfile = unsafe { temp::TempFile::new()? };
+    for file in files {
+        writeln!(tempfile.file(), "{}", dst.join(file).as_posix()?)?;
+    }
+
+    // need to avoid having hundreds of files on the command, so
+    // just provide a single file name.
+    subcommand(engine, "cp")
+        .arg(tempfile.path())
+        .arg(format!("{container}:{PATH}"))
+        .run_and_get_status(verbose, true)?;
+
+    subcommand(engine, "exec")
+        .arg(container)
+        .args(&["sh", "-c", &script.join("\n")])
+        .run_and_get_status(verbose, true)
+        .map_err(Into::into)
+}
+
+fn copy_volume_container_project(
+    engine: &Engine,
+    container: &str,
+    src: &Path,
+    dst: &Path,
+    volume: &VolumeId,
+    copy_cache: bool,
+    verbose: bool,
+) -> Result<()> {
+    let copy_all = || {
+        if copy_cache {
+            copy_volume_files(engine, container, src, dst, verbose)
+        } else {
+            copy_volume_files_nocache(engine, container, src, dst, verbose)
+        }
+    };
+    match volume {
+        VolumeId::Keep(_) => {
+            let parent = temp::dir()?;
+            fs::create_dir_all(&parent)?;
+            let fingerprint = parent.join(container);
+            let current = get_project_fingerprint(src, copy_cache)?;
+            if fingerprint.exists() {
+                let previous = parse_project_fingerprint(&fingerprint)?;
+                let (changed, removed) = get_fingerprint_difference(&previous, &current);
+                write_project_fingerprint(&fingerprint, &current)?;
+
+                if !changed.is_empty() {
+                    copy_volume_file_list(engine, container, src, dst, &changed, verbose)?;
+                }
+                if !removed.is_empty() {
+                    remove_volume_file_list(engine, container, dst, &removed, verbose)?;
+                }
+            } else {
+                write_project_fingerprint(&fingerprint, &current)?;
+                copy_all()?;
+            }
+        }
+        VolumeId::Discard(_) => {
+            copy_all()?;
+        }
+    }
+
+    Ok(())
+}
+
 fn run_and_get_status(engine: &Engine, args: &[&str], verbose: bool) -> Result<ExitStatus> {
     command(engine)
         .args(args)
@@ -645,7 +849,15 @@ pub(crate) fn run(
     } else {
         mount_prefix_path.join("project")
     };
-    copy(&dirs.host_root, &mount_root)?;
+    copy_volume_container_project(
+        engine,
+        &container,
+        &dirs.host_root,
+        &mount_root,
+        &volume,
+        copy_cache,
+        verbose,
+    )?;
 
     let mut copied = vec![
         (&dirs.xargo, mount_prefix_path.join("xargo")),
@@ -692,7 +904,7 @@ pub(crate) fn run(
     let mut final_args = vec![];
     let mut iter = args.iter().cloned();
     let mut has_target_dir = false;
-    let target_dir_string = target_dir.to_utf8()?.to_string();
+    let target_dir_string = target_dir.as_posix()?;
     while let Some(arg) = iter.next() {
         if arg == "--target-dir" {
             has_target_dir = true;

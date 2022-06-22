@@ -34,12 +34,12 @@ pub(crate) unsafe fn clean() {
 
 /// # Safety
 /// Safe as long as we have single-threaded execution.
-unsafe fn push_tempfile() -> Result<&'static Path> {
+unsafe fn push_tempfile() -> Result<&'static mut tempfile::NamedTempFile> {
     let parent = dir()?;
     fs::create_dir_all(&parent).ok();
     let file = tempfile::NamedTempFile::new_in(&parent)?;
     FILES.push(file);
-    Ok(FILES.last().unwrap().path())
+    Ok(FILES.last_mut().unwrap())
 }
 
 /// # Safety
@@ -50,7 +50,7 @@ unsafe fn pop_tempfile() -> Option<tempfile::NamedTempFile> {
 
 #[derive(Debug)]
 pub struct TempFile {
-    path: &'static Path,
+    file: &'static mut tempfile::NamedTempFile,
 }
 
 impl TempFile {
@@ -58,12 +58,16 @@ impl TempFile {
     /// Safe as long as we have single-threaded execution.
     pub unsafe fn new() -> Result<Self> {
         Ok(Self {
-            path: push_tempfile()?,
+            file: push_tempfile()?,
         })
     }
 
-    pub fn path(&self) -> &'static Path {
-        self.path
+    pub fn file(&mut self) -> &mut tempfile::NamedTempFile {
+        self.file
+    }
+
+    pub fn path(&self) -> &Path {
+        self.file.path()
     }
 }
 
