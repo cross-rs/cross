@@ -55,6 +55,7 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           components: clippy
+          toolchain: 1.58.1 # MSRV, Minimally Supported Rust Version. Make sure to update README.md
 
       - name: Run clippy
         uses: actions-rs/cargo@v1
@@ -64,7 +65,6 @@ jobs:
 
   test:
     runs-on: ${{ matrix.os }}
-    needs: [fmt, clippy]
     strategy:
       matrix:
         os:
@@ -81,7 +81,7 @@ jobs:
         with:
           command: test
           args: --locked --all-targets --workspace --all-features
-        timeout-minutes: 5
+        timeout-minutes: 10
 
   generate-matrix:
     runs-on: ubuntu-latest
