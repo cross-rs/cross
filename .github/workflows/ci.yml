@@ -189,9 +189,8 @@ jobs:
             - { target: i686-unknown-freebsd,             os: ubuntu-latest,          dylib: 1, std: 1 }
             - { target: x86_64-unknown-freebsd,           os: ubuntu-latest,          dylib: 1, std: 1 }
             - { target: x86_64-unknown-netbsd,            os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-            # Disabled, see #534
-            #-{ target: sparcv9-sun-solaris,              os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-            #-{ target: x86_64-sun-solaris,               os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
+            - { target: sparcv9-sun-solaris,              os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
+            - { target: x86_64-sun-solaris,               os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
             - { target: thumbv6m-none-eabi,               os: ubuntu-latest,                    std: 1 }
             - { target: thumbv7em-none-eabi,              os: ubuntu-latest,                    std: 1 }
             - { target: thumbv7em-none-eabihf,            os: ubuntu-latest,                    std: 1 }
