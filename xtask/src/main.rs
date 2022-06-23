@@ -7,10 +7,9 @@ pub mod install_git_hooks;
 pub mod target_info;
 pub mod util;
 
-use std::path::PathBuf;
-
 use ci::CiJob;
 use clap::{CommandFactory, Parser, Subcommand};
+use cross::docker;
 use util::ImageTarget;
 
 use self::build_docker_image::BuildDockerImage;
@@ -66,11 +65,11 @@ pub fn main() -> cross::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::TargetInfo(args) => {
-            let engine = get_container_engine(args.engine.as_deref())?;
+            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
             target_info::target_info(args, &engine)?;
         }
         Commands::BuildDockerImage(args) => {
-            let engine = get_container_engine(args.engine.as_deref())?;
+            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
             build_docker_image::build_docker_image(args, &engine)?;
         }
         Commands::InstallGitHooks(args) => {
@@ -88,10 +87,11 @@ pub fn main() -> cross::Result<()> {
     Ok(())
 }
 
-fn get_container_engine(engine: Option<&str>) -> Result<PathBuf, which::Error> {
-    if let Some(ce) = engine {
-        which::which(ce)
+fn get_container_engine(engine: Option<&str>, verbose: bool) -> cross::Result<docker::Engine> {
+    let engine = if let Some(ce) = engine {
+        which::which(ce)?
     } else {
-        cross::docker::get_container_engine()
-    }
+        docker::get_container_engine()?
+    };
+    docker::Engine::from_path(engine, None, verbose)
 }

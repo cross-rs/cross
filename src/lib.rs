@@ -27,8 +27,9 @@ mod extensions;
 mod file;
 mod id;
 mod interpreter;
-mod rustc;
+pub mod rustc;
 mod rustup;
+pub mod temp;
 
 use std::env;
 use std::io::{self, Write};
@@ -42,11 +43,11 @@ use serde::{Deserialize, Serialize, Serializer};
 pub use self::cargo::{cargo_command, cargo_metadata_with_args, CargoMetadata, Subcommand};
 use self::cross_toml::CrossToml;
 use self::errors::Context;
-use self::rustc::{TargetList, VersionMetaExt};
 
-pub use self::errors::{install_panic_hook, Result};
+pub use self::errors::{install_panic_hook, install_termination_hook, Result};
 pub use self::extensions::{CommandExt, OutputExt};
-pub use self::file::ToUtf8;
+pub use self::file::{pretty_path, ToUtf8};
+pub use self::rustc::{TargetList, VersionMetaExt};
 
 pub const CROSS_LABEL_DOMAIN: &str = "org.cross-rs";
 
@@ -115,7 +116,7 @@ impl Host {
     }
 
     /// Returns the [`Target`] as target triple string
-    fn triple(&self) -> &str {
+    pub fn triple(&self) -> &str {
         match self {
             Host::X86_64AppleDarwin => "x86_64-apple-darwin",
             Host::Aarch64AppleDarwin => "aarch64-apple-darwin",
@@ -314,7 +315,7 @@ impl std::fmt::Display for Target {
 }
 
 impl Target {
-    fn from(triple: &str, target_list: &TargetList) -> Target {
+    pub fn from(triple: &str, target_list: &TargetList) -> Target {
         if target_list.contains(triple) {
             Target::new_built_in(triple)
         } else {
@@ -370,8 +371,7 @@ pub fn run() -> Result<ExitStatus> {
         .iter()
         .any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
-    let host_version_meta =
-        rustc_version::version_meta().wrap_err("couldn't fetch the `rustc` version")?;
+    let host_version_meta = rustc::version_meta()?;
     let cwd = std::env::current_dir()?;
     if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), verbose)? {
         let host = host_version_meta.host();
@@ -392,22 +392,8 @@ pub fn run() -> Result<ExitStatus> {
         };
 
         if image_exists && host.is_supported(Some(&target)) {
-            let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
-            let default_toolchain = sysroot
-                .file_name()
-                .and_then(|file_name| file_name.to_str())
-                .ok_or_else(|| eyre::eyre!("couldn't get toolchain name"))?;
-            let toolchain = if let Some(channel) = args.channel {
-                [channel]
-                    .iter()
-                    .map(|c| c.as_str())
-                    .chain(default_toolchain.splitn(2, '-').skip(1))
-                    .collect::<Vec<_>>()
-                    .join("-")
-            } else {
-                default_toolchain.to_string()
-            };
-            sysroot.set_file_name(&toolchain);
+            let (toolchain, sysroot) =
+                rustc::get_sysroot(&host, &target, args.channel.as_deref(), verbose)?;
             let mut is_nightly = toolchain.contains("nightly");
 
             let installed_toolchains = rustup::installed_toolchains(verbose)?;
@@ -501,17 +487,23 @@ pub fn run() -> Result<ExitStatus> {
                 filtered_args.push("-Zbuild-std".to_string());
             }
 
-            if target.needs_docker() && args.subcommand.map(|sc| sc.needs_docker()).unwrap_or(false)
-            {
+            let is_remote = docker::Engine::is_remote();
+            let needs_docker = args
+                .subcommand
+                .map(|sc| sc.needs_docker(is_remote))
+                .unwrap_or(false);
+            if target.needs_docker() && needs_docker {
+                let engine = docker::Engine::new(Some(is_remote), verbose)?;
                 if host_version_meta.needs_interpreter()
                     && needs_interpreter
                     && target.needs_interpreter()
                     && !interpreter::is_registered(&target)?
                 {
-                    docker::register(&target, verbose)?
+                    docker::register(&engine, &target, verbose)?
                 }
 
-                return docker::run(
+                let status = docker::run(
+                    &engine,
                     &target,
                     &filtered_args,
                     &metadata,
@@ -521,7 +513,14 @@ pub fn run() -> Result<ExitStatus> {
                     verbose,
                     args.docker_in_docker,
                     &cwd,
-                );
+                )?;
+                let needs_host = args
+                    .subcommand
+                    .map(|sc| sc.needs_host(is_remote))
+                    .unwrap_or(false);
+                if !(status.success() && needs_host) {
+                    return Ok(status);
+                }
             }
         }
     }

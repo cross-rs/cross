@@ -5,7 +5,7 @@ use crate::docker::Engine;
 use crate::{config::Config, docker, CargoMetadata, Target};
 use crate::{errors::*, file, CommandExt, ToUtf8};
 
-use super::{image_name, parse_docker_opts};
+use super::{image_name, parse_docker_opts, path_hash};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Dockerfile<'a> {
@@ -51,7 +51,7 @@ impl<'a> Dockerfile<'a> {
             ),
         ]);
 
-        let image_name = self.image_name(target_triple, metadata);
+        let image_name = self.image_name(target_triple, metadata)?;
         docker_build.args(["--tag", &image_name]);
 
         for (key, arg) in build_args.into_iter() {
@@ -102,32 +102,25 @@ impl<'a> Dockerfile<'a> {
         Ok(image_name)
     }
 
-    pub fn image_name(&self, target_triple: &Target, metadata: &CargoMetadata) -> String {
+    pub fn image_name(&self, target_triple: &Target, metadata: &CargoMetadata) -> Result<String> {
         match self {
             Dockerfile::File {
                 name: Some(name), ..
-            } => name.to_string(),
-            _ => format!(
+            } => Ok(name.to_string()),
+            _ => Ok(format!(
                 "cross-custom-{package_name}:{target_triple}-{path_hash}{custom}",
                 package_name = metadata
                     .workspace_root
                     .file_name()
                     .expect("workspace_root can't end in `..`")
                     .to_string_lossy(),
-                path_hash = format!(
-                    "{}",
-                    const_sha1::sha1(&const_sha1::ConstBuffer::from_slice(
-                        metadata.workspace_root.to_string_lossy().as_bytes()
-                    ))
-                )
-                .get(..5)
-                .expect("sha1 is expected to be at least 5 characters long"),
+                path_hash = path_hash(&metadata.workspace_root)?,
                 custom = if matches!(self, Self::File { .. }) {
                     ""
                 } else {
                     "-pre-build"
                 }
-            ),
+            )),
         }
     }
 

@@ -1,7 +1,4 @@
-use std::path::Path;
-use std::process::Command;
-
-use cross::CommandExt;
+use cross::{docker, CommandExt};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
@@ -84,9 +81,8 @@ pub fn format_repo(registry: &str, repository: &str) -> String {
     output
 }
 
-pub fn pull_image(engine: &Path, image: &str, verbose: bool) -> cross::Result<()> {
-    let mut command = Command::new(engine);
-    command.arg("pull");
+pub fn pull_image(engine: &docker::Engine, image: &str, verbose: bool) -> cross::Result<()> {
+    let mut command = docker::subcommand(engine, "pull");
     command.arg(image);
     let out = command.run_and_get_output(verbose)?;
     command.status_result(verbose, out.status, Some(&out))?;

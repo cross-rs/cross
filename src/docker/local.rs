@@ -6,13 +6,14 @@ use super::shared::*;
 use crate::cargo::CargoMetadata;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
-use crate::file::ToUtf8;
+use crate::file::{PathExt, ToUtf8};
 use crate::{Config, Target};
 use atty::Stream;
 use eyre::Context;
 
 #[allow(clippy::too_many_arguments)] // TODO: refactor
 pub(crate) fn run(
+    engine: &Engine,
     target: &Target,
     args: &[String],
     metadata: &CargoMetadata,
@@ -23,13 +24,12 @@ pub(crate) fn run(
     docker_in_docker: bool,
     cwd: &Path,
 ) -> Result<ExitStatus> {
-    let engine = Engine::new(verbose)?;
-    let dirs = Directories::create(&engine, metadata, cwd, sysroot, docker_in_docker, verbose)?;
+    let dirs = Directories::create(engine, metadata, cwd, sysroot, docker_in_docker, verbose)?;
 
     let mut cmd = cargo_safe_command(uses_xargo);
     cmd.args(args);
 
-    let mut docker = subcommand(&engine, "run");
+    let mut docker = subcommand(engine, "run");
     docker.args(&["--userns", "host"]);
     docker_envvars(&mut docker, config, target)?;
 
@@ -76,7 +76,7 @@ pub(crate) fn run(
     if let Some(ref nix_store) = dirs.nix_store {
         docker.args(&[
             "-v",
-            &format!("{}:{}:Z", nix_store.to_utf8()?, nix_store.to_utf8()?),
+            &format!("{}:{}:Z", nix_store.to_utf8()?, nix_store.as_posix()?),
         ]);
     }
 
@@ -88,7 +88,7 @@ pub(crate) fn run(
     }
     let mut image = image_name(config, target)?;
     if needs_custom_image(target, config) {
-        image = custom_image_build(target, config, metadata, dirs, &engine, verbose)
+        image = custom_image_build(target, config, metadata, dirs, engine, verbose)
             .wrap_err("when building custom image")?
     }
 

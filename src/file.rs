@@ -75,6 +75,7 @@ fn read_(path: &Path) -> Result<String> {
 
 pub fn canonicalize(path: impl AsRef<Path>) -> Result<PathBuf> {
     _canonicalize(path.as_ref())
+        .wrap_err_with(|| format!("when canonicalizing path `{:?}`", path.as_ref()))
 }
 
 fn _canonicalize(path: &Path) -> Result<PathBuf> {

@@ -43,6 +43,10 @@ serde_json = "1"
 serde_ignored = "0.1.2"
 shell-words = "1.1.0"
 const-sha1 = "0.2.0"
+ctrlc = { version = "3.2.2", features = ["termination"] }
+directories = "4.0.1"
+walkdir = { version = "2", optional = true }
+tempfile = "3.3.0"
 
 [target.'cfg(not(windows))'.dependencies]
 nix = { version = "0.24", default-features = false, features = ["user"] }

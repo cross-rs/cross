@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rustc_version::{Channel, Version};
@@ -123,25 +123,35 @@ fn rustc_channel(version: &Version) -> Result<Channel> {
     }
 }
 
-pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Channel, String)>> {
-    let path = toolchain_path.join("lib/rustlib/multirust-channel-manifest.toml");
+fn multirust_channel_manifest_path(toolchain_path: &Path) -> PathBuf {
+    toolchain_path.join("lib/rustlib/multirust-channel-manifest.toml")
+}
+
+pub fn rustc_version_string(toolchain_path: &Path) -> Result<Option<String>> {
+    let path = multirust_channel_manifest_path(toolchain_path);
     if path.exists() {
         let contents =
             std::fs::read(&path).wrap_err_with(|| format!("couldn't open file `{path:?}`"))?;
         let manifest: toml::value::Table = toml::from_slice(&contents)?;
-        if let Some(rust_version) = manifest
+        return Ok(manifest
             .get("pkg")
             .and_then(|pkg| pkg.get("rust"))
             .and_then(|rust| rust.get("version"))
             .and_then(|version| version.as_str())
-        {
-            // Field is `"{version} ({commit} {date})"`
-            if let Some((version, meta)) = rust_version.split_once(' ') {
-                let version = Version::parse(version)
-                    .wrap_err_with(|| format!("invalid rust version found in {path:?}"))?;
-                let channel = rustc_channel(&version)?;
-                return Ok(Some((version, channel, meta.to_owned())));
-            }
+            .map(|version| version.to_string()));
+    }
+    Ok(None)
+}
+
+pub fn rustc_version(toolchain_path: &Path) -> Result<Option<(Version, Channel, String)>> {
+    let path = multirust_channel_manifest_path(toolchain_path);
+    if let Some(rust_version) = rustc_version_string(toolchain_path)? {
+        // Field is `"{version} ({commit} {date})"`
+        if let Some((version, meta)) = rust_version.split_once(' ') {
+            let version = Version::parse(version)
+                .wrap_err_with(|| format!("invalid rust version found in {path:?}"))?;
+            let channel = rustc_channel(&version)?;
+            return Ok(Some((version, channel, meta.to_owned())));
         }
     }
     Ok(None)

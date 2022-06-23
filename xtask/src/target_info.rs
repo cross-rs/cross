@@ -1,12 +1,8 @@
-use std::{
-    collections::BTreeMap,
-    path::Path,
-    process::{Command, Stdio},
-};
+use std::{collections::BTreeMap, process::Stdio};
 
 use crate::util::{format_repo, pull_image};
 use clap::Args;
-use cross::CommandExt;
+use cross::{docker, CommandExt};
 
 // Store raw text data in the binary so we don't need a data directory
 // when extracting all targets, or running our target info script.
@@ -18,7 +14,7 @@ pub struct TargetInfo {
     targets: Vec<crate::ImageTarget>,
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
-    verbose: bool,
+    pub verbose: bool,
     /// Image registry.
     #[clap(long, default_value_t = String::from("ghcr.io"))]
     registry: String,
@@ -34,7 +30,7 @@ pub struct TargetInfo {
 }
 
 fn image_info(
-    engine: &Path,
+    engine: &docker::Engine,
     target: &crate::ImageTarget,
     image: &str,
     tag: &str,
@@ -45,7 +41,7 @@ fn image_info(
         pull_image(engine, image, verbose)?;
     }
 
-    let mut command = Command::new(engine);
+    let mut command = docker::command(engine);
     command.arg("run");
     command.arg("--rm");
     command.args(&["-e", &format!("TARGET={}", target.triplet)]);
@@ -73,7 +69,7 @@ pub fn target_info(
         tag,
         ..
     }: TargetInfo,
-    engine: &Path,
+    engine: &docker::Engine,
 ) -> cross::Result<()> {
     let matrix = crate::util::get_matrix();
     let test_map: BTreeMap<crate::ImageTarget, bool> = matrix
