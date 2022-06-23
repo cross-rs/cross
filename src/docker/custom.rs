@@ -7,6 +7,8 @@ use crate::{errors::*, file, CommandExt, ToUtf8};
 
 use super::{image_name, parse_docker_opts, path_hash};
 
+pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "cross-custom-";
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Dockerfile<'a> {
     File {
@@ -108,7 +110,8 @@ impl<'a> Dockerfile<'a> {
                 name: Some(name), ..
             } => Ok(name.to_string()),
             _ => Ok(format!(
-                "cross-custom-{package_name}:{target_triple}-{path_hash}{custom}",
+                "{}{package_name}:{target_triple}-{path_hash}{custom}",
+                CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX,
                 package_name = metadata
                     .workspace_root
                     .file_name()
