@@ -84,9 +84,27 @@ Additional documentation can be found on the [wiki](https://github.com/cross-rs/
 
 ## Configuration
 
-You can place a `Cross.toml` file in the root of your Cargo project or use a
-`CROSS_CONFIG` environment variable to tweak `cross`'s behavior. The format
-of `Cross.toml` is documented in [docs/cross_toml.md](docs/cross_toml.md).
+You have three options to configure `cross`. All of these options use the TOML format for configuration and the possible configuration values are documented [here](docs/cross_toml.md).
+
+### Option 1: Configuring `cross` directly in your `Cargo.toml`
+
+You can directly set [configuration values](docs/cross_toml.md) in your `Cargo.toml` file, under the `[package.metadata.cross]` table, i.e. key prefix.
+An example config snippet would look like this:
+
+```
+[package.metadata.cross.target.aarch64-unknown-linux-gnu]
+xargo = false
+image = "test-image"
+runner = "custom-runner"
+```
+
+### Option 2: Configuring `cross` via a `Cross.toml` file
+
+You can put your [configuration](docs/cross_toml.md) inside a `Cross.toml` file in your project root directory.
+
+### Option 3: Using `CROSS_CONFIG` to specify the location of your configuration
+
+By setting the `CROSS_CONFIG` environment variable, you can tell `cross` where it should search for the config file. This way you are not limited to a `Cross.toml` file in the project root.
 
 ### Custom Docker images
 

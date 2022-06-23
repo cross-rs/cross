@@ -2,19 +2,20 @@
 
 use crate::{config, errors::*};
 use crate::{Target, TargetList};
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::str::FromStr;
 
 /// Environment configuration
-#[derive(Debug, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct CrossEnvConfig {
     volumes: Option<Vec<String>>,
     passthrough: Option<Vec<String>>,
 }
 
 /// Build configuration
-#[derive(Debug, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CrossBuildConfig {
     #[serde(default)]
@@ -28,7 +29,7 @@ pub struct CrossBuildConfig {
 }
 
 /// Target configuration
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CrossTargetConfig {
     xargo: Option<bool>,
@@ -43,7 +44,7 @@ pub struct CrossTargetConfig {
 }
 
 /// Dockerfile configuration
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CrossTargetDockerfileConfig {
     file: String,
@@ -64,7 +65,7 @@ impl FromStr for CrossTargetDockerfileConfig {
 }
 
 /// Cross configuration
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct CrossToml {
     #[serde(default, rename = "target")]
     pub targets: HashMap<Target, CrossTargetConfig>,
@@ -73,13 +74,46 @@ pub struct CrossToml {
 }
 
 impl CrossToml {
+    /// Parses the [`CrossToml`] from all of the config sources
+    pub fn parse(cargo_toml: &str, cross_toml: &str) -> Result<(Self, BTreeSet<String>)> {
+        let (cross_toml, unused) = Self::parse_from_cross(cross_toml)?;
+
+        if let Some((cargo_toml, _)) = Self::parse_from_cargo(cargo_toml)? {
+            Ok((cargo_toml.merge(cross_toml)?, unused))
+        } else {
+            Ok((cross_toml, unused))
+        }
+    }
+
     /// Parses the [`CrossToml`] from a string
-    pub fn parse(toml_str: &str) -> Result<(Self, BTreeSet<String>)> {
-        let tomld = &mut toml::Deserializer::new(toml_str);
+    pub fn parse_from_cross(toml_str: &str) -> Result<(Self, BTreeSet<String>)> {
+        let mut tomld = toml::Deserializer::new(toml_str);
+        Self::parse_from_deserializer(&mut tomld)
+    }
 
+    /// Parses the [`CrossToml`] from a string containing the Cargo.toml contents
+    pub fn parse_from_cargo(cargo_toml_str: &str) -> Result<Option<(Self, BTreeSet<String>)>> {
+        let cargo_toml: toml::Value = toml::from_str(cargo_toml_str)?;
+        let cross_metadata_opt = cargo_toml
+            .get("package")
+            .and_then(|p| p.get("metadata"))
+            .and_then(|m| m.get("cross"));
+
+        if let Some(cross_meta) = cross_metadata_opt {
+            Ok(Some(Self::parse_from_deserializer(cross_meta.clone())?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Parses the [`CrossToml`] from a [`Deserializer`]
+    fn parse_from_deserializer<'de, D>(deserializer: D) -> Result<(Self, BTreeSet<String>)>
+    where
+        D: Deserializer<'de>,
+        D::Error: Send + Sync + 'static,
+    {
         let mut unused = BTreeSet::new();
-
-        let cfg = serde_ignored::deserialize(tomld, |path| {
+        let cfg = serde_ignored::deserialize(deserializer, |path| {
             unused.insert(path.to_string());
         })?;
 
@@ -91,6 +125,72 @@ impl CrossToml {
         }
 
         Ok((cfg, unused))
+    }
+
+    /// Merges another [`CrossToml`] into `self` and returns a new merged one
+    pub fn merge(self, other: CrossToml) -> Result<CrossToml> {
+        type ValueMap = serde_json::Map<String, serde_json::Value>;
+
+        fn to_map<S: Serialize>(s: S) -> Result<ValueMap> {
+            if let Some(obj) = serde_json::to_value(s)
+                .wrap_err("could not convert CrossToml to serde_json::Value")?
+                .as_object()
+            {
+                Ok(obj.to_owned())
+            } else {
+                eyre::bail!("failed to serialize CrossToml as object");
+            }
+        }
+
+        fn from_map<D: DeserializeOwned>(map: ValueMap) -> Result<D> {
+            let value = serde_json::to_value(map)
+                .wrap_err("could not convert ValueMap to serde_json::Value")?;
+            serde_json::from_value(value)
+                .wrap_err("could not deserialize serde_json::Value to CrossToml")
+        }
+
+        // merge 2 objects. y has precedence over x.
+        fn merge_objects(x: &mut ValueMap, y: &ValueMap) -> Option<()> {
+            // we need to iterate over both keys, so we need a full deduplication
+            let keys: BTreeSet<String> = x.keys().chain(y.keys()).cloned().collect();
+            for key in keys {
+                let in_x = x.contains_key(&key);
+                let in_y = y.contains_key(&key);
+                if !in_x && in_y {
+                    let yk = y[&key].clone();
+                    x.insert(key, yk);
+                    continue;
+                } else if !in_y {
+                    continue;
+                }
+
+                let xk = x.get_mut(&key)?;
+                let yk = y.get(&key)?;
+                if xk.is_null() && !yk.is_null() {
+                    *xk = yk.clone();
+                    continue;
+                } else if yk.is_null() {
+                    continue;
+                }
+
+                // now we've filtered out missing keys and optional values
+                // all key/value pairs should be same type.
+                if xk.is_object() {
+                    merge_objects(xk.as_object_mut()?, yk.as_object()?)?;
+                } else {
+                    *xk = yk.clone();
+                }
+            }
+
+            Some(())
+        }
+
+        // Builds maps of objects
+        let mut self_map = to_map(&self)?;
+        let other_map = to_map(other)?;
+
+        merge_objects(&mut self_map, &other_map).ok_or_else(|| eyre::eyre!("could not merge"))?;
+        from_map(self_map)
     }
 
     /// Returns the `target.{}.image` part of `Cross.toml`
@@ -258,6 +358,20 @@ where
                 Deserialize::deserialize(de::value::MapAccessDeserializer::new(map));
             t.map(Some)
         }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
     }
 
     deserializer.deserialize_any(StringOrStruct(PhantomData))
@@ -273,7 +387,7 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig::default(),
         };
-        let (parsed_cfg, unused) = CrossToml::parse("")?;
+        let (parsed_cfg, unused) = CrossToml::parse_from_cross("")?;
 
         assert_eq!(parsed_cfg, cfg);
         assert!(unused.is_empty());
@@ -307,7 +421,7 @@ mod tests {
           volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
         "#;
-        let (parsed_cfg, unused) = CrossToml::parse(test_str)?;
+        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str)?;
 
         assert_eq!(parsed_cfg, cfg);
         assert!(unused.is_empty());
@@ -351,7 +465,7 @@ mod tests {
             image = "test-image"
             pre-build = []
         "#;
-        let (parsed_cfg, unused) = CrossToml::parse(test_str)?;
+        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str)?;
 
         assert_eq!(parsed_cfg, cfg);
         assert!(unused.is_empty());
@@ -415,10 +529,175 @@ mod tests {
             [target.aarch64-unknown-linux-gnu.env]
             volumes = ["VOL"]
         "#;
-        let (parsed_cfg, unused) = CrossToml::parse(test_str)?;
+        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str)?;
 
         assert_eq!(parsed_cfg, cfg);
         assert!(unused.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn parse_from_empty_cargo_toml() -> Result<()> {
+        let test_str = r#"
+          [package]
+          name = "cargo_toml_test_package"
+          version = "0.1.0"
+
+          [dependencies]
+          cross = "1.2.3"
+        "#;
+
+        let res = CrossToml::parse_from_cargo(test_str)?;
+        assert!(res.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn parse_from_cargo_toml() -> Result<()> {
+        let cfg = CrossToml {
+            targets: HashMap::new(),
+            build: CrossBuildConfig {
+                env: CrossEnvConfig {
+                    passthrough: None,
+                    volumes: None,
+                },
+                build_std: None,
+                xargo: Some(true),
+                default_target: None,
+                pre_build: None,
+                dockerfile: None,
+            },
+        };
+
+        let test_str = r#"
+          [package]
+          name = "cargo_toml_test_package"
+          version = "0.1.0"
+
+          [dependencies]
+          cross = "1.2.3"
+
+          [package.metadata.cross.build]
+          xargo = true
+        "#;
+
+        if let Some((parsed_cfg, _unused)) = CrossToml::parse_from_cargo(test_str)? {
+            assert_eq!(parsed_cfg, cfg);
+        } else {
+            panic!("Parsing result is None");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn merge() -> Result<()> {
+        let cfg1_str = r#"
+            [target.aarch64-unknown-linux-gnu]
+            xargo = false
+            build-std = true
+            image = "test-image1"
+
+            [target.aarch64-unknown-linux-gnu.env]
+            volumes = ["VOL1_ARG"]
+            passthrough = ["VAR1"]
+
+            [target.target2]
+            xargo = false
+            build-std = true
+            image = "test-image2"
+
+            [target.target2.env]
+            volumes = ["VOL2_ARG"]
+            passthrough = ["VAR2"]
+
+            [build]
+            build-std = true
+            xargo = true
+
+            [build.env]
+            volumes = []
+            passthrough = ["VAR1", "VAR2"]
+        "#;
+
+        let cfg2_str = r#"
+            [target.target2]
+            xargo = false
+            build-std = false
+            image = "test-image2-precedence"
+
+            [target.target2.env]
+            volumes = ["VOL2_ARG_PRECEDENCE"]
+            passthrough = ["VAR2_PRECEDENCE"]
+
+            [target.target3]
+            xargo = false
+            build-std = true
+            image = "test-image3"
+
+            [target.target3.env]
+            volumes = ["VOL3_ARG"]
+            passthrough = ["VAR3"]
+
+            [build]
+            build-std = true
+            xargo = false
+            default-target = "aarch64-unknown-linux-gnu"
+
+            [build.env]
+            volumes = []
+            passthrough = ["VAR3", "VAR4"]
+
+        "#;
+
+        let cfg_expected_str = r#"
+            [target.aarch64-unknown-linux-gnu]
+            xargo = false
+            build-std = true
+            image = "test-image1"
+
+            [target.aarch64-unknown-linux-gnu.env]
+            volumes = ["VOL1_ARG"]
+            passthrough = ["VAR1"]
+
+            [target.target2]
+            xargo = false
+            build-std = false
+            image = "test-image2-precedence"
+
+            [target.target2.env]
+            volumes = ["VOL2_ARG_PRECEDENCE"]
+            passthrough = ["VAR2_PRECEDENCE"]
+
+            [target.target3]
+            xargo = false
+            build-std = true
+            image = "test-image3"
+
+            [target.target3.env]
+            volumes = ["VOL3_ARG"]
+            passthrough = ["VAR3"]
+
+            [build]
+            build-std = true
+            xargo = false
+            default-target = "aarch64-unknown-linux-gnu"
+                
+            [build.env]
+            volumes = []
+            passthrough = ["VAR3", "VAR4"]
+        "#;
+
+        // Parses configs
+        let (cfg1, _) = CrossToml::parse_from_cross(cfg1_str)?;
+        let (cfg2, _) = CrossToml::parse_from_cross(cfg2_str)?;
+        let (cfg_expected, _) = CrossToml::parse_from_cross(cfg_expected_str)?;
+
+        // Merges config and compares
+        let cfg_merged = cfg1.merge(cfg2)?;
+        assert_eq!(cfg_expected, cfg_merged);
 
         Ok(())
     }

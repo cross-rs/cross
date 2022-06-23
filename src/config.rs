@@ -431,7 +431,9 @@ mod tests {
         use std::matches;
 
         fn toml(content: &str) -> Result<crate::CrossToml> {
-            Ok(CrossToml::parse(content).wrap_err("couldn't parse toml")?.0)
+            Ok(CrossToml::parse_from_cross(content)
+                .wrap_err("couldn't parse toml")?
+                .0)
         }
 
         #[test]

@@ -37,7 +37,7 @@ use std::process::ExitStatus;
 
 use config::Config;
 use rustc_version::Channel;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, Serializer};
 
 pub use self::cargo::{cargo_command, cargo_metadata_with_args, CargoMetadata, Subcommand};
 use self::cross_toml::CrossToml;
@@ -145,7 +145,7 @@ impl<'a> From<&'a str> for Host {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
-#[serde(from = "&str")]
+#[serde(from = "String")]
 pub enum Target {
     BuiltIn { triple: String },
     Custom { triple: String },
@@ -338,10 +338,19 @@ impl From<Host> for Target {
     }
 }
 
-impl From<&str> for Target {
-    fn from(target_str: &str) -> Target {
-        let target_host: Host = target_str.into();
+impl From<String> for Target {
+    fn from(target_str: String) -> Target {
+        let target_host: Host = target_str.as_str().into();
         target_host.into()
+    }
+}
+
+impl Serialize for Target {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Target::BuiltIn { triple } => serializer.serialize_str(triple),
+            Target::Custom { triple } => serializer.serialize_str(triple),
+        }
     }
 }
 
@@ -582,27 +591,44 @@ pub(crate) fn warn_host_version_mismatch(
     Ok(VersionMatch::Same)
 }
 
-/// Parses the `Cross.toml` at the root of the Cargo project or from the
-/// `CROSS_CONFIG` environment variable (if any exist in either location).
+/// Obtains the [`CrossToml`] from one of the possible locations
+///
+/// These locations are checked in the following order:
+/// 1. If the `CROSS_CONFIG` variable is set, it tries to read the config from its value
+/// 2. Otherwise, the `Cross.toml` in the project root is used
+/// 3. Package metadata in the Cargo.toml
+///
+/// The values from `CROSS_CONFIG` or `Cross.toml` are concatenated with the package
+/// metadata in `Cargo.toml`, with `Cross.toml` having the highest priority.
 fn toml(metadata: &CargoMetadata) -> Result<Option<CrossToml>> {
-    let path = match env::var("CROSS_CONFIG") {
+    let root = &metadata.workspace_root;
+    let cross_config_path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),
-        Err(_) => metadata.workspace_root.join("Cross.toml"),
+        Err(_) => root.join("Cross.toml"),
     };
 
-    if path.exists() {
-        let content =
-            file::read(&path).wrap_err_with(|| format!("could not read file `{path:?}`"))?;
+    // Attempts to read the cross config from the Cargo.toml
+    let cargo_toml_str =
+        file::read(root.join("Cargo.toml")).wrap_err("failed to read Cargo.toml")?;
 
-        let (config, _) = CrossToml::parse(&content)
-            .wrap_err_with(|| format!("failed to parse file `{path:?}` as TOML"))?;
+    if cross_config_path.exists() {
+        let cross_toml_str = file::read(&cross_config_path)
+            .wrap_err_with(|| format!("could not read file `{cross_config_path:?}`"))?;
+
+        let (config, _) = CrossToml::parse(&cargo_toml_str, &cross_toml_str)
+            .wrap_err_with(|| format!("failed to parse file `{cross_config_path:?}` as TOML",))?;
 
         Ok(Some(config))
     } else {
         // Checks if there is a lowercase version of this file
-        if metadata.workspace_root.join("cross.toml").exists() {
+        if root.join("cross.toml").exists() {
             eprintln!("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.");
         }
-        Ok(None)
+
+        if let Some((cfg, _)) = CrossToml::parse_from_cargo(&cargo_toml_str)? {
+            Ok(Some(cfg))
+        } else {
+            Ok(None)
+        }
     }
 }
