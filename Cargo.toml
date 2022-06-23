@@ -98,3 +98,8 @@ file = "CHANGELOG.md"
 search = "<!-- next-url -->"
 replace = "<!-- next-url -->\n\n[Unreleased]: https://github.com/cross-rs/{{crate_name}}/compare/{{tag_name}}...HEAD"
 exactly = 1
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-format }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"

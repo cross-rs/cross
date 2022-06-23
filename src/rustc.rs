@@ -52,7 +52,7 @@ fn short_commit_hash(hash: &str) -> String {
 }
 
 pub fn hash_from_version_string(version: &str, index: usize) -> String {
-    let is_hash = |x: &str| x.chars().all(|c| c.is_digit(16));
+    let is_hash = |x: &str| x.chars().all(|c| c.is_ascii_hexdigit());
     let is_date = |x: &str| x.chars().all(|c| matches!(c, '-' | '0'..='9'));
 
     // the version can be one of two forms:
