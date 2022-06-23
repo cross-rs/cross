@@ -76,9 +76,10 @@ pub struct CrossToml {
 impl CrossToml {
     /// Parses the [`CrossToml`] from all of the config sources
     pub fn parse(cargo_toml: &str, cross_toml: &str) -> Result<(Self, BTreeSet<String>)> {
-        let (cross_toml, unused) = Self::parse_from_cross(cross_toml)?;
+        let (cross_toml, mut unused) = Self::parse_from_cross(cross_toml)?;
 
-        if let Some((cargo_toml, _)) = Self::parse_from_cargo(cargo_toml)? {
+        if let Some((cargo_toml, u_cargo)) = Self::parse_from_cargo(cargo_toml)? {
+            unused.extend(u_cargo.into_iter());
             Ok((cargo_toml.merge(cross_toml)?, unused))
         } else {
             Ok((cross_toml, unused))
@@ -684,7 +685,7 @@ mod tests {
             build-std = true
             xargo = false
             default-target = "aarch64-unknown-linux-gnu"
-                
+
             [build.env]
             volumes = []
             passthrough = ["VAR3", "VAR4"]
