@@ -54,6 +54,9 @@ pub struct BuildDockerImage {
     /// If no target list is provided, parse list from CI.
     #[clap(long)]
     from_ci: bool,
+    /// Additional build arguments to pass to Docker.
+    #[clap(long)]
+    build_arg: Vec<String>,
     /// Targets to build for
     #[clap()]
     targets: Vec<crate::ImageTarget>,
@@ -92,6 +95,7 @@ pub fn build_docker_image(
         no_cache,
         no_fastfail,
         from_ci,
+        build_arg,
         mut targets,
         ..
     }: BuildDockerImage,
@@ -219,6 +223,9 @@ pub fn build_docker_image(
             docker_build.args(&["--progress", "plain"]);
         } else {
             docker_build.args(&["--progress", &progress]);
+        }
+        for arg in &build_arg {
+            docker_build.args(&["--build-arg", arg]);
         }
 
         docker_build.arg(".");
