@@ -39,8 +39,7 @@ pub(crate) fn run(
         config,
         target,
         cwd,
-        verbose,
-        |docker, val, verbose| mount(docker, val, "", verbose),
+        |docker, val| mount(docker, val, ""),
         |_| {},
     )?;
 
@@ -57,11 +56,7 @@ pub(crate) fn run(
     if mount_volumes {
         docker.args(&[
             "-v",
-            &format!(
-                "{}:{}:Z",
-                dirs.host_root.to_utf8()?,
-                dirs.mount_root.to_utf8()?
-            ),
+            &format!("{}:{}:Z", dirs.host_root.to_utf8()?, dirs.mount_root),
         ]);
     } else {
         docker.args(&["-v", &format!("{}:/project:Z", dirs.host_root.to_utf8()?)]);
