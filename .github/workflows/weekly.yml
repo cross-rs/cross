@@ -12,6 +12,7 @@ env:
 jobs:
   weekly:
     name: Check All Targets - No Cache
+    timeout-minutes: 1440
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
