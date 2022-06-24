@@ -393,6 +393,7 @@ terminate.
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/85821), you will have to build them yourself for now.-->
 
 Additional Dockerfiles for other targets can be found in [cross-toolchains](https://github.com/cross-rs/cross-toolchains).
+These include MSVC and Apple Darwin targets, which we cannot ship pre-built images of.
 
 ## Debugging
 
