@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use clap::{Args, Subcommand};
 use cross::{
@@ -21,8 +21,8 @@ pub struct ListImages {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
-    /// Only list images for a specific target
-    pub target: String,
+    /// Only list images for specific target(s). By default, list all targets.
+    pub targets: Vec<String>,
 }
 
 impl ListImages {
@@ -231,12 +231,73 @@ fn get_image_target(
 }
 
 pub fn list_images(
-    ListImages { verbose, .. }: ListImages,
+    ListImages {
+        targets, verbose, ..
+    }: ListImages,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    get_cross_images(engine, verbose, true)?
-        .iter()
-        .for_each(|image| println!("{}", image));
+    let cross_images = get_cross_images(engine, verbose, true)?;
+    let target_list = cross::rustc::target_list(false)?;
+    let mut map: BTreeMap<String, Vec<Image>> = BTreeMap::new();
+    let mut max_target_len = 0;
+    let mut max_image_len = 0;
+    for image in cross_images {
+        let target = get_image_target(engine, &image, &target_list)?;
+        if targets.is_empty() || targets.contains(&target) {
+            if !map.contains_key(&target) {
+                map.insert(target.clone(), vec![]);
+            }
+            max_target_len = target.len().max(max_target_len);
+            max_image_len = image.name().len().max(max_image_len);
+            map.get_mut(&target).expect("map must have key").push(image);
+        }
+    }
+    let mut keys: Vec<&str> = map.iter().map(|(k, _)| k.as_ref()).collect();
+    keys.sort_unstable();
+
+    let print_string = |col1: &str, col2: &str, fill: char| {
+        let mut row = String::new();
+        row.push('|');
+        row.push(fill);
+        row.push_str(col1);
+        let spaces = max_target_len.max(col1.len()) + 1 - col1.len();
+        for _ in 0..spaces {
+            row.push(fill);
+        }
+        row.push('|');
+        row.push(fill);
+        row.push_str(col2);
+        let spaces = max_image_len.max(col2.len()) + 1 - col2.len();
+        for _ in 0..spaces {
+            row.push(fill);
+        }
+        row.push('|');
+        println!("{}", row);
+    };
+
+    if targets.len() != 1 {
+        print_string("Targets", "Images", ' ');
+        print_string("-------", "------", '-');
+    }
+
+    let print_single = |_: &str, image: &Image| println!("{}", image);
+    let print_table = |target: &str, image: &Image| {
+        let name = image.name();
+        print_string(target, &name, ' ');
+    };
+
+    keys.iter().for_each(|&target| {
+        map.get(target)
+            .expect("map must have key")
+            .iter()
+            .for_each(|image| {
+                if targets.len() == 1 {
+                    print_single(target, image);
+                } else {
+                    print_table(target, image);
+                }
+            });
+    });
 
     Ok(())
 }
