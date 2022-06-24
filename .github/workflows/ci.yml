@@ -82,6 +82,25 @@ jobs:
           command: test
           args: --locked --all-targets --workspace --all-features
         timeout-minutes: 10
+      - name: Test basic image
+        run: |
+          set -x
+          cargo install --path . --force --debug
+          td=$(mktemp -d)
+          git clone \
+              --depth 1 \
+              --recursive \
+              https://github.com/cross-rs/test-workspace "${td}"
+          pushd "${td}"
+          cross build -v --target x86_64-unknown-linux-gnu --manifest-path="./workspace/Cargo.toml"
+          pushd "workspace"
+          cross run -v --target x86_64-unknown-linux-gnu -p binary
+          popd; popd;
+        shell: bash
+        if: matrix.os != 'macos-latest'
+        env:
+          CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE: "ubuntu:16.04"
+          CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_PRE_BUILD: "apt-get update && apt-get install -y gcc"
 
   generate-matrix:
     runs-on: ubuntu-latest
