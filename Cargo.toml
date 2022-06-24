@@ -79,7 +79,7 @@ replace = "v{{version}}"
 [[package.metadata.release.pre-release-replacements]]
 file = "CHANGELOG.md"
 search = "\\.\\.\\.HEAD"
-replace = "...{{tag_name}}"
+replace = "...v{{version}}"
 exactly = 1
 
 [[package.metadata.release.pre-release-replacements]]
@@ -96,10 +96,10 @@ exactly = 1
 [[package.metadata.release.pre-release-replacements]]
 file = "CHANGELOG.md"
 search = "<!-- next-url -->"
-replace = "<!-- next-url -->\n\n[Unreleased]: https://github.com/cross-rs/{{crate_name}}/compare/{{tag_name}}...HEAD"
+replace = "<!-- next-url -->\n\n[Unreleased]: https://github.com/cross-rs/{{crate_name}}/compare/v{{version}}...HEAD"
 exactly = 1
 
 [package.metadata.binstall]
-pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-format }"
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.tar.gz"
 bin-dir = "{ bin }{ binary-ext }"
 pkg-fmt = "tgz"
