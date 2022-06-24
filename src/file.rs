@@ -2,6 +2,8 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::Read;
+#[cfg(target_family = "windows")]
+use std::path::Prefix;
 use std::path::{Component, Path, PathBuf};
 
 use crate::errors::*;
@@ -25,18 +27,49 @@ impl ToUtf8 for Path {
 
 pub trait PathExt {
     fn as_posix(&self) -> Result<String>;
+    #[cfg(target_family = "windows")]
+    fn as_wslpath(&self) -> Result<String>;
 }
 
-fn push_posix_path(path: &mut String, component: &str) {
-    if !path.is_empty() && path != "/" {
-        path.push('/');
+#[cfg(target_family = "windows")]
+fn format_prefix(prefix: &str) -> Result<String> {
+    match prefix {
+        "" => eyre::bail!("Error: got empty windows prefix"),
+        _ => Ok(format!("/mnt/{}", prefix.to_lowercase())),
     }
-    path.push_str(component);
+}
+
+#[cfg(target_family = "windows")]
+fn fmt_disk(disk: u8) -> String {
+    (disk as char).to_string()
+}
+
+#[cfg(target_family = "windows")]
+fn fmt_unc(server: &std::ffi::OsStr, volume: &std::ffi::OsStr) -> Result<String> {
+    let server = server.to_utf8()?;
+    let volume = volume.to_utf8()?;
+    let bytes = volume.as_bytes();
+    if server == "localhost"
+        && bytes.len() == 2
+        && bytes[1] == b'$'
+        && matches!(bytes[0], b'A'..=b'Z' | b'a'..=b'z')
+    {
+        Ok(fmt_disk(bytes[0]))
+    } else {
+        Ok(format!("{}/{}", server, volume))
+    }
 }
 
 impl PathExt for Path {
     fn as_posix(&self) -> Result<String> {
         if cfg!(target_os = "windows") {
+            let push = |p: &mut String, c: &str| {
+                if !p.is_empty() && p != "/" {
+                    p.push('/');
+                }
+                p.push_str(c);
+            };
+
             // iterate over components to join them
             let mut output = String::new();
             for component in self.components() {
@@ -45,15 +78,61 @@ impl PathExt for Path {
                         eyre::bail!("unix paths cannot handle windows prefix {prefix:?}.")
                     }
                     Component::RootDir => output = "/".to_string(),
-                    Component::CurDir => push_posix_path(&mut output, "."),
-                    Component::ParentDir => push_posix_path(&mut output, ".."),
-                    Component::Normal(path) => push_posix_path(&mut output, path.to_utf8()?),
+                    Component::CurDir => push(&mut output, "."),
+                    Component::ParentDir => push(&mut output, ".."),
+                    Component::Normal(path) => push(&mut output, path.to_utf8()?),
                 }
             }
             Ok(output)
         } else {
             self.to_utf8().map(|x| x.to_string())
         }
+    }
+
+    // this is similar to as_posix, but it handles drive separators
+    // and doesn't assume a relative path.
+    #[cfg(target_family = "windows")]
+    fn as_wslpath(&self) -> Result<String> {
+        let path = canonicalize(self)?;
+
+        let push = |p: &mut String, c: &str, r: bool| {
+            if !r {
+                p.push('/');
+            }
+            p.push_str(c);
+        };
+        // iterate over components to join them
+        let mut output = String::new();
+        let mut root_prefix = String::new();
+        let mut was_root = false;
+        for component in path.components() {
+            match component {
+                Component::Prefix(prefix) => {
+                    root_prefix = match prefix.kind() {
+                        Prefix::Verbatim(verbatim) => verbatim.to_utf8()?.to_string(),
+                        Prefix::VerbatimUNC(server, volume) => fmt_unc(server, volume)?,
+                        // we should never get this, but it's effectively just
+                        // a root_prefix since we force absolute paths.
+                        Prefix::VerbatimDisk(disk) => fmt_disk(disk),
+                        Prefix::UNC(server, volume) => fmt_unc(server, volume)?,
+                        Prefix::DeviceNS(ns) => ns.to_utf8()?.to_string(),
+                        Prefix::Disk(disk) => fmt_disk(disk),
+                    }
+                }
+                Component::RootDir => output = format!("{}/", format_prefix(&root_prefix)?),
+                Component::CurDir => push(&mut output, ".", was_root),
+                Component::ParentDir => push(&mut output, "..", was_root),
+                Component::Normal(path) => push(&mut output, path.to_utf8()?, was_root),
+            }
+            was_root = component == Component::RootDir;
+        }
+
+        // remove trailing '/'
+        if was_root {
+            output.truncate(output.len() - 1);
+        }
+
+        Ok(output)
     }
 }
 
@@ -166,6 +245,12 @@ mod tests {
     use super::*;
     use std::fmt::Debug;
 
+    macro_rules! p {
+        ($path:expr) => {
+            Path::new($path)
+        };
+    }
+
     fn result_eq<T: PartialEq + Eq + Debug>(x: Result<T>, y: Result<T>) {
         match (x, y) {
             (Ok(x), Ok(y)) => assert_eq!(x, y),
@@ -175,14 +260,11 @@ mod tests {
 
     #[test]
     fn as_posix() {
-        result_eq(Path::new(".").join("..").as_posix(), Ok("./..".to_string()));
-        result_eq(Path::new(".").join("/").as_posix(), Ok("/".to_string()));
+        result_eq(p!(".").join("..").as_posix(), Ok("./..".to_string()));
+        result_eq(p!(".").join("/").as_posix(), Ok("/".to_string()));
+        result_eq(p!("foo").join("bar").as_posix(), Ok("foo/bar".to_string()));
         result_eq(
-            Path::new("foo").join("bar").as_posix(),
-            Ok("foo/bar".to_string()),
-        );
-        result_eq(
-            Path::new("/foo").join("bar").as_posix(),
+            p!("/foo").join("bar").as_posix(),
             Ok("/foo/bar".to_string()),
         );
     }
@@ -190,8 +272,24 @@ mod tests {
     #[test]
     #[cfg(target_family = "windows")]
     fn as_posix_prefix() {
-        assert_eq!(Path::new("C:").join(".."), Path::new("C:.."));
-        assert!(Path::new("C:").join("..").as_posix().is_err());
+        assert_eq!(p!("C:").join(".."), p!("C:.."));
+        assert!(p!("C:").join("..").as_posix().is_err());
+    }
+
+    #[test]
+    #[cfg(target_family = "windows")]
+    fn as_wslpath() {
+        result_eq(p!(r"C:\").as_wslpath(), Ok("/mnt/c".to_string()));
+        result_eq(p!(r"C:\Users").as_wslpath(), Ok("/mnt/c/Users".to_string()));
+        result_eq(
+            p!(r"\\localhost\c$\Users").as_wslpath(),
+            Ok("/mnt/c/Users".to_string()),
+        );
+        result_eq(p!(r"\\.\C:\").as_wslpath(), Ok("/mnt/c".to_string()));
+        result_eq(
+            p!(r"\\.\C:\Users").as_wslpath(),
+            Ok("/mnt/c/Users".to_string()),
+        );
     }
 
     #[test]

@@ -679,9 +679,9 @@ pub fn unique_container_identifier(
     Ok(format!("{toolchain_id}-{triple}-{name}-{project_hash}"))
 }
 
-fn mount_path(val: &Path, verbose: bool) -> Result<PathBuf> {
+fn mount_path(val: &Path) -> Result<String> {
     let host_path = file::canonicalize(val)?;
-    canonicalize_mount_path(&host_path, verbose)
+    canonicalize_mount_path(&host_path)
 }
 
 #[allow(clippy::too_many_arguments)] // TODO: refactor
@@ -760,8 +760,7 @@ pub(crate) fn run(
         config,
         target,
         cwd,
-        verbose,
-        |_, val, verbose| mount_path(val, verbose),
+        |_, val| mount_path(val),
         |(src, dst)| volumes.push((src, dst)),
     )?;
 
@@ -773,7 +772,8 @@ pub(crate) fn run(
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
     if let Some(ref nix_store) = dirs.nix_store {
-        volumes.push((nix_store.to_utf8()?.to_string(), nix_store.to_path_buf()))
+        let nix_string = nix_store.to_utf8()?;
+        volumes.push((nix_string.to_string(), nix_string.to_string()))
     }
 
     docker.arg("-d");
@@ -840,9 +840,9 @@ pub(crate) fn run(
     }
     let mount_root = if mount_volumes {
         // cannot panic: absolute unix path, must have root
-        let rel_mount_root = dirs.mount_root.strip_prefix("/").unwrap();
+        let rel_mount_root = dirs.mount_root.strip_prefix('/').unwrap();
         let mount_root = mount_prefix_path.join(rel_mount_root);
-        if rel_mount_root != PathBuf::new() {
+        if !rel_mount_root.is_empty() {
             create_volume_dir(engine, &container, mount_root.parent().unwrap(), verbose)?;
         }
         mount_root
@@ -887,11 +887,11 @@ pub(crate) fn run(
         if let Some((psrc, pdst)) = copied.iter().find(|(p, _)| src.starts_with(p)) {
             // path has already been copied over
             let relpath = src.strip_prefix(psrc).unwrap();
-            to_symlink.push((pdst.join(relpath), dst.as_posix()?));
+            to_symlink.push((pdst.join(relpath), dst));
         } else {
-            let rel_dst = dst.strip_prefix("/").unwrap();
+            let rel_dst = dst.strip_prefix('/').unwrap();
             let mount_dst = mount_prefix_path.join(rel_dst);
-            if rel_dst != PathBuf::new() {
+            if !rel_dst.is_empty() {
                 create_volume_dir(engine, &container, mount_dst.parent().unwrap(), verbose)?;
             }
             copy(src, &mount_dst)?;

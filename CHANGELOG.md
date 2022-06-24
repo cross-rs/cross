@@ -77,6 +77,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Internal
 
+- #856 - remove use of external wslpath and create internal helper that properly handles UNC paths.
 - #828 - assume paths are Unicode and provide better error messages for path encoding errors.
 - #787 - add installer for git hooks.
 - #786, #791 - Migrate build script to rust: `cargo build-docker-image $TARGET`

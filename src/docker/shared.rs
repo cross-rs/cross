@@ -35,8 +35,8 @@ pub struct Directories {
     pub nix_store: Option<PathBuf>,
     pub host_root: PathBuf,
     // both mount fields are WSL paths on windows: they already are POSIX paths
-    pub mount_root: PathBuf,
-    pub mount_cwd: PathBuf,
+    pub mount_root: String,
+    pub mount_cwd: String,
     pub sysroot: PathBuf,
 }
 
@@ -82,25 +82,28 @@ impl Directories {
         });
 
         // root is either workspace_root, or, if we're outside the workspace root, the current directory
-        let mount_root: PathBuf;
+        let mount_root: String;
         #[cfg(target_os = "windows")]
         {
             // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-            mount_root = wslpath(&host_root, verbose)?;
+            mount_root = host_root.as_wslpath()?;
         }
         #[cfg(not(target_os = "windows"))]
         {
-            mount_root = mount_finder.find_mount_path(host_root.clone());
+            mount_root = mount_finder
+                .find_mount_path(host_root.clone())
+                .to_utf8()?
+                .to_string();
         }
-        let mount_cwd: PathBuf;
+        let mount_cwd: String;
         #[cfg(target_os = "windows")]
         {
             // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-            mount_cwd = wslpath(cwd, verbose)?;
+            mount_cwd = cwd.as_wslpath()?;
         }
         #[cfg(not(target_os = "windows"))]
         {
-            mount_cwd = mount_finder.find_mount_path(cwd);
+            mount_cwd = mount_finder.find_mount_path(cwd).to_utf8()?.to_string();
         }
         let sysroot = mount_finder.find_mount_path(sysroot);
 
@@ -218,17 +221,12 @@ pub(crate) fn cargo_safe_command(uses_xargo: bool) -> SafeCommand {
     }
 }
 
-pub(crate) fn mount(
-    docker: &mut Command,
-    val: &Path,
-    prefix: &str,
-    verbose: bool,
-) -> Result<PathBuf> {
+pub(crate) fn mount(docker: &mut Command, val: &Path, prefix: &str) -> Result<String> {
     let host_path = file::canonicalize(val)?;
-    let mount_path = canonicalize_mount_path(&host_path, verbose)?;
+    let mount_path = canonicalize_mount_path(&host_path)?;
     docker.args(&[
         "-v",
-        &format!("{}:{prefix}{}", host_path.to_utf8()?, mount_path.to_utf8()?),
+        &format!("{}:{prefix}{}", host_path.to_utf8()?, mount_path),
     ]);
     Ok(mount_path)
 }
@@ -284,8 +282,8 @@ pub(crate) fn docker_cwd(
     mount_volumes: bool,
 ) -> Result<()> {
     if mount_volumes {
-        docker.args(&["-w", dirs.mount_cwd.to_utf8()?]);
-    } else if dirs.mount_cwd == metadata.workspace_root {
+        docker.args(&["-w", &dirs.mount_cwd]);
+    } else if dirs.mount_cwd == metadata.workspace_root.to_utf8()? {
         docker.args(&["-w", "/project"]);
     } else {
         // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
@@ -304,9 +302,8 @@ pub(crate) fn docker_mount(
     config: &Config,
     target: &Target,
     cwd: &Path,
-    verbose: bool,
-    mount_cb: impl Fn(&mut Command, &Path, bool) -> Result<PathBuf>,
-    mut store_cb: impl FnMut((String, PathBuf)),
+    mount_cb: impl Fn(&mut Command, &Path) -> Result<String>,
+    mut store_cb: impl FnMut((String, String)),
 ) -> Result<bool> {
     let mut mount_volumes = false;
     // FIXME(emilgardis 2022-04-07): This is a fallback so that if it's hard for us to do mounting logic, make it simple(r)
@@ -323,15 +320,15 @@ pub(crate) fn docker_mount(
         };
 
         if let Ok(val) = value {
-            let mount_path = mount_cb(docker, val.as_ref(), verbose)?;
-            docker.args(&["-e", &format!("{}={}", var, mount_path.to_utf8()?)]);
+            let mount_path = mount_cb(docker, val.as_ref())?;
+            docker.args(&["-e", &format!("{}={}", var, mount_path)]);
             store_cb((val, mount_path));
             mount_volumes = true;
         }
     }
 
     for path in metadata.path_dependencies() {
-        let mount_path = mount_cb(docker, path, verbose)?;
+        let mount_path = mount_cb(docker, path)?;
         store_cb((path.to_utf8()?.to_string(), mount_path));
         mount_volumes = true;
     }
@@ -339,33 +336,15 @@ pub(crate) fn docker_mount(
     Ok(mount_volumes)
 }
 
-#[cfg(target_os = "windows")]
-fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
-    let wslpath = which::which("wsl.exe")
-        .map_err(|_| eyre::eyre!("could not find wsl.exe"))
-        .warning("usage of `env.volumes` requires WSL on Windows")
-        .suggestion("is WSL installed on the host?")?;
-
-    Command::new(wslpath)
-        .arg("-e")
-        .arg("wslpath")
-        .arg("-a")
-        .arg(path)
-        .run_and_get_stdout(verbose)
-        .wrap_err_with(|| format!("could not get linux compatible path for `{path:?}`"))
-        .map(|s| s.trim().into())
-}
-
-#[allow(unused_variables)]
-pub(crate) fn canonicalize_mount_path(path: &Path, verbose: bool) -> Result<PathBuf> {
+pub(crate) fn canonicalize_mount_path(path: &Path) -> Result<String> {
     #[cfg(target_os = "windows")]
     {
         // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-        wslpath(path, verbose)
+        path.as_wslpath()
     }
     #[cfg(not(target_os = "windows"))]
     {
-        Ok(path.to_path_buf())
+        path.to_utf8().map(|p| p.to_string())
     }
 }
 
@@ -384,7 +363,7 @@ pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
     }
 }
 
-#[allow(unused_variables)]
+#[allow(unused_variables, unused_mut)]
 pub(crate) fn docker_seccomp(
     docker: &mut Command,
     engine_type: EngineType,
@@ -407,12 +386,13 @@ pub(crate) fn docker_seccomp(
             if !path.exists() {
                 write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
             }
+            let mut path_string = path.to_utf8()?.to_string();
             #[cfg(target_os = "windows")]
             if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
                 // podman weirdly expects a WSL path here, and fails otherwise
-                path = wslpath(&path, verbose)?;
+                path_string = path.as_wslpath()?;
             }
-            path.to_utf8()?.to_string()
+            path_string
         };
 
         docker.args(&["--security-opt", &format!("seccomp={}", seccomp)]);
