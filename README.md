@@ -362,7 +362,7 @@ terminate.
 | `thumbv7m-none-eabi` [4]             | 2.2.0  | 4.9.3   |     | N/A   |       |
 | `thumbv7neon-linux-androideabi` [1]  | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `thumbv7neon-unknown-linux-gnueabihf`| 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
-| `wasm32-unknown-emscripten` [6]        | 3.1.10 | 15.0.0  | ✓   | N/A   |   ✓    |
+| `wasm32-unknown-emscripten` [6]        | 3.1.14 | 15.0.0  | ✓   | N/A   |   ✓    |
 | `x86_64-linux-android` [1]           | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 7.3     | ✓   | N/A   |   ✓    |
 | `x86_64-sun-solaris`                 | 1.22.7 | 8.4.0   | ✓   | N/A   |       |
@@ -372,7 +372,7 @@ terminate.
 | `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5   | ✓   | 4.2.1 |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.24  | 9.2.0   | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [3]          | 9.2.0  | 9.4.0   | ✓   | N/A   |       |
-<!--| `asmjs-unknown-emscripten` [7]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |-->
+<!--| `asmjs-unknown-emscripten` [7]       | 3.1.14 | 15.0.0  | ✓   | N/A   |   ✓    |-->
 
 [1] libc = bionic; Only works with native tests, that is, tests that do not depends on the
     Android Runtime. For i686 some tests may fails with the error `assertion
