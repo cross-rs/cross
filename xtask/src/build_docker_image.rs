@@ -11,6 +11,8 @@ pub struct BuildDockerImage {
     ref_type: Option<String>,
     #[clap(long, hide = true, env = "GITHUB_REF_NAME")]
     ref_name: Option<String>,
+    #[clap(action, long = "latest", hide = true, env = "LATEST")]
+    is_latest: bool,
     /// Specify a tag to use instead of the derived one, eg `local`
     #[clap(long)]
     tag: Option<String>,
@@ -38,7 +40,7 @@ pub struct BuildDockerImage {
     /// Docker build progress output type.
     #[clap(
         long,
-        value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]), 
+        value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]),
         default_value = "auto"
     )]
     progress: String,
@@ -83,6 +85,7 @@ pub fn build_docker_image(
     BuildDockerImage {
         ref_type,
         ref_name,
+        is_latest,
         tag: tag_override,
         repository,
         labels,
@@ -168,6 +171,7 @@ pub fn build_docker_image(
                 &repository,
                 ref_type,
                 ref_name,
+                is_latest,
                 &version,
             )?),
             _ => {
@@ -283,6 +287,7 @@ pub fn determine_image_name(
     repository: &str,
     ref_type: &str,
     ref_name: &str,
+    is_latest: bool,
     version: &str,
 ) -> cross::Result<Vec<String>> {
     let mut tags = vec![];
@@ -296,8 +301,7 @@ pub fn determine_image_name(
             }
             tags.push(target.image_name(repository, version));
             // Check for unstable releases, tag stable releases as `latest`
-            if version.contains('-') {
-                // TODO: Don't tag if version is older than currently released version.
+            if is_latest {
                 tags.push(target.image_name(repository, "latest"))
             }
         }
