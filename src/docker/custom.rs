@@ -36,6 +36,7 @@ impl<'a> Dockerfile<'a> {
         let mut docker_build = docker::subcommand(engine, "build");
         docker_build.current_dir(host_root);
         docker_build.env("DOCKER_SCAN_SUGGEST", "false");
+        docker_build.args(&["--platform", "linux/amd64"]);
         docker_build.args([
             "--label",
             &format!(
