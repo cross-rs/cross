@@ -84,10 +84,13 @@ jobs:
         timeout-minutes: 10
   check:
     runs-on: ubuntu-latest
+    outputs:
+      is-latest: ${{ steps.check.outputs.is-latest }}
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup-rust
       - run: cargo xtask ci-job check
+        id: check
         shell: bash
   generate-matrix:
     runs-on: ubuntu-latest
@@ -256,6 +259,7 @@ jobs:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}
           LABELS: ${{ steps.docker-meta.outputs.labels }}
+          LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
         shell: bash
       - name: Set Docker image for test
         if: steps.prepare-meta.outputs.has-image
@@ -302,6 +306,7 @@ jobs:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}
           LABELS: ${{ steps.docker-meta.outputs.labels }}
+          LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
         shell: bash
 
   publish:

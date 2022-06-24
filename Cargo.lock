@@ -693,6 +693,7 @@ dependencies = [
  "cross",
  "eyre",
  "once_cell",
+ "semver",
  "serde",
  "serde_json",
  "serde_yaml",

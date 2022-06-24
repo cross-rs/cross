@@ -1,5 +1,5 @@
 use clap::Subcommand;
-use cross::CargoMetadata;
+use cross::{cargo_command, CargoMetadata, CommandExt};
 
 #[derive(Subcommand, Debug)]
 pub enum CiJob {
@@ -59,6 +59,7 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
                     cross::docker::CROSS_IMAGE,
                     &ref_type,
                     &ref_name,
+                    false,
                     &version,
                 )?[0],
             );
@@ -68,9 +69,28 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
             }
         }
         CiJob::Check { ref_type, ref_name } => {
-            let version = cross_meta.version.clone();
-            if ref_type == "tag" && ref_name.starts_with('v') && ref_name != format!("v{version}") {
-                eyre::bail!("a version tag was published, but the tag does not match the current version in Cargo.toml");
+            let version = semver::Version::parse(&cross_meta.version)?;
+            if ref_type == "tag" {
+                if ref_name.starts_with('v') && ref_name != format!("v{version}") {
+                    eyre::bail!("a version tag was published, but the tag does not match the current version in Cargo.toml");
+                }
+                let search = cargo_command()
+                    .args(&["search", "--limit", "1"])
+                    .arg("cross")
+                    .run_and_get_stdout(true)?;
+                let (cross, rest) = search
+                    .split_once(" = ")
+                    .ok_or_else(|| eyre::eyre!("cargo search failed"))?;
+                assert_eq!(cross, "cross");
+                // Note: this version includes pre-releases.
+                let latest_version = semver::Version::parse(
+                    rest.split('"')
+                        .nth(1)
+                        .ok_or_else(|| eyre::eyre!("cargo search returned unexpected data"))?,
+                )?;
+                if version >= latest_version && version.pre.is_empty() {
+                    gha_output("is-latest", "true")
+                }
             }
         }
     }
