@@ -82,6 +82,14 @@ jobs:
           command: test
           args: --locked --all-targets --workspace --all-features
         timeout-minutes: 10
+      - name: Set up QEMU
+        if: matrix.os == 'windows-latest'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: linux/amd64
+      - name: Enable 'Linux'
+        if: matrix.os == 'windows-latest'
+        uses: docker/setup-buildx-action@v1
       - name: Test basic image
         run: |
           set -x
