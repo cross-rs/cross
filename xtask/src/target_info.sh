@@ -62,6 +62,48 @@ max_glibc_version() {
     echo "${major}.${minor}"
 }
 
+max_solaris_libc_version() {
+    # solaris libc versions have the following format:
+    #  67: 0000000000000000     0 OBJECT  GLOBAL DEFAULT  ABS SUNW_1.21.1
+    local major=0
+    local minor=0
+    local patch=0
+    local version
+    local x
+    local y
+    local z
+    local is_larger
+
+    for version in "${@}"; do
+        x=$(echo "${version}" | cut -d '.' -f 1)
+        y=$(echo "${version}" | cut -d '.' -f 2)
+        z=$(echo "${version}" | cut -d '.' -f 3)
+        is_larger=
+
+        if [ "${x}" -gt "${major}" ]; then
+            is_larger=1
+        elif [ "${x}" -eq "${major}" ] && [ "${y}" -gt "${minor}" ]; then
+            is_larger=1
+        elif [ -z "${patch}" ]; then
+            is_larger=1
+        elif [ -n "${z}" ] && [ "${x}" -eq "${major}" ] && [ "${y}" -eq "${minor}" ] && [ "${z}" -gt "${patch}" ]; then
+            is_larger=1
+        fi
+
+        if [ -n "${is_larger}" ]; then
+            major="${x}"
+            minor="${y}"
+            patch="${z}"
+        fi
+    done
+
+    result="${major}.${minor}"
+    if [ -n "${patch}" ]; then
+        result="${result}.${patch}"
+    fi
+    echo "${result}"
+}
+
 readelf_all() {
     # weirdly, readelf -a can produce a non-zero error code.
     set +e
@@ -103,6 +145,12 @@ case "${target}" in
         ;;
      *-*-dragonfly)
         cc_regex=".*gcc \(GCC\) ([0-9]+.[0-9]+.[0-9]+).*"
+        ;;
+    *-*-solaris)
+        cc_regex=".*gcc \(GCC\) ([0-9]+.[0-9]+.[0-9]+).*"
+        ;;
+    *-*-emscripten)
+        cc_regex="clang version ([0-9]+.[0-9]+.[0-9]+).*"
         ;;
     *-none-*)
         cc_regex=".*gcc \(.*\) ([0-9]+.[0-9]+.[0-9]+).*"
@@ -150,11 +198,14 @@ case "${target}" in
         cc_bin=arm-none-eabi-gcc
         cxx_bin=arm-none-eabi-g++
         ;;
+    *-*-emscripten)
+        cc_bin="${EMSDK}/upstream/bin/clang"
+        cxx_bin="${cc_bin}"
+        ;;
     *)
         cc_bin="${!cc_var}"
         cxx_bin="${!cxx_var}"
         ;;
-
 esac
 cc=$(extract_regex_version "${cc_bin}" "${cc_regex}" compiler)
 if command -v "${cxx_bin}" &>/dev/null; then
@@ -168,6 +219,12 @@ EOT
     cxx_flags=()
     if [[ "${target}" == *-none-* ]]; then
         cxx_flags=("${cxx_flags[@]}" "-nostartfiles")
+    fi
+    if [[ "${target}" == *-*-emscripten ]]; then
+        # need to switch to the real c++ compiler here, not the wrapper
+        cxx_bin=emcc
+        # shellcheck disable=SC2206
+        cxx_flags=($EMCC_CFLAGS)
     fi
     if "${cxx_bin}" "${cxx_flags[@]}" main.cc >/dev/null 2>&1; then
         cxx=1
@@ -286,6 +343,25 @@ case "${target}" in
             echo "Unable to get libc version for ${target}: invalid Dragonfly release found." 1>&2
             exit 1
         fi
+        ;;
+    *-*-solaris)
+        # we can read the libc version from the libc symbols
+        # first, we need to use our compiler name to get the libdir
+        #    67: 0000000000000000     0 OBJECT  GLOBAL DEFAULT  ABS SUNW_1.21.1
+        # there will be many of these, so we want to grab the highest one.
+        prefix="${cc_bin//-gcc/}"
+        libdir="/usr/local/${prefix}/lib"
+        lines=$(readelf_all "${libdir}"/libc.so | grep 'ABS SUNW_')
+        lines=$(echo "${lines}" | grep -o 'ABS .*')
+        # shellcheck disable=SC2207
+        libc_versions=($(echo "$lines" | cut -d ' ' -f 2 | cut -d '_' -f 2))
+        libc=$(max_solaris_libc_version "${libc_versions[@]}")
+        ;;
+    *-*-emscripten)
+        # we want the emsdk version, which is the image version
+        libc_cmd=emcc
+        libc_regex="emcc \(.* GNU ld) ([0-9]+.[0-9]+.[0-9]+).*"
+        libc=$(extract_regex_version "${libc_cmd}" "${libc_regex}" libc)
         ;;
     thumb*-none-eabi* | arm*-none-eabi*)
         # newlib kinda sucks. just query for the install package

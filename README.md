@@ -355,24 +355,24 @@ terminate.
 | `riscv64gc-unknown-linux-gnu`        | 2.27   | 7.5.0   | ✓   | 6.1.0 |   ✓    |
 | `s390x-unknown-linux-gnu`            | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
 | `sparc64-unknown-linux-gnu`          | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
+| `sparcv9-sun-solaris`                | 1.22.7 | 8.4.0   | ✓   | N/A   |       |
 | `thumbv6m-none-eabi` [4]             | 2.2.0  | 4.9.3   |     | N/A   |       |
 | `thumbv7em-none-eabi` [4]            | 2.2.0  | 4.9.3   |     | N/A   |       |
 | `thumbv7em-none-eabihf` [4]          | 2.2.0  | 4.9.3   |     | N/A   |       |
 | `thumbv7m-none-eabi` [4]             | 2.2.0  | 4.9.3   |     | N/A   |       |
 | `thumbv7neon-linux-androideabi` [1]  | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `thumbv7neon-unknown-linux-gnueabihf`| 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
+| `wasm32-unknown-emscripten` [6]        | 3.1.10 | 15.0.0  | ✓   | N/A   |   ✓    |
 | `x86_64-linux-android` [1]           | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 7.3     | ✓   | N/A   |   ✓    |
+| `x86_64-sun-solaris`                 | 1.22.7 | 8.4.0   | ✓   | N/A   |       |
 | `x86_64-unknown-freebsd`             | 1.5    | 6.4.0   | ✓   | N/A   |       |
 | `x86_64-unknown-dragonfly` [2] [3]   | 6.0.1  | 5.3.0   | ✓   | N/A   |       |
 | `x86_64-unknown-linux-gnu`           | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
 | `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5   | ✓   | 4.2.1 |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.24  | 9.2.0   | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [3]          | 9.2.0  | 9.4.0   | ✓   | N/A   |       |
-<!--| `asmjs-unknown-emscripten` [6]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |-->
-<!--| `wasm32-unknown-emscripten` [6]      | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |-->
-<!--| `sparcv9-sun-solaris` [3]            | 2.11   | 5.3.0   | ✓   | N/A   |        |-->
-<!--| `x86_64-sun-solaris` [3]             | 2.11   | 5.3.0   | ✓   | N/A   |        |-->
+<!--| `asmjs-unknown-emscripten` [7]       | 1.2.2  | 3.1.10  | ✓   | N/A   |   ✓    |-->
 
 [1] libc = bionic; Only works with native tests, that is, tests that do not depends on the
     Android Runtime. For i686 some tests may fails with the error `assertion
@@ -389,8 +389,10 @@ terminate.
 
 [5] Must change `image = "x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
 
-<!--[6] libc = musl, gcc = emcc. The Docker images for these targets are currently not built automatically
-due to a [compiler bug](https://github.com/rust-lang/rust/issues/85821), you will have to build them yourself for now.-->
+[6] libc = emscripten and GCC = clang
+
+<!--[7] libc = emscripten and GCC = clang. The Docker images for these targets are currently not built automatically
+due to a [compiler bug](https://github.com/rust-lang/rust/issues/98216), you will have to build them yourself for now.-->
 
 Additional Dockerfiles for other targets can be found in [cross-toolchains](https://github.com/cross-rs/cross-toolchains).
 
