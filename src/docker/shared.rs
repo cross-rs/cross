@@ -85,8 +85,8 @@ impl Directories {
         let mount_root: PathBuf;
         #[cfg(target_os = "windows")]
         {
-            // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-            mount_root = wslpath(&host_root, verbose)?;
+            // On Windows, we can not mount the directory name directly. Instead, we use winpath to convert the path to a linux compatible path.
+            mount_root = winpath(&host_root, verbose)?;
         }
         #[cfg(not(target_os = "windows"))]
         {
@@ -95,8 +95,8 @@ impl Directories {
         let mount_cwd: PathBuf;
         #[cfg(target_os = "windows")]
         {
-            // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-            mount_cwd = wslpath(cwd, verbose)?;
+            // On Windows, we can not mount the directory name directly. Instead, we use winpath to convert the path to a linux compatible path.
+            mount_cwd = winpath(cwd, verbose)?;
         }
         #[cfg(not(target_os = "windows"))]
         {
@@ -340,11 +340,44 @@ pub(crate) fn docker_mount(
 }
 
 #[cfg(target_os = "windows")]
+fn winpath(path: &Path, verbose: bool) -> Result<PathBuf> {
+    let wslpath = wslpath(path, verbose);
+
+    match wslpath {
+        Ok(path) => Ok(path),
+        Err(wsl_err) => cygpath(path, verbose).map_err(|cyg_err| {
+            eyre::eyre!("could not get linux compatible path for `{path:?}`")
+                .with_error(|| {
+                    <eyre::Report as std::convert::AsRef<
+                        dyn std::error::Error + Send + Sync + 'static,
+                    >>::as_ref(Box::leak(Box::new(cyg_err)))
+                })
+                .with_error(|| {
+                    <eyre::Report as std::convert::AsRef<
+                        dyn std::error::Error + Send + Sync + 'static,
+                    >>::as_ref(Box::leak(Box::new(wsl_err)))
+                })
+        }),
+    }
+    .warning("usage of `env.volumes` requires WSL or cygpath on Windows")
+    .suggestion("is WSL or cygpath installed on the host?")
+}
+
+#[cfg(target_os = "windows")]
+fn cygpath(path: &Path, verbose: bool) -> Result<PathBuf> {
+    let cygpath =
+        which::which("cygpath.exe").map_err(|_| eyre::eyre!("could not find cygpath.exe"))?;
+
+    Command::new(cygpath)
+        .arg("-u")
+        .arg(path)
+        .run_and_get_stdout(verbose)
+        .map(|s| s.trim().into())
+}
+
+#[cfg(target_os = "windows")]
 fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
-    let wslpath = which::which("wsl.exe")
-        .map_err(|_| eyre::eyre!("could not find wsl.exe"))
-        .warning("usage of `env.volumes` requires WSL on Windows")
-        .suggestion("is WSL installed on the host?")?;
+    let wslpath = which::which("wsl.exe").map_err(|_| eyre::eyre!("could not find wsl.exe"))?;
 
     Command::new(wslpath)
         .arg("-e")
@@ -352,7 +385,6 @@ fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
         .arg("-a")
         .arg(path)
         .run_and_get_stdout(verbose)
-        .wrap_err_with(|| format!("could not get linux compatible path for `{path:?}`"))
         .map(|s| s.trim().into())
 }
 
@@ -360,8 +392,8 @@ fn wslpath(path: &Path, verbose: bool) -> Result<PathBuf> {
 pub(crate) fn canonicalize_mount_path(path: &Path, verbose: bool) -> Result<PathBuf> {
     #[cfg(target_os = "windows")]
     {
-        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-        wslpath(path, verbose)
+        // On Windows, we can not mount the directory name directly. Instead, we use winpath to convert the path to a linux compatible path.
+        winpath(path, verbose)
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -410,7 +442,7 @@ pub(crate) fn docker_seccomp(
             #[cfg(target_os = "windows")]
             if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
                 // podman weirdly expects a WSL path here, and fails otherwise
-                path = wslpath(&path, verbose)?;
+                path = winpath(&path, verbose)?;
             }
             path.to_utf8()?.to_string()
         };
