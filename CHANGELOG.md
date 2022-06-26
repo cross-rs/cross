@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+### Changed
+
+- #869 - ensure cargo configuration environment variable flags are passed to the docker container.
+
 ### Fixed
 
 - #868 - ignore the `CARGO` environment variable.
