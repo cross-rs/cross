@@ -259,7 +259,11 @@ impl CrossToml {
 
     /// Returns the list of environment variables to pass through for `build` and `target`
     pub fn env_passthrough(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
-        self.get_vec(target, |_| None, |t| t.env.passthrough.as_deref())
+        self.get_vec(
+            target,
+            |build| build.env.passthrough.as_deref(),
+            |t| t.env.passthrough.as_deref(),
+        )
     }
 
     /// Returns the list of environment variables to pass through for `build` and `target`
@@ -381,6 +385,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    macro_rules! s {
+        ($x:literal) => {
+            $x.to_string()
+        };
+    }
 
     #[test]
     pub fn parse_empty_toml() -> Result<()> {
@@ -699,6 +709,45 @@ mod tests {
         // Merges config and compares
         let cfg_merged = cfg1.merge(cfg2)?;
         assert_eq!(cfg_expected, cfg_merged);
+
+        // need to test individual values. i've broken this down into
+        // tests on values for better error reporting
+        let build = &cfg_expected.build;
+        assert_eq!(build.build_std, Some(true));
+        assert_eq!(build.xargo, Some(false));
+        assert_eq!(build.default_target, Some(s!("aarch64-unknown-linux-gnu")));
+        assert_eq!(build.pre_build, None);
+        assert_eq!(build.dockerfile, None);
+        assert_eq!(build.env.passthrough, Some(vec![s!("VAR3"), s!("VAR4")]));
+        assert_eq!(build.env.volumes, Some(vec![]));
+
+        let targets = &cfg_expected.targets;
+        let aarch64 = &targets[&Target::new_built_in("aarch64-unknown-linux-gnu")];
+        assert_eq!(aarch64.build_std, Some(true));
+        assert_eq!(aarch64.xargo, Some(false));
+        assert_eq!(aarch64.image, Some(s!("test-image1")));
+        assert_eq!(aarch64.pre_build, None);
+        assert_eq!(aarch64.dockerfile, None);
+        assert_eq!(aarch64.env.passthrough, Some(vec![s!("VAR1")]));
+        assert_eq!(aarch64.env.volumes, Some(vec![s!("VOL1_ARG")]));
+
+        let target2 = &targets[&Target::new_custom("target2")];
+        assert_eq!(target2.build_std, Some(false));
+        assert_eq!(target2.xargo, Some(false));
+        assert_eq!(target2.image, Some(s!("test-image2-precedence")));
+        assert_eq!(target2.pre_build, None);
+        assert_eq!(target2.dockerfile, None);
+        assert_eq!(target2.env.passthrough, Some(vec![s!("VAR2_PRECEDENCE")]));
+        assert_eq!(target2.env.volumes, Some(vec![s!("VOL2_ARG_PRECEDENCE")]));
+
+        let target3 = &targets[&Target::new_custom("target3")];
+        assert_eq!(target3.build_std, Some(true));
+        assert_eq!(target3.xargo, Some(false));
+        assert_eq!(target3.image, Some(s!("test-image3")));
+        assert_eq!(target3.pre_build, None);
+        assert_eq!(target3.dockerfile, None);
+        assert_eq!(target3.env.passthrough, Some(vec![s!("VAR3")]));
+        assert_eq!(target3.env.volumes, Some(vec![s!("VOL3_ARG")]));
 
         Ok(())
     }

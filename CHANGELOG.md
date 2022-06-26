@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+
+- #867 - fixed parsing of `build.env,passthrough` config values.
+
 ## [v0.2.2] - 2022-06-24
 
 ### Added
