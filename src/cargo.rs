@@ -112,7 +112,12 @@ impl Package {
 }
 
 pub fn cargo_command() -> Command {
-    Command::new(env_program("CARGO", "cargo"))
+    let mut cmd = Command::new(env_program("CARGO", "cargo"));
+    cmd.env(
+        crate::IN_CROSS_CONTEXT_ENV,
+        std::env::current_exe().unwrap_or_else(|_| "cross".to_owned().into()),
+    );
+    cmd
 }
 
 /// Cargo metadata with specific invocation

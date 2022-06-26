@@ -51,6 +51,10 @@ pub use self::rustc::{TargetList, VersionMetaExt};
 
 pub const CROSS_LABEL_DOMAIN: &str = "org.cross-rs";
 
+/// Signals to cross that we're inside its own context and to act only as a wrapper to cargo
+#[doc(hidden)]
+pub const IN_CROSS_CONTEXT_ENV: &str = "__CROSS_CONTEXT";
+
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Host {
