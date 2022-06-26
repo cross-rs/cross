@@ -10,7 +10,7 @@ pub mod util;
 use ci::CiJob;
 use clap::{CommandFactory, Parser, Subcommand};
 use cross::docker;
-use util::ImageTarget;
+use util::{cargo_metadata, ImageTarget};
 
 use self::build_docker_image::BuildDockerImage;
 use self::hooks::{Check, Test};
@@ -82,12 +82,7 @@ pub fn main() -> cross::Result<()> {
             hooks::test(args, cli.toolchain.as_deref())?;
         }
         Commands::CiJob(args) => {
-            let metadata = cross::cargo_metadata_with_args(
-                Some(std::path::Path::new(env!("CARGO_MANIFEST_DIR"))),
-                None,
-                true,
-            )?
-            .ok_or_else(|| eyre::eyre!("could not find cross workspace"))?;
+            let metadata = cargo_metadata(true)?;
             ci::ci(args, metadata)?
         }
     }

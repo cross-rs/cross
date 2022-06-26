@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::util::cargo_metadata;
 use clap::Args;
 use color_eyre::Section;
 use cross::{docker, CommandExt, ToUtf8};
@@ -104,12 +105,7 @@ pub fn build_docker_image(
     }: BuildDockerImage,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let metadata = cross::cargo_metadata_with_args(
-        Some(Path::new(env!("CARGO_MANIFEST_DIR"))),
-        None,
-        verbose,
-    )?
-    .ok_or_else(|| eyre::eyre!("could not find cross workspace and its current version"))?;
+    let metadata = cargo_metadata(verbose)?;
     let version = metadata
         .get_package("cross")
         .expect("cross expected in workspace")
