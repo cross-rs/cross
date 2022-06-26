@@ -66,7 +66,14 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut target = None;
     let mut features = Vec::new();
     let mut manifest_path: Option<PathBuf> = None;
+    // `--target-dir` > `CARGO_TARGET_DIR` > `CARGO_BUILD_TARGET_DIR`.
     let mut target_dir = None;
+    if let Ok(var) = env::var("CARGO_BUILD_TARGET_DIR") {
+        target_dir = Some(absolute_path(PathBuf::from(var))?);
+    }
+    if let Ok(var) = env::var("CARGO_TARGET_DIR") {
+        target_dir = Some(absolute_path(PathBuf::from(var))?);
+    }
     let mut sc = None;
     let mut all: Vec<String> = Vec::new();
 

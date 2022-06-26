@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- #869 - support `CARGO_TARGET_DIR` and `CARGO_BUILD_TARGET_DIR`.
+
 ### Fixed
 
 - #867 - fixed parsing of `build.env,passthrough` config values.
