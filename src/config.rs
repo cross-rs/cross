@@ -428,7 +428,12 @@ mod tests {
     mod test_config {
 
         use super::*;
-        use std::matches;
+
+        macro_rules! s {
+            ($x:literal) => {
+                $x.to_string()
+            };
+        }
 
         fn toml(content: &str) -> Result<crate::CrossToml> {
             Ok(CrossToml::parse_from_cross(content)
@@ -440,10 +445,19 @@ mod tests {
         pub fn env_and_toml_build_xargo_then_use_env() -> Result<()> {
             let mut map = HashMap::new();
             map.insert("CROSS_BUILD_XARGO", "true");
+            map.insert(
+                "CROSS_BUILD_PRE_BUILD",
+                "apt-get update\napt-get install zlib-dev",
+            );
 
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
-            assert!(matches!(config.xargo(&target()), Some(true)));
+            assert_eq!(config.xargo(&target()), Some(true));
+            assert_eq!(config.build_std(&target()), None);
+            assert_eq!(
+                config.pre_build(&target())?,
+                Some(vec![s!("apt-get update"), s!("apt-get install zlib-dev")])
+            );
 
             Ok(())
         }
@@ -456,8 +470,9 @@ mod tests {
             let env = Environment::new(Some(map));
 
             let config = Config::new_with(Some(toml(TOML_TARGET_XARGO_FALSE)?), env);
-            assert!(matches!(config.xargo(&target()), Some(true)));
-            assert!(matches!(config.build_std(&target()), Some(true)));
+            assert_eq!(config.xargo(&target()), Some(true));
+            assert_eq!(config.build_std(&target()), Some(true));
+            assert_eq!(config.pre_build(&target())?, None);
 
             Ok(())
         }
@@ -466,9 +481,82 @@ mod tests {
         pub fn env_target_and_toml_build_xargo_then_use_toml() -> Result<()> {
             let mut map = HashMap::new();
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
+
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
-            assert!(matches!(config.xargo(&target()), Some(true)));
+            assert_eq!(config.xargo(&target()), Some(true));
+            assert_eq!(config.build_std(&target()), None);
+            assert_eq!(config.pre_build(&target())?, None);
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn env_target_and_toml_build_pre_build_then_use_toml() -> Result<()> {
+            let mut map = HashMap::new();
+            map.insert(
+                "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_PRE_BUILD",
+                "dpkg --add-architecture arm64",
+            );
+
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(Some(toml(TOML_BUILD_PRE_BUILD)?), env);
+            assert_eq!(
+                config.pre_build(&target())?,
+                Some(vec![s!("dpkg --add-architecture arm64")])
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn toml_build_passthrough_then_use_target_passthrough_both() -> Result<()> {
+            let map = HashMap::new();
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(Some(toml(TOML_ARRAYS_BOTH)?), env);
+            assert_eq!(
+                config.env_passthrough(&target())?,
+                Some(vec![s!("VAR1"), s!("VAR2"), s!("VAR3"), s!("VAR4")])
+            );
+            assert_eq!(
+                config.env_volumes(&target())?,
+                Some(vec![s!("VOLUME3"), s!("VOLUME4")])
+            );
+            // TODO(ahuszagh) Need volumes
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn toml_build_passthrough() -> Result<()> {
+            let map = HashMap::new();
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(Some(toml(TOML_ARRAYS_BUILD)?), env);
+            assert_eq!(
+                config.env_passthrough(&target())?,
+                Some(vec![s!("VAR1"), s!("VAR2")])
+            );
+            assert_eq!(
+                config.env_volumes(&target())?,
+                Some(vec![s!("VOLUME1"), s!("VOLUME2")])
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        pub fn toml_target_passthrough() -> Result<()> {
+            let map = HashMap::new();
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(Some(toml(TOML_ARRAYS_TARGET)?), env);
+            assert_eq!(
+                config.env_passthrough(&target())?,
+                Some(vec![s!("VAR3"), s!("VAR4")])
+            );
+            assert_eq!(
+                config.env_volumes(&target())?,
+                Some(vec![s!("VOLUME3"), s!("VOLUME4")])
+            );
 
             Ok(())
         }
@@ -510,7 +598,7 @@ mod tests {
         pub fn no_env_and_no_toml_default_target_then_none() -> Result<()> {
             let config = Config::new_with(None, Environment::new(None));
             let config_target = config.target(&target_list());
-            assert!(matches!(config_target, None));
+            assert_eq!(config_target, None);
 
             Ok(())
         }
@@ -523,10 +611,7 @@ mod tests {
             let config = Config::new_with(Some(toml(TOML_DEFAULT_TARGET)?), env);
 
             let config_target = config.target(&target_list()).unwrap();
-            assert!(matches!(
-                config_target.triple(),
-                "armv7-unknown-linux-musleabihf"
-            ));
+            assert_eq!(config_target.triple(), "armv7-unknown-linux-musleabihf");
 
             Ok(())
         }
@@ -537,10 +622,7 @@ mod tests {
             let config = Config::new_with(Some(toml(TOML_DEFAULT_TARGET)?), env);
 
             let config_target = config.target(&target_list()).unwrap();
-            assert!(matches!(
-                config_target.triple(),
-                "aarch64-unknown-linux-gnu"
-            ));
+            assert_eq!(config_target.triple(), "aarch64-unknown-linux-gnu");
 
             Ok(())
         }
@@ -548,6 +630,11 @@ mod tests {
         static TOML_BUILD_XARGO_FALSE: &str = r#"
     [build]
     xargo = false
+    "#;
+
+        static TOML_BUILD_PRE_BUILD: &str = r#"
+    [build]
+    pre-build = ["apt-get update && apt-get install zlib-dev"]
     "#;
 
         static TOML_TARGET_XARGO_FALSE: &str = r#"
@@ -560,6 +647,28 @@ mod tests {
     volumes = ["VOLUME3", "VOLUME4"]
     [target.aarch64-unknown-linux-gnu]
     xargo = false
+    "#;
+
+        static TOML_ARRAYS_BOTH: &str = r#"
+    [build.env]
+    passthrough = ["VAR1", "VAR2"]
+    volumes = ["VOLUME1", "VOLUME2"]
+
+    [target.aarch64-unknown-linux-gnu.env]
+    passthrough = ["VAR3", "VAR4"]
+    volumes = ["VOLUME3", "VOLUME4"]
+    "#;
+
+        static TOML_ARRAYS_BUILD: &str = r#"
+    [build.env]
+    passthrough = ["VAR1", "VAR2"]
+    volumes = ["VOLUME1", "VOLUME2"]
+    "#;
+
+        static TOML_ARRAYS_TARGET: &str = r#"
+    [target.aarch64-unknown-linux-gnu.env]
+    passthrough = ["VAR3", "VAR4"]
+    volumes = ["VOLUME3", "VOLUME4"]
     "#;
 
         static TOML_DEFAULT_TARGET: &str = r#"
