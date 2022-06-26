@@ -221,6 +221,40 @@ pub(crate) fn cargo_safe_command(uses_xargo: bool) -> SafeCommand {
     }
 }
 
+fn add_cargo_configuration_envvars(docker: &mut Command) {
+    let non_cargo_prefix = &[
+        "http_proxy",
+        "TERM",
+        "RUSTDOCFLAGS",
+        "RUSTFLAGS",
+        "BROWSER",
+        "HTTPS_PROXY",
+        "HTTP_TIMEOUT",
+        "https_proxy",
+    ];
+    let cargo_prefix_skip = &[
+        "CARGO_HOME",
+        "CARGO_TARGET_DIR",
+        "CARGO_BUILD_TARGET_DIR",
+        "CARGO_BUILD_RUSTC",
+        "CARGO_BUILD_RUSTC_WRAPPER",
+        "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
+        "CARGO_BUILD_RUSTDOC",
+    ];
+    let is_cargo_passthrough = |key: &str| -> bool {
+        non_cargo_prefix.contains(&key)
+            || key.starts_with("CARGO_") && !cargo_prefix_skip.contains(&key)
+    };
+
+    // also need to accept any additional flags used to configure
+    // cargo, but only pass what's actually present.
+    for (key, _) in env::vars() {
+        if is_cargo_passthrough(&key) {
+            docker.args(&["-e", &key]);
+        }
+    }
+}
+
 pub(crate) fn mount(docker: &mut Command, val: &Path, prefix: &str) -> Result<String> {
     let host_path = file::canonicalize(val)?;
     let mount_path = canonicalize_mount_path(&host_path)?;
@@ -248,6 +282,7 @@ pub(crate) fn docker_envvars(docker: &mut Command, config: &Config, target: &Tar
         .args(&["-e", "CARGO_HOME=/cargo"])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
         .args(&["-e", &cross_runner]);
+    add_cargo_configuration_envvars(docker);
 
     if let Some(username) = id::username().unwrap() {
         docker.args(&["-e", &format!("USER={username}")]);
