@@ -4,7 +4,7 @@ use std::process::{Command, ExitStatus};
 
 use crate::cli::Args;
 use crate::errors::*;
-use crate::extensions::{env_program, CommandExt};
+use crate::extensions::CommandExt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subcommand {
@@ -112,7 +112,7 @@ impl Package {
 }
 
 pub fn cargo_command() -> Command {
-    Command::new(env_program("CARGO", "cargo"))
+    Command::new("cargo")
 }
 
 /// Cargo metadata with specific invocation

@@ -363,7 +363,7 @@ pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
     }
 }
 
-#[allow(unused_variables, unused_mut)]
+#[allow(unused_variables, unused_mut, clippy::let_and_return)]
 pub(crate) fn docker_seccomp(
     docker: &mut Command,
     engine_type: EngineType,
