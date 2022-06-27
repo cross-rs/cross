@@ -3,6 +3,7 @@ use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::Path;
 use std::process::Command;
 
+use crate::util::{cargo, get_channel_prefer_nightly};
 use clap::Args;
 use cross::CommandExt;
 
@@ -23,35 +24,6 @@ pub struct Test {
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
     verbose: bool,
-}
-
-fn has_nightly(verbose: bool) -> cross::Result<bool> {
-    cross::cargo_command()
-        .arg("+nightly")
-        .run_and_get_output(verbose)
-        .map(|o| o.status.success())
-        .map_err(Into::into)
-}
-
-fn get_channel_prefer_nightly(
-    verbose: bool,
-    toolchain: Option<&str>,
-) -> cross::Result<Option<&str>> {
-    Ok(match toolchain {
-        Some(t) => Some(t),
-        None => match has_nightly(verbose)? {
-            true => Some("nightly"),
-            false => None,
-        },
-    })
-}
-
-fn cargo(channel: Option<&str>) -> Command {
-    let mut command = cross::cargo_command();
-    if let Some(channel) = channel {
-        command.arg(&format!("+{channel}"));
-    }
-    command
 }
 
 fn cargo_fmt(verbose: bool, channel: Option<&str>) -> cross::Result<()> {

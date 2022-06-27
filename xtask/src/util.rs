@@ -1,3 +1,6 @@
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
 use cross::{docker, CommandExt};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
@@ -147,4 +150,42 @@ impl std::fmt::Display for ImageTarget {
             write!(f, "{}", self.triplet)
         }
     }
+}
+
+pub fn has_nightly(verbose: bool) -> cross::Result<bool> {
+    cross::cargo_command()
+        .arg("+nightly")
+        .run_and_get_output(verbose)
+        .map(|o| o.status.success())
+        .map_err(Into::into)
+}
+
+pub fn get_channel_prefer_nightly(
+    verbose: bool,
+    toolchain: Option<&str>,
+) -> cross::Result<Option<&str>> {
+    Ok(match toolchain {
+        Some(t) => Some(t),
+        None => match has_nightly(verbose)? {
+            true => Some("nightly"),
+            false => None,
+        },
+    })
+}
+
+pub fn cargo(channel: Option<&str>) -> Command {
+    let mut command = cross::cargo_command();
+    if let Some(channel) = channel {
+        command.arg(&format!("+{channel}"));
+    }
+    command
+}
+
+pub fn cargo_metadata(verbose: bool) -> cross::Result<cross::CargoMetadata> {
+    cross::cargo_metadata_with_args(Some(Path::new(env!("CARGO_MANIFEST_DIR"))), None, verbose)?
+        .ok_or_else(|| eyre::eyre!("could not find cross workspace"))
+}
+
+pub fn project_dir(verbose: bool) -> cross::Result<PathBuf> {
+    Ok(cargo_metadata(verbose)?.workspace_root)
 }
