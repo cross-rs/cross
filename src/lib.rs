@@ -29,6 +29,7 @@ mod id;
 mod interpreter;
 pub mod rustc;
 mod rustup;
+pub mod shell;
 pub mod temp;
 
 use std::env;
@@ -43,6 +44,7 @@ use serde::{Deserialize, Serialize, Serializer};
 pub use self::cargo::{cargo_command, cargo_metadata_with_args, CargoMetadata, Subcommand};
 use self::cross_toml::CrossToml;
 use self::errors::Context;
+use self::shell::{MessageInfo, Verbosity};
 
 pub use self::errors::{install_panic_hook, install_termination_hook, Result};
 pub use self::extensions::{CommandExt, OutputExt};
@@ -334,7 +336,10 @@ impl From<Host> for Target {
             Host::Aarch64AppleDarwin => Target::new_built_in("aarch64-apple-darwin"),
             Host::Aarch64UnknownLinuxGnu => Target::new_built_in("aarch64-unknown-linux-gnu"),
             Host::Aarch64UnknownLinuxMusl => Target::new_built_in("aarch64-unknown-linux-musl"),
-            Host::Other(s) => Target::from(s.as_str(), &rustc::target_list(false).unwrap()),
+            Host::Other(s) => Target::from(
+                s.as_str(),
+                &rustc::target_list(Verbosity::Quiet.into()).unwrap(),
+            ),
         }
     }
 }
@@ -356,50 +361,49 @@ impl Serialize for Target {
 }
 
 pub fn run() -> Result<ExitStatus> {
-    let target_list = rustc::target_list(false)?;
+    let target_list = rustc::target_list(Verbosity::Quiet.into())?;
     let args = cli::parse(&target_list)?;
 
-    if args.all.iter().any(|a| a == "--version" || a == "-V") && args.subcommand.is_none() {
-        println!(
-            concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
-            include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt"))
-        );
+    if args.version && args.subcommand.is_none() {
+        let commit_info = include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt"));
+        shell::print(
+            format!(
+                concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
+                commit_info
+            ),
+            args.msg_info,
+        )?;
     }
-
-    let verbose = args
-        .all
-        .iter()
-        .any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
     let host_version_meta = rustc::version_meta()?;
     let cwd = std::env::current_dir()?;
-    if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), verbose)? {
+    if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), args.msg_info)? {
         let host = host_version_meta.host();
-        let toml = toml(&metadata)?;
+        let toml = toml(&metadata, args.msg_info)?;
         let config = Config::new(toml);
         let target = args
             .target
             .or_else(|| config.target(&target_list))
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
-        config.confusable_target(&target);
+        config.confusable_target(&target, args.msg_info)?;
 
         let image_exists = match docker::image_name(&config, &target) {
             Ok(_) => true,
             Err(err) => {
-                eprintln!("Warning: {}", err);
+                shell::warn(err, args.msg_info)?;
                 false
             }
         };
 
         if image_exists && host.is_supported(Some(&target)) {
             let (toolchain, sysroot) =
-                rustc::get_sysroot(&host, &target, args.channel.as_deref(), verbose)?;
+                rustc::get_sysroot(&host, &target, args.channel.as_deref(), args.msg_info)?;
             let mut is_nightly = toolchain.contains("nightly");
 
-            let installed_toolchains = rustup::installed_toolchains(verbose)?;
+            let installed_toolchains = rustup::installed_toolchains(args.msg_info)?;
 
             if !installed_toolchains.into_iter().any(|t| t == toolchain) {
-                rustup::install_toolchain(&toolchain, verbose)?;
+                rustup::install_toolchain(&toolchain, args.msg_info)?;
             }
             // TODO: Provide a way to pick/match the toolchain version as a consumer of `cross`.
             if let Some((rustc_version, channel, rustc_commit)) = rustup::rustc_version(&sysroot)? {
@@ -408,6 +412,7 @@ pub fn run() -> Result<ExitStatus> {
                     &toolchain,
                     &rustc_version,
                     &rustc_commit,
+                    args.msg_info,
                 )?;
                 is_nightly = channel == Channel::Nightly;
             }
@@ -418,7 +423,7 @@ pub fn run() -> Result<ExitStatus> {
             if std::env::var("CROSS_CUSTOM_TOOLCHAIN").is_err() {
                 // build-std overrides xargo, but only use it if it's a built-in
                 // tool but not an available target or doesn't have rust-std.
-                let available_targets = rustup::available_targets(&toolchain, verbose)?;
+                let available_targets = rustup::available_targets(&toolchain, args.msg_info)?;
 
                 if !is_nightly && uses_build_std {
                     eyre::bail!(
@@ -431,17 +436,17 @@ pub fn run() -> Result<ExitStatus> {
                     && !available_targets.is_installed(&target)
                     && available_targets.contains(&target)
                 {
-                    rustup::install(&target, &toolchain, verbose)?;
-                } else if !rustup::component_is_installed("rust-src", &toolchain, verbose)? {
-                    rustup::install_component("rust-src", &toolchain, verbose)?;
+                    rustup::install(&target, &toolchain, args.msg_info)?;
+                } else if !rustup::component_is_installed("rust-src", &toolchain, args.msg_info)? {
+                    rustup::install_component("rust-src", &toolchain, args.msg_info)?;
                 }
                 if args
                     .subcommand
                     .map(|sc| sc == Subcommand::Clippy)
                     .unwrap_or(false)
-                    && !rustup::component_is_installed("clippy", &toolchain, verbose)?
+                    && !rustup::component_is_installed("clippy", &toolchain, args.msg_info)?
                 {
-                    rustup::install_component("clippy", &toolchain, verbose)?;
+                    rustup::install_component("clippy", &toolchain, args.msg_info)?;
                 }
             }
 
@@ -493,13 +498,13 @@ pub fn run() -> Result<ExitStatus> {
                 .map(|sc| sc.needs_docker(is_remote))
                 .unwrap_or(false);
             if target.needs_docker() && needs_docker {
-                let engine = docker::Engine::new(Some(is_remote), verbose)?;
+                let engine = docker::Engine::new(Some(is_remote), args.msg_info)?;
                 if host_version_meta.needs_interpreter()
                     && needs_interpreter
                     && target.needs_interpreter()
                     && !interpreter::is_registered(&target)?
                 {
-                    docker::register(&engine, &target, verbose)?
+                    docker::register(&engine, &target, args.msg_info)?
                 }
 
                 let status = docker::run(
@@ -510,7 +515,7 @@ pub fn run() -> Result<ExitStatus> {
                     &config,
                     uses_xargo,
                     &sysroot,
-                    verbose,
+                    args.msg_info,
                     args.docker_in_docker,
                     &cwd,
                 )?;
@@ -527,14 +532,14 @@ pub fn run() -> Result<ExitStatus> {
 
     // if we fallback to the host cargo, use the same invocation that was made to cross
     let argv: Vec<String> = env::args().skip(1).collect();
-    eprintln!("Warning: Falling back to `cargo` on the host.");
+    shell::note("Falling back to `cargo` on the host.", args.msg_info)?;
     match args.subcommand {
         Some(Subcommand::List) => {
             // this won't print in order if we have both stdout and stderr.
-            let out = cargo::run_and_get_output(&argv, verbose)?;
+            let out = cargo::run_and_get_output(&argv, args.msg_info)?;
             let stdout = out.stdout()?;
             if out.status.success() && cli::is_subcommand_list(&stdout) {
-                cli::fmt_subcommands(&stdout);
+                cli::fmt_subcommands(&stdout, args.msg_info)?;
             } else {
                 // Not a list subcommand, which can happen with weird edge-cases.
                 print!("{}", stdout);
@@ -542,7 +547,7 @@ pub fn run() -> Result<ExitStatus> {
             }
             Ok(out.status)
         }
-        _ => cargo::run(&argv, verbose).map_err(Into::into),
+        _ => cargo::run(&argv, args.msg_info).map_err(Into::into),
     }
 }
 
@@ -559,6 +564,7 @@ pub(crate) fn warn_host_version_mismatch(
     toolchain: &str,
     rustc_version: &rustc_version::Version,
     rustc_commit: &str,
+    msg_info: MessageInfo,
 ) -> Result<VersionMatch> {
     let host_commit = (&host_version_meta.short_version_string)
         .splitn(3, ' ')
@@ -577,13 +583,16 @@ pub(crate) fn warn_host_version_mismatch(
             host_version_meta.short_version_string
         );
         if versions.is_lt() || (versions.is_eq() && dates.is_lt()) {
-            eprintln!("Warning: using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`");
+            shell::warn(format!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"), msg_info)?;
             return Ok(VersionMatch::OlderTarget);
         } else if versions.is_gt() || (versions.is_eq() && dates.is_gt()) {
-            eprintln!("Warning: using newer {rustc_warning}.\n > Update with `rustup update`");
+            shell::warn(
+                format!("using newer {rustc_warning}.\n > Update with `rustup update`"),
+                msg_info,
+            )?;
             return Ok(VersionMatch::NewerTarget);
         } else {
-            eprintln!("Warning: using {rustc_warning}.");
+            shell::warn(format!("using {rustc_warning}."), msg_info)?;
             return Ok(VersionMatch::Different);
         }
     }
@@ -599,7 +608,7 @@ pub(crate) fn warn_host_version_mismatch(
 ///
 /// The values from `CROSS_CONFIG` or `Cross.toml` are concatenated with the package
 /// metadata in `Cargo.toml`, with `Cross.toml` having the highest priority.
-fn toml(metadata: &CargoMetadata) -> Result<Option<CrossToml>> {
+fn toml(metadata: &CargoMetadata, msg_info: MessageInfo) -> Result<Option<CrossToml>> {
     let root = &metadata.workspace_root;
     let cross_config_path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),
@@ -614,17 +623,17 @@ fn toml(metadata: &CargoMetadata) -> Result<Option<CrossToml>> {
         let cross_toml_str = file::read(&cross_config_path)
             .wrap_err_with(|| format!("could not read file `{cross_config_path:?}`"))?;
 
-        let (config, _) = CrossToml::parse(&cargo_toml_str, &cross_toml_str)
+        let (config, _) = CrossToml::parse(&cargo_toml_str, &cross_toml_str, msg_info)
             .wrap_err_with(|| format!("failed to parse file `{cross_config_path:?}` as TOML",))?;
 
         Ok(Some(config))
     } else {
         // Checks if there is a lowercase version of this file
         if root.join("cross.toml").exists() {
-            eprintln!("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.");
+            shell::warn("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.", msg_info)?;
         }
 
-        if let Some((cfg, _)) = CrossToml::parse_from_cargo(&cargo_toml_str)? {
+        if let Some((cfg, _)) = CrossToml::parse_from_cargo(&cargo_toml_str, msg_info)? {
             Ok(Some(cfg))
         } else {
             Ok(None)

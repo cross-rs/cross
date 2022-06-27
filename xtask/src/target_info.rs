@@ -1,7 +1,8 @@
-use std::{collections::BTreeMap, process::Stdio};
+use std::collections::BTreeMap;
 
 use crate::util::{format_repo, pull_image};
 use clap::Args;
+use cross::shell::MessageInfo;
 use cross::{docker, CommandExt};
 
 // Store raw text data in the binary so we don't need a data directory
@@ -11,19 +12,25 @@ const TARGET_INFO_SCRIPT: &str = include_str!("target_info.sh");
 #[derive(Args, Debug)]
 pub struct TargetInfo {
     /// If not provided, get info for all targets.
-    targets: Vec<crate::ImageTarget>,
+    pub targets: Vec<crate::ImageTarget>,
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
     pub verbose: bool,
+    /// Do not print cross log messages.
+    #[clap(short, long)]
+    pub quiet: bool,
+    /// Whether messages should use color output.
+    #[clap(long)]
+    pub color: Option<String>,
     /// Image registry.
     #[clap(long, default_value_t = String::from("ghcr.io"))]
-    registry: String,
+    pub registry: String,
     /// Image repository.
     #[clap(long, default_value_t = String::from("cross-rs"))]
-    repository: String,
+    pub repository: String,
     /// Image tag.
     #[clap(long, default_value_t = String::from("main"))]
-    tag: String,
+    pub tag: String,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
@@ -34,11 +41,11 @@ fn image_info(
     target: &crate::ImageTarget,
     image: &str,
     tag: &str,
-    verbose: bool,
+    msg_info: MessageInfo,
     has_test: bool,
 ) -> cross::Result<()> {
     if !tag.starts_with("local") {
-        pull_image(engine, image, verbose)?;
+        pull_image(engine, image, msg_info)?;
     }
 
     let mut command = docker::command(engine);
@@ -52,18 +59,17 @@ fn image_info(
     }
     command.arg(image);
     command.args(&["bash", "-c", TARGET_INFO_SCRIPT]);
-
-    if !verbose {
-        // capture stderr to avoid polluting table
-        command.stderr(Stdio::null());
-    }
-    command.run(verbose, false).map_err(Into::into)
+    command
+        .run(msg_info, !msg_info.verbose())
+        .map_err(Into::into)
 }
 
 pub fn target_info(
     TargetInfo {
         mut targets,
         verbose,
+        quiet,
+        color,
         registry,
         repository,
         tag,
@@ -71,6 +77,7 @@ pub fn target_info(
     }: TargetInfo,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
+    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
     let matrix = crate::util::get_matrix();
     let test_map: BTreeMap<crate::ImageTarget, bool> = matrix
         .iter()
@@ -91,7 +98,7 @@ pub fn target_info(
             .get(&target)
             .cloned()
             .ok_or_else(|| eyre::eyre!("invalid target name {}", target))?;
-        image_info(engine, &target, &image, &tag, verbose, has_test)?;
+        image_info(engine, &target, &image, &tag, msg_info, has_test)?;
     }
 
     Ok(())

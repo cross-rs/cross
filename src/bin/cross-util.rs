@@ -2,6 +2,7 @@
 
 use clap::{CommandFactory, Parser, Subcommand};
 use cross::docker;
+use cross::shell::MessageInfo;
 
 mod commands;
 
@@ -46,13 +47,16 @@ fn is_toolchain(toolchain: &str) -> cross::Result<String> {
     }
 }
 
-fn get_container_engine(engine: Option<&str>, verbose: bool) -> cross::Result<docker::Engine> {
+fn get_container_engine(
+    engine: Option<&str>,
+    msg_info: MessageInfo,
+) -> cross::Result<docker::Engine> {
     let engine = if let Some(ce) = engine {
         which::which(ce)?
     } else {
         docker::get_container_engine()?
     };
-    docker::Engine::from_path(engine, None, verbose)
+    docker::Engine::from_path(engine, None, msg_info)
 }
 
 pub fn main() -> cross::Result<()> {
@@ -60,19 +64,23 @@ pub fn main() -> cross::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Images(args) => {
-            let engine = get_container_engine(args.engine(), args.verbose())?;
+            let msg_info = MessageInfo::create(args.verbose(), args.quiet(), args.color())?;
+            let engine = get_container_engine(args.engine(), msg_info)?;
             args.run(engine)?;
         }
         Commands::Volumes(args) => {
-            let engine = get_container_engine(args.engine(), args.verbose())?;
+            let msg_info = MessageInfo::create(args.verbose(), args.quiet(), args.color())?;
+            let engine = get_container_engine(args.engine(), msg_info)?;
             args.run(engine, cli.toolchain.as_deref())?;
         }
         Commands::Containers(args) => {
-            let engine = get_container_engine(args.engine(), args.verbose())?;
+            let msg_info = MessageInfo::create(args.verbose(), args.quiet(), args.color())?;
+            let engine = get_container_engine(args.engine(), msg_info)?;
             args.run(engine)?;
         }
         Commands::Clean(args) => {
-            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
+            let msg_info = MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
+            let engine = get_container_engine(args.engine.as_deref(), msg_info)?;
             args.run(engine)?;
         }
     }

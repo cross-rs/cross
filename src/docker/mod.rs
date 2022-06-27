@@ -12,6 +12,7 @@ use std::process::ExitStatus;
 
 use crate::cargo::CargoMetadata;
 use crate::errors::*;
+use crate::shell::MessageInfo;
 use crate::{Config, Target};
 
 #[allow(clippy::too_many_arguments)] // TODO: refactor
@@ -23,7 +24,7 @@ pub fn run(
     config: &Config,
     uses_xargo: bool,
     sysroot: &Path,
-    verbose: bool,
+    msg_info: MessageInfo,
     docker_in_docker: bool,
     cwd: &Path,
 ) -> Result<ExitStatus> {
@@ -36,7 +37,7 @@ pub fn run(
             config,
             uses_xargo,
             sysroot,
-            verbose,
+            msg_info,
             docker_in_docker,
             cwd,
         )
@@ -49,7 +50,7 @@ pub fn run(
             config,
             uses_xargo,
             sysroot,
-            verbose,
+            msg_info,
             docker_in_docker,
             cwd,
         )

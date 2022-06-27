@@ -10,6 +10,7 @@ pub mod util;
 use ci::CiJob;
 use clap::{CommandFactory, Parser, Subcommand};
 use cross::docker;
+use cross::shell::{MessageInfo, Verbosity};
 use util::{cargo_metadata, ImageTarget};
 
 use self::build_docker_image::BuildDockerImage;
@@ -65,11 +66,13 @@ pub fn main() -> cross::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::TargetInfo(args) => {
-            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
+            let msg_info = MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
+            let engine = get_container_engine(args.engine.as_deref(), msg_info)?;
             target_info::target_info(args, &engine)?;
         }
         Commands::BuildDockerImage(args) => {
-            let engine = get_container_engine(args.engine.as_deref(), args.verbose)?;
+            let msg_info = MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
+            let engine = get_container_engine(args.engine.as_deref(), msg_info)?;
             build_docker_image::build_docker_image(args, &engine)?;
         }
         Commands::InstallGitHooks(args) => {
@@ -82,7 +85,7 @@ pub fn main() -> cross::Result<()> {
             hooks::test(args, cli.toolchain.as_deref())?;
         }
         Commands::CiJob(args) => {
-            let metadata = cargo_metadata(true)?;
+            let metadata = cargo_metadata(Verbosity::Verbose.into())?;
             ci::ci(args, metadata)?
         }
     }
@@ -90,11 +93,14 @@ pub fn main() -> cross::Result<()> {
     Ok(())
 }
 
-fn get_container_engine(engine: Option<&str>, verbose: bool) -> cross::Result<docker::Engine> {
+fn get_container_engine(
+    engine: Option<&str>,
+    msg_info: MessageInfo,
+) -> cross::Result<docker::Engine> {
     let engine = if let Some(ce) = engine {
         which::which(ce)?
     } else {
         docker::get_container_engine()?
     };
-    docker::Engine::from_path(engine, None, verbose)
+    docker::Engine::from_path(engine, None, msg_info)
 }

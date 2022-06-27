@@ -3,12 +3,19 @@ use std::fs;
 use super::containers::*;
 use super::images::*;
 use clap::Args;
+use cross::shell::{self, MessageInfo};
 
 #[derive(Args, Debug)]
 pub struct Clean {
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
     pub verbose: bool,
+    /// Do not print cross log messages.
+    #[clap(short, long)]
+    pub quiet: bool,
+    /// Whether messages should use color output.
+    #[clap(long)]
+    pub color: Option<String>,
     /// Force removal of images.
     #[clap(short, long)]
     pub force: bool,
@@ -25,6 +32,7 @@ pub struct Clean {
 
 impl Clean {
     pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
+        let msg_info = MessageInfo::create(self.verbose, self.quiet, self.color.as_deref())?;
         let tempdir = cross::temp::dir()?;
         match self.execute {
             true => {
@@ -32,15 +40,20 @@ impl Clean {
                     fs::remove_dir_all(tempdir)?;
                 }
             }
-            false => println!(
-                "fs::remove_dir_all({})",
-                cross::pretty_path(&tempdir, |_| false)
-            ),
+            false => shell::print(
+                format!(
+                    "fs::remove_dir_all({})",
+                    cross::pretty_path(&tempdir, |_| false)
+                ),
+                msg_info,
+            )?,
         }
 
         // containers -> images -> volumes -> prune to ensure no conflicts.
         let remove_containers = RemoveAllContainers {
             verbose: self.verbose,
+            quiet: self.quiet,
+            color: self.color.clone(),
             force: self.force,
             execute: self.execute,
             engine: None,
@@ -50,6 +63,8 @@ impl Clean {
         let remove_images = RemoveImages {
             targets: vec![],
             verbose: self.verbose,
+            quiet: self.quiet,
+            color: self.color.clone(),
             force: self.force,
             local: self.local,
             execute: self.execute,
@@ -59,6 +74,8 @@ impl Clean {
 
         let remove_volumes = RemoveAllVolumes {
             verbose: self.verbose,
+            quiet: self.quiet,
+            color: self.color.clone(),
             force: self.force,
             execute: self.execute,
             engine: None,
@@ -67,6 +84,8 @@ impl Clean {
 
         let prune_volumes = PruneVolumes {
             verbose: self.verbose,
+            quiet: self.quiet,
+            color: self.color.clone(),
             execute: self.execute,
             engine: None,
         };

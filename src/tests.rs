@@ -14,10 +14,14 @@ static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 pub fn get_cargo_workspace() -> &'static Path {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     WORKSPACE.get_or_init(|| {
-        crate::cargo_metadata_with_args(Some(manifest_dir.as_ref()), None, true)
-            .unwrap()
-            .unwrap()
-            .workspace_root
+        crate::cargo_metadata_with_args(
+            Some(manifest_dir.as_ref()),
+            None,
+            crate::shell::Verbosity::Verbose.into(),
+        )
+        .unwrap()
+        .unwrap()
+        .workspace_root
     })
 }
 
@@ -71,7 +75,14 @@ release: {version}
         let target_meta = dbg!(make_rustc_version(targ));
         assert_eq!(
             expected,
-            warn_host_version_mismatch(&host_meta, "xxxx", &target_meta.0, &target_meta.1).unwrap(),
+            warn_host_version_mismatch(
+                &host_meta,
+                "xxxx",
+                &target_meta.0,
+                &target_meta.1,
+                crate::shell::MessageInfo::default()
+            )
+            .unwrap(),
             "\nhost = {}\ntarg = {}",
             host,
             targ

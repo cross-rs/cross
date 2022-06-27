@@ -1,68 +1,74 @@
+use std::fmt::Write;
 use std::path::Path;
 
-use crate::util::cargo_metadata;
+use crate::util::{cargo_metadata, gha_error, gha_output, gha_print};
 use clap::Args;
-use color_eyre::Section;
+use cross::shell::{self, MessageInfo};
 use cross::{docker, CommandExt, ToUtf8};
-use std::fmt::Write;
 
 #[derive(Args, Debug)]
 pub struct BuildDockerImage {
     #[clap(long, hide = true, env = "GITHUB_REF_TYPE")]
-    ref_type: Option<String>,
+    pub ref_type: Option<String>,
     #[clap(long, hide = true, env = "GITHUB_REF_NAME")]
     ref_name: Option<String>,
     #[clap(action, long = "latest", hide = true, env = "LATEST")]
     is_latest: bool,
     /// Specify a tag to use instead of the derived one, eg `local`
     #[clap(long)]
-    tag: Option<String>,
+    pub tag: Option<String>,
     /// Repository name for image.
     #[clap(long, default_value = docker::CROSS_IMAGE)]
-    repository: String,
+    pub repository: String,
     /// Newline separated labels
     #[clap(long, env = "LABELS")]
-    labels: Option<String>,
+    pub labels: Option<String>,
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
     pub verbose: bool,
+    /// Do not print cross log messages.
+    #[clap(short, long)]
+    pub quiet: bool,
+    /// Whether messages should use color output.
+    #[clap(long)]
+    pub color: Option<String>,
     /// Print but do not execute the build commands.
     #[clap(long)]
-    dry_run: bool,
+    pub dry_run: bool,
     /// Force a push when `--push` is set, but not `--tag`
     #[clap(long, hide = true)]
-    force: bool,
+    pub force: bool,
     /// Push build to registry.
     #[clap(short, long)]
-    push: bool,
+    pub push: bool,
     /// Set output to /dev/null
     #[clap(short, long)]
-    no_output: bool,
+    pub no_output: bool,
     /// Docker build progress output type.
     #[clap(
         long,
         value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]),
         default_value = "auto"
     )]
-    progress: String,
+    pub progress: String,
     /// Do not load from cache when building the image.
     #[clap(long)]
-    no_cache: bool,
+    pub no_cache: bool,
     /// Continue building images even if an image fails to build.
     #[clap(long)]
-    no_fastfail: bool,
+    pub no_fastfail: bool,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
     /// If no target list is provided, parse list from CI.
     #[clap(long)]
-    from_ci: bool,
+    pub from_ci: bool,
     /// Additional build arguments to pass to Docker.
     #[clap(long)]
-    build_arg: Vec<String>,
+    pub build_arg: Vec<String>,
     /// Targets to build for
     #[clap()]
-    targets: Vec<crate::ImageTarget>,
+    pub targets: Vec<crate::ImageTarget>,
 }
 
 fn locate_dockerfile(
@@ -91,6 +97,8 @@ pub fn build_docker_image(
         repository,
         labels,
         verbose,
+        quiet,
+        color,
         dry_run,
         force,
         push,
@@ -105,7 +113,8 @@ pub fn build_docker_image(
     }: BuildDockerImage,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let metadata = cargo_metadata(verbose)?;
+    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let metadata = cargo_metadata(msg_info)?;
     let version = metadata
         .get_package("cross")
         .expect("cross expected in workspace")
@@ -145,7 +154,7 @@ pub fn build_docker_image(
     let mut results = vec![];
     for (target, dockerfile) in &targets {
         if gha && targets.len() > 1 {
-            println!("::group::Build {target}");
+            gha_print("::group::Build {target}");
         }
         let mut docker_build = docker::command(engine);
         docker_build.args(&["buildx", "build"]);
@@ -231,14 +240,11 @@ pub fn build_docker_image(
         docker_build.arg(".");
 
         if !dry_run && (force || !push || gha) {
-            let result = docker_build.run(verbose, false);
+            let result = docker_build.run(msg_info, false);
             if gha && targets.len() > 1 {
                 if let Err(e) = &result {
                     // TODO: Determine what instruction errorred, and place warning on that line with appropriate warning
-                    println!(
-                        "::error file=docker/{},title=Build failed::{}",
-                        dockerfile, e
-                    )
+                    gha_error(&format!("file=docker/{dockerfile},title=Build failed::{e}"));
                 }
             }
             results.push(
@@ -250,19 +256,16 @@ pub fn build_docker_image(
                 break;
             }
         } else {
-            docker_build.print_verbose(true);
+            docker_build.print(msg_info)?;
             if !dry_run {
-                panic!("refusing to push, use --force to override");
+                shell::fatal("refusing to push, use --force to override", msg_info, 1);
             }
         }
         if gha {
-            println!("::set-output name=image::{}", &tags[0]);
-            println!(
-                "::set-output name=images::'{}'",
-                serde_json::to_string(&tags)?
-            );
+            gha_output("image", &tags[0]);
+            gha_output("images", &format!("'{}'", serde_json::to_string(&tags)?));
             if targets.len() > 1 {
-                println!("::endgroup::");
+                gha_print("::endgroup::");
             }
         }
     }
@@ -270,10 +273,10 @@ pub fn build_docker_image(
         std::env::set_var("GITHUB_STEP_SUMMARY", job_summary(&results)?);
     }
     if results.iter().any(|r| r.is_err()) {
-        results.into_iter().filter_map(Result::err).fold(
-            Err(eyre::eyre!("encountered error(s)")),
-            |report: Result<(), color_eyre::Report>, e| report.error(e.1),
-        )?;
+        results
+            .into_iter()
+            .filter_map(Result::err)
+            .fold(Err(eyre::eyre!("encountered error(s)")), |_, e| Err(e.1))?;
     }
     Ok(())
 }
@@ -317,7 +320,7 @@ pub fn determine_image_name(
 }
 
 pub fn job_summary(
-    results: &[Result<crate::ImageTarget, (crate::ImageTarget, cross::errors::CommandError)>],
+    results: &[Result<crate::ImageTarget, (crate::ImageTarget, eyre::ErrReport)>],
 ) -> cross::Result<String> {
     let mut summary = "# SUMMARY\n\n".to_string();
     let success: Vec<_> = results.iter().filter_map(|r| r.as_ref().ok()).collect();

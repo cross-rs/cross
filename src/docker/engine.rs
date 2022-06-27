@@ -5,6 +5,7 @@ use std::process::Command;
 use crate::config::bool_from_envvar;
 use crate::errors::*;
 use crate::extensions::CommandExt;
+use crate::shell::MessageInfo;
 
 pub const DOCKER: &str = "docker";
 pub const PODMAN: &str = "podman";
@@ -25,15 +26,19 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(is_remote: Option<bool>, verbose: bool) -> Result<Engine> {
+    pub fn new(is_remote: Option<bool>, msg_info: MessageInfo) -> Result<Engine> {
         let path = get_container_engine()
             .map_err(|_| eyre::eyre!("no container engine found"))
             .with_suggestion(|| "is docker or podman installed?")?;
-        Self::from_path(path, is_remote, verbose)
+        Self::from_path(path, is_remote, msg_info)
     }
 
-    pub fn from_path(path: PathBuf, is_remote: Option<bool>, verbose: bool) -> Result<Engine> {
-        let kind = get_engine_type(&path, verbose)?;
+    pub fn from_path(
+        path: PathBuf,
+        is_remote: Option<bool>,
+        msg_info: MessageInfo,
+    ) -> Result<Engine> {
+        let kind = get_engine_type(&path, msg_info)?;
         let is_remote = is_remote.unwrap_or_else(Self::is_remote);
         Ok(Engine {
             path,
@@ -55,10 +60,10 @@ impl Engine {
 
 // determine if the container engine is docker. this fixes issues with
 // any aliases (#530), and doesn't fail if an executable suffix exists.
-fn get_engine_type(ce: &Path, verbose: bool) -> Result<EngineType> {
+fn get_engine_type(ce: &Path, msg_info: MessageInfo) -> Result<EngineType> {
     let stdout = Command::new(ce)
         .arg("--help")
-        .run_and_get_stdout(verbose)?
+        .run_and_get_stdout(msg_info)?
         .to_lowercase();
 
     if stdout.contains("podman-remote") {

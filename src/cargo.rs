@@ -5,6 +5,7 @@ use std::process::{Command, ExitStatus};
 use crate::cli::Args;
 use crate::errors::*;
 use crate::extensions::CommandExt;
+use crate::shell::MessageInfo;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subcommand {
@@ -119,7 +120,7 @@ pub fn cargo_command() -> Command {
 pub fn cargo_metadata_with_args(
     cd: Option<&Path>,
     args: Option<&Args>,
-    verbose: bool,
+    msg_info: MessageInfo,
 ) -> Result<Option<CargoMetadata>> {
     let mut command = cargo_command();
     command.arg("metadata").args(&["--format-version", "1"]);
@@ -139,7 +140,7 @@ pub fn cargo_metadata_with_args(
     if let Some(features) = args.map(|a| &a.features).filter(|v| !v.is_empty()) {
         command.args([String::from("--features"), features.join(",")]);
     }
-    let output = command.run_and_get_output(verbose)?;
+    let output = command.run_and_get_output(msg_info)?;
     if !output.status.success() {
         // TODO: logging
         return Ok(None);
@@ -158,13 +159,13 @@ pub fn cargo_metadata_with_args(
 }
 
 /// Pass-through mode
-pub fn run(args: &[String], verbose: bool) -> Result<ExitStatus, CommandError> {
+pub fn run(args: &[String], msg_info: MessageInfo) -> Result<ExitStatus> {
     cargo_command()
         .args(args)
-        .run_and_get_status(verbose, false)
+        .run_and_get_status(msg_info, false)
 }
 
 /// run cargo and get the output, does not check the exit status
-pub fn run_and_get_output(args: &[String], verbose: bool) -> Result<std::process::Output> {
-    cargo_command().args(args).run_and_get_output(verbose)
+pub fn run_and_get_output(args: &[String], msg_info: MessageInfo) -> Result<std::process::Output> {
+    cargo_command().args(args).run_and_get_output(msg_info)
 }

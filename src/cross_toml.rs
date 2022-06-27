@@ -1,5 +1,6 @@
 #![doc = include_str!("../docs/cross_toml.md")]
 
+use crate::shell::{self, MessageInfo};
 use crate::{config, errors::*};
 use crate::{Target, TargetList};
 use serde::de::DeserializeOwned;
@@ -75,10 +76,14 @@ pub struct CrossToml {
 
 impl CrossToml {
     /// Parses the [`CrossToml`] from all of the config sources
-    pub fn parse(cargo_toml: &str, cross_toml: &str) -> Result<(Self, BTreeSet<String>)> {
-        let (cross_toml, mut unused) = Self::parse_from_cross(cross_toml)?;
+    pub fn parse(
+        cargo_toml: &str,
+        cross_toml: &str,
+        msg_info: MessageInfo,
+    ) -> Result<(Self, BTreeSet<String>)> {
+        let (cross_toml, mut unused) = Self::parse_from_cross(cross_toml, msg_info)?;
 
-        if let Some((cargo_toml, u_cargo)) = Self::parse_from_cargo(cargo_toml)? {
+        if let Some((cargo_toml, u_cargo)) = Self::parse_from_cargo(cargo_toml, msg_info)? {
             unused.extend(u_cargo.into_iter());
             Ok((cargo_toml.merge(cross_toml)?, unused))
         } else {
@@ -87,13 +92,19 @@ impl CrossToml {
     }
 
     /// Parses the [`CrossToml`] from a string
-    pub fn parse_from_cross(toml_str: &str) -> Result<(Self, BTreeSet<String>)> {
+    pub fn parse_from_cross(
+        toml_str: &str,
+        msg_info: MessageInfo,
+    ) -> Result<(Self, BTreeSet<String>)> {
         let mut tomld = toml::Deserializer::new(toml_str);
-        Self::parse_from_deserializer(&mut tomld)
+        Self::parse_from_deserializer(&mut tomld, msg_info)
     }
 
     /// Parses the [`CrossToml`] from a string containing the Cargo.toml contents
-    pub fn parse_from_cargo(cargo_toml_str: &str) -> Result<Option<(Self, BTreeSet<String>)>> {
+    pub fn parse_from_cargo(
+        cargo_toml_str: &str,
+        msg_info: MessageInfo,
+    ) -> Result<Option<(Self, BTreeSet<String>)>> {
         let cargo_toml: toml::Value = toml::from_str(cargo_toml_str)?;
         let cross_metadata_opt = cargo_toml
             .get("package")
@@ -101,14 +112,20 @@ impl CrossToml {
             .and_then(|m| m.get("cross"));
 
         if let Some(cross_meta) = cross_metadata_opt {
-            Ok(Some(Self::parse_from_deserializer(cross_meta.clone())?))
+            Ok(Some(Self::parse_from_deserializer(
+                cross_meta.clone(),
+                msg_info,
+            )?))
         } else {
             Ok(None)
         }
     }
 
     /// Parses the [`CrossToml`] from a [`Deserializer`]
-    fn parse_from_deserializer<'de, D>(deserializer: D) -> Result<(Self, BTreeSet<String>)>
+    fn parse_from_deserializer<'de, D>(
+        deserializer: D,
+        msg_info: MessageInfo,
+    ) -> Result<(Self, BTreeSet<String>)>
     where
         D: Deserializer<'de>,
         D::Error: Send + Sync + 'static,
@@ -119,10 +136,13 @@ impl CrossToml {
         })?;
 
         if !unused.is_empty() {
-            eprintln!(
-                "Warning: found unused key(s) in Cross configuration:\n > {}",
-                unused.clone().into_iter().collect::<Vec<_>>().join(", ")
-            );
+            shell::warn(
+                format!(
+                    "found unused key(s) in Cross configuration:\n > {}",
+                    unused.clone().into_iter().collect::<Vec<_>>().join(", ")
+                ),
+                msg_info,
+            )?;
         }
 
         Ok((cfg, unused))
@@ -385,6 +405,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    const MSG_INFO: MessageInfo = MessageInfo {
+        color_choice: shell::ColorChoice::Never,
+        verbosity: shell::Verbosity::Quiet,
+    };
 
     macro_rules! s {
         ($x:literal) => {
@@ -398,7 +422,7 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig::default(),
         };
-        let (parsed_cfg, unused) = CrossToml::parse_from_cross("")?;
+        let (parsed_cfg, unused) = CrossToml::parse_from_cross("", MSG_INFO)?;
 
         assert_eq!(parsed_cfg, cfg);
         assert!(unused.is_empty());
@@ -432,7 +456,7 @@ mod tests {
           volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
         "#;
-        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str)?;
+        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str, MSG_INFO)?;
 
         assert_eq!(parsed_cfg, cfg);
         assert!(unused.is_empty());
@@ -476,7 +500,7 @@ mod tests {
             image = "test-image"
             pre-build = []
         "#;
-        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str)?;
+        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str, MSG_INFO)?;
 
         assert_eq!(parsed_cfg, cfg);
         assert!(unused.is_empty());
@@ -540,7 +564,7 @@ mod tests {
             [target.aarch64-unknown-linux-gnu.env]
             volumes = ["VOL"]
         "#;
-        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str)?;
+        let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str, MSG_INFO)?;
 
         assert_eq!(parsed_cfg, cfg);
         assert!(unused.is_empty());
@@ -559,7 +583,7 @@ mod tests {
           cross = "1.2.3"
         "#;
 
-        let res = CrossToml::parse_from_cargo(test_str)?;
+        let res = CrossToml::parse_from_cargo(test_str, MSG_INFO)?;
         assert!(res.is_none());
 
         Ok(())
@@ -594,7 +618,7 @@ mod tests {
           xargo = true
         "#;
 
-        if let Some((parsed_cfg, _unused)) = CrossToml::parse_from_cargo(test_str)? {
+        if let Some((parsed_cfg, _unused)) = CrossToml::parse_from_cargo(test_str, MSG_INFO)? {
             assert_eq!(parsed_cfg, cfg);
         } else {
             panic!("Parsing result is None");
@@ -702,9 +726,9 @@ mod tests {
         "#;
 
         // Parses configs
-        let (cfg1, _) = CrossToml::parse_from_cross(cfg1_str)?;
-        let (cfg2, _) = CrossToml::parse_from_cross(cfg2_str)?;
-        let (cfg_expected, _) = CrossToml::parse_from_cross(cfg_expected_str)?;
+        let (cfg1, _) = CrossToml::parse_from_cross(cfg1_str, MSG_INFO)?;
+        let (cfg2, _) = CrossToml::parse_from_cross(cfg2_str, MSG_INFO)?;
+        let (cfg_expected, _) = CrossToml::parse_from_cross(cfg_expected_str, MSG_INFO)?;
 
         // Merges config and compares
         let cfg_merged = cfg1.merge(cfg2)?;

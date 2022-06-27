@@ -1,3 +1,4 @@
+use std::io;
 use std::path::Path;
 use std::process::ExitStatus;
 
@@ -7,8 +8,8 @@ use crate::cargo::CargoMetadata;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::file::{PathExt, ToUtf8};
+use crate::shell::{MessageInfo, Stream};
 use crate::{Config, Target};
-use atty::Stream;
 use eyre::Context;
 
 #[allow(clippy::too_many_arguments)] // TODO: refactor
@@ -20,18 +21,18 @@ pub(crate) fn run(
     config: &Config,
     uses_xargo: bool,
     sysroot: &Path,
-    verbose: bool,
+    msg_info: MessageInfo,
     docker_in_docker: bool,
     cwd: &Path,
 ) -> Result<ExitStatus> {
-    let dirs = Directories::create(engine, metadata, cwd, sysroot, docker_in_docker, verbose)?;
+    let dirs = Directories::create(engine, metadata, cwd, sysroot, docker_in_docker)?;
 
     let mut cmd = cargo_safe_command(uses_xargo);
     cmd.args(args);
 
     let mut docker = subcommand(engine, "run");
     docker.args(&["--userns", "host"]);
-    docker_envvars(&mut docker, config, target)?;
+    docker_envvars(&mut docker, config, target, msg_info)?;
 
     let mount_volumes = docker_mount(
         &mut docker,
@@ -45,7 +46,7 @@ pub(crate) fn run(
 
     docker.arg("--rm");
 
-    docker_seccomp(&mut docker, engine.kind, target, metadata, verbose)?;
+    docker_seccomp(&mut docker, engine.kind, target, metadata)?;
     docker_user_id(&mut docker, engine.kind);
 
     docker
@@ -75,21 +76,21 @@ pub(crate) fn run(
         ]);
     }
 
-    if atty::is(Stream::Stdin) {
+    if io::Stdin::is_atty() {
         docker.arg("-i");
-        if atty::is(Stream::Stdout) && atty::is(Stream::Stderr) {
+        if io::Stdout::is_atty() && io::Stderr::is_atty() {
             docker.arg("-t");
         }
     }
     let mut image = image_name(config, target)?;
     if needs_custom_image(target, config) {
-        image = custom_image_build(target, config, metadata, dirs, engine, verbose)
+        image = custom_image_build(target, config, metadata, dirs, engine, msg_info)
             .wrap_err("when building custom image")?
     }
 
     docker
         .arg(&image)
         .args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)])
-        .run_and_get_status(verbose, false)
+        .run_and_get_status(msg_info, false)
         .map_err(Into::into)
 }
