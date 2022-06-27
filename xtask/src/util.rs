@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -278,4 +279,14 @@ mod tests {
             Ok(())
         }
     }
+}
+
+pub fn write_to_string(path: &Path, contents: &str) -> cross::Result<()> {
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(path)?;
+    writeln!(file, "{}", contents)?;
+    Ok(())
 }

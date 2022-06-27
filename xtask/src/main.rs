@@ -2,6 +2,7 @@
 
 pub mod build_docker_image;
 pub mod ci;
+pub mod crosstool;
 pub mod hooks;
 pub mod install_git_hooks;
 pub mod target_info;
@@ -14,6 +15,7 @@ use cross::shell::{MessageInfo, Verbosity};
 use util::{cargo_metadata, ImageTarget};
 
 use self::build_docker_image::BuildDockerImage;
+use self::crosstool::ConfigureCrosstool;
 use self::hooks::{Check, Test};
 use self::install_git_hooks::InstallGitHooks;
 use self::target_info::TargetInfo;
@@ -50,6 +52,8 @@ enum Commands {
     /// CI tasks
     #[clap(subcommand, hide = true)]
     CiJob(CiJob),
+    /// Configure crosstool config files.
+    ConfigureCrosstool(ConfigureCrosstool),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<String> {
@@ -88,6 +92,7 @@ pub fn main() -> cross::Result<()> {
             let metadata = cargo_metadata(Verbosity::Verbose.into())?;
             ci::ci(args, metadata)?
         }
+        Commands::ConfigureCrosstool(args) => crosstool::configure_crosstool(args)?,
     }
 
     Ok(())
