@@ -1,4 +1,6 @@
+use crate::util::gha_output;
 use clap::Subcommand;
+use cross::shell::Verbosity;
 use cross::{cargo_command, CargoMetadata, CommandExt};
 
 #[derive(Subcommand, Debug)]
@@ -77,7 +79,7 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
                 let search = cargo_command()
                     .args(&["search", "--limit", "1"])
                     .arg("cross")
-                    .run_and_get_stdout(true)?;
+                    .run_and_get_stdout(Verbosity::Verbose.into())?;
                 let (cross, rest) = search
                     .split_once(" = ")
                     .ok_or_else(|| eyre::eyre!("cargo search failed"))?;
@@ -95,13 +97,4 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
         }
     }
     Ok(())
-}
-
-#[track_caller]
-fn gha_output(tag: &str, content: &str) {
-    if content.contains('\n') {
-        // https://github.com/actions/toolkit/issues/403
-        panic!("output `{tag}` contains newlines, consider serializing with json and deserializing in gha with fromJSON()")
-    }
-    println!("::set-output name={tag}::{}", content)
 }

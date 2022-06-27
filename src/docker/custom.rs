@@ -2,6 +2,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::docker::Engine;
+use crate::shell::MessageInfo;
 use crate::{config::Config, docker, CargoMetadata, Target};
 use crate::{errors::*, file, CommandExt, ToUtf8};
 
@@ -31,7 +32,7 @@ impl<'a> Dockerfile<'a> {
         host_root: &Path,
         build_args: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
         target_triple: &Target,
-        verbose: bool,
+        msg_info: MessageInfo,
     ) -> Result<String> {
         let mut docker_build = docker::subcommand(engine, "build");
         docker_build.current_dir(host_root);
@@ -100,7 +101,7 @@ impl<'a> Dockerfile<'a> {
             docker_build.arg(".");
         }
 
-        docker_build.run(verbose, true)?;
+        docker_build.run(msg_info, true)?;
         Ok(image_name)
     }
 

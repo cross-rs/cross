@@ -1,10 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use clap::{Args, Subcommand};
-use cross::{
-    docker::{self, CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX},
-    CommandExt, TargetList,
-};
+use cross::docker::{self, CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX};
+use cross::shell::{self, MessageInfo, Verbosity};
+use cross::{CommandExt, TargetList};
 
 // known image prefixes, with their registry
 // the docker.io registry can also be implicit
@@ -18,6 +17,12 @@ pub struct ListImages {
     /// Provide verbose diagnostic output.
     #[clap(short, long)]
     pub verbose: bool,
+    /// Do not print cross log messages.
+    #[clap(short, long)]
+    pub quiet: bool,
+    /// Whether messages should use color output.
+    #[clap(long)]
+    pub color: Option<String>,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
@@ -38,6 +43,12 @@ pub struct RemoveImages {
     /// Remove images matching provided targets.
     #[clap(short, long)]
     pub verbose: bool,
+    /// Do not print cross log messages.
+    #[clap(short, long)]
+    pub quiet: bool,
+    /// Whether messages should use color output.
+    #[clap(long)]
+    pub color: Option<String>,
     /// Force removal of images.
     #[clap(short, long)]
     pub force: bool,
@@ -91,6 +102,20 @@ impl Images {
             Images::Remove(l) => l.verbose,
         }
     }
+
+    pub fn quiet(&self) -> bool {
+        match self {
+            Images::List(l) => l.quiet,
+            Images::Remove(l) => l.quiet,
+        }
+    }
+
+    pub fn color(&self) -> Option<&str> {
+        match self {
+            Images::List(l) => l.color.as_deref(),
+            Images::Remove(l) => l.color.as_deref(),
+        }
+    }
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -138,7 +163,7 @@ fn is_local_image(tag: &str) -> bool {
 
 fn get_cross_images(
     engine: &docker::Engine,
-    verbose: bool,
+    msg_info: MessageInfo,
     local: bool,
 ) -> cross::Result<Vec<Image>> {
     let mut images: BTreeSet<_> = cross::docker::subcommand(engine, "images")
@@ -147,14 +172,14 @@ fn get_cross_images(
             "--filter",
             &format!("label={}.for-cross-target", cross::CROSS_LABEL_DOMAIN),
         ])
-        .run_and_get_stdout(verbose)?
+        .run_and_get_stdout(msg_info)?
         .lines()
         .map(parse_image)
         .collect();
 
     let stdout = cross::docker::subcommand(engine, "images")
         .args(&["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
-        .run_and_get_stdout(verbose)?;
+        .run_and_get_stdout(msg_info)?;
     let ids: Vec<_> = images.iter().map(|i| i.id.to_string()).collect();
     images.extend(
         stdout
@@ -192,6 +217,7 @@ fn get_image_target(
     engine: &cross::docker::Engine,
     image: &Image,
     target_list: &TargetList,
+    msg_info: MessageInfo,
 ) -> cross::Result<String> {
     if let Some(stripped) = image.repository.strip_prefix(&format!("{GHCR_IO}/")) {
         return Ok(stripped.to_string());
@@ -222,8 +248,7 @@ fn get_image_target(
     ]);
     command.arg(&image.id);
 
-    // TODO: verbosity = 3?
-    let target = command.run_and_get_stdout(true)?;
+    let target = command.run_and_get_stdout(msg_info)?;
     if target.trim().is_empty() {
         eyre::bail!("cannot get target for image {}", image)
     }
@@ -232,17 +257,22 @@ fn get_image_target(
 
 pub fn list_images(
     ListImages {
-        targets, verbose, ..
+        targets,
+        verbose,
+        quiet,
+        color,
+        ..
     }: ListImages,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let cross_images = get_cross_images(engine, verbose, true)?;
-    let target_list = cross::rustc::target_list(false)?;
+    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let cross_images = get_cross_images(engine, msg_info, true)?;
+    let target_list = cross::rustc::target_list((msg_info.color_choice, Verbosity::Quiet).into())?;
     let mut map: BTreeMap<String, Vec<Image>> = BTreeMap::new();
     let mut max_target_len = 0;
     let mut max_image_len = 0;
     for image in cross_images {
-        let target = get_image_target(engine, &image, &target_list)?;
+        let target = get_image_target(engine, &image, &target_list, msg_info)?;
         if targets.is_empty() || targets.contains(&target) {
             if !map.contains_key(&target) {
                 map.insert(target.clone(), vec![]);
@@ -255,7 +285,7 @@ pub fn list_images(
     let mut keys: Vec<&str> = map.iter().map(|(k, _)| k.as_ref()).collect();
     keys.sort_unstable();
 
-    let print_string = |col1: &str, col2: &str, fill: char| {
+    let print_string = |col1: &str, col2: &str, fill: char| -> cross::Result<()> {
         let mut row = String::new();
         row.push('|');
         row.push(fill);
@@ -272,32 +302,30 @@ pub fn list_images(
             row.push(fill);
         }
         row.push('|');
-        println!("{}", row);
+        shell::print(row, msg_info)
     };
 
     if targets.len() != 1 {
-        print_string("Targets", "Images", ' ');
-        print_string("-------", "------", '-');
+        print_string("Targets", "Images", ' ')?;
+        print_string("-------", "------", '-')?;
     }
 
-    let print_single = |_: &str, image: &Image| println!("{}", image);
-    let print_table = |target: &str, image: &Image| {
+    let print_single =
+        |_: &str, image: &Image| -> cross::Result<()> { shell::print(image, msg_info) };
+    let print_table = |target: &str, image: &Image| -> cross::Result<()> {
         let name = image.name();
-        print_string(target, &name, ' ');
+        print_string(target, &name, ' ')
     };
 
-    keys.iter().for_each(|&target| {
-        map.get(target)
-            .expect("map must have key")
-            .iter()
-            .for_each(|image| {
-                if targets.len() == 1 {
-                    print_single(target, image);
-                } else {
-                    print_table(target, image);
-                }
-            });
-    });
+    for target in keys {
+        for image in map.get(target).expect("map must have key").iter() {
+            if targets.len() == 1 {
+                print_single(target, image)?;
+            } else {
+                print_table(target, image)?;
+            }
+        }
+    }
 
     Ok(())
 }
@@ -305,7 +333,7 @@ pub fn list_images(
 fn remove_images(
     engine: &docker::Engine,
     images: &[Image],
-    verbose: bool,
+    msg_info: MessageInfo,
     force: bool,
     execute: bool,
 ) -> cross::Result<()> {
@@ -317,10 +345,13 @@ fn remove_images(
     if images.is_empty() {
         Ok(())
     } else if execute {
-        command.run(verbose, false).map_err(Into::into)
+        command.run(msg_info, false).map_err(Into::into)
     } else {
-        eprintln!("Note: this is a dry run. to remove the images, pass the `--execute` flag.");
-        command.print_verbose(true);
+        shell::note(
+            "this is a dry run. to remove the images, pass the `--execute` flag.",
+            msg_info,
+        )?;
+        command.print(msg_info)?;
         Ok(())
     }
 }
@@ -328,6 +359,8 @@ fn remove_images(
 pub fn remove_all_images(
     RemoveImages {
         verbose,
+        quiet,
+        color,
         force,
         local,
         execute,
@@ -335,14 +368,17 @@ pub fn remove_all_images(
     }: RemoveImages,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let images = get_cross_images(engine, verbose, local)?;
-    remove_images(engine, &images, verbose, force, execute)
+    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let images = get_cross_images(engine, msg_info, local)?;
+    remove_images(engine, &images, msg_info, force, execute)
 }
 
 pub fn remove_target_images(
     RemoveImages {
         targets,
         verbose,
+        quiet,
+        color,
         force,
         local,
         execute,
@@ -350,16 +386,17 @@ pub fn remove_target_images(
     }: RemoveImages,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let cross_images = get_cross_images(engine, verbose, local)?;
-    let target_list = cross::rustc::target_list(false)?;
+    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let cross_images = get_cross_images(engine, msg_info, local)?;
+    let target_list = cross::rustc::target_list((msg_info.color_choice, Verbosity::Quiet).into())?;
     let mut images = vec![];
     for image in cross_images {
-        let target = dbg!(get_image_target(engine, &image, &target_list)?);
+        let target = dbg!(get_image_target(engine, &image, &target_list, msg_info)?);
         if targets.contains(&target) {
             images.push(image);
         }
     }
-    remove_images(engine, &images, verbose, force, execute)
+    remove_images(engine, &images, msg_info, force, execute)
 }
 
 #[cfg(test)]

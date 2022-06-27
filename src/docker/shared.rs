@@ -12,6 +12,7 @@ use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
 use crate::rustc::{self, VersionMetaExt};
+use crate::shell::{self, MessageInfo, Verbosity};
 use crate::Target;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
@@ -41,14 +42,12 @@ pub struct Directories {
 }
 
 impl Directories {
-    #[allow(unused_variables)]
     pub fn create(
         engine: &Engine,
         metadata: &CargoMetadata,
         cwd: &Path,
         sysroot: &Path,
         docker_in_docker: bool,
-        verbose: bool,
     ) -> Result<Self> {
         let mount_finder = if docker_in_docker {
             MountFinder::new(docker_read_mount_paths(engine)?)
@@ -158,23 +157,23 @@ pub fn get_package_info(
     target: &str,
     channel: Option<&str>,
     docker_in_docker: bool,
-    verbose: bool,
+    msg_info: MessageInfo,
 ) -> Result<(Target, CargoMetadata, Directories)> {
-    let target_list = rustc::target_list(false)?;
+    let target_list = rustc::target_list((msg_info.color_choice, Verbosity::Quiet).into())?;
     let target = Target::from(target, &target_list);
-    let metadata = cargo_metadata_with_args(None, None, verbose)?
+    let metadata = cargo_metadata_with_args(None, None, msg_info)?
         .ok_or(eyre::eyre!("unable to get project metadata"))?;
     let cwd = std::env::current_dir()?;
     let host_meta = rustc::version_meta()?;
     let host = host_meta.host();
-    let sysroot = rustc::get_sysroot(&host, &target, channel, verbose)?.1;
-    let dirs = Directories::create(engine, &metadata, &cwd, &sysroot, docker_in_docker, verbose)?;
+    let sysroot = rustc::get_sysroot(&host, &target, channel, msg_info)?.1;
+    let dirs = Directories::create(engine, &metadata, &cwd, &sysroot, docker_in_docker)?;
 
     Ok((target, metadata, dirs))
 }
 
 /// Register binfmt interpreters
-pub(crate) fn register(engine: &Engine, target: &Target, verbose: bool) -> Result<()> {
+pub(crate) fn register(engine: &Engine, target: &Target, msg_info: MessageInfo) -> Result<()> {
     let cmd = if target.is_windows() {
         // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
         "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
@@ -190,7 +189,7 @@ pub(crate) fn register(engine: &Engine, target: &Target, verbose: bool) -> Resul
         .arg("--rm")
         .arg(UBUNTU_BASE)
         .args(&["sh", "-c", cmd])
-        .run(verbose, false)
+        .run(msg_info, false)
         .map_err(Into::into)
 }
 
@@ -265,7 +264,12 @@ pub(crate) fn mount(docker: &mut Command, val: &Path, prefix: &str) -> Result<St
     Ok(mount_path)
 }
 
-pub(crate) fn docker_envvars(docker: &mut Command, config: &Config, target: &Target) -> Result<()> {
+pub(crate) fn docker_envvars(
+    docker: &mut Command,
+    config: &Config,
+    target: &Target,
+    msg_info: MessageInfo,
+) -> Result<()> {
     for ref var in config.env_passthrough(target)?.unwrap_or_default() {
         validate_env_var(var)?;
 
@@ -298,7 +302,10 @@ pub(crate) fn docker_envvars(docker: &mut Command, config: &Config, target: &Tar
 
     if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
         if env::var("DOCKER_OPTS").is_ok() {
-            eprintln!("Warning: using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.");
+            shell::warn(
+                "using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.",
+                msg_info,
+            )?;
         }
         docker.args(&parse_docker_opts(&value)?);
     } else if let Ok(value) = env::var("DOCKER_OPTS") {
@@ -398,13 +405,12 @@ pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
     }
 }
 
-#[allow(unused_variables, unused_mut, clippy::let_and_return)]
+#[allow(unused_mut, clippy::let_and_return)]
 pub(crate) fn docker_seccomp(
     docker: &mut Command,
     engine_type: EngineType,
     target: &Target,
     metadata: &CargoMetadata,
-    verbose: bool,
 ) -> Result<()> {
     // docker uses seccomp now on all installations
     if target.needs_docker_seccomp() {
@@ -451,7 +457,7 @@ pub(crate) fn custom_image_build(
     metadata: &CargoMetadata,
     Directories { host_root, .. }: Directories,
     engine: &Engine,
-    verbose: bool,
+    msg_info: MessageInfo,
 ) -> Result<String> {
     let mut image = image_name(config, target)?;
 
@@ -473,7 +479,7 @@ pub(crate) fn custom_image_build(
                 &host_root,
                 config.dockerfile_build_args(target)?.unwrap_or_default(),
                 target,
-                verbose,
+                msg_info,
             )
             .wrap_err("when building dockerfile")?;
     }
@@ -498,7 +504,7 @@ pub(crate) fn custom_image_build(
                     &host_root,
                     Some(("CROSS_CMD", pre_build.join("\n"))),
                     target,
-                    verbose,
+                    msg_info,
                 )
                 .wrap_err("when pre-building")
                 .with_note(|| format!("CROSS_CMD={}", pre_build.join("\n")))?;
@@ -538,7 +544,7 @@ fn docker_read_mount_paths(engine: &Engine) -> Result<Vec<MountDetail>> {
         command
     };
 
-    let output = docker.run_and_get_stdout(false)?;
+    let output = docker.run_and_get_stdout(Verbosity::Quiet.into())?;
     let info = serde_json::from_str(&output).wrap_err("failed to parse docker inspect output")?;
     dockerinfo_parse_mounts(&info)
 }

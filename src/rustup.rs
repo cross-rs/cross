@@ -5,6 +5,7 @@ use rustc_version::{Channel, Version};
 
 use crate::errors::*;
 pub use crate::extensions::{CommandExt, OutputExt};
+use crate::shell::{MessageInfo, Verbosity};
 use crate::Target;
 
 #[derive(Debug)]
@@ -26,10 +27,24 @@ impl AvailableTargets {
     }
 }
 
-pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
+fn rustup_command(msg_info: MessageInfo) -> Command {
+    let mut cmd = Command::new("rustup");
+    match msg_info.verbosity {
+        Verbosity::Quiet => {
+            cmd.arg("--quiet");
+        }
+        Verbosity::Verbose => {
+            cmd.arg("--verbose");
+        }
+        _ => (),
+    }
+    cmd
+}
+
+pub fn installed_toolchains(msg_info: MessageInfo) -> Result<Vec<String>> {
     let out = Command::new("rustup")
         .args(&["toolchain", "list"])
-        .run_and_get_stdout(verbose)?;
+        .run_and_get_stdout(msg_info)?;
 
     Ok(out
         .lines()
@@ -42,11 +57,11 @@ pub fn installed_toolchains(verbose: bool) -> Result<Vec<String>> {
         .collect())
 }
 
-pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTargets> {
+pub fn available_targets(toolchain: &str, msg_info: MessageInfo) -> Result<AvailableTargets> {
     let mut cmd = Command::new("rustup");
     cmd.args(&["target", "list", "--toolchain", toolchain]);
     let output = cmd
-        .run_and_get_output(verbose)
+        .run_and_get_output(msg_info)
         .suggestion("is rustup installed?")?;
 
     if !output.status.success() {
@@ -54,7 +69,7 @@ pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTarg
             eyre::bail!("{toolchain} is a custom toolchain. To use it, you'll need to set the environment variable `CROSS_CUSTOM_TOOLCHAIN=1`")
         }
         return Err(cmd
-            .status_result(verbose, output.status, Some(&output))
+            .status_result(msg_info, output.status, Some(&output))
             .unwrap_err()
             .to_section_report());
     }
@@ -82,33 +97,37 @@ pub fn available_targets(toolchain: &str, verbose: bool) -> Result<AvailableTarg
     })
 }
 
-pub fn install_toolchain(toolchain: &str, verbose: bool) -> Result<()> {
-    Command::new("rustup")
+pub fn install_toolchain(toolchain: &str, msg_info: MessageInfo) -> Result<()> {
+    rustup_command(msg_info)
         .args(&["toolchain", "add", toolchain, "--profile", "minimal"])
-        .run(verbose, false)
+        .run(msg_info, false)
         .wrap_err_with(|| format!("couldn't install toolchain `{toolchain}`"))
 }
 
-pub fn install(target: &Target, toolchain: &str, verbose: bool) -> Result<()> {
+pub fn install(target: &Target, toolchain: &str, msg_info: MessageInfo) -> Result<()> {
     let target = target.triple();
 
-    Command::new("rustup")
+    rustup_command(msg_info)
         .args(&["target", "add", target, "--toolchain", toolchain])
-        .run(verbose, false)
+        .run(msg_info, false)
         .wrap_err_with(|| format!("couldn't install `std` for {target}"))
 }
 
-pub fn install_component(component: &str, toolchain: &str, verbose: bool) -> Result<()> {
-    Command::new("rustup")
+pub fn install_component(component: &str, toolchain: &str, msg_info: MessageInfo) -> Result<()> {
+    rustup_command(msg_info)
         .args(&["component", "add", component, "--toolchain", toolchain])
-        .run(verbose, false)
+        .run(msg_info, false)
         .wrap_err_with(|| format!("couldn't install the `{component}` component"))
 }
 
-pub fn component_is_installed(component: &str, toolchain: &str, verbose: bool) -> Result<bool> {
+pub fn component_is_installed(
+    component: &str,
+    toolchain: &str,
+    msg_info: MessageInfo,
+) -> Result<bool> {
     Ok(Command::new("rustup")
         .args(&["component", "list", "--toolchain", toolchain])
-        .run_and_get_stdout(verbose)?
+        .run_and_get_stdout(msg_info)?
         .lines()
         .any(|l| l.starts_with(component) && l.contains("installed")))
 }

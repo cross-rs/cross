@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - #869 - ensure cargo configuration environment variable flags are passed to the docker container.
+- #859 - added color diagnostic output and error messages.
 
 ### Fixed
 

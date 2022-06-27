@@ -24,11 +24,22 @@ unknown-git = "deny"
 allow-git = []
 
 [licenses]
+# need this since to suppress errors in case we add crates with these allowed licenses
+unused-allowed-license = "allow"
 unlicensed = "deny"
 allow-osi-fsf-free = "neither"
 copyleft = "deny"
 confidence-threshold = 0.93
-allow = ["Apache-2.0", "MIT", "CC0-1.0"]
+allow = [
+  "Apache-2.0",
+  "MIT",
+  "CC0-1.0",
+  "ISC",
+  "0BSD",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "Unlicense"
+]
 
 [licenses.private]
 ignore = true

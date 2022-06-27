@@ -4,6 +4,7 @@ use crate::cargo::Subcommand;
 use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::rustc::TargetList;
+use crate::shell::{self, MessageInfo};
 use crate::Target;
 
 #[derive(Debug)]
@@ -17,6 +18,8 @@ pub struct Args {
     pub docker_in_docker: bool,
     pub enable_doctests: bool,
     pub manifest_path: Option<PathBuf>,
+    pub version: bool,
+    pub msg_info: MessageInfo,
 }
 
 // Fix for issue #581. target_dir must be absolute.
@@ -49,16 +52,21 @@ pub fn group_subcommands(stdout: &str) -> (Vec<&str>, Vec<&str>) {
     (cross, host)
 }
 
-pub fn fmt_subcommands(stdout: &str) {
+pub fn fmt_subcommands(stdout: &str, msg_info: MessageInfo) -> Result<()> {
     let (cross, host) = group_subcommands(stdout);
     if !cross.is_empty() {
-        println!("Cross Commands:");
-        cross.iter().for_each(|line| println!("{}", line));
+        shell::print("Cross Commands:", msg_info)?;
+        for line in cross.iter() {
+            shell::print(line, msg_info)?;
+        }
     }
     if !host.is_empty() {
-        println!("Host Commands:");
-        host.iter().for_each(|line| println!("{}", line));
+        shell::print("Host Commands:", msg_info)?;
+        for line in cross.iter() {
+            shell::print(line, msg_info)?;
+        }
     }
+    Ok(())
 }
 
 pub fn parse(target_list: &TargetList) -> Result<Args> {
@@ -69,6 +77,11 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut target_dir = None;
     let mut sc = None;
     let mut all: Vec<String> = Vec::new();
+    let mut version = false;
+    let mut quiet = false;
+    let mut verbose = false;
+    let mut color = None;
+    let default_msg_info = MessageInfo::default();
 
     {
         let mut args = env::args().skip(1);
@@ -76,7 +89,20 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
             if arg.is_empty() {
                 continue;
             }
-            if arg == "--manifest-path" {
+            if matches!(arg.as_str(), "--verbose" | "-v" | "-vv") {
+                verbose = true;
+            } else if matches!(arg.as_str(), "--version" | "-V") {
+                version = true;
+            } else if matches!(arg.as_str(), "--quiet" | "-q") {
+                quiet = true;
+            } else if arg == "--color" {
+                match args.next() {
+                    Some(arg) => color = Some(arg),
+                    None => {
+                        shell::fatal_usage("--color <WHEN>", default_msg_info, 1);
+                    }
+                }
+            } else if arg == "--manifest-path" {
                 all.push(arg);
                 if let Some(m) = args.next() {
                     let p = PathBuf::from(&m);
@@ -133,11 +159,13 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         }
     }
 
+    let msg_info = shell::MessageInfo::create(verbose, quiet, color.as_deref())?;
     let docker_in_docker = if let Ok(value) = env::var("CROSS_CONTAINER_IN_CONTAINER") {
         if env::var("CROSS_DOCKER_IN_DOCKER").is_ok() {
-            eprintln!(
-                "Warning: using both `CROSS_CONTAINER_IN_CONTAINER` and `CROSS_DOCKER_IN_DOCKER`."
-            );
+            shell::warn(
+                "using both `CROSS_CONTAINER_IN_CONTAINER` and `CROSS_DOCKER_IN_DOCKER`.",
+                msg_info,
+            )?;
         }
         bool_from_envvar(&value)
     } else if let Ok(value) = env::var("CROSS_DOCKER_IN_DOCKER") {
@@ -161,5 +189,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         docker_in_docker,
         enable_doctests,
         manifest_path,
+        version,
+        msg_info,
     })
 }

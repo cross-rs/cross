@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use cross::shell::MessageInfo;
 use cross::{docker, CommandExt};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
@@ -84,11 +85,15 @@ pub fn format_repo(registry: &str, repository: &str) -> String {
     output
 }
 
-pub fn pull_image(engine: &docker::Engine, image: &str, verbose: bool) -> cross::Result<()> {
+pub fn pull_image(
+    engine: &docker::Engine,
+    image: &str,
+    msg_info: MessageInfo,
+) -> cross::Result<()> {
     let mut command = docker::subcommand(engine, "pull");
     command.arg(image);
-    let out = command.run_and_get_output(verbose)?;
-    command.status_result(verbose, out.status, Some(&out))?;
+    let out = command.run_and_get_output(msg_info)?;
+    command.status_result(msg_info, out.status, Some(&out))?;
     Ok(())
 }
 
@@ -152,21 +157,21 @@ impl std::fmt::Display for ImageTarget {
     }
 }
 
-pub fn has_nightly(verbose: bool) -> cross::Result<bool> {
+pub fn has_nightly(msg_info: MessageInfo) -> cross::Result<bool> {
     cross::cargo_command()
         .arg("+nightly")
-        .run_and_get_output(verbose)
+        .run_and_get_output(msg_info)
         .map(|o| o.status.success())
         .map_err(Into::into)
 }
 
 pub fn get_channel_prefer_nightly(
-    verbose: bool,
+    msg_info: MessageInfo,
     toolchain: Option<&str>,
 ) -> cross::Result<Option<&str>> {
     Ok(match toolchain {
         Some(t) => Some(t),
-        None => match has_nightly(verbose)? {
+        None => match has_nightly(msg_info)? {
             true => Some("nightly"),
             false => None,
         },
@@ -181,11 +186,30 @@ pub fn cargo(channel: Option<&str>) -> Command {
     command
 }
 
-pub fn cargo_metadata(verbose: bool) -> cross::Result<cross::CargoMetadata> {
-    cross::cargo_metadata_with_args(Some(Path::new(env!("CARGO_MANIFEST_DIR"))), None, verbose)?
+pub fn cargo_metadata(msg_info: MessageInfo) -> cross::Result<cross::CargoMetadata> {
+    cross::cargo_metadata_with_args(Some(Path::new(env!("CARGO_MANIFEST_DIR"))), None, msg_info)?
         .ok_or_else(|| eyre::eyre!("could not find cross workspace"))
 }
 
-pub fn project_dir(verbose: bool) -> cross::Result<PathBuf> {
-    Ok(cargo_metadata(verbose)?.workspace_root)
+pub fn project_dir(msg_info: MessageInfo) -> cross::Result<PathBuf> {
+    Ok(cargo_metadata(msg_info)?.workspace_root)
+}
+
+// note: for GHA actions we need to output these tags no matter the verbosity level
+pub fn gha_print(content: &str) {
+    println!("{}", content)
+}
+
+// note: for GHA actions we need to output these tags no matter the verbosity level
+pub fn gha_error(content: &str) {
+    println!("::error {}", content)
+}
+
+#[track_caller]
+pub fn gha_output(tag: &str, content: &str) {
+    if content.contains('\n') {
+        // https://github.com/actions/toolkit/issues/403
+        panic!("output `{tag}` contains newlines, consider serializing with json and deserializing in gha with fromJSON()")
+    }
+    println!("::set-output name={tag}::{}", content)
 }

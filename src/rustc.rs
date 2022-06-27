@@ -5,6 +5,7 @@ use rustc_version::{Version, VersionMeta};
 
 use crate::errors::*;
 use crate::extensions::{env_program, CommandExt};
+use crate::shell::MessageInfo;
 use crate::{Host, Target};
 
 #[derive(Debug)]
@@ -80,19 +81,19 @@ pub fn rustc_command() -> Command {
     Command::new(env_program("RUSTC", "rustc"))
 }
 
-pub fn target_list(verbose: bool) -> Result<TargetList> {
+pub fn target_list(msg_info: MessageInfo) -> Result<TargetList> {
     rustc_command()
         .args(&["--print", "target-list"])
-        .run_and_get_stdout(verbose)
+        .run_and_get_stdout(msg_info)
         .map(|s| TargetList {
             triples: s.lines().map(|l| l.to_owned()).collect(),
         })
 }
 
-pub fn sysroot(host: &Host, target: &Target, verbose: bool) -> Result<PathBuf> {
+pub fn sysroot(host: &Host, target: &Target, msg_info: MessageInfo) -> Result<PathBuf> {
     let mut stdout = rustc_command()
         .args(&["--print", "sysroot"])
-        .run_and_get_stdout(verbose)?
+        .run_and_get_stdout(msg_info)?
         .trim()
         .to_owned();
 
@@ -108,9 +109,9 @@ pub fn get_sysroot(
     host: &Host,
     target: &Target,
     channel: Option<&str>,
-    verbose: bool,
+    msg_info: MessageInfo,
 ) -> Result<(String, PathBuf)> {
-    let mut sysroot = sysroot(host, target, verbose)?;
+    let mut sysroot = sysroot(host, target, msg_info)?;
     let default_toolchain = sysroot
         .file_name()
         .and_then(|file_name| file_name.to_str())

@@ -1,3 +1,4 @@
+use crate::shell::{self, MessageInfo};
 use crate::{CrossToml, Result, Target, TargetList};
 
 use std::collections::HashMap;
@@ -131,7 +132,7 @@ impl Config {
         }
     }
 
-    pub fn confusable_target(&self, target: &Target) {
+    pub fn confusable_target(&self, target: &Target, msg_info: MessageInfo) -> Result<()> {
         if let Some(keys) = self.toml.as_ref().map(|t| t.targets.keys()) {
             for mentioned_target in keys {
                 let mentioned_target_norm = mentioned_target
@@ -143,11 +144,15 @@ impl Config {
                     .replace(|c| c == '-' || c == '_', "")
                     .to_lowercase();
                 if mentioned_target != target && mentioned_target_norm == target_norm {
-                    eprintln!("Warning: a target named \"{mentioned_target}\" is mentioned in the Cross configuration, but the current specified target is \"{target}\".");
-                    eprintln!(" > Is the target misspelled in the Cross configuration?");
+                    shell::warn("a target named \"{mentioned_target}\" is mentioned in the Cross configuration, but the current specified target is \"{target}\".", msg_info)?;
+                    shell::status(
+                        " > Is the target misspelled in the Cross configuration?",
+                        msg_info,
+                    )?;
                 }
             }
         }
+        Ok(())
     }
 
     fn bool_from_config(
@@ -436,7 +441,7 @@ mod tests {
         }
 
         fn toml(content: &str) -> Result<crate::CrossToml> {
-            Ok(CrossToml::parse_from_cross(content)
+            Ok(CrossToml::parse_from_cross(content, MessageInfo::default())
                 .wrap_err("couldn't parse toml")?
                 .0)
         }

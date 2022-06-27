@@ -41,11 +41,12 @@ fn toml_check() -> Result<(), Box<dyn std::error::Error>> {
                 dir_entry.path(),
                 text_line_no(&contents, fence.range().start),
             );
-            assert!(
-                crate::cross_toml::CrossToml::parse_from_cross(fence.as_str())?
-                    .1
-                    .is_empty()
-            );
+            assert!(crate::cross_toml::CrossToml::parse_from_cross(
+                fence.as_str(),
+                crate::shell::MessageInfo::default()
+            )?
+            .1
+            .is_empty());
         }
     }
     Ok(())
