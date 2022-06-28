@@ -1,8 +1,9 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use cross::shell::MessageInfo;
-use cross::{docker, CommandExt};
+use cross::{docker, CommandExt, ToUtf8};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
@@ -212,4 +213,69 @@ pub fn gha_output(tag: &str, content: &str) {
         panic!("output `{tag}` contains newlines, consider serializing with json and deserializing in gha with fromJSON()")
     }
     println!("::set-output name={tag}::{}", content)
+}
+
+pub fn read_dockerfiles(msg_info: MessageInfo) -> cross::Result<Vec<String>> {
+    let root = project_dir(msg_info)?;
+    let docker = root.join("docker");
+    let mut dockerfiles = vec![];
+    for entry in fs::read_dir(docker)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let file_name = entry.file_name();
+        if file_type.is_file() && file_name.to_utf8()?.starts_with("Dockerfile") {
+            dockerfiles.push(fs::read_to_string(entry.path())?);
+        }
+    }
+
+    Ok(dockerfiles)
+}
+
+#[cfg(tests)]
+mod tests {
+    use super::*;
+
+    use crate::util::read_dockerfiles;
+    use cross::shell::Verbosity;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn check_ubuntu_base() -> cross::Result<()> {
+        // count all the entries of FROM for our images
+        let mut counts = BTreeMap::new();
+        let dockerfiles = read_dockerfiles(Verbosity::Verbose.into())?;
+        for dockerfile in dockerfiles {
+            let lines: Vec<&str> = dockerfile.lines().collect();
+            let index = lines
+                .iter()
+                .map(|x| x.trim())
+                .position(|x| x.to_lowercase().starts_with("from"))
+                .ok_or_else(|| {
+                    eyre::eyre!("unable to find FROM instruction for {:?}", entry.path())
+                })?;
+            let tag = lines[index]
+                .split_whitespace()
+                .nth(1)
+                .ok_or_else(|| eyre::eyre!("invalid FROM instruction, got {}", lines[index]))?;
+            if let Some(value) = counts.get_mut(tag) {
+                *value += 1;
+            } else {
+                counts.insert(tag.to_string(), 1);
+            }
+        }
+
+        // Now, get the most common and ensure our base is correct.
+        let actual_base = cross::docker::UBUNTU_BASE;
+        let max_base = counts
+            .iter()
+            .max_by(|x, y| x.1.cmp(y.1))
+            .map(|(k, _)| k)
+            .ok_or_else(|| eyre::eyre!("have no dockerfiles"))?;
+
+        if actual_base != max_base {
+            eyre::bail!("most common base image is {max_base} but source code has {actual_base}")
+        } else {
+            Ok(())
+        }
+    }
 }
