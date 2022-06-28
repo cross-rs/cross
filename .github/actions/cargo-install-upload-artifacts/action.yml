@@ -40,6 +40,8 @@ runs:
           --root ${{ steps.metadata.outputs.out-dir }}
           --bins
         use-cross: true
+      env:
+        RUSTFLAGS: "" # Make sure to unset RUSTFLAGS
 
     - name: Archive artifacts
       id: archive

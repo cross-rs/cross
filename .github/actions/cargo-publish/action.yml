@@ -40,7 +40,7 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
-        
+
     - name: Create GitHub release
       if: >
         github.event_name == 'push' && (
@@ -54,7 +54,7 @@ runs:
         prerelease: ${{ startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-') }}
         draft: ${{ !startsWith(github.ref, 'refs/tags/v') && steps.changelog-reader.outputs.status == 'unreleased' }}
         files: |
-          ${{ steps.download-artifacts.outputs.download-path }}/*/*
+          ${{ steps.download-artifacts.outputs.download-path }}/cross-*/*
 
     - name: Publish crate
       uses: actions-rs/cargo@v1

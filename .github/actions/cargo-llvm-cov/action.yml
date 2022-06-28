@@ -1,0 +1,67 @@
+name: llvm coverage
+description: Sets up everything that is needed for coverage. Makes artifacts available for processing later, prefixed with _coverage-
+inputs:
+  name:
+    description: 'the name of the artifact'
+    required: true
+outputs:
+  artifact-name:
+    description: 'the name of the artifact'
+    value: ${{ steps.cov.outputs.artifact-name }}
+runs:
+  using: composite
+  steps:
+    - name: Install cargo-llvm-cov
+      uses: taiki-e/install-action@v1
+      with:
+        tool: cargo-llvm-cov
+    - run: rustup component add llvm-tools-preview
+      shell: bash
+    - name: LLVM instrument coverage
+      id: cov
+      uses: ./.github/actions/post
+      if: always()
+      with:
+        main: |
+          pwd=$(pwd)
+          if which cygpath; then
+            pwd="$(cygpath -w "$(pwd)")"
+          fi
+          echo RUSTFLAGS=" -C instrument-coverage --remap-path-prefix ${pwd}=" >> $GITHUB_ENV
+          echo LLVM_PROFILE_FILE="${pwd}/target/cross-%m.profraw" >> $GITHUB_ENV
+          echo CARGO_INCREMENTAL="0" >> $GITHUB_ENV
+          echo RUST_TEST_THREADS="1" >> $GITHUB_ENV
+          echo "::set-output name=artifact-name::_coverage-${name}"
+        post: |
+          # XXX(emilgardis): Upload early?
+          pwd=$(pwd)
+          if which cygpath; then
+            pwd="$(cygpath -w "$(pwd)")"
+          fi
+          # No pwd needed here, we're in the root
+          export LLVM_PROFILE_FILE="${pwd}/target/cross-%m.profraw"
+          export CARGO_LLVM_COV_TARGET_DIR="${pwd}/target"
+          mkdir coverage
+          echo $(ls target)
+          cargo llvm-cov --no-run --remap-path-prefix --lcov --output-path "coverage/lcov.${name}.info" -vv || ( echo "::error title=Coverage merge failed::" && exit 0 )
+          rm target/*.profraw
+          npm install @actions/artifact
+          npm install glob
+
+          cat <<-EOT | node - || ( echo "::error title=Coverage upload failed::" && exit 0 )
+          (async function main() {
+              var artifact = require('@actions/artifact');
+              var glob = require('glob')
+              const artifactClient = artifact.create();
+              const artifactName = '_coverage-' + process.env.name;
+              const files = glob.sync("coverage/*");
+              if (!files.length) {
+                process.exit(0);
+              }
+              console.log("${files}")
+              const options = { retentionDays: 2 };
+              const upload = await artifactClient.uploadArtifact(artifactName, files, "coverage", options);
+              })()
+          EOT
+      env:
+        name: ${{ inputs.name }}

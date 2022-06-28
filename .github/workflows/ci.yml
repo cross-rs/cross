@@ -75,6 +75,9 @@ jobs:
       - uses: actions/checkout@v3
 
       - uses: ./.github/actions/setup-rust
+      - uses: ./.github/actions/cargo-llvm-cov
+        with:
+          name: test-${{matrix.os}}
 
       - name: Run unit tests
         uses: actions-rs/cargo@v1
@@ -217,6 +220,7 @@ jobs:
     outputs:
       has-image: ${{ steps.prepare-meta.outputs.has-image }}
       images: ${{ steps.build-docker-image.outputs.images && fromJSON(steps.build-docker-image.outputs.images)  }}
+      coverage-artifact: ${{ steps.cov.outputs.artifact-name }}
     steps:
       - uses: actions/checkout@v3
 
@@ -226,12 +230,9 @@ jobs:
         if: runner.os == 'Linux'
         uses: docker/setup-buildx-action@v1
 
-      - name: Install cross
-        if: matrix.deploy
-        run: cargo install --path . --force
-
       - name: Build xtask
         run: cargo build -p xtask
+
       - name: Prepare Meta
         id: prepare-meta
         timeout-minutes: 60
@@ -240,6 +241,18 @@ jobs:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}
         shell: bash
+
+      - name: LLVM instrument coverage
+        id: cov
+        uses: ./.github/actions/cargo-llvm-cov
+        if: steps.prepare-meta.outputs.has-image
+        with:
+          name: cross-${{matrix.pretty}}
+
+      - name: Install cross
+        if: matrix.deploy
+        run: cargo install --path . --force --debug
+
       - name: Docker Meta
         if: steps.prepare-meta.outputs.has-image
         id: docker-meta
@@ -332,3 +345,39 @@ jobs:
           "$(jq -r 'all(.result as $result | (["success", "skipped"] | contains([$result])))' <<< "${needs}")"
         env:
           needs: ${{ toJson(needs) }}
+
+  code-cov:
+    name: Coverage
+    needs: [test, build, conclusion, generate-matrix]
+    # should check that there are any artifacts, if not skip
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped') && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+      - uses: actions/download-artifact@v3
+        with:
+          path: ${{ runner.temp }}/artifacts
+      - name: Grab PR number
+        run: echo "::set-output name=pr::"$(echo $commit_message | sed -ne  's/.*\#\(.*\):/\1/p')
+        id: pr-number
+        if: ${{ !github.event.pull_request.number }}
+        env:
+          commit_message: >
+            ${{
+              ((
+                startsWith(github.event.head_commit.message, 'Try #') &&
+                github.event.head_commit.author.username == 'bors[bot]'
+              ) && github.event.head_commit.message) || ''
+            }}
+      - name: Upload to codecov.io
+        run: |
+          set -x
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          chmod +x codecov
+          sha_rev=$(git rev-parse HEAD)
+          find ${artifacts} -name "lcov.*.info" -exec ./codecov -F $(echo {} | sed -n 's/lcov\.\(.*\)\.info/\1/p') \
+            ${pr:+-P ${pr}} -f {} --sha ${sha_rev} -n $(echo {} | sed -n 's/lcov\.\(.*\)\.info/\1/p') \;
+        env:
+          pr: ${{  steps.pr-number.outputs.pr || '' }}
+          artifacts: ${{ runner.temp }}/artifacts

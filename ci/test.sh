@@ -41,7 +41,10 @@ main() {
     local td=
 
     retry cargo fetch
-    cargo install --force --path .
+    cargo install --force --path . --debug
+
+    # Unset RUSTFLAGS
+    export RUSTFLAGS=""
 
     export QEMU_STRACE=1
 
@@ -165,7 +168,7 @@ main() {
                     --depth 1 \
                     --recursive \
                     https://github.com/cross-rs/test-workspace "${td}"
-                
+
                 pushd "${td}"
                 TARGET="${TARGET}" workspace_test --manifest-path="./workspace/Cargo.toml"
                 pushd "workspace"
