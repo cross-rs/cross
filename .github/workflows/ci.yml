@@ -283,7 +283,7 @@ jobs:
           IMAGE: ${{ steps.build-docker-image.outputs.image }}
         shell: bash
       - name: Test Image
-        if: steps.prepare-meta.outputs.has-image && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/trying')
+        if: steps.prepare-meta.outputs.has-image
         run: ./ci/test.sh
         env:
           TARGET: ${{ matrix.target }}
