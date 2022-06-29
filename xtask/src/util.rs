@@ -216,7 +216,7 @@ pub fn gha_output(tag: &str, content: &str) {
     println!("::set-output name={tag}::{}", content)
 }
 
-pub fn read_dockerfiles(msg_info: MessageInfo) -> cross::Result<Vec<String>> {
+pub fn read_dockerfiles(msg_info: MessageInfo) -> cross::Result<Vec<(PathBuf, String)>> {
     let root = project_dir(msg_info)?;
     let docker = root.join("docker");
     let mut dockerfiles = vec![];
@@ -225,18 +225,18 @@ pub fn read_dockerfiles(msg_info: MessageInfo) -> cross::Result<Vec<String>> {
         let file_type = entry.file_type()?;
         let file_name = entry.file_name();
         if file_type.is_file() && file_name.to_utf8()?.starts_with("Dockerfile") {
-            dockerfiles.push(fs::read_to_string(entry.path())?);
+            let contents = fs::read_to_string(entry.path())?;
+            dockerfiles.push((entry.path().to_path_buf(), contents));
         }
     }
 
     Ok(dockerfiles)
 }
 
-#[cfg(tests)]
+#[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::util::read_dockerfiles;
     use cross::shell::Verbosity;
     use std::collections::BTreeMap;
 
@@ -245,15 +245,13 @@ mod tests {
         // count all the entries of FROM for our images
         let mut counts = BTreeMap::new();
         let dockerfiles = read_dockerfiles(Verbosity::Verbose.into())?;
-        for dockerfile in dockerfiles {
+        for (path, dockerfile) in dockerfiles {
             let lines: Vec<&str> = dockerfile.lines().collect();
             let index = lines
                 .iter()
                 .map(|x| x.trim())
                 .position(|x| x.to_lowercase().starts_with("from"))
-                .ok_or_else(|| {
-                    eyre::eyre!("unable to find FROM instruction for {:?}", entry.path())
-                })?;
+                .ok_or_else(|| eyre::eyre!("unable to find FROM instruction for {:?}", path))?;
             let tag = lines[index]
                 .split_whitespace()
                 .nth(1)

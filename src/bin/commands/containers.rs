@@ -109,9 +109,9 @@ impl CreateVolume {
 
 #[derive(Args, Debug)]
 pub struct RemoveVolume {
-    /// Triple for the target platform.
-    #[clap(long)]
-    pub target: String,
+    /// FIXME: remove in 0.3.0, remains since it's a breaking change.
+    #[clap(long, hide = true)]
+    pub target: Option<String>,
     /// If cross is running inside a container.
     #[clap(short, long)]
     pub docker_in_docker: bool,
@@ -473,7 +473,6 @@ pub fn create_persistent_volume(
 
 pub fn remove_persistent_volume(
     RemoveVolume {
-        target,
         docker_in_docker,
         verbose,
         quiet,
@@ -484,8 +483,9 @@ pub fn remove_persistent_volume(
     channel: Option<&str>,
 ) -> cross::Result<()> {
     let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let triple = cross::Host::X86_64UnknownLinuxGnu.triple();
     let (_, _, dirs) =
-        docker::get_package_info(engine, &target, channel, docker_in_docker, msg_info)?;
+        docker::get_package_info(engine, triple, channel, docker_in_docker, msg_info)?;
     let volume = docker::remote::unique_toolchain_identifier(&dirs.sysroot)?;
 
     if !docker::remote::volume_exists(engine, &volume, msg_info)? {
