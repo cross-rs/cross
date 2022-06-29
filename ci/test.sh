@@ -8,6 +8,10 @@ set -euo pipefail
 # installed version on macOS. likewise, "${var[@]}" is an unbound
 # error if var is an empty array.
 
+ci_dir=$(dirname "${BASH_SOURCE[0]}")
+ci_dir=$(realpath "${ci_dir}")
+project_home=$(dirname "${ci_dir}")
+
 function retry {
   local tries="${TRIES-5}"
   local timeout="${TIMEOUT-1}"
@@ -41,7 +45,7 @@ main() {
     local td=
 
     retry cargo fetch
-    cargo install --force --path . --debug
+    cargo build
 
     # Unset RUSTFLAGS
     export RUSTFLAGS=""
@@ -49,7 +53,7 @@ main() {
     export QEMU_STRACE=1
 
     # ensure we have the proper toolchain and optional rust flags
-    export CROSS=(cross)
+    export CROSS=("${project_home}/target/debug/cross")
     export CROSS_FLAGS=""
     if (( ${BUILD_STD:-0} )); then
         # use build-std instead of xargo, due to xargo being
