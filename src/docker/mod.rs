@@ -41,6 +41,7 @@ pub fn run(
             docker_in_docker,
             cwd,
         )
+        .wrap_err("could not complete remote run")
     } else {
         local::run(
             engine,

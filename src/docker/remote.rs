@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
 use std::{env, fs, time};
 
+use eyre::Context;
+
 use super::engine::Engine;
 use super::shared::*;
 use crate::cargo::CargoMetadata;
@@ -114,7 +116,6 @@ fn create_volume_dir(
         .arg(container)
         .args(&["sh", "-c", &format!("mkdir -p '{}'", dir.as_posix()?)])
         .run_and_get_status(msg_info, false)
-        .map_err(Into::into)
 }
 
 // copy files for a docker volume, for remote host support
@@ -130,7 +131,6 @@ fn copy_volume_files(
         .arg(src.to_utf8()?)
         .arg(format!("{container}:{}", dst.as_posix()?))
         .run_and_get_status(msg_info, false)
-        .map_err(Into::into)
 }
 
 fn is_cachedir_tag(path: &Path) -> Result<bool> {
@@ -223,9 +223,15 @@ pub fn copy_volume_container_cargo(
     } else {
         // can copy a limit subset of files: the rest is present.
         create_volume_dir(engine, container, &dst, msg_info)?;
-        for entry in fs::read_dir(cargo_dir)? {
+        for entry in fs::read_dir(cargo_dir)
+            .wrap_err_with(|| format!("when reading directory {cargo_dir:?}"))?
+        {
             let file = entry?;
-            let basename = file.file_name().to_utf8()?.to_string();
+            let basename = file
+                .file_name()
+                .to_utf8()
+                .wrap_err_with(|| format!("when reading file {file:?}"))?
+                .to_string();
             if !basename.starts_with('.') && !matches!(basename.as_ref(), "git" | "registry") {
                 copy_volume_files(engine, container, &file.path(), &dst, msg_info)?;
             }
@@ -248,7 +254,7 @@ where
 {
     let mut had_symlinks = false;
 
-    for entry in fs::read_dir(src)? {
+    for entry in fs::read_dir(src).wrap_err_with(|| format!("when reading directory {src:?}"))? {
         let file = entry?;
         if skip(&file, depth) {
             continue;
@@ -257,7 +263,8 @@ where
         let src_path = file.path();
         let dst_path = dst.join(file.file_name());
         if file.file_type()?.is_file() {
-            fs::copy(&src_path, &dst_path)?;
+            fs::copy(&src_path, &dst_path)
+                .wrap_err_with(|| format!("when copying file {src_path:?} -> {dst_path:?}"))?;
         } else if file.file_type()?.is_dir() {
             fs::create_dir(&dst_path).ok();
             had_symlinks = copy_dir(&src_path, &dst_path, copy_symlinks, depth + 1, skip)?;
@@ -604,7 +611,6 @@ rm \"{PATH}\"
         .arg(container)
         .args(&["sh", "-c", &script.join("\n")])
         .run_and_get_status(msg_info, true)
-        .map_err(Into::into)
 }
 
 fn copy_volume_container_project(
@@ -657,7 +663,6 @@ fn run_and_get_status(engine: &Engine, args: &[&str], msg_info: MessageInfo) -> 
     command(engine)
         .args(args)
         .run_and_get_status(msg_info, true)
-        .map_err(Into::into)
 }
 
 pub fn volume_create(engine: &Engine, volume: &str, msg_info: MessageInfo) -> Result<ExitStatus> {
@@ -673,7 +678,6 @@ pub fn volume_exists(engine: &Engine, volume: &str, msg_info: MessageInfo) -> Re
         .args(&["volume", "inspect", volume])
         .run_and_get_output(msg_info)
         .map(|output| output.status.success())
-        .map_err(Into::into)
 }
 
 pub fn container_stop(
@@ -805,7 +809,7 @@ pub(crate) fn run(
 
     // 2. create our volume to copy all our data over to
     if let VolumeId::Discard(ref id) = volume {
-        volume_create(engine, id, msg_info)?;
+        volume_create(engine, id, msg_info).wrap_err("when creating volume")?;
     }
     let _volume_deletter = DeleteVolume(engine, &volume, msg_info);
 
@@ -825,9 +829,11 @@ pub(crate) fn run(
         cwd,
         |_, val| mount_path(val),
         |(src, dst)| volumes.push((src, dst)),
-    )?;
+    )
+    .wrap_err("could not determine mount points")?;
 
-    docker_seccomp(&mut docker, engine.kind, target, metadata)?;
+    docker_seccomp(&mut docker, engine.kind, target, metadata)
+        .wrap_err("when copying seccomp profile")?;
 
     // Prevent `bin` from being mounted inside the Docker container.
     docker.args(&["-v", &format!("{mount_prefix}/cargo/bin")]);
@@ -871,7 +877,8 @@ pub(crate) fn run(
             target,
             mount_prefix_path,
             msg_info,
-        )?;
+        )
+        .wrap_err("when copying xargo")?;
         copy_volume_container_cargo(
             engine,
             &container,
@@ -879,7 +886,8 @@ pub(crate) fn run(
             mount_prefix_path,
             false,
             msg_info,
-        )?;
+        )
+        .wrap_err("when copying cargo")?;
         copy_volume_container_rust(
             engine,
             &container,
@@ -888,7 +896,8 @@ pub(crate) fn run(
             mount_prefix_path,
             false,
             msg_info,
-        )?;
+        )
+        .wrap_err("when copying rust")?;
     } else {
         // need to copy over the target triple if it hasn't been previously copied
         copy_volume_container_rust_triple(
@@ -899,14 +908,16 @@ pub(crate) fn run(
             mount_prefix_path,
             true,
             msg_info,
-        )?;
+        )
+        .wrap_err("when copying rust target files")?;
     }
     let mount_root = if mount_volumes {
         // cannot panic: absolute unix path, must have root
         let rel_mount_root = dirs.mount_root.strip_prefix('/').unwrap();
         let mount_root = mount_prefix_path.join(rel_mount_root);
         if !rel_mount_root.is_empty() {
-            create_volume_dir(engine, &container, mount_root.parent().unwrap(), msg_info)?;
+            create_volume_dir(engine, &container, mount_root.parent().unwrap(), msg_info)
+                .wrap_err("when creating mount root")?;
         }
         mount_root
     } else {
@@ -920,7 +931,8 @@ pub(crate) fn run(
         &volume,
         copy_cache,
         msg_info,
-    )?;
+    )
+    .wrap_err("when copying project")?;
 
     let mut copied = vec![
         (&dirs.xargo, mount_prefix_path.join("xargo")),
@@ -1029,7 +1041,7 @@ symlink_recurse \"${{prefix}}\"
         .arg(&container)
         .args(&["sh", "-c", &symlink.join("\n")])
         .run_and_get_status(msg_info, false)
-        .map_err::<eyre::ErrReport, _>(Into::into)?;
+        .wrap_err("when creating symlinks to provide consistent host/mount paths")?;
 
     // 6. execute our cargo command inside the container
     let mut docker = subcommand(engine, "exec");

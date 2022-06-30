@@ -518,7 +518,8 @@ pub fn run() -> Result<ExitStatus> {
                     args.msg_info,
                     args.docker_in_docker,
                     &cwd,
-                )?;
+                )
+                .wrap_err("could not run container")?;
                 let needs_host = args
                     .subcommand
                     .map(|sc| sc.needs_host(is_remote))

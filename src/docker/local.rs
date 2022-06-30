@@ -46,7 +46,8 @@ pub(crate) fn run(
 
     docker.arg("--rm");
 
-    docker_seccomp(&mut docker, engine.kind, target, metadata)?;
+    docker_seccomp(&mut docker, engine.kind, target, metadata)
+        .wrap_err("when copying seccomp profile")?;
     docker_user_id(&mut docker, engine.kind);
 
     docker
