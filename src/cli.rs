@@ -91,13 +91,21 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
             }
             if matches!(arg.as_str(), "--verbose" | "-v" | "-vv") {
                 verbose = true;
+                all.push(arg);
             } else if matches!(arg.as_str(), "--version" | "-V") {
                 version = true;
             } else if matches!(arg.as_str(), "--quiet" | "-q") {
                 quiet = true;
+                all.push(arg);
             } else if arg == "--color" {
+                all.push(arg);
                 match args.next() {
-                    Some(arg) => color = Some(arg),
+                    Some(arg) => {
+                        color = {
+                            all.push(arg.clone());
+                            Some(arg)
+                        }
+                    }
                     None => {
                         shell::fatal_usage("--color <WHEN>", default_msg_info, 1);
                     }
