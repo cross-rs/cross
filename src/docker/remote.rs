@@ -171,6 +171,7 @@ fn copy_volume_files_nocache(
     container: &str,
     src: &Path,
     dst: &Path,
+    copy_symlinks: bool,
     msg_info: MessageInfo,
 ) -> Result<ExitStatus> {
     // avoid any cached directories when copying
@@ -178,7 +179,8 @@ fn copy_volume_files_nocache(
     // SAFETY: safe, single-threaded execution.
     let tempdir = unsafe { temp::TempDir::new()? };
     let temppath = tempdir.path();
-    copy_dir(src, temppath, 0, |e, _| is_cachedir(e))?;
+    let had_symlinks = copy_dir(src, temppath, copy_symlinks, 0, |e, _| is_cachedir(e))?;
+    warn_symlinks(had_symlinks, msg_info)?;
     copy_volume_files(engine, container, temppath, dst, msg_info)
 }
 
@@ -234,10 +236,18 @@ pub fn copy_volume_container_cargo(
 }
 
 // recursively copy a directory into another
-fn copy_dir<Skip>(src: &Path, dst: &Path, depth: u32, skip: Skip) -> Result<()>
+fn copy_dir<Skip>(
+    src: &Path,
+    dst: &Path,
+    copy_symlinks: bool,
+    depth: u32,
+    skip: Skip,
+) -> Result<bool>
 where
     Skip: Copy + Fn(&fs::DirEntry, u32) -> bool,
 {
+    let mut had_symlinks = false;
+
     for entry in fs::read_dir(src)? {
         let file = entry?;
         if skip(&file, depth) {
@@ -248,13 +258,47 @@ where
         let dst_path = dst.join(file.file_name());
         if file.file_type()?.is_file() {
             fs::copy(&src_path, &dst_path)?;
-        } else {
+        } else if file.file_type()?.is_dir() {
             fs::create_dir(&dst_path).ok();
-            copy_dir(&src_path, &dst_path, depth + 1, skip)?;
+            had_symlinks = copy_dir(&src_path, &dst_path, copy_symlinks, depth + 1, skip)?;
+        } else if copy_symlinks {
+            had_symlinks = true;
+            let link_dst = fs::read_link(src_path)?;
+
+            #[cfg(target_family = "unix")]
+            {
+                std::os::unix::fs::symlink(link_dst, dst_path)?;
+            }
+
+            #[cfg(target_family = "windows")]
+            {
+                let link_dst_absolute = if link_dst.is_absolute() {
+                    link_dst.clone()
+                } else {
+                    // we cannot fail even if the linked to path does not exist.
+                    src.join(&link_dst)
+                };
+                if link_dst_absolute.is_dir() {
+                    std::os::windows::fs::symlink_dir(link_dst, dst_path)?;
+                } else {
+                    // symlink_file handles everything that isn't a directory
+                    std::os::windows::fs::symlink_file(link_dst, dst_path)?;
+                }
+            }
+        } else {
+            had_symlinks = true;
         }
     }
 
-    Ok(())
+    Ok(had_symlinks)
+}
+
+fn warn_symlinks(had_symlinks: bool, msg_info: MessageInfo) -> Result<()> {
+    if had_symlinks {
+        shell::warn("copied directory contained symlinks. if the volume the link points to was not mounted, the remote build may fail", msg_info)
+    } else {
+        Ok(())
+    }
 }
 
 // copy over files needed for all targets in the toolchain that should never change
@@ -284,20 +328,25 @@ fn copy_volume_container_rust_base(
     let tempdir = unsafe { temp::TempDir::new()? };
     let temppath = tempdir.path();
     fs::create_dir_all(&temppath.join(&rustlib))?;
-    copy_dir(&sysroot.join("lib"), &temppath.join("lib"), 0, |e, d| {
-        d == 0 && e.file_name() == "rustlib"
-    })?;
+    let mut had_symlinks = copy_dir(
+        &sysroot.join("lib"),
+        &temppath.join("lib"),
+        true,
+        0,
+        |e, d| d == 0 && e.file_name() == "rustlib",
+    )?;
 
     // next, copy the src/etc directories inside rustlib
-    copy_dir(
+    had_symlinks |= copy_dir(
         &sysroot.join(&rustlib),
         &temppath.join(&rustlib),
+        true,
         0,
         |e, d| d == 0 && !(e.file_name() == "src" || e.file_name() == "etc"),
     )?;
     copy_volume_files(engine, container, &temppath.join("lib"), &dst, msg_info)?;
 
-    Ok(())
+    warn_symlinks(had_symlinks, msg_info)
 }
 
 fn copy_volume_container_rust_manifest(
@@ -316,15 +365,16 @@ fn copy_volume_container_rust_manifest(
     let tempdir = unsafe { temp::TempDir::new()? };
     let temppath = tempdir.path();
     fs::create_dir_all(&temppath.join(&rustlib))?;
-    copy_dir(
+    let had_symlinks = copy_dir(
         &sysroot.join(&rustlib),
         &temppath.join(&rustlib),
+        true,
         0,
         |e, d| d != 0 || e.file_type().map(|t| !t.is_file()).unwrap_or(true),
     )?;
     copy_volume_files(engine, container, &temppath.join("lib"), &dst, msg_info)?;
 
-    Ok(())
+    warn_symlinks(had_symlinks, msg_info)
 }
 
 // copy over the toolchain for a specific triple
@@ -570,7 +620,7 @@ fn copy_volume_container_project(
         if copy_cache {
             copy_volume_files(engine, container, src, dst, msg_info)
         } else {
-            copy_volume_files_nocache(engine, container, src, dst, msg_info)
+            copy_volume_files_nocache(engine, container, src, dst, true, msg_info)
         }
     };
     match volume {
@@ -809,7 +859,7 @@ pub(crate) fn run(
         if copy_cache {
             copy_volume_files(engine, &container, src, dst, msg_info)
         } else {
-            copy_volume_files_nocache(engine, &container, src, dst, msg_info)
+            copy_volume_files_nocache(engine, &container, src, dst, true, msg_info)
         }
     };
     let mount_prefix_path = mount_prefix.as_ref();

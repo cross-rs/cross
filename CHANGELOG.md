@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- #885 - handle symlinks when using remote docker.
 - #868 - ignore the `CARGO` environment variable.
 - #867 - fixed parsing of `build.env.passthrough` config values.
 
