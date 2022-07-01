@@ -6,7 +6,7 @@ use std::{env, fs};
 use super::custom::Dockerfile;
 use super::engine::*;
 use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
-use crate::config::Config;
+use crate::config::{bool_from_envvar, Config};
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{self, write_file, PathExt, ToUtf8};
@@ -399,8 +399,17 @@ pub(crate) fn group_id() -> String {
 }
 
 pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
-    // We need to specify the user for Docker, but not for Podman.
-    if engine_type == EngineType::Docker {
+    // by default, docker runs as root so we need to specify the user
+    // so the resulting file permissions are for the current user.
+    // since we can have rootless docker, we provide an override.
+    let is_rootless = env::var("CROSS_ROOTLESS_CONTAINER_ENGINE")
+        .ok()
+        .and_then(|s| match s.as_ref() {
+            "auto" => None,
+            b => Some(bool_from_envvar(b)),
+        })
+        .unwrap_or_else(|| engine_type != EngineType::Docker);
+    if !is_rootless {
         docker.args(&["--user", &format!("{}:{}", user_id(), group_id(),)]);
     }
 }
@@ -648,6 +657,50 @@ pub fn path_hash(path: &Path) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::id;
+
+    #[test]
+    fn test_docker_user_id() {
+        let var = "CROSS_ROOTLESS_CONTAINER_ENGINE";
+        let old = env::var(var);
+        env::remove_var(var);
+
+        let rootful = format!("\"engine\" \"--user\" \"{}:{}\"", id::user(), id::group());
+        let rootless = "\"engine\"".to_string();
+
+        let test = |engine, expected| {
+            let mut cmd = Command::new("engine");
+            docker_user_id(&mut cmd, engine);
+            assert_eq!(expected, &format!("{cmd:?}"));
+        };
+        test(EngineType::Docker, &rootful);
+        test(EngineType::Podman, &rootless);
+        test(EngineType::PodmanRemote, &rootless);
+        test(EngineType::Other, &rootless);
+
+        env::set_var(var, "0");
+        test(EngineType::Docker, &rootful);
+        test(EngineType::Podman, &rootful);
+        test(EngineType::PodmanRemote, &rootful);
+        test(EngineType::Other, &rootful);
+
+        env::set_var(var, "1");
+        test(EngineType::Docker, &rootless);
+        test(EngineType::Podman, &rootless);
+        test(EngineType::PodmanRemote, &rootless);
+        test(EngineType::Other, &rootless);
+
+        env::set_var(var, "auto");
+        test(EngineType::Docker, &rootful);
+        test(EngineType::Podman, &rootless);
+        test(EngineType::PodmanRemote, &rootless);
+        test(EngineType::Other, &rootless);
+
+        match old {
+            Ok(v) => env::set_var(var, v),
+            Err(_) => env::remove_var(var),
+        }
+    }
 
     mod mount_finder {
         use super::*;

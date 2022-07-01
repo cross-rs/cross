@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- #890 - support rootless docker via the `CROSS_ROOTLESS_CONTAINER_ENGINE` environment variable.
+
 ### Changed
 
 - #869 - ensure cargo configuration environment variable flags are passed to the docker container.
