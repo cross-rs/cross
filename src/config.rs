@@ -69,21 +69,18 @@ impl Environment {
         self.get_target_var(target, "IMAGE")
     }
 
-    fn dockerfile(&self, target: &Target) -> Option<String> {
-        let res = self.get_values_for("DOCKERFILE", target, |s| s.to_string());
-        res.0.or(res.1)
+    fn dockerfile(&self, target: &Target) -> (Option<String>, Option<String>) {
+        self.get_values_for("DOCKERFILE", target, |s| s.to_string())
     }
 
-    fn dockerfile_context(&self, target: &Target) -> Option<String> {
-        let res = self.get_values_for("DOCKERFILE_CONTEXT", target, |s| s.to_string());
-        res.0.or(res.1)
+    fn dockerfile_context(&self, target: &Target) -> (Option<String>, Option<String>) {
+        self.get_values_for("DOCKERFILE_CONTEXT", target, |s| s.to_string())
     }
 
-    fn pre_build(&self, target: &Target) -> Option<Vec<String>> {
-        let res = self.get_values_for("PRE_BUILD", target, |v| {
+    fn pre_build(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
+        self.get_values_for("PRE_BUILD", target, |v| {
             v.split('\n').map(String::from).collect()
-        });
-        res.0.or(res.1)
+        })
     }
 
     fn runner(&self, target: &Target) -> Option<String> {
@@ -205,11 +202,29 @@ impl Config {
         config: impl for<'a> Fn(&'a CrossToml, &Target) -> (Option<&'a [String]>, Option<&'a [String]>),
         sum: bool,
     ) -> Result<Option<Vec<String>>> {
+        if sum {
+            let (mut env_build, env_target) = env(&self.env, target);
+            env_build
+                .as_mut()
+                .map(|b| env_target.map(|mut t| b.append(&mut t)));
+            self.sum_of_env_toml_values(env_build, |t| config(t, target))
+        } else {
+            self.get_from_ref(target, env, config)
+        }
+    }
+
+    fn get_from_ref<T, U>(
+        &self,
+        target: &Target,
+        env: impl for<'a> Fn(&'a Environment, &Target) -> (Option<T>, Option<T>),
+        config: impl for<'a> Fn(&'a CrossToml, &Target) -> (Option<&'a U>, Option<&'a U>),
+    ) -> Result<Option<T>>
+    where
+        U: ToOwned<Owned = T> + ?Sized,
+    {
         let (env_build, env_target) = env(&self.env, target);
 
-        if sum {
-            return self.sum_of_env_toml_values(env_target, |t| config(t, target));
-        } else if let Some(env_target) = env_target {
+        if let Some(env_target) = env_target {
             return Ok(Some(env_target));
         }
 
@@ -262,7 +277,7 @@ impl Config {
     }
 
     pub fn env_volumes(&self, target: &Target) -> Result<Option<Vec<String>>> {
-        self.vec_from_config(target, Environment::volumes, CrossToml::env_volumes, false)
+        self.get_from_ref(target, Environment::volumes, CrossToml::env_volumes)
     }
 
     pub fn target(&self, target_list: &TargetList) -> Option<Target> {
@@ -275,11 +290,11 @@ impl Config {
     }
 
     pub fn dockerfile(&self, target: &Target) -> Result<Option<String>> {
-        self.string_from_config(target, Environment::dockerfile, CrossToml::dockerfile)
+        self.get_from_ref(target, Environment::dockerfile, CrossToml::dockerfile)
     }
 
     pub fn dockerfile_context(&self, target: &Target) -> Result<Option<String>> {
-        self.string_from_config(
+        self.get_from_ref(
             target,
             Environment::dockerfile_context,
             CrossToml::dockerfile_context,
@@ -297,14 +312,10 @@ impl Config {
     }
 
     pub fn pre_build(&self, target: &Target) -> Result<Option<Vec<String>>> {
-        self.vec_from_config(
-            target,
-            |e, t| (None, e.pre_build(t)),
-            CrossToml::pre_build,
-            false,
-        )
+        self.get_from_ref(target, Environment::pre_build, CrossToml::pre_build)
     }
 
+    // FIXME: remove when we disable sums in 0.3.0.
     fn sum_of_env_toml_values<'a>(
         &'a self,
         env_values: Option<impl AsRef<[String]>>,
@@ -367,6 +378,11 @@ mod tests {
     fn target() -> Target {
         let target_list = target_list();
         Target::from("aarch64-unknown-linux-gnu", &target_list)
+    }
+
+    fn target2() -> Target {
+        let target_list = target_list();
+        Target::from("armv7-unknown-linux-musleabihf", &target_list)
     }
 
     mod test_environment {
@@ -515,6 +531,29 @@ mod tests {
         }
 
         #[test]
+        pub fn env_target_then_toml_target_then_env_build_then_toml_build() -> Result<()> {
+            let mut map = HashMap::new();
+            map.insert("CROSS_BUILD_DOCKERFILE", "Dockerfile3");
+            map.insert(
+                "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_DOCKERFILE",
+                "Dockerfile4",
+            );
+
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(Some(toml(TOML_BUILD_DOCKERFILE)?), env);
+            assert_eq!(config.dockerfile(&target())?, Some(s!("Dockerfile4")));
+            assert_eq!(config.dockerfile(&target2())?, Some(s!("Dockerfile3")));
+
+            let map = HashMap::new();
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(Some(toml(TOML_BUILD_DOCKERFILE)?), env);
+            assert_eq!(config.dockerfile(&target())?, Some(s!("Dockerfile2")));
+            assert_eq!(config.dockerfile(&target2())?, Some(s!("Dockerfile1")));
+
+            Ok(())
+        }
+
+        #[test]
         pub fn toml_build_passthrough_then_use_target_passthrough_both() -> Result<()> {
             let map = HashMap::new();
             let env = Environment::new(Some(map));
@@ -527,7 +566,6 @@ mod tests {
                 config.env_volumes(&target())?,
                 Some(vec![s!("VOLUME3"), s!("VOLUME4")])
             );
-            // TODO(ahuszagh) Need volumes
 
             Ok(())
         }
@@ -640,6 +678,13 @@ mod tests {
         static TOML_BUILD_PRE_BUILD: &str = r#"
     [build]
     pre-build = ["apt-get update && apt-get install zlib-dev"]
+    "#;
+
+        static TOML_BUILD_DOCKERFILE: &str = r#"
+    [build]
+    dockerfile = "Dockerfile1"
+    [target.aarch64-unknown-linux-gnu]
+    dockerfile = "Dockerfile2"
     "#;
 
         static TOML_TARGET_XARGO_FALSE: &str = r#"
