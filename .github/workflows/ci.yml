@@ -376,8 +376,10 @@ jobs:
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
           sha_rev=$(git rev-parse HEAD)
-          find ${artifacts} -name "lcov.*.info" -exec ./codecov -F $(echo {} | sed -n 's/lcov\.\(.*\)\.info/\1/p') \
-            ${pr:+-P ${pr}} -f {} --sha ${sha_rev} -n $(echo {} | sed -n 's/lcov\.\(.*\)\.info/\1/p') \;
+          for file in $(find ${artifacts} -name "lcov.*.info" -exec ls {} +); do
+            name=$(echo $file | awk -F'.' '{print $2}');
+            ./codecov -F $name ${pr:+-P ${pr}} -f $file --sha ${sha_rev} -n $name;
+          done
         env:
           pr: ${{  steps.pr-number.outputs.pr || '' }}
           artifacts: ${{ runner.temp }}/artifacts
