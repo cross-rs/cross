@@ -815,7 +815,7 @@ pub(crate) fn run(
 
     // 3. create our start container command here
     let mut docker = subcommand(engine, "run");
-    docker.args(&["--userns", "host"]);
+    docker_userns(&mut docker);
     docker.args(&["--name", &container]);
     docker.args(&["-v", &format!("{}:{mount_prefix}", volume.as_ref())]);
     docker_envvars(&mut docker, config, target, msg_info)?;

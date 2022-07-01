@@ -31,7 +31,7 @@ pub(crate) fn run(
     cmd.args(args);
 
     let mut docker = subcommand(engine, "run");
-    docker.args(&["--userns", "host"]);
+    docker_userns(&mut docker);
     docker_envvars(&mut docker, config, target, msg_info)?;
 
     let mount_volumes = docker_mount(
