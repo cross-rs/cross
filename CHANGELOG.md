@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #900 - add the option to skip copying build artifacts back to host when using remote cross via `CROSS_REMOTE_SKIP_BUILD_ARTIFACTS`.
 - #891 - support custom user namespace overrides by setting the `CROSS_CONTAINER_USER_NAMESPACE` environment variable. 
 - #890 - support rootless docker via the `CROSS_ROOTLESS_CONTAINER_ENGINE` environment variable.
+- #878 - added an image `ghcr.io/cross-rs/cross` containing cross.
 
 ### Changed
 

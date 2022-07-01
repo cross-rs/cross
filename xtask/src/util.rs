@@ -129,6 +129,16 @@ impl ImageTarget {
             .iter()
             .any(|m| m.builds_image() && m.target == self.triplet && m.sub == self.sub)
     }
+
+    /// Determine if this target uses the default test script
+    pub fn is_default_test_image(&self) -> bool {
+        self.triplet != "cross"
+    }
+
+    /// Determine if this target needs to interact with the project root.
+    pub fn needs_workspace_root_context(&self) -> bool {
+        self.triplet == "cross"
+    }
 }
 
 impl std::str::FromStr for ImageTarget {
