@@ -183,14 +183,14 @@ pub(crate) fn register(engine: &Engine, target: &Target, msg_info: MessageInfo) 
             binfmt-support qemu-user-static"
     };
 
-    subcommand(engine, "run")
-        .args(&["--userns", "host"])
-        .arg("--privileged")
-        .arg("--rm")
-        .arg(UBUNTU_BASE)
-        .args(&["sh", "-c", cmd])
-        .run(msg_info, false)
-        .map_err(Into::into)
+    let mut docker = subcommand(engine, "run");
+    docker_userns(&mut docker);
+    docker.arg("--privileged");
+    docker.arg("--rm");
+    docker.arg(UBUNTU_BASE);
+    docker.args(&["sh", "-c", cmd]);
+
+    docker.run(msg_info, false).map_err(Into::into)
 }
 
 fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
@@ -411,6 +411,17 @@ pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
         .unwrap_or_else(|| engine_type != EngineType::Docker);
     if !is_rootless {
         docker.args(&["--user", &format!("{}:{}", user_id(), group_id(),)]);
+    }
+}
+
+pub(crate) fn docker_userns(docker: &mut Command) {
+    let userns = match env::var("CROSS_CONTAINER_USER_NAMESPACE").ok().as_deref() {
+        Some("none") => None,
+        None | Some("auto") => Some("host".to_string()),
+        Some(ns) => Some(ns.to_string()),
+    };
+    if let Some(ns) = userns {
+        docker.args(&["--userns", &ns]);
     }
 }
 
@@ -695,6 +706,41 @@ mod tests {
         test(EngineType::Podman, &rootless);
         test(EngineType::PodmanRemote, &rootless);
         test(EngineType::Other, &rootless);
+
+        match old {
+            Ok(v) => env::set_var(var, v),
+            Err(_) => env::remove_var(var),
+        }
+    }
+
+    #[test]
+    fn test_docker_userns() {
+        let var = "CROSS_CONTAINER_USER_NAMESPACE";
+        let old = env::var(var);
+        env::remove_var(var);
+
+        let host = "\"engine\" \"--userns\" \"host\"".to_string();
+        let custom = "\"engine\" \"--userns\" \"custom\"".to_string();
+        let none = "\"engine\"".to_string();
+
+        let test = |expected| {
+            let mut cmd = Command::new("engine");
+            docker_userns(&mut cmd);
+            assert_eq!(expected, &format!("{cmd:?}"));
+        };
+        test(&host);
+
+        env::set_var(var, "auto");
+        test(&host);
+
+        env::set_var(var, "none");
+        test(&none);
+
+        env::set_var(var, "host");
+        test(&host);
+
+        env::set_var(var, "custom");
+        test(&custom);
 
         match old {
             Ok(v) => env::set_var(var, v),

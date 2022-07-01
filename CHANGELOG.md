@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- #891 - support custom user namespace overrides by setting the `CROSS_CONTAINER_USER_NAMESPACE` environment variable. 
 - #890 - support rootless docker via the `CROSS_ROOTLESS_CONTAINER_ENGINE` environment variable.
 
 ### Changed
