@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- #898 - fix the path to the mount root with docker-in-docker if mounting volumes.
 - #897 - ensure `target.$(...)` config options override `build` ones when parsing strings and vecs.
 - #895 - convert filenames in docker tags to ASCII lowercase and ignore invalid characters
 - #885 - handle symlinks when using remote docker.
