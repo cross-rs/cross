@@ -220,8 +220,8 @@ impl CrossToml {
     }
 
     /// Returns the `{}.dockerfile` or `{}.dockerfile.file` part of `Cross.toml`
-    pub fn dockerfile(&self, target: &Target) -> Option<String> {
-        self.get_string(
+    pub fn dockerfile(&self, target: &Target) -> (Option<&String>, Option<&String>) {
+        self.get_ref(
             target,
             |b| b.dockerfile.as_ref().map(|c| &c.file),
             |t| t.dockerfile.as_ref().map(|c| &c.file),
@@ -229,8 +229,8 @@ impl CrossToml {
     }
 
     /// Returns the `target.{}.dockerfile.context` part of `Cross.toml`
-    pub fn dockerfile_context(&self, target: &Target) -> Option<String> {
-        self.get_string(
+    pub fn dockerfile_context(&self, target: &Target) -> (Option<&String>, Option<&String>) {
+        self.get_ref(
             target,
             |b| b.dockerfile.as_ref().and_then(|c| c.context.as_ref()),
             |t| t.dockerfile.as_ref().and_then(|c| c.context.as_ref()),
@@ -255,7 +255,7 @@ impl CrossToml {
 
     /// Returns the `build.dockerfile.pre-build` and `target.{}.dockerfile.pre-build` part of `Cross.toml`
     pub fn pre_build(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
-        self.get_vec(
+        self.get_ref(
             target,
             |b| b.pre_build.as_deref(),
             |t| t.pre_build.as_deref(),
@@ -269,17 +269,17 @@ impl CrossToml {
 
     /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
     pub fn xargo(&self, target: &Target) -> (Option<bool>, Option<bool>) {
-        self.get_bool(target, |b| b.xargo, |t| t.xargo)
+        self.get_value(target, |b| b.xargo, |t| t.xargo)
     }
 
     /// Returns the `build.build-std` or the `target.{}.build-std` part of `Cross.toml`
     pub fn build_std(&self, target: &Target) -> (Option<bool>, Option<bool>) {
-        self.get_bool(target, |b| b.build_std, |t| t.build_std)
+        self.get_value(target, |b| b.build_std, |t| t.build_std)
     }
 
     /// Returns the list of environment variables to pass through for `build` and `target`
     pub fn env_passthrough(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
-        self.get_vec(
+        self.get_ref(
             target,
             |build| build.env.passthrough.as_deref(),
             |t| t.env.passthrough.as_deref(),
@@ -288,7 +288,7 @@ impl CrossToml {
 
     /// Returns the list of environment variables to pass through for `build` and `target`
     pub fn env_volumes(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
-        self.get_vec(
+        self.get_ref(
             target,
             |build| build.env.volumes.as_deref(),
             |t| t.env.volumes.as_deref(),
@@ -320,30 +320,26 @@ impl CrossToml {
             .map(ToOwned::to_owned)
     }
 
-    fn get_bool(
+    fn get_value<T>(
         &self,
-        target: &Target,
-        get_build: impl Fn(&CrossBuildConfig) -> Option<bool>,
-        get_target: impl Fn(&CrossTargetConfig) -> Option<bool>,
-    ) -> (Option<bool>, Option<bool>) {
+        target_triple: &Target,
+        get_build: impl Fn(&CrossBuildConfig) -> Option<T>,
+        get_target: impl Fn(&CrossTargetConfig) -> Option<T>,
+    ) -> (Option<T>, Option<T>) {
         let build = get_build(&self.build);
-        let target = self.get_target(target).and_then(get_target);
-
+        let target = self.get_target(target_triple).and_then(get_target);
         (build, target)
     }
 
-    fn get_vec(
+    fn get_ref<T: ?Sized>(
         &self,
         target_triple: &Target,
-        build: impl Fn(&CrossBuildConfig) -> Option<&[String]>,
-        target: impl Fn(&CrossTargetConfig) -> Option<&[String]>,
-    ) -> (Option<&[String]>, Option<&[String]>) {
-        let target = if let Some(t) = self.get_target(target_triple) {
-            target(t)
-        } else {
-            None
-        };
-        (build(&self.build), target)
+        get_build: impl Fn(&CrossBuildConfig) -> Option<&T>,
+        get_target: impl Fn(&CrossTargetConfig) -> Option<&T>,
+    ) -> (Option<&T>, Option<&T>) {
+        let build = get_build(&self.build);
+        let target = self.get_target(target_triple).and_then(get_target);
+        (build, target)
     }
 }
 
