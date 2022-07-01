@@ -113,11 +113,7 @@ impl<'a> Dockerfile<'a> {
             _ => Ok(format!(
                 "{}{package_name}:{target_triple}-{path_hash}{custom}",
                 CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX,
-                package_name = metadata
-                    .workspace_root
-                    .file_name()
-                    .expect("workspace_root can't end in `..`")
-                    .to_string_lossy(),
+                package_name = docker_package_name(metadata),
                 path_hash = path_hash(&metadata.workspace_root)?,
                 custom = if matches!(self, Self::File { .. }) {
                     ""
@@ -136,5 +132,88 @@ impl<'a> Dockerfile<'a> {
             } => Some(context),
             _ => None,
         }
+    }
+}
+
+fn docker_package_name(metadata: &CargoMetadata) -> String {
+    // a valid image name consists of the following:
+    // - lowercase ASCII letters
+    // - digits
+    // - a period
+    // - 1-2 underscores
+    // - 1 or more hyphens (dashes)
+    docker_tag_name(
+        &metadata
+            .workspace_root
+            .file_name()
+            .expect("workspace_root can't end in `..`")
+            .to_string_lossy(),
+    )
+}
+
+fn docker_tag_name(file_name: &str) -> String {
+    // a valid image name consists of the following:
+    // - lowercase ASCII letters
+    // - digits
+    // - a period
+    // - 1-2 underscores
+    // - 1 or more hyphens (dashes)
+    let mut result = String::new();
+    let mut consecutive_underscores = 0;
+    for c in file_name.chars() {
+        match c {
+            'a'..='z' | '.' | '-' => {
+                consecutive_underscores = 0;
+                result.push(c);
+            }
+            'A'..='Z' => {
+                consecutive_underscores = 0;
+                result.push(c.to_ascii_lowercase());
+            }
+            '_' => {
+                consecutive_underscores += 1;
+                if consecutive_underscores <= 2 {
+                    result.push(c);
+                }
+            }
+            // ignore any non-ascii characters
+            _ => (),
+        }
+    }
+
+    // in case all characters were invalid, use a non-empty filename
+    if result.is_empty() {
+        result = "empty".to_string();
+    }
+
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! s {
+        ($s:literal) => {
+            $s.to_string()
+        };
+    }
+
+    #[test]
+    fn docker_tag_name_test() {
+        assert_eq!(docker_tag_name("package"), s!("package"));
+        assert_eq!(docker_tag_name("pAcKaGe"), s!("package"));
+        assert_eq!(
+            docker_tag_name("package_안녕하세요_test"),
+            s!("package__test")
+        );
+        assert_eq!(
+            docker_tag_name("pAcKaGe___test_name"),
+            s!("package__test_name")
+        );
+        assert_eq!(
+            docker_tag_name("pAcKaGe---test.name"),
+            s!("package---test.name")
+        );
     }
 }
