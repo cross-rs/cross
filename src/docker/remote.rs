@@ -1055,7 +1055,10 @@ symlink_recurse \"${{prefix}}\"
 
     // 7. copy data from our target dir back to host
     // this might not exist if we ran `clean`.
-    if container_path_exists(engine, &container, &target_dir, msg_info)? {
+    let skip_artifacts = env::var("CROSS_REMOTE_SKIP_BUILD_ARTIFACTS")
+        .map(|s| bool_from_envvar(&s))
+        .unwrap_or_default();
+    if !skip_artifacts && container_path_exists(engine, &container, &target_dir, msg_info)? {
         subcommand(engine, "cp")
             .arg("-a")
             .arg(&format!("{container}:{}", target_dir.as_posix()?))
