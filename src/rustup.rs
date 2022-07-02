@@ -120,16 +120,52 @@ pub fn install_component(component: &str, toolchain: &str, msg_info: MessageInfo
         .wrap_err_with(|| format!("couldn't install the `{component}` component"))
 }
 
+pub enum Component<'a> {
+    Installed(&'a str),
+    Available(&'a str),
+    NotAvailable(&'a str),
+}
+
+impl<'a> Component<'a> {
+    pub fn is_installed(&'a self) -> bool {
+        matches!(self, Component::Installed(_))
+    }
+
+    pub fn is_not_available(&'a self) -> bool {
+        matches!(self, Component::NotAvailable(_))
+    }
+}
+
+pub fn check_component<'a>(
+    component: &'a str,
+    toolchain: &str,
+    msg_info: MessageInfo,
+) -> Result<Component<'a>> {
+    Ok(Command::new("rustup")
+        .args(&["component", "list", "--toolchain", toolchain])
+        .run_and_get_stdout(msg_info)?
+        .lines()
+        .find_map(|line| {
+            let available = line.starts_with(component);
+            let installed = line.contains("installed");
+            match available {
+                true => Some(installed),
+                false => None,
+            }
+        })
+        .map(|installed| match installed {
+            true => Component::Installed(component),
+            false => Component::Available(component),
+        })
+        .unwrap_or_else(|| Component::NotAvailable(component)))
+}
+
 pub fn component_is_installed(
     component: &str,
     toolchain: &str,
     msg_info: MessageInfo,
 ) -> Result<bool> {
-    Ok(Command::new("rustup")
-        .args(&["component", "list", "--toolchain", toolchain])
-        .run_and_get_stdout(msg_info)?
-        .lines()
-        .any(|l| l.starts_with(component) && l.contains("installed")))
+    Ok(check_component(component, toolchain, msg_info)?.is_installed())
 }
 
 fn rustc_channel(version: &Version) -> Result<Channel> {
