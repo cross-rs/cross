@@ -89,10 +89,7 @@ impl Directories {
         }
         #[cfg(not(target_os = "windows"))]
         {
-            mount_root = mount_finder
-                .find_mount_path(host_root.clone())
-                .to_utf8()?
-                .to_string();
+            mount_root = host_root.to_utf8()?.to_string();
         }
         let mount_cwd: String;
         #[cfg(target_os = "windows")]
