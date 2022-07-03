@@ -19,8 +19,10 @@ ENV PATH /x-tools/arm-unknown-linux-gnueabihf/bin/:$PATH
 COPY qemu.sh /
 RUN /qemu.sh arm
 
+COPY qemu-runner /
+
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-unknown-linux-gnueabihf-gcc \
-    CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER=qemu-arm \
+    CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER="/qemu-runner arm" \
     CC_arm_unknown_linux_gnueabihf=arm-unknown-linux-gnueabihf-gcc \
     CXX_arm_unknown_linux_gnueabihf=arm-unknown-linux-gnueabihf-g++ \
     BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_gnueabihf="--sysroot=/x-tools/arm-unknown-linux-gnueabihf/arm-unknown-linux-gnueabihf/sysroot/" \

@@ -9,6 +9,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- #905 - added `qemu-runner` for musl images, allowing use of native or emulated runners.
+- #905 - added qemu emulation to `i586-unknown-linux-gnu`, `i686-unknown-linux-musl`, and `i586-unknown-linux-gnu`, so they can run on an `x86` CPU, rather than an `x86_64` CPU.
 - #900 - add the option to skip copying build artifacts back to host when using remote cross via `CROSS_REMOTE_SKIP_BUILD_ARTIFACTS`.
 - #891 - support custom user namespace overrides by setting the `CROSS_CONTAINER_USER_NAMESPACE` environment variable. 
 - #890 - support rootless docker via the `CROSS_ROOTLESS_CONTAINER_ENGINE` environment variable.
@@ -20,6 +22,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- #905 - fixed running dynamically-linked libraries for all musl targets except `x86_64-unknown-linux-musl`.
 - #904 - ensure `cargo metadata` works by using the same channel.
 - #904 - fixed the path for workspace volumes and passthrough volumes with docker-in-docker.
 - #898 - fix the path to the mount root with docker-in-docker if mounting volumes.

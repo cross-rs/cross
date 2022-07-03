@@ -21,15 +21,16 @@ RUN /musl.sh \
                       --with-float=hard \
                       --with-mode=arm"
 
-# Allows qemu run dynamic linked binaries
-RUN ln -sf \
-    /usr/local/arm-linux-musleabihf/lib/libc.so \
-    /usr/local/arm-linux-musleabihf/lib/ld-musl-armhf.so.1
+ENV CROSS_MUSL_SYSROOT=/usr/local/arm-linux-musleabihf
+COPY musl-symlink.sh /
+RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT armhf
+
+COPY qemu-runner /
 
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-musleabihf-gcc \
-    CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_RUNNER=qemu-arm \
+    CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_RUNNER="/qemu-runner arm" \
     CC_arm_unknown_linux_musleabihf=arm-linux-musleabihf-gcc \
     CXX_arm_unknown_linux_musleabihf=arm-linux-musleabihf-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_musleabihf="--sysroot=/usr/local/arm-linux-musleabihf" \
-    QEMU_LD_PREFIX=/usr/local/arm-linux-musleabihf \
+    BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_musleabihf="--sysroot=$CROSS_MUSL_SYSROOT" \
+    QEMU_LD_PREFIX=$CROSS_MUSL_SYSROOT \
     RUST_TEST_THREADS=1
