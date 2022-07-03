@@ -308,3 +308,14 @@ impl Stream for io::Stderr {
     const TTY: atty::Stream = atty::Stream::Stderr;
     const OWO: owo_colors::Stream = owo_colors::Stream::Stderr;
 }
+
+pub fn default_ident() -> usize {
+    cross_prefix!("").len()
+}
+
+pub fn indent(message: &str, spaces: usize) -> String {
+    message
+        .lines()
+        .map(|s| format!("{:spaces$}{s}", ""))
+        .collect()
+}

@@ -12,7 +12,7 @@ use std::process::ExitStatus;
 
 use crate::cargo::CargoMetadata;
 use crate::errors::*;
-use crate::shell::MessageInfo;
+use crate::shell::{self, MessageInfo};
 use crate::{Config, Target};
 
 #[allow(clippy::too_many_arguments)] // TODO: refactor
@@ -28,6 +28,13 @@ pub fn run(
     docker_in_docker: bool,
     cwd: &Path,
 ) -> Result<ExitStatus> {
+    if cfg!(target_os = "windows") && docker_in_docker {
+        shell::fatal(
+            "running cross insider a container running windows is currently unsupported",
+            msg_info,
+            1,
+        );
+    }
     if engine.is_remote {
         remote::run(
             engine,

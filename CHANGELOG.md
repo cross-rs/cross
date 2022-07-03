@@ -20,6 +20,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- #904 - ensure `cargo metadata` works by using the same channel.
+- #904 - fixed the path for workspace volumes and passthrough volumes with docker-in-docker.
 - #898 - fix the path to the mount root with docker-in-docker if mounting volumes.
 - #897 - ensure `target.$(...)` config options override `build` ones when parsing strings and vecs.
 - #895 - convert filenames in docker tags to ASCII lowercase and ignore invalid characters

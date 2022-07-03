@@ -764,7 +764,8 @@ pub(crate) fn run(
     docker_in_docker: bool,
     cwd: &Path,
 ) -> Result<ExitStatus> {
-    let dirs = Directories::create(engine, metadata, cwd, sysroot, docker_in_docker)?;
+    let mount_finder = MountFinder::create(engine, docker_in_docker)?;
+    let dirs = Directories::create(&mount_finder, metadata, cwd, sysroot)?;
 
     let mount_prefix = MOUNT_PREFIX;
 
@@ -793,16 +794,16 @@ pub(crate) fn run(
     let volume = VolumeId::create(engine, &toolchain_id, &container, msg_info)?;
     let state = container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
-        shell::warn("container {container} was running.", msg_info)?;
+        shell::warn(format_args!("container {container} was running."), msg_info)?;
         container_stop(engine, &container, msg_info)?;
     }
     if state.exists() {
-        shell::warn("container {container} was exited.", msg_info)?;
+        shell::warn(format_args!("container {container} was exited."), msg_info)?;
         container_rm(engine, &container, msg_info)?;
     }
     if let VolumeId::Discard(ref id) = volume {
         if volume_exists(engine, id, msg_info)? {
-            shell::warn("temporary volume {container} existed.", msg_info)?;
+            shell::warn(format_args!("temporary volume {id} existed."), msg_info)?;
             volume_rm(engine, id, msg_info)?;
         }
     }
@@ -824,6 +825,7 @@ pub(crate) fn run(
     let mount_volumes = docker_mount(
         &mut docker,
         metadata,
+        &mount_finder,
         config,
         target,
         cwd,
