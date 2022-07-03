@@ -91,7 +91,7 @@ You have three options to configure `cross`. All of these options use the TOML f
 You can directly set [configuration values](docs/cross_toml.md) in your `Cargo.toml` file, under the `[package.metadata.cross]` table, i.e. key prefix.
 An example config snippet would look like this:
 
-```
+```toml,cargo
 [package.metadata.cross.target.aarch64-unknown-linux-gnu]
 xargo = false
 image = "test-image"

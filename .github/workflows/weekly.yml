@@ -24,6 +24,18 @@ jobs:
       - name: Build Docker image
         id: build-docker-image
         run: cargo xtask build-docker-image -v --no-cache --no-output --from-ci --no-fastfail --tag weekly
+        timeout-minutes: 1440
+  wiki:
+    name: Ensure wiki is valid
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+      - run: git clone ${wikirepo}
+        shell: bash
+        env:
+          wikirepo: https://github.com/${{ github.repository }}.wiki.git
+      - run: cargo test toml_check -- --nocapture
   cargo-deny:
     runs-on: ubuntu-latest
     steps:
