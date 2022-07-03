@@ -25,7 +25,8 @@ pub(crate) fn run(
     docker_in_docker: bool,
     cwd: &Path,
 ) -> Result<ExitStatus> {
-    let dirs = Directories::create(engine, metadata, cwd, sysroot, docker_in_docker)?;
+    let mount_finder = MountFinder::create(engine, docker_in_docker)?;
+    let dirs = Directories::create(&mount_finder, metadata, cwd, sysroot)?;
 
     let mut cmd = cargo_safe_command(uses_xargo);
     cmd.args(args);
@@ -37,6 +38,7 @@ pub(crate) fn run(
     let mount_volumes = docker_mount(
         &mut docker,
         metadata,
+        &mount_finder,
         config,
         target,
         cwd,

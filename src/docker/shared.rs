@@ -43,17 +43,11 @@ pub struct Directories {
 
 impl Directories {
     pub fn create(
-        engine: &Engine,
+        mount_finder: &MountFinder,
         metadata: &CargoMetadata,
         cwd: &Path,
         sysroot: &Path,
-        docker_in_docker: bool,
     ) -> Result<Self> {
-        let mount_finder = if docker_in_docker {
-            MountFinder::new(docker_read_mount_paths(engine)?)
-        } else {
-            MountFinder::default()
-        };
         let home_dir =
             home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
         let cargo = home::cargo_home()?;
@@ -89,18 +83,10 @@ impl Directories {
         }
         #[cfg(not(target_os = "windows"))]
         {
+            // NOTE: host root has already found the mount path
             mount_root = host_root.to_utf8()?.to_string();
         }
-        let mount_cwd: String;
-        #[cfg(target_os = "windows")]
-        {
-            // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-            mount_cwd = cwd.as_wslpath()?;
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            mount_cwd = mount_finder.find_mount_path(cwd).to_utf8()?.to_string();
-        }
+        let mount_cwd = mount_finder.find_path(cwd, false)?;
         let sysroot = mount_finder.find_mount_path(sysroot);
 
         Ok(Directories {
@@ -163,8 +149,10 @@ pub fn get_package_info(
     let cwd = std::env::current_dir()?;
     let host_meta = rustc::version_meta()?;
     let host = host_meta.host();
+
     let sysroot = rustc::get_sysroot(&host, &target, channel, msg_info)?.1;
-    let dirs = Directories::create(engine, &metadata, &cwd, &sysroot, docker_in_docker)?;
+    let mount_finder = MountFinder::create(engine, docker_in_docker)?;
+    let dirs = Directories::create(&mount_finder, &metadata, &cwd, &sysroot)?;
 
     Ok((target, metadata, dirs))
 }
@@ -251,9 +239,9 @@ fn add_cargo_configuration_envvars(docker: &mut Command) {
     }
 }
 
-pub(crate) fn mount(docker: &mut Command, val: &Path, prefix: &str) -> Result<String> {
-    let host_path = file::canonicalize(val)?;
-    let mount_path = canonicalize_mount_path(&host_path)?;
+// NOTE: host path must be canonical
+pub(crate) fn mount(docker: &mut Command, host_path: &Path, prefix: &str) -> Result<String> {
+    let mount_path = canonicalize_mount_path(host_path)?;
     docker.args(&[
         "-v",
         &format!("{}:{prefix}{}", host_path.to_utf8()?, mount_path),
@@ -338,6 +326,7 @@ pub(crate) fn docker_cwd(
 pub(crate) fn docker_mount(
     docker: &mut Command,
     metadata: &CargoMetadata,
+    mount_finder: &MountFinder,
     config: &Config,
     target: &Target,
     cwd: &Path,
@@ -359,15 +348,19 @@ pub(crate) fn docker_mount(
         };
 
         if let Ok(val) = value {
-            let mount_path = mount_cb(docker, val.as_ref())?;
-            docker.args(&["-e", &format!("{}={}", var, mount_path)]);
+            let canonical_val = file::canonicalize(&val)?;
+            let host_path = mount_finder.find_path(&canonical_val, true)?;
+            let mount_path = mount_cb(docker, host_path.as_ref())?;
+            docker.args(&["-e", &format!("{}={}", host_path, mount_path)]);
             store_cb((val, mount_path));
             mount_volumes = true;
         }
     }
 
     for path in metadata.path_dependencies() {
-        let mount_path = mount_cb(docker, path)?;
+        let canonical_path = file::canonicalize(path)?;
+        let host_path = mount_finder.find_path(&canonical_path, true)?;
+        let mount_path = mount_cb(docker, host_path.as_ref())?;
         store_cb((path.to_utf8()?.to_string(), mount_path));
         mount_volumes = true;
     }
@@ -614,7 +607,7 @@ fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
 }
 
 #[derive(Debug, Default)]
-struct MountFinder {
+pub struct MountFinder {
     mounts: Vec<MountDetail>,
 }
 
@@ -636,7 +629,15 @@ impl MountFinder {
         MountFinder { mounts }
     }
 
-    fn find_mount_path(&self, path: impl AsRef<Path>) -> PathBuf {
+    pub fn create(engine: &Engine, docker_in_docker: bool) -> Result<MountFinder> {
+        Ok(if docker_in_docker {
+            MountFinder::new(docker_read_mount_paths(engine)?)
+        } else {
+            MountFinder::default()
+        })
+    }
+
+    pub fn find_mount_path(&self, path: impl AsRef<Path>) -> PathBuf {
         let path = path.as_ref();
 
         for info in &self.mounts {
@@ -646,6 +647,23 @@ impl MountFinder {
         }
 
         path.to_path_buf()
+    }
+
+    #[allow(unused_variables, clippy::needless_return)]
+    fn find_path(&self, path: &Path, host: bool) -> Result<String> {
+        #[cfg(target_os = "windows")]
+        {
+            // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+            if host {
+                return Ok(path.to_utf8()?.to_string());
+            } else {
+                return path.as_wslpath();
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            return Ok(self.find_mount_path(path).to_utf8()?.to_string());
+        }
     }
 }
 

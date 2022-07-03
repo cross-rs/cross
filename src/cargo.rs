@@ -5,7 +5,7 @@ use std::process::{Command, ExitStatus};
 use crate::cli::Args;
 use crate::errors::*;
 use crate::extensions::CommandExt;
-use crate::shell::MessageInfo;
+use crate::shell::{self, MessageInfo};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subcommand {
@@ -123,6 +123,9 @@ pub fn cargo_metadata_with_args(
     msg_info: MessageInfo,
 ) -> Result<Option<CargoMetadata>> {
     let mut command = cargo_command();
+    if let Some(channel) = args.and_then(|x| x.channel.as_deref()) {
+        command.arg(format!("+{channel}"));
+    }
     command.arg("metadata").args(&["--format-version", "1"]);
     if let Some(cd) = cd {
         command.current_dir(cd);
@@ -142,7 +145,9 @@ pub fn cargo_metadata_with_args(
     }
     let output = command.run_and_get_output(msg_info)?;
     if !output.status.success() {
-        // TODO: logging
+        shell::warn("unable to get metadata for package", msg_info)?;
+        let indented = shell::indent(&String::from_utf8(output.stderr)?, shell::default_ident());
+        shell::debug(indented, msg_info)?;
         return Ok(None);
     }
     let manifest: Option<CargoMetadata> = serde_json::from_slice(&output.stdout)?;
