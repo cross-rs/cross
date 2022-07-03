@@ -482,6 +482,7 @@ pub fn remove_persistent_volume(
     engine: &docker::Engine,
     channel: Option<&str>,
 ) -> cross::Result<()> {
+    // we only need a triple that needs docker: the actual target doesn't matter.
     let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
     let triple = cross::Host::X86_64UnknownLinuxGnu.triple();
     let (_, _, dirs) =
