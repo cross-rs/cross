@@ -3,8 +3,10 @@ use std::io::Read;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 
+use crate::ToUtf8;
+
 static TOML_REGEX: Lazy<Regex> = Lazy::new(|| {
-    RegexBuilder::new(r#"```toml\n(.*?)```"#)
+    RegexBuilder::new(r#"```toml(.*?)\n(.*?)```"#)
         .multi_line(true)
         .dot_matches_new_line(true)
         .build()
@@ -35,16 +37,40 @@ fn toml_check() -> Result<(), Box<dyn std::error::Error>> {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
         for matches in TOML_REGEX.captures_iter(&contents) {
-            let fence = matches.get(1).unwrap();
+            let cargo = {
+                let t = matches.get(1).unwrap().as_str();
+                if t.is_empty() {
+                    false
+                } else if t == ",cargo" {
+                    true
+                } else {
+                    println!("skipping {t}");
+                    continue;
+                }
+            };
+            let fence = matches.get(2).unwrap();
+            let fence_content = fence
+                .as_str()
+                .replace("$TARGET", "x86_64-unknown-linux-gnu")
+                .replace("${target}", "x86_64-unknown-linux-gnu");
+
             eprintln!(
-                "testing snippet at: {:?}:{:?}",
-                dir_entry.path(),
+                "testing snippet at: {}:{:?}",
+                dir_entry.path().to_utf8()?,
                 text_line_no(&contents, fence.range().start),
             );
-            assert!(crate::cross_toml::CrossToml::parse_from_cross(
-                fence.as_str(),
-                crate::shell::MessageInfo::default()
-            )?
+            assert!(if !cargo {
+                crate::cross_toml::CrossToml::parse_from_cross(
+                    &fence_content,
+                    crate::shell::MessageInfo::default(),
+                )?
+            } else {
+                crate::cross_toml::CrossToml::parse_from_cargo(
+                    &fence_content,
+                    crate::shell::MessageInfo::default(),
+                )?
+                .unwrap_or_default()
+            }
             .1
             .is_empty());
         }
