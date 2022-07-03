@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2086
+# shellcheck disable=SC2086,SC1091,SC1090
 
 set -x
 set -euo pipefail
@@ -10,29 +10,8 @@ set -euo pipefail
 
 ci_dir=$(dirname "${BASH_SOURCE[0]}")
 ci_dir=$(realpath "${ci_dir}")
+. "${ci_dir}"/shared.sh
 project_home=$(dirname "${ci_dir}")
-
-function retry {
-  local tries="${TRIES-5}"
-  local timeout="${TIMEOUT-1}"
-  local try=0
-  local exit_code=0
-
-  while (( try < tries )); do
-    if "${@}"; then
-      return 0
-    else
-      exit_code=$?
-    fi
-
-    sleep "${timeout}"
-    echo "Retrying ..." 1>&2
-    try=$(( try + 1 ))
-    timeout=$(( timeout * 2 ))
-  done
-
-  return ${exit_code}
-}
 
 workspace_test() {
   "${CROSS[@]}" build --target "${TARGET}" --workspace "$@" ${CROSS_FLAGS}

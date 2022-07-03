@@ -763,6 +763,162 @@ mod tests {
         }
     }
 
+    mod directories {
+        use super::*;
+        use crate::cargo::cargo_metadata_with_args;
+        use crate::temp;
+
+        fn unset_env() -> Vec<(&'static str, Option<String>)> {
+            let mut result = vec![];
+            let envvars = ["CARGO_HOME", "XARGO_HOME", "NIX_STORE"];
+            for var in envvars {
+                result.push((var, env::var(var).ok()));
+                env::remove_var(var);
+            }
+
+            result
+        }
+
+        fn reset_env(vars: Vec<(&'static str, Option<String>)>) {
+            for (var, value) in vars {
+                if let Some(value) = value {
+                    env::set_var(var, value);
+                }
+            }
+        }
+
+        fn create_engine(msg_info: MessageInfo) -> Result<Engine> {
+            Engine::from_path(get_container_engine()?, Some(false), msg_info)
+        }
+
+        fn cargo_metadata(subdir: bool, msg_info: MessageInfo) -> Result<CargoMetadata> {
+            let mut metadata = cargo_metadata_with_args(
+                Some(Path::new(env!("CARGO_MANIFEST_DIR"))),
+                None,
+                msg_info,
+            )?
+            .ok_or_else(|| eyre::eyre!("could not find cross workspace"))?;
+
+            let root = match subdir {
+                true => get_cwd()?.join("member"),
+                false => get_cwd()?.parent().unwrap().to_path_buf(),
+            };
+            fs::create_dir_all(&root)?;
+            metadata.workspace_root = root;
+            metadata.target_directory = metadata.workspace_root.join("target");
+
+            Ok(metadata)
+        }
+
+        fn home() -> Result<PathBuf> {
+            home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))
+        }
+
+        fn get_cwd() -> Result<PathBuf> {
+            // we need this directory to exist for Windows
+            let path = temp::dir()?.join("Documents").join("package");
+            fs::create_dir_all(&path)?;
+            Ok(path)
+        }
+
+        fn get_sysroot() -> Result<PathBuf> {
+            Ok(home()?
+                .join(".rustup")
+                .join("toolchains")
+                .join("stable-x86_64-unknown-linux-gnu"))
+        }
+
+        fn get_directories(
+            metadata: &CargoMetadata,
+            mount_finder: &MountFinder,
+        ) -> Result<Directories> {
+            let cwd = get_cwd()?;
+            let sysroot = get_sysroot()?;
+            Directories::create(mount_finder, metadata, &cwd, &sysroot)
+        }
+
+        fn path_to_posix(path: &Path) -> Result<String> {
+            #[cfg(target_os = "windows")]
+            {
+                path.as_wslpath()
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                path.as_posix()
+            }
+        }
+
+        #[track_caller]
+        fn paths_equal(x: &Path, y: &Path) -> Result<()> {
+            assert_eq!(path_to_posix(x)?, path_to_posix(y)?);
+            Ok(())
+        }
+
+        #[test]
+        fn test_host() -> Result<()> {
+            let vars = unset_env();
+            let mount_finder = MountFinder::new(vec![]);
+            let metadata = cargo_metadata(false, MessageInfo::default())?;
+            let directories = get_directories(&metadata, &mount_finder)?;
+            paths_equal(&directories.cargo, &home()?.join(".cargo"))?;
+            paths_equal(&directories.xargo, &home()?.join(".xargo"))?;
+            paths_equal(&directories.host_root, &metadata.workspace_root)?;
+            assert_eq!(
+                &directories.mount_root,
+                &path_to_posix(&metadata.workspace_root)?
+            );
+            assert_eq!(&directories.mount_cwd, &path_to_posix(&get_cwd()?)?);
+
+            reset_env(vars);
+            Ok(())
+        }
+
+        #[test]
+        #[cfg_attr(not(target_os = "linux"), ignore)]
+        fn test_docker_in_docker() -> Result<()> {
+            let vars = unset_env();
+
+            let engine = create_engine(MessageInfo::default());
+            let hostname = env::var("HOSTNAME");
+            if engine.is_err() || hostname.is_err() {
+                eprintln!("could not get container engine or no hostname found");
+                reset_env(vars);
+                return Ok(());
+            }
+            let engine = engine.unwrap();
+            let hostname = hostname.unwrap();
+            let output = subcommand(&engine, "inspect")
+                .arg(hostname)
+                .run_and_get_output(MessageInfo::default())?;
+            if !output.status.success() {
+                eprintln!("inspect failed");
+                reset_env(vars);
+                return Ok(());
+            }
+
+            let mount_finder = MountFinder::create(&engine, true)?;
+            let metadata = cargo_metadata(true, MessageInfo::default())?;
+            let directories = get_directories(&metadata, &mount_finder)?;
+            let mount_finder = MountFinder::new(docker_read_mount_paths(&engine)?);
+            let mount_path = |p| mount_finder.find_mount_path(p);
+
+            paths_equal(&directories.cargo, &mount_path(home()?.join(".cargo")))?;
+            paths_equal(&directories.xargo, &mount_path(home()?.join(".xargo")))?;
+            paths_equal(&directories.host_root, &mount_path(get_cwd()?))?;
+            assert_eq!(
+                &directories.mount_root,
+                &path_to_posix(&mount_path(get_cwd()?))?
+            );
+            assert_eq!(
+                &directories.mount_cwd,
+                &path_to_posix(&mount_path(get_cwd()?))?
+            );
+
+            reset_env(vars);
+            Ok(())
+        }
+    }
+
     mod mount_finder {
         use super::*;
 

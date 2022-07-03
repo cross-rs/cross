@@ -321,8 +321,69 @@ jobs:
           LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
         shell: bash
 
+  # we should always have an artifact from a previous build.
+  remote:
+    needs: [shellcheck, test, check]
+    runs-on: ubuntu-latest
+    if: github.actor == 'bors[bot]'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: LLVM instrument coverage
+        id: remote-cov
+        uses: ./.github/actions/cargo-llvm-cov
+        with:
+          name: integration-remote
+
+      - name: Run Remote Test
+        env:
+          TARGET: aarch64-unknown-linux-gnu
+        run: ./ci/test-remote.sh
+        shell: bash
+
+  bisect:
+    needs: [shellcheck, test, check]
+    runs-on: ubuntu-latest
+    if: github.actor == 'bors[bot]'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: LLVM instrument coverage
+        id: bisect-cov
+        uses: ./.github/actions/cargo-llvm-cov
+        with:
+          name: integration-bisect
+
+      - name: Run Bisect Test
+        env:
+          TARGET: aarch64-unknown-linux-gnu
+        run: ./ci/test-bisect.sh
+        shell: bash
+
+  docker-in-docker:
+    needs: [shellcheck, test, check]
+    runs-on: ubuntu-latest
+    if: github.actor == 'bors[bot]'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: LLVM instrument coverage
+        id: docker-in-docker-cov
+        uses: ./.github/actions/cargo-llvm-cov
+        with:
+          name: integration-docker-in-docker
+
+      - name: Run Docker-in-Docker Test
+        env:
+          TARGET: aarch64-unknown-linux-gnu
+        run: ./ci/test-docker-in-docker.sh
+        shell: bash
+
   publish:
-    needs: [build, check]
+    needs: [build, check, fmt, clippy, cargo-deny, remote, bisect, docker-in-docker]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
