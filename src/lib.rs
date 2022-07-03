@@ -360,6 +360,24 @@ impl Serialize for Target {
     }
 }
 
+fn warn_on_failure(target: &Target, toolchain: &str, msg_info: MessageInfo) -> Result<()> {
+    let rust_std = format!("rust-std-{target}");
+    if target.is_builtin() {
+        let component = rustup::check_component(&rust_std, toolchain, msg_info)?;
+        if component.is_not_available() {
+            shell::warn(format!("rust-std is not available for {target}"), msg_info)?;
+            shell::note(
+                format_args!(
+                    r#"you may need to build components for the target via `-Z build-std=<components>` or in your cross configuration specify `target.{target}.build-std`
+              the available components are core, std, alloc, and proc_macro"#
+                ),
+                msg_info,
+            )?;
+        }
+    }
+    Ok(())
+}
+
 pub fn run() -> Result<ExitStatus> {
     let target_list = rustc::target_list(Verbosity::Quiet.into())?;
     let args = cli::parse(&target_list)?;
@@ -524,6 +542,9 @@ pub fn run() -> Result<ExitStatus> {
                     .subcommand
                     .map(|sc| sc.needs_host(is_remote))
                     .unwrap_or(false);
+                if !status.success() {
+                    warn_on_failure(&target, &toolchain, args.msg_info)?;
+                }
                 if !(status.success() && needs_host) {
                     return Ok(status);
                 }

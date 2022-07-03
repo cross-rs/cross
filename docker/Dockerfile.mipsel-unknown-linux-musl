@@ -18,15 +18,16 @@ RUN /musl.sh \
     TARGET=mipsel-linux-muslsf \
     "COMMON_CONFIG += -with-arch=mips32"
 
-# This allows qemu run dynamic linked binaries
-RUN ln -sf \
-    /usr/local/mipsel-linux-muslsf/lib/libc.so \
-    /usr/local/mipsel-linux-muslsf/lib/ld-musl-mipsel-sf.so.1
+ENV CROSS_MUSL_SYSROOT=/usr/local/mipsel-linux-muslsf
+COPY musl-symlink.sh /
+RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT mipsel-sf
+
+COPY qemu-runner /
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER=mipsel-linux-muslsf-gcc \
-    CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_RUNNER=qemu-mipsel \
+    CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner mipsel" \
     CC_mipsel_unknown_linux_musl=mipsel-linux-muslsf-gcc \
     CXX_mipsel_unknown_linux_musl=mipsel-linux-muslsf-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_mipsel_unknown_linux_musl="--sysroot=/usr/local/mipsel-linux-muslsf" \
-    QEMU_LD_PREFIX=/usr/local/mipsel-linux-muslsf \
+    BINDGEN_EXTRA_CLANG_ARGS_mipsel_unknown_linux_musl="--sysroot=$CROSS_MUSL_SYSROOT" \
+    QEMU_LD_PREFIX=$CROSS_MUSL_SYSROOT \
     RUST_TEST_THREADS=1

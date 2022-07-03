@@ -18,15 +18,16 @@ RUN /musl.sh \
     TARGET=mips-linux-muslsf \
     "COMMON_CONFIG += -with-arch=mips32r2"
 
-# Allows qemu run dynamic linked binaries
-RUN ln -sf \
-    /usr/local/mips-linux-muslsf/lib/libc.so \
-    /usr/local/mips-linux-muslsf/lib/ld-musl-mips-sf.so.1
+ENV CROSS_MUSL_SYSROOT=/usr/local/mips-linux-muslsf
+COPY musl-symlink.sh /
+RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT mips-sf
+
+COPY qemu-runner /
 
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_LINKER=mips-linux-muslsf-gcc \
-    CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_RUNNER=qemu-mips \
+    CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner mips" \
     CC_mips_unknown_linux_musl=mips-linux-muslsf-gcc \
     CXX_mips_unknown_linux_musl=mips-linux-muslsf-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_mips_unknown_linux_musl="--sysroot=/usr/local/mips-linux-muslsf" \
-    QEMU_LD_PREFIX=/usr/local/mips-linux-muslsf \
+    BINDGEN_EXTRA_CLANG_ARGS_mips_unknown_linux_musl="--sysroot=$CROSS_MUSL_SYSROOT" \
+    QEMU_LD_PREFIX=$CROSS_MUSL_SYSROOT \
     RUST_TEST_THREADS=1

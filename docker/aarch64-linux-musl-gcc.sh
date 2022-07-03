@@ -4,6 +4,7 @@
 # which affects toolchains older than 1.48
 # older toolchains require the `-lgcc` linker flag otherwise they fail to link
 
+set -x
 set -euo pipefail
 
 main() {

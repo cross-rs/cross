@@ -13,4 +13,10 @@ RUN /xargo.sh
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-multilib
 
-ENV PKG_CONFIG_PATH="/usr/lib/i386-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"
+COPY qemu.sh /
+RUN /qemu.sh i386
+
+COPY qemu-runner /
+
+ENV CARGO_TARGET_I586_UNKNOWN_LINUX_GNU_RUNNER="/qemu-runner i586" \
+    PKG_CONFIG_PATH="/usr/lib/i386-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"
