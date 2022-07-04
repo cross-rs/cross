@@ -10,6 +10,7 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
+ARG VERBOSE
 COPY crosstool-ng.sh /
 COPY crosstool-config/arm-unknown-linux-gnueabihf.config /
 RUN /crosstool-ng.sh arm-unknown-linux-gnueabihf.config 5
