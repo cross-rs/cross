@@ -24,8 +24,8 @@ pub struct BuildDockerImage {
     #[clap(long, env = "LABELS")]
     pub labels: Option<String>,
     /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
+    #[clap(short, long, action = clap::ArgAction::Count)]
+    pub verbose: u8,
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
@@ -113,7 +113,7 @@ pub fn build_docker_image(
     }: BuildDockerImage,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let msg_info = MessageInfo::create(verbose != 0, quiet, color.as_deref())?;
     let metadata = cargo_metadata(msg_info)?;
     let version = metadata
         .get_package("cross")
@@ -235,6 +235,9 @@ pub fn build_docker_image(
         }
         for arg in &build_arg {
             docker_build.args(&["--build-arg", arg]);
+        }
+        if verbose > 1 {
+            docker_build.args(&["--build-arg", "VERBOSE=1"]);
         }
 
         docker_build.arg(".");

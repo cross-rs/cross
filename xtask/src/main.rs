@@ -75,7 +75,8 @@ pub fn main() -> cross::Result<()> {
             target_info::target_info(args, &engine)?;
         }
         Commands::BuildDockerImage(args) => {
-            let msg_info = MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
+            let msg_info =
+                MessageInfo::create(args.verbose != 0, args.quiet, args.color.as_deref())?;
             let engine = get_container_engine(args.engine.as_deref(), msg_info)?;
             build_docker_image::build_docker_image(args, &engine)?;
         }
