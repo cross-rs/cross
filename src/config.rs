@@ -1,3 +1,4 @@
+use crate::docker::custom::PreBuild;
 use crate::shell::MessageInfo;
 use crate::{CrossToml, Result, Target, TargetList};
 
@@ -77,9 +78,17 @@ impl Environment {
         self.get_values_for("DOCKERFILE_CONTEXT", target, |s| s.to_owned())
     }
 
-    fn pre_build(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
+    fn pre_build(&self, target: &Target) -> (Option<PreBuild>, Option<PreBuild>) {
         self.get_values_for("PRE_BUILD", target, |v| {
-            v.split('\n').map(String::from).collect()
+            let v: Vec<_> = v.split('\n').map(String::from).collect();
+            if v.len() == 1 {
+                PreBuild::Single {
+                    line: v.into_iter().next().expect("should contain one item"),
+                    env: true,
+                }
+            } else {
+                PreBuild::Lines(v)
+            }
         })
     }
 
@@ -326,7 +335,7 @@ impl Config {
             .map_or(Ok(None), |t| Ok(t.dockerfile_build_args(target)))
     }
 
-    pub fn pre_build(&self, target: &Target) -> Result<Option<Vec<String>>> {
+    pub fn pre_build(&self, target: &Target) -> Result<Option<PreBuild>> {
         self.get_from_ref(target, Environment::pre_build, CrossToml::pre_build)
     }
 
@@ -494,7 +503,10 @@ mod tests {
             assert_eq!(config.build_std(&target()), None);
             assert_eq!(
                 config.pre_build(&target())?,
-                Some(vec![s!("apt-get update"), s!("apt-get install zlib-dev")])
+                Some(PreBuild::Lines(vec![
+                    s!("apt-get update"),
+                    s!("apt-get install zlib-dev")
+                ]))
             );
 
             Ok(())
@@ -530,7 +542,7 @@ mod tests {
         }
 
         #[test]
-        pub fn env_target_and_toml_build_pre_build_then_use_toml() -> Result<()> {
+        pub fn env_target_and_toml_build_pre_build_then_use_env() -> Result<()> {
             let mut map = HashMap::new();
             map.insert(
                 "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_PRE_BUILD",
@@ -541,7 +553,10 @@ mod tests {
             let config = Config::new_with(Some(toml(TOML_BUILD_PRE_BUILD)?), env);
             assert_eq!(
                 config.pre_build(&target())?,
-                Some(vec![s!("dpkg --add-architecture arm64")])
+                Some(PreBuild::Single {
+                    line: s!("dpkg --add-architecture arm64"),
+                    env: true
+                })
             );
 
             Ok(())

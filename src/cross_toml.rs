@@ -1,5 +1,6 @@
 #![doc = include_str!("../docs/cross_toml.md")]
 
+use crate::docker::custom::PreBuild;
 use crate::shell::MessageInfo;
 use crate::{config, errors::*};
 use crate::{Target, TargetList};
@@ -24,7 +25,8 @@ pub struct CrossBuildConfig {
     xargo: Option<bool>,
     build_std: Option<bool>,
     default_target: Option<String>,
-    pre_build: Option<Vec<String>>,
+    #[serde(default, deserialize_with = "opt_string_or_string_vec")]
+    pre_build: Option<PreBuild>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
     dockerfile: Option<CrossTargetDockerfileConfig>,
 }
@@ -38,7 +40,8 @@ pub struct CrossTargetConfig {
     image: Option<String>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
     dockerfile: Option<CrossTargetDockerfileConfig>,
-    pre_build: Option<Vec<String>>,
+    #[serde(default, deserialize_with = "opt_string_or_string_vec")]
+    pre_build: Option<PreBuild>,
     runner: Option<String>,
     #[serde(default)]
     env: CrossEnvConfig,
@@ -251,12 +254,8 @@ impl CrossToml {
     }
 
     /// Returns the `build.dockerfile.pre-build` and `target.{}.dockerfile.pre-build` part of `Cross.toml`
-    pub fn pre_build(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
-        self.get_ref(
-            target,
-            |b| b.pre_build.as_deref(),
-            |t| t.pre_build.as_deref(),
-        )
+    pub fn pre_build(&self, target: &Target) -> (Option<&PreBuild>, Option<&PreBuild>) {
+        self.get_ref(target, |b| b.pre_build.as_ref(), |t| t.pre_build.as_ref())
     }
 
     /// Returns the `target.{}.runner` part of `Cross.toml`
@@ -395,6 +394,64 @@ where
     deserializer.deserialize_any(StringOrStruct(PhantomData))
 }
 
+fn opt_string_or_string_vec<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: Deserialize<'de> + std::str::FromStr<Err = std::convert::Infallible> + From<Vec<String>>,
+    D: serde::Deserializer<'de>,
+{
+    use std::{fmt, marker::PhantomData};
+
+    use serde::de::{self, SeqAccess, Visitor};
+
+    struct StringOrStringVec<T>(PhantomData<fn() -> T>);
+
+    impl<'de, T> Visitor<'de> for StringOrStringVec<T>
+    where
+        T: Deserialize<'de> + FromStr<Err = std::convert::Infallible> + From<Vec<String>>,
+    {
+        type Value = Option<T>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("string or seq")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(FromStr::from_str(value).ok())
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut vec: Vec<String> = vec![];
+
+            while let Some(inner) = seq.next_element::<String>()? {
+                vec.push(inner);
+            }
+            Ok(Some(vec.into()))
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_any(StringOrStringVec(PhantomData))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -438,7 +495,7 @@ mod tests {
                 xargo: Some(true),
                 build_std: None,
                 default_target: None,
-                pre_build: Some(vec![s!("echo 'Hello World!'")]),
+                pre_build: Some(PreBuild::Lines(vec![s!("echo 'Hello World!'")])),
                 dockerfile: None,
             },
         };
@@ -477,7 +534,7 @@ mod tests {
                 image: Some(s!("test-image")),
                 runner: None,
                 dockerfile: None,
-                pre_build: Some(vec![]),
+                pre_build: Some(PreBuild::Lines(vec![])),
             },
         );
 
@@ -520,7 +577,7 @@ mod tests {
                     context: None,
                     build_args: None,
                 }),
-                pre_build: Some(vec![s!("echo 'Hello'")]),
+                pre_build: Some(PreBuild::Lines(vec![s!("echo 'Hello'")])),
                 runner: None,
                 env: CrossEnvConfig {
                     passthrough: None,
@@ -539,7 +596,7 @@ mod tests {
                 xargo: Some(true),
                 build_std: None,
                 default_target: None,
-                pre_build: Some(vec![]),
+                pre_build: Some(PreBuild::Lines(vec![])),
                 dockerfile: None,
             },
         };
@@ -769,6 +826,24 @@ mod tests {
         assert_eq!(target3.env.passthrough, Some(vec![s!("VAR3")]));
         assert_eq!(target3.env.volumes, Some(vec![s!("VOL3_ARG")]));
 
+        Ok(())
+    }
+
+    #[test]
+    fn pre_build_script() -> Result<()> {
+        let toml_str = r#"
+            [target.aarch64-unknown-linux-gnu]
+            pre-build = "./my-script.sh"
+
+            [build]
+            pre-build = ["echo Hello World"]
+        "#;
+        let (toml, unused) = CrossToml::parse_from_cross(toml_str, &mut m!())?;
+        assert!(unused.is_empty());
+        assert!(matches!(
+            toml.pre_build(&Target::new_built_in("aarch64-unknown-linux-gnu")),
+            (Some(&PreBuild::Lines(_)), Some(&PreBuild::Single { .. }))
+        ));
         Ok(())
     }
 }
