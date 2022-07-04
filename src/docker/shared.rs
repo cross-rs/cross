@@ -59,8 +59,10 @@ impl Directories {
 
         // create the directories we are going to mount before we mount them,
         // otherwise `docker` will create them but they will be owned by `root`
-        fs::create_dir(&cargo).ok();
-        fs::create_dir(&xargo).ok();
+        // cargo builds all intermediate directories, but fails
+        // if it has other issues (such as permission errors).
+        fs::create_dir_all(&cargo)?;
+        fs::create_dir_all(&xargo)?;
         create_target_dir(target)?;
 
         let cargo = mount_finder.find_mount_path(cargo);
