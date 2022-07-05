@@ -774,9 +774,9 @@ pub(crate) fn run(
     args: &[String],
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
-    let engine = options.engine();
-    let target = options.target();
-    let dirs = &paths.directories();
+    let engine = &options.engine;
+    let target = &options.target;
+    let dirs = &paths.directories;
 
     let mount_prefix = MOUNT_PREFIX;
 
@@ -801,7 +801,7 @@ pub(crate) fn run(
     // 1. get our unique identifiers and cleanup from a previous run.
     // this can happen if we didn't gracefully exit before
     let toolchain_id = unique_toolchain_identifier(&dirs.sysroot)?;
-    let container = unique_container_identifier(target, paths.metadata(), dirs)?;
+    let container = unique_container_identifier(target, &paths.metadata, dirs)?;
     let volume = VolumeId::create(engine, &toolchain_id, &container, msg_info)?;
     let state = container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
@@ -830,7 +830,7 @@ pub(crate) fn run(
     docker_userns(&mut docker);
     docker.args(&["--name", &container]);
     docker.args(&["-v", &format!("{}:{mount_prefix}", volume.as_ref())]);
-    docker_envvars(&mut docker, options.config(), target, msg_info)?;
+    docker_envvars(&mut docker, &options.config, target, msg_info)?;
 
     let mut volumes = vec![];
     let mount_volumes = docker_mount(
@@ -842,7 +842,7 @@ pub(crate) fn run(
     )
     .wrap_err("could not determine mount points")?;
 
-    docker_seccomp(&mut docker, engine.kind, target, paths.metadata())
+    docker_seccomp(&mut docker, engine.kind, target, &paths.metadata)
         .wrap_err("when copying seccomp profile")?;
 
     // Prevent `bin` from being mounted inside the Docker container.
@@ -861,7 +861,7 @@ pub(crate) fn run(
     }
 
     docker
-        .arg(&image_name(options.config(), target)?)
+        .arg(&image_name(&options.config, target)?)
         // ensure the process never exits until we stop it
         .args(&["sh", "-c", "sleep infinity"])
         .run_and_get_status(msg_info, true)?;
@@ -1015,7 +1015,7 @@ pub(crate) fn run(
         final_args.push("--target-dir".to_string());
         final_args.push(target_dir_string);
     }
-    let mut cmd = cargo_safe_command(options.uses_xargo());
+    let mut cmd = cargo_safe_command(options.uses_xargo);
     cmd.args(final_args);
 
     // 5. create symlinks for copied data

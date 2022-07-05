@@ -30,10 +30,10 @@ pub(crate) const SECCOMP: &str = include_str!("seccomp.json");
 
 #[derive(Debug)]
 pub struct DockerOptions {
-    engine: Engine,
-    target: Target,
-    config: Config,
-    uses_xargo: bool,
+    pub engine: Engine,
+    pub target: Target,
+    pub config: Config,
+    pub uses_xargo: bool,
 }
 
 impl DockerOptions {
@@ -54,30 +54,14 @@ impl DockerOptions {
         self.engine.is_remote
     }
 
-    pub fn uses_xargo(&self) -> bool {
-        self.uses_xargo
-    }
-
-    pub fn engine(&self) -> &Engine {
-        &self.engine
-    }
-
-    pub fn config(&self) -> &Config {
-        &self.config
-    }
-
-    pub fn target(&self) -> &Target {
-        &self.target
-    }
-
     pub fn needs_custom_image(&self) -> bool {
-        self.config()
-            .dockerfile(self.target())
+        self.config
+            .dockerfile(&self.target)
             .unwrap_or_default()
             .is_some()
             || !self
-                .config()
-                .pre_build(self.target())
+                .config
+                .pre_build(&self.target)
                 .unwrap_or_default()
                 .unwrap_or_default()
                 .is_empty()
@@ -88,11 +72,11 @@ impl DockerOptions {
         paths: &DockerPaths,
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
-        let mut image = image_name(self.config(), self.target())?;
+        let mut image = image_name(&self.config, &self.target)?;
 
-        if let Some(path) = self.config().dockerfile(self.target())? {
-            let context = self.config().dockerfile_context(self.target())?;
-            let name = self.config().image(self.target())?;
+        if let Some(path) = self.config.dockerfile(&self.target)? {
+            let context = self.config.dockerfile_context(&self.target)?;
+            let name = self.config.image(&self.target)?;
 
             let build = Dockerfile::File {
                 path: &path,
@@ -104,14 +88,14 @@ impl DockerOptions {
                 .build(
                     self,
                     paths,
-                    self.config()
-                        .dockerfile_build_args(self.target())?
+                    self.config
+                        .dockerfile_build_args(&self.target)?
                         .unwrap_or_default(),
                     msg_info,
                 )
                 .wrap_err("when building dockerfile")?;
         }
-        let pre_build = self.config().pre_build(self.target())?;
+        let pre_build = self.config.pre_build(&self.target)?;
 
         if let Some(pre_build) = pre_build {
             if !pre_build.is_empty() {
@@ -133,22 +117,22 @@ impl DockerOptions {
                     )
                     .wrap_err("when pre-building")
                     .with_note(|| format!("CROSS_CMD={}", pre_build.join("\n")))?;
-                image = custom.image_name(self.target(), paths.metadata())?;
+                image = custom.image_name(&self.target, &paths.metadata)?;
             }
         }
         Ok(image)
     }
 
     pub(crate) fn image_name(&self) -> Result<String> {
-        if let Some(image) = self.config().image(self.target())? {
+        if let Some(image) = self.config.image(&self.target)? {
             return Ok(image);
         }
 
-        if !DOCKER_IMAGES.contains(&self.target().triple()) {
+        if !DOCKER_IMAGES.contains(&self.target.triple()) {
             eyre::bail!(
                 "`cross` does not provide a Docker image for target {target}, \
                    specify a custom image in `Cross.toml`.",
-                target = self.target()
+                target = self.target
             );
         }
 
@@ -160,18 +144,18 @@ impl DockerOptions {
 
         Ok(format!(
             "{CROSS_IMAGE}/{target}:{version}",
-            target = self.target()
+            target = self.target
         ))
     }
 }
 
 #[derive(Debug)]
 pub struct DockerPaths {
-    mount_finder: MountFinder,
-    metadata: CargoMetadata,
-    cwd: PathBuf,
-    sysroot: PathBuf,
-    directories: Directories,
+    pub mount_finder: MountFinder,
+    pub metadata: CargoMetadata,
+    pub cwd: PathBuf,
+    pub sysroot: PathBuf,
+    pub directories: Directories,
 }
 
 impl DockerPaths {
@@ -192,36 +176,16 @@ impl DockerPaths {
         })
     }
 
-    pub fn mount_finder(&self) -> &MountFinder {
-        &self.mount_finder
-    }
-
-    pub fn metadata(&self) -> &CargoMetadata {
-        &self.metadata
-    }
-
-    pub fn cwd(&self) -> &Path {
-        &self.cwd
-    }
-
-    pub fn sysroot(&self) -> &Path {
-        &self.sysroot
-    }
-
-    pub fn directories(&self) -> &Directories {
-        &self.directories
-    }
-
     pub fn workspace_root(&self) -> &Path {
-        &self.metadata().workspace_root
+        &self.metadata.workspace_root
     }
 
     pub fn workspace_dependencies(&self) -> impl Iterator<Item = &Path> {
-        self.metadata().path_dependencies()
+        self.metadata.path_dependencies()
     }
 
     pub fn workspace_from_cwd(&self) -> Result<&Path> {
-        self.cwd()
+        self.cwd
             .strip_prefix(self.workspace_root())
             .map_err(Into::into)
     }
@@ -231,11 +195,11 @@ impl DockerPaths {
     }
 
     pub fn mount_cwd(&self) -> &str {
-        &self.directories().mount_cwd
+        &self.directories.mount_cwd
     }
 
     pub fn host_root(&self) -> &Path {
-        &self.directories().host_root
+        &self.directories.host_root
     }
 }
 
@@ -544,7 +508,7 @@ pub(crate) fn docker_mount(
 
     for ref var in options
         .config
-        .env_volumes(options.target())?
+        .env_volumes(&options.target)?
         .unwrap_or_default()
     {
         let (var, value) = validate_env_var(var)?;
@@ -555,7 +519,7 @@ pub(crate) fn docker_mount(
 
         if let Ok(val) = value {
             let canonical_val = file::canonicalize(&val)?;
-            let host_path = paths.mount_finder().find_path(&canonical_val, true)?;
+            let host_path = paths.mount_finder.find_path(&canonical_val, true)?;
             let mount_path = mount_cb(docker, host_path.as_ref())?;
             docker.args(&["-e", &format!("{}={}", host_path, mount_path)]);
             store_cb((val, mount_path));
@@ -565,7 +529,7 @@ pub(crate) fn docker_mount(
 
     for path in paths.workspace_dependencies() {
         let canonical_path = file::canonicalize(path)?;
-        let host_path = paths.mount_finder().find_path(&canonical_path, true)?;
+        let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
         let mount_path = mount_cb(docker, host_path.as_ref())?;
         store_cb((path.to_utf8()?.to_string(), mount_path));
         mount_volumes = true;

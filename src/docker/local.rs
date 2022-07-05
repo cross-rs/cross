@@ -14,14 +14,15 @@ pub(crate) fn run(
     args: &[String],
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
-    let dirs = paths.directories();
+    let engine = &options.engine;
+    let dirs = &paths.directories;
 
-    let mut cmd = cargo_safe_command(options.uses_xargo());
+    let mut cmd = cargo_safe_command(options.uses_xargo);
     cmd.args(args);
 
-    let mut docker = subcommand(options.engine(), "run");
+    let mut docker = subcommand(engine, "run");
     docker_userns(&mut docker);
-    docker_envvars(&mut docker, options.config(), options.target(), msg_info)?;
+    docker_envvars(&mut docker, &options.config, &options.target, msg_info)?;
 
     let mount_volumes = docker_mount(
         &mut docker,
@@ -33,14 +34,9 @@ pub(crate) fn run(
 
     docker.arg("--rm");
 
-    docker_seccomp(
-        &mut docker,
-        options.engine().kind,
-        options.target(),
-        paths.metadata(),
-    )
-    .wrap_err("when copying seccomp profile")?;
-    docker_user_id(&mut docker, options.engine().kind);
+    docker_seccomp(&mut docker, engine.kind, &options.target, &paths.metadata)
+        .wrap_err("when copying seccomp profile")?;
+    docker_user_id(&mut docker, engine.kind);
 
     docker
         .args(&["-v", &format!("{}:/xargo:Z", dirs.xargo.to_utf8()?)])

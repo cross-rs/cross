@@ -30,7 +30,7 @@ impl<'a> Dockerfile<'a> {
         build_args: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
-        let mut docker_build = docker::subcommand(options.engine(), "build");
+        let mut docker_build = docker::subcommand(&options.engine, "build");
         docker_build.current_dir(paths.host_root());
         docker_build.env("DOCKER_SCAN_SUGGEST", "false");
         docker_build.args([
@@ -38,7 +38,7 @@ impl<'a> Dockerfile<'a> {
             &format!(
                 "{}.for-cross-target={}",
                 crate::CROSS_LABEL_DOMAIN,
-                options.target(),
+                options.target,
             ),
         ]);
 
@@ -51,14 +51,14 @@ impl<'a> Dockerfile<'a> {
             ),
         ]);
 
-        let image_name = self.image_name(options.target(), paths.metadata())?;
+        let image_name = self.image_name(&options.target, &paths.metadata)?;
         docker_build.args(["--tag", &image_name]);
 
         for (key, arg) in build_args.into_iter() {
             docker_build.args(["--build-arg", &format!("{}={}", key.as_ref(), arg.as_ref())]);
         }
 
-        if let Some(arch) = options.target().deb_arch() {
+        if let Some(arch) = options.target.deb_arch() {
             docker_build.args(["--build-arg", &format!("CROSS_DEB_ARCH={arch}")]);
         }
 
@@ -66,10 +66,10 @@ impl<'a> Dockerfile<'a> {
             Dockerfile::File { path, .. } => PathBuf::from(path),
             Dockerfile::Custom { content } => {
                 let path = paths
-                    .metadata()
+                    .metadata
                     .target_directory
-                    .join(options.target().to_string())
-                    .join(format!("Dockerfile.{}-custom", options.target(),));
+                    .join(options.target.to_string())
+                    .join(format!("Dockerfile.{}-custom", &options.target));
                 {
                     let mut file = file::write_file(&path, true)?;
                     file.write_all(content.as_bytes())?;
@@ -79,7 +79,7 @@ impl<'a> Dockerfile<'a> {
         };
 
         if matches!(self, Dockerfile::File { .. }) {
-            if let Ok(cross_base_image) = self::image_name(options.config(), options.target()) {
+            if let Ok(cross_base_image) = self::image_name(&options.config, &options.target) {
                 docker_build.args([
                     "--build-arg",
                     &format!("CROSS_BASE_IMAGE={cross_base_image}"),
