@@ -200,17 +200,14 @@ CT_LINUX_VERSION=\"{linux_major}.{linux_minor}.{linux_patch}\""
 
 pub fn configure_crosstool(
     ConfigureCrosstool {
-        verbose,
-        quiet,
-        color,
         gcc_version,
         glibc_version,
         linux_version,
         mut targets,
         ..
     }: ConfigureCrosstool,
+    msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
     let gcc_version = gcc_version.as_deref().unwrap_or(DEFAULT_GCC_VERSION);
     let glibc_version = glibc_version.as_deref().unwrap_or(DEFAULT_GLIBC_VERSION);
     let linux_version = linux_version.as_deref().unwrap_or(DEFAULT_LINUX_VERSION);

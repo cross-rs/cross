@@ -120,7 +120,7 @@ pub fn cargo_command() -> Command {
 pub fn cargo_metadata_with_args(
     cd: Option<&Path>,
     args: Option<&Args>,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<Option<CargoMetadata>> {
     let mut command = cargo_command();
     if let Some(channel) = args.and_then(|x| x.channel.as_deref()) {
@@ -145,9 +145,9 @@ pub fn cargo_metadata_with_args(
     }
     let output = command.run_and_get_output(msg_info)?;
     if !output.status.success() {
-        shell::warn("unable to get metadata for package", msg_info)?;
+        msg_info.warn("unable to get metadata for package")?;
         let indented = shell::indent(&String::from_utf8(output.stderr)?, shell::default_ident());
-        shell::debug(indented, msg_info)?;
+        msg_info.debug(indented)?;
         return Ok(None);
     }
     let manifest: Option<CargoMetadata> = serde_json::from_slice(&output.stdout)?;
@@ -164,13 +164,16 @@ pub fn cargo_metadata_with_args(
 }
 
 /// Pass-through mode
-pub fn run(args: &[String], msg_info: MessageInfo) -> Result<ExitStatus> {
+pub fn run(args: &[String], msg_info: &mut MessageInfo) -> Result<ExitStatus> {
     cargo_command()
         .args(args)
         .run_and_get_status(msg_info, false)
 }
 
 /// run cargo and get the output, does not check the exit status
-pub fn run_and_get_output(args: &[String], msg_info: MessageInfo) -> Result<std::process::Output> {
+pub fn run_and_get_output(
+    args: &[String],
+    msg_info: &mut MessageInfo,
+) -> Result<std::process::Output> {
     cargo_command().args(args).run_and_get_output(msg_info)
 }

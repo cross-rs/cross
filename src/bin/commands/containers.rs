@@ -1,7 +1,7 @@
 use std::io;
 
 use clap::{Args, Subcommand};
-use cross::shell::{self, MessageInfo, Stream};
+use cross::shell::{MessageInfo, Stream};
 use cross::{docker, CommandExt};
 
 #[derive(Args, Debug)]
@@ -149,6 +149,18 @@ pub enum Volumes {
     Remove(RemoveVolume),
 }
 
+macro_rules! volumes_get_field {
+    ($self:ident, $field:ident $(.$cb:ident)?) => {{
+        match $self {
+            Volumes::List(l) => l.$field$(.$cb())?,
+            Volumes::RemoveAll(l) => l.$field$(.$cb())?,
+            Volumes::Prune(l) => l.$field$(.$cb())?,
+            Volumes::Create(l) => l.$field$(.$cb())?,
+            Volumes::Remove(l) => l.$field$(.$cb())?,
+        }
+    }};
+}
+
 impl Volumes {
     pub fn run(self, engine: docker::Engine, toolchain: Option<&str>) -> cross::Result<()> {
         match self {
@@ -161,43 +173,30 @@ impl Volumes {
     }
 
     pub fn engine(&self) -> Option<&str> {
+        volumes_get_field!(self, engine.as_deref)
+    }
+
+    // FIXME: remove this in v0.3.0.
+    pub fn docker_in_docker(&self) -> bool {
         match self {
-            Volumes::List(l) => l.engine.as_deref(),
-            Volumes::RemoveAll(l) => l.engine.as_deref(),
-            Volumes::Prune(l) => l.engine.as_deref(),
-            Volumes::Create(l) => l.engine.as_deref(),
-            Volumes::Remove(l) => l.engine.as_deref(),
+            Volumes::List(_) => false,
+            Volumes::RemoveAll(_) => false,
+            Volumes::Prune(_) => false,
+            Volumes::Create(l) => l.docker_in_docker,
+            Volumes::Remove(l) => l.docker_in_docker,
         }
     }
 
     pub fn verbose(&self) -> bool {
-        match self {
-            Volumes::List(l) => l.verbose,
-            Volumes::RemoveAll(l) => l.verbose,
-            Volumes::Prune(l) => l.verbose,
-            Volumes::Create(l) => l.verbose,
-            Volumes::Remove(l) => l.verbose,
-        }
+        volumes_get_field!(self, verbose)
     }
 
     pub fn quiet(&self) -> bool {
-        match self {
-            Volumes::List(l) => l.quiet,
-            Volumes::RemoveAll(l) => l.quiet,
-            Volumes::Prune(l) => l.quiet,
-            Volumes::Create(l) => l.quiet,
-            Volumes::Remove(l) => l.quiet,
-        }
+        volumes_get_field!(self, quiet)
     }
 
     pub fn color(&self) -> Option<&str> {
-        match self {
-            Volumes::List(l) => l.color.as_deref(),
-            Volumes::RemoveAll(l) => l.color.as_deref(),
-            Volumes::Prune(l) => l.color.as_deref(),
-            Volumes::Create(l) => l.color.as_deref(),
-            Volumes::Remove(l) => l.color.as_deref(),
-        }
+        volumes_get_field!(self, color.as_deref)
     }
 }
 
@@ -259,6 +258,15 @@ pub enum Containers {
     RemoveAll(RemoveAllContainers),
 }
 
+macro_rules! containers_get_field {
+    ($self:ident, $field:ident $(.$cb:ident)?) => {{
+        match $self {
+            Containers::List(l) => l.$field$(.$cb())?,
+            Containers::RemoveAll(l) => l.$field$(.$cb())?,
+        }
+    }};
+}
+
 impl Containers {
     pub fn run(self, engine: docker::Engine) -> cross::Result<()> {
         match self {
@@ -268,35 +276,26 @@ impl Containers {
     }
 
     pub fn engine(&self) -> Option<&str> {
-        match self {
-            Containers::List(l) => l.engine.as_deref(),
-            Containers::RemoveAll(l) => l.engine.as_deref(),
-        }
+        containers_get_field!(self, engine.as_deref)
     }
 
     pub fn verbose(&self) -> bool {
-        match self {
-            Containers::List(l) => l.verbose,
-            Containers::RemoveAll(l) => l.verbose,
-        }
+        containers_get_field!(self, verbose)
     }
 
     pub fn quiet(&self) -> bool {
-        match self {
-            Containers::List(l) => l.quiet,
-            Containers::RemoveAll(l) => l.quiet,
-        }
+        containers_get_field!(self, quiet)
     }
 
     pub fn color(&self) -> Option<&str> {
-        match self {
-            Containers::List(l) => l.color.as_deref(),
-            Containers::RemoveAll(l) => l.color.as_deref(),
-        }
+        containers_get_field!(self, color.as_deref)
     }
 }
 
-fn get_cross_volumes(engine: &docker::Engine, msg_info: MessageInfo) -> cross::Result<Vec<String>> {
+fn get_cross_volumes(
+    engine: &docker::Engine,
+    msg_info: &mut MessageInfo,
+) -> cross::Result<Vec<String>> {
     let stdout = docker::subcommand(engine, "volume")
         .arg("list")
         .args(&["--format", "{{.Name}}"])
@@ -319,9 +318,9 @@ pub fn list_volumes(
     }: ListVolumes,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
-    for line in get_cross_volumes(engine, msg_info)?.iter() {
-        shell::print(line, msg_info)?;
+    let mut msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    for line in get_cross_volumes(engine, &mut msg_info)?.iter() {
+        msg_info.print(line)?;
     }
 
     Ok(())
@@ -338,8 +337,8 @@ pub fn remove_all_volumes(
     }: RemoveAllVolumes,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
-    let volumes = get_cross_volumes(engine, msg_info)?;
+    let mut msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let volumes = get_cross_volumes(engine, &mut msg_info)?;
 
     let mut command = docker::subcommand(engine, "volume");
     command.arg("rm");
@@ -350,13 +349,10 @@ pub fn remove_all_volumes(
     if volumes.is_empty() {
         Ok(())
     } else if execute {
-        command.run(msg_info, false).map_err(Into::into)
+        command.run(&mut msg_info, false).map_err(Into::into)
     } else {
-        shell::note(
-            "this is a dry run. to remove the volumes, pass the `--execute` flag.",
-            msg_info,
-        )?;
-        command.print(msg_info)?;
+        msg_info.note("this is a dry run. to remove the volumes, pass the `--execute` flag.")?;
+        command.print(&mut msg_info)?;
         Ok(())
     }
 }
@@ -371,24 +367,20 @@ pub fn prune_volumes(
     }: PruneVolumes,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let mut msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
     let mut command = docker::subcommand(engine, "volume");
     command.args(&["prune", "--force"]);
     if execute {
-        command.run(msg_info, false).map_err(Into::into)
+        command.run(&mut msg_info, false).map_err(Into::into)
     } else {
-        shell::note(
-            "this is a dry run. to prune the volumes, pass the `--execute` flag.",
-            msg_info,
-        )?;
-        command.print(msg_info)?;
+        msg_info.note("this is a dry run. to prune the volumes, pass the `--execute` flag.")?;
+        command.print(&mut msg_info)?;
         Ok(())
     }
 }
 
 pub fn create_persistent_volume(
     CreateVolume {
-        docker_in_docker,
         copy_registry,
         verbose,
         quiet,
@@ -398,31 +390,31 @@ pub fn create_persistent_volume(
     engine: &docker::Engine,
     channel: Option<&str>,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let mut msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
     // we only need a triple that needs docker: the actual target doesn't matter.
     let triple = cross::Host::X86_64UnknownLinuxGnu.triple();
     let (target, metadata, dirs) =
-        docker::get_package_info(engine, triple, channel, docker_in_docker, msg_info)?;
+        docker::get_package_info(engine, triple, channel, &mut msg_info)?;
     let container = docker::remote::unique_container_identifier(&target, &metadata, &dirs)?;
     let volume = docker::remote::unique_toolchain_identifier(&dirs.sysroot)?;
 
-    if docker::remote::volume_exists(engine, &volume, msg_info)? {
+    if docker::remote::volume_exists(engine, &volume, &mut msg_info)? {
         eyre::bail!("Error: volume {volume} already exists.");
     }
 
     docker::subcommand(engine, "volume")
         .args(&["create", &volume])
-        .run_and_get_status(msg_info, false)?;
+        .run_and_get_status(&mut msg_info, false)?;
 
     // stop the container if it's already running
-    let state = docker::remote::container_state(engine, &container, msg_info)?;
+    let state = docker::remote::container_state(engine, &container, &mut msg_info)?;
     if !state.is_stopped() {
-        shell::warn("container {container} was running.", msg_info)?;
-        docker::remote::container_stop(engine, &container, msg_info)?;
+        msg_info.warn("container {container} was running.")?;
+        docker::remote::container_stop(engine, &container, &mut msg_info)?;
     }
     if state.exists() {
-        shell::warn("container {container} was exited.", msg_info)?;
-        docker::remote::container_rm(engine, &container, msg_info)?;
+        msg_info.warn("container {container} was exited.")?;
+        docker::remote::container_rm(engine, &container, &mut msg_info)?;
     }
 
     // create a dummy running container to copy data over
@@ -437,7 +429,7 @@ pub fn create_persistent_volume(
     docker.arg(docker::UBUNTU_BASE);
     // ensure the process never exits until we stop it
     docker.args(&["sh", "-c", "sleep infinity"]);
-    docker.run_and_get_status(msg_info, false)?;
+    docker.run_and_get_status(&mut msg_info, false)?;
 
     docker::remote::copy_volume_container_xargo(
         engine,
@@ -445,7 +437,7 @@ pub fn create_persistent_volume(
         &dirs.xargo,
         &target,
         mount_prefix.as_ref(),
-        msg_info,
+        &mut msg_info,
     )?;
     docker::remote::copy_volume_container_cargo(
         engine,
@@ -453,7 +445,7 @@ pub fn create_persistent_volume(
         &dirs.cargo,
         mount_prefix.as_ref(),
         copy_registry,
-        msg_info,
+        &mut msg_info,
     )?;
     docker::remote::copy_volume_container_rust(
         engine,
@@ -462,18 +454,17 @@ pub fn create_persistent_volume(
         &target,
         mount_prefix.as_ref(),
         true,
-        msg_info,
+        &mut msg_info,
     )?;
 
-    docker::remote::container_stop(engine, &container, msg_info)?;
-    docker::remote::container_rm(engine, &container, msg_info)?;
+    docker::remote::container_stop(engine, &container, &mut msg_info)?;
+    docker::remote::container_rm(engine, &container, &mut msg_info)?;
 
     Ok(())
 }
 
 pub fn remove_persistent_volume(
     RemoveVolume {
-        docker_in_docker,
         verbose,
         quiet,
         color,
@@ -483,24 +474,23 @@ pub fn remove_persistent_volume(
     channel: Option<&str>,
 ) -> cross::Result<()> {
     // we only need a triple that needs docker: the actual target doesn't matter.
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let mut msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
     let triple = cross::Host::X86_64UnknownLinuxGnu.triple();
-    let (_, _, dirs) =
-        docker::get_package_info(engine, triple, channel, docker_in_docker, msg_info)?;
+    let (_, _, dirs) = docker::get_package_info(engine, triple, channel, &mut msg_info)?;
     let volume = docker::remote::unique_toolchain_identifier(&dirs.sysroot)?;
 
-    if !docker::remote::volume_exists(engine, &volume, msg_info)? {
+    if !docker::remote::volume_exists(engine, &volume, &mut msg_info)? {
         eyre::bail!("Error: volume {volume} does not exist.");
     }
 
-    docker::remote::volume_rm(engine, &volume, msg_info)?;
+    docker::remote::volume_rm(engine, &volume, &mut msg_info)?;
 
     Ok(())
 }
 
 fn get_cross_containers(
     engine: &docker::Engine,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> cross::Result<Vec<String>> {
     let stdout = docker::subcommand(engine, "ps")
         .arg("-a")
@@ -524,9 +514,9 @@ pub fn list_containers(
     }: ListContainers,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
-    for line in get_cross_containers(engine, msg_info)?.iter() {
-        shell::print(line, msg_info)?;
+    let mut msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    for line in get_cross_containers(engine, &mut msg_info)?.iter() {
+        msg_info.print(line)?;
     }
 
     Ok(())
@@ -543,8 +533,8 @@ pub fn remove_all_containers(
     }: RemoveAllContainers,
     engine: &docker::Engine,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
-    let containers = get_cross_containers(engine, msg_info)?;
+    let mut msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+    let containers = get_cross_containers(engine, &mut msg_info)?;
     let mut running = vec![];
     let mut stopped = vec![];
     for container in containers.iter() {
@@ -577,15 +567,12 @@ pub fn remove_all_containers(
     }
     if execute {
         for mut command in commands {
-            command.run(msg_info, false)?;
+            command.run(&mut msg_info, false)?;
         }
     } else {
-        shell::note(
-            "this is a dry run. to remove the containers, pass the `--execute` flag.",
-            msg_info,
-        )?;
+        msg_info.note("this is a dry run. to remove the containers, pass the `--execute` flag.")?;
         for command in commands {
-            command.print(msg_info)?;
+            command.print(&mut msg_info)?;
         }
     }
 

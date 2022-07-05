@@ -1,10 +1,9 @@
 use std::{env, path::PathBuf};
 
 use crate::cargo::Subcommand;
-use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::rustc::TargetList;
-use crate::shell::{self, MessageInfo};
+use crate::shell::MessageInfo;
 use crate::Target;
 
 #[derive(Debug)]
@@ -15,11 +14,11 @@ pub struct Args {
     pub target: Option<Target>,
     pub features: Vec<String>,
     pub target_dir: Option<PathBuf>,
-    pub docker_in_docker: bool,
-    pub enable_doctests: bool,
     pub manifest_path: Option<PathBuf>,
     pub version: bool,
-    pub msg_info: MessageInfo,
+    pub verbose: bool,
+    pub quiet: bool,
+    pub color: Option<String>,
 }
 
 // Fix for issue #581. target_dir must be absolute.
@@ -52,21 +51,84 @@ pub fn group_subcommands(stdout: &str) -> (Vec<&str>, Vec<&str>) {
     (cross, host)
 }
 
-pub fn fmt_subcommands(stdout: &str, msg_info: MessageInfo) -> Result<()> {
+pub fn fmt_subcommands(stdout: &str, msg_info: &mut MessageInfo) -> Result<()> {
     let (cross, host) = group_subcommands(stdout);
     if !cross.is_empty() {
-        shell::print("Cross Commands:", msg_info)?;
+        msg_info.print("Cross Commands:")?;
         for line in cross.iter() {
-            shell::print(line, msg_info)?;
+            msg_info.print(line)?;
         }
     }
     if !host.is_empty() {
-        shell::print("Host Commands:", msg_info)?;
+        msg_info.print("Host Commands:")?;
         for line in cross.iter() {
-            shell::print(line, msg_info)?;
+            msg_info.print(line)?;
         }
     }
     Ok(())
+}
+
+fn is_verbose(arg: &str) -> bool {
+    match arg {
+        "--verbose" => true,
+        // cargo can handle any number of "v"s
+        a => a
+            .get(1..)
+            .map(|a| a.chars().all(|x| x == 'v'))
+            .unwrap_or_default(),
+    }
+}
+
+enum ArgKind {
+    Next,
+    Equal,
+}
+
+fn is_value_arg(arg: &str, field: &str) -> Option<ArgKind> {
+    if arg == field {
+        Some(ArgKind::Next)
+    } else if arg
+        .strip_prefix(field)
+        .map(|a| a.starts_with('='))
+        .unwrap_or_default()
+    {
+        Some(ArgKind::Equal)
+    } else {
+        None
+    }
+}
+
+fn parse_next_arg<T>(
+    arg: String,
+    out: &mut Vec<String>,
+    parse: impl Fn(&str) -> T,
+    iter: &mut impl Iterator<Item = String>,
+) -> Option<T> {
+    out.push(arg);
+    match iter.next() {
+        Some(next) => {
+            let result = parse(&next);
+            out.push(next);
+            Some(result)
+        }
+        None => None,
+    }
+}
+
+fn parse_equal_arg<T>(arg: String, out: &mut Vec<String>, parse: impl Fn(&str) -> T) -> T {
+    let result = parse(arg.split_once('=').unwrap().1);
+    out.push(arg);
+
+    result
+}
+
+fn parse_manifest_path(path: &str) -> Option<PathBuf> {
+    let p = PathBuf::from(path);
+    env::current_dir().ok().map(|cwd| cwd.join(p))
+}
+
+fn parse_target_dir(path: &str) -> Result<PathBuf> {
+    absolute_path(PathBuf::from(path))
 }
 
 pub fn parse(target_list: &TargetList) -> Result<Args> {
@@ -81,7 +143,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut quiet = false;
     let mut verbose = false;
     let mut color = None;
-    let default_msg_info = MessageInfo::default();
+    let mut default_msg_info = MessageInfo::default();
 
     {
         let mut args = env::args().skip(1);
@@ -89,7 +151,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
             if arg.is_empty() {
                 continue;
             }
-            if matches!(arg.as_str(), "--verbose" | "-v" | "-vv") {
+            if is_verbose(arg.as_str()) {
                 verbose = true;
                 all.push(arg);
             } else if matches!(arg.as_str(), "--version" | "-V") {
@@ -97,65 +159,59 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
             } else if matches!(arg.as_str(), "--quiet" | "-q") {
                 quiet = true;
                 all.push(arg);
-            } else if arg == "--color" {
-                all.push(arg);
-                match args.next() {
-                    Some(arg) => {
-                        color = {
-                            all.push(arg.clone());
-                            Some(arg)
+            } else if let Some(kind) = is_value_arg(&arg, "--color") {
+                color = match kind {
+                    ArgKind::Next => {
+                        match parse_next_arg(arg, &mut all, ToOwned::to_owned, &mut args) {
+                            Some(c) => Some(c),
+                            None => default_msg_info.fatal_usage("--color <WHEN>", 1),
                         }
                     }
-                    None => {
-                        shell::fatal_usage("--color <WHEN>", default_msg_info, 1);
+                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, ToOwned::to_owned)),
+                };
+            } else if let Some(kind) = is_value_arg(&arg, "--manifest-path") {
+                manifest_path = match kind {
+                    ArgKind::Next => {
+                        parse_next_arg(arg, &mut all, parse_manifest_path, &mut args).flatten()
                     }
-                }
-            } else if arg == "--manifest-path" {
-                all.push(arg);
-                if let Some(m) = args.next() {
-                    let p = PathBuf::from(&m);
-                    all.push(m);
-                    manifest_path = env::current_dir().ok().map(|cwd| cwd.join(p));
-                }
-            } else if arg.starts_with("--manifest-path=") {
-                manifest_path = arg
-                    .split_once('=')
-                    .map(|x| x.1)
-                    .map(PathBuf::from)
-                    .and_then(|p| env::current_dir().ok().map(|cwd| cwd.join(p)));
-                all.push(arg);
+                    ArgKind::Equal => parse_equal_arg(arg, &mut all, parse_manifest_path),
+                };
             } else if let ("+", ch) = arg.split_at(1) {
                 channel = Some(ch.to_string());
-            } else if arg == "--target" {
-                all.push(arg);
-                if let Some(t) = args.next() {
-                    target = Some(Target::from(&t, target_list));
-                    all.push(t);
+            } else if let Some(kind) = is_value_arg(&arg, "--target") {
+                target = match kind {
+                    ArgKind::Next => {
+                        parse_next_arg(arg, &mut all, |t| Target::from(t, target_list), &mut args)
+                    }
+                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, |t| {
+                        Target::from(t, target_list)
+                    })),
+                };
+            } else if let Some(kind) = is_value_arg(&arg, "--features") {
+                match kind {
+                    ArgKind::Next => {
+                        let next = parse_next_arg(arg, &mut all, ToOwned::to_owned, &mut args);
+                        if let Some(feature) = next {
+                            features.push(feature);
+                        }
+                    }
+                    ArgKind::Equal => {
+                        features.push(parse_equal_arg(arg, &mut all, ToOwned::to_owned))
+                    }
                 }
-            } else if arg.starts_with("--target=") {
-                target = arg
-                    .split_once('=')
-                    .map(|(_, t)| Target::from(t, target_list));
-                all.push(arg);
-            } else if arg == "--features" {
-                all.push(arg);
-                if let Some(t) = args.next() {
-                    features.push(t.clone());
-                    all.push(t);
-                }
-            } else if arg.starts_with("--features=") {
-                features.extend(arg.split_once('=').map(|(_, t)| t.to_owned()));
-                all.push(arg);
-            } else if arg == "--target-dir" {
-                all.push(arg);
-                if let Some(td) = args.next() {
-                    target_dir = Some(absolute_path(PathBuf::from(&td))?);
-                    all.push("/target".to_string());
-                }
-            } else if arg.starts_with("--target-dir=") {
-                if let Some((_, td)) = arg.split_once('=') {
-                    target_dir = Some(absolute_path(PathBuf::from(&td))?);
-                    all.push("--target-dir=/target".into());
+            } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
+                match kind {
+                    ArgKind::Next => {
+                        all.push(arg);
+                        if let Some(td) = args.next() {
+                            target_dir = Some(parse_target_dir(&td)?);
+                            all.push("/target".to_string());
+                        }
+                    }
+                    ArgKind::Equal => {
+                        target_dir = Some(parse_target_dir(arg.split_once('=').unwrap().1)?);
+                        all.push("--target-dir=/target".into());
+                    }
                 }
             } else {
                 if (!arg.starts_with('-') || arg == "--list") && sc.is_none() {
@@ -167,26 +223,6 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         }
     }
 
-    let msg_info = shell::MessageInfo::create(verbose, quiet, color.as_deref())?;
-    let docker_in_docker = if let Ok(value) = env::var("CROSS_CONTAINER_IN_CONTAINER") {
-        if env::var("CROSS_DOCKER_IN_DOCKER").is_ok() {
-            shell::warn(
-                "using both `CROSS_CONTAINER_IN_CONTAINER` and `CROSS_DOCKER_IN_DOCKER`.",
-                msg_info,
-            )?;
-        }
-        bool_from_envvar(&value)
-    } else if let Ok(value) = env::var("CROSS_DOCKER_IN_DOCKER") {
-        // FIXME: remove this when we deprecate CROSS_DOCKER_IN_DOCKER.
-        bool_from_envvar(&value)
-    } else {
-        false
-    };
-
-    let enable_doctests = env::var("CROSS_UNSTABLE_ENABLE_DOCTESTS")
-        .map(|s| bool_from_envvar(&s))
-        .unwrap_or_default();
-
     Ok(Args {
         all,
         subcommand: sc,
@@ -194,10 +230,10 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         target,
         features,
         target_dir,
-        docker_in_docker,
-        enable_doctests,
         manifest_path,
         version,
-        msg_info,
+        verbose,
+        quiet,
+        color,
     })
 }

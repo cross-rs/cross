@@ -1,9 +1,9 @@
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use crate::docker::Engine;
+use crate::docker::{DockerOptions, DockerPaths};
 use crate::shell::MessageInfo;
-use crate::{config::Config, docker, CargoMetadata, Target};
+use crate::{docker, CargoMetadata, Target};
 use crate::{errors::*, file, CommandExt, ToUtf8};
 
 use super::{image_name, parse_docker_opts, path_hash};
@@ -23,25 +23,22 @@ pub enum Dockerfile<'a> {
 }
 
 impl<'a> Dockerfile<'a> {
-    #[allow(clippy::too_many_arguments)]
     pub fn build(
         &self,
-        config: &Config,
-        metadata: &CargoMetadata,
-        engine: &Engine,
-        host_root: &Path,
+        options: &DockerOptions,
+        paths: &DockerPaths,
         build_args: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
-        target_triple: &Target,
-        msg_info: MessageInfo,
+        msg_info: &mut MessageInfo,
     ) -> Result<String> {
-        let mut docker_build = docker::subcommand(engine, "build");
-        docker_build.current_dir(host_root);
+        let mut docker_build = docker::subcommand(options.engine(), "build");
+        docker_build.current_dir(paths.host_root());
         docker_build.env("DOCKER_SCAN_SUGGEST", "false");
         docker_build.args([
             "--label",
             &format!(
-                "{}.for-cross-target={target_triple}",
-                crate::CROSS_LABEL_DOMAIN
+                "{}.for-cross-target={}",
+                crate::CROSS_LABEL_DOMAIN,
+                options.target(),
             ),
         ]);
 
@@ -50,28 +47,29 @@ impl<'a> Dockerfile<'a> {
             &format!(
                 "{}.workspace_root={}",
                 crate::CROSS_LABEL_DOMAIN,
-                metadata.workspace_root.to_utf8()?
+                paths.workspace_root().to_utf8()?
             ),
         ]);
 
-        let image_name = self.image_name(target_triple, metadata)?;
+        let image_name = self.image_name(options.target(), paths.metadata())?;
         docker_build.args(["--tag", &image_name]);
 
         for (key, arg) in build_args.into_iter() {
             docker_build.args(["--build-arg", &format!("{}={}", key.as_ref(), arg.as_ref())]);
         }
 
-        if let Some(arch) = target_triple.deb_arch() {
+        if let Some(arch) = options.target().deb_arch() {
             docker_build.args(["--build-arg", &format!("CROSS_DEB_ARCH={arch}")]);
         }
 
         let path = match self {
             Dockerfile::File { path, .. } => PathBuf::from(path),
             Dockerfile::Custom { content } => {
-                let path = metadata
+                let path = paths
+                    .metadata()
                     .target_directory
-                    .join(target_triple.to_string())
-                    .join(format!("Dockerfile.{}-custom", target_triple,));
+                    .join(options.target().to_string())
+                    .join(format!("Dockerfile.{}-custom", options.target(),));
                 {
                     let mut file = file::write_file(&path, true)?;
                     file.write_all(content.as_bytes())?;
@@ -81,7 +79,7 @@ impl<'a> Dockerfile<'a> {
         };
 
         if matches!(self, Dockerfile::File { .. }) {
-            if let Ok(cross_base_image) = self::image_name(config, target_triple) {
+            if let Ok(cross_base_image) = self::image_name(options.config(), options.target()) {
                 docker_build.args([
                     "--build-arg",
                     &format!("CROSS_BASE_IMAGE={cross_base_image}"),

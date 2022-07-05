@@ -9,35 +9,40 @@ use eyre::Context;
 use super::engine::Engine;
 use super::shared::*;
 use crate::cargo::CargoMetadata;
-use crate::config::{bool_from_envvar, Config};
+use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, VersionMetaExt};
 use crate::rustup;
-use crate::shell::{self, MessageInfo, Stream};
+use crate::shell::{ColorChoice, MessageInfo, Stream, Verbosity};
 use crate::temp;
 use crate::{Host, Target};
 
 // the mount directory for the data volume.
 pub const MOUNT_PREFIX: &str = "/cross";
 
-struct DeleteVolume<'a>(&'a Engine, &'a VolumeId, MessageInfo);
+// it's unlikely that we ever need to erase a line in the destructors,
+// and it's better than keep global state everywhere, or keeping a ref
+// cell which could have already deleted a line
+struct DeleteVolume<'a>(&'a Engine, &'a VolumeId, ColorChoice, Verbosity);
 
 impl<'a> Drop for DeleteVolume<'a> {
     fn drop(&mut self) {
         if let VolumeId::Discard(id) = self.1 {
-            volume_rm(self.0, id, self.2).ok();
+            let mut msg_info = MessageInfo::new(self.2, self.3);
+            volume_rm(self.0, id, &mut msg_info).ok();
         }
     }
 }
 
-struct DeleteContainer<'a>(&'a Engine, &'a str, MessageInfo);
+struct DeleteContainer<'a>(&'a Engine, &'a str, ColorChoice, Verbosity);
 
 impl<'a> Drop for DeleteContainer<'a> {
     fn drop(&mut self) {
-        container_stop(self.0, self.1, self.2).ok();
-        container_rm(self.0, self.1, self.2).ok();
+        let mut msg_info = MessageInfo::new(self.2, self.3);
+        container_stop(self.0, self.1, &mut msg_info).ok();
+        container_rm(self.0, self.1, &mut msg_info).ok();
     }
 }
 
@@ -86,7 +91,7 @@ impl VolumeId {
         engine: &Engine,
         toolchain: &str,
         container: &str,
-        msg_info: MessageInfo,
+        msg_info: &mut MessageInfo,
     ) -> Result<Self> {
         if volume_exists(engine, toolchain, msg_info)? {
             Ok(Self::Keep(toolchain.to_string()))
@@ -109,7 +114,7 @@ fn create_volume_dir(
     engine: &Engine,
     container: &str,
     dir: &Path,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     // make our parent directory if needed
     subcommand(engine, "exec")
@@ -124,7 +129,7 @@ fn copy_volume_files(
     container: &str,
     src: &Path,
     dst: &Path,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     subcommand(engine, "cp")
         .arg("-a")
@@ -156,7 +161,7 @@ fn container_path_exists(
     engine: &Engine,
     container: &str,
     path: &Path,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<bool> {
     Ok(subcommand(engine, "exec")
         .arg(container)
@@ -172,7 +177,7 @@ fn copy_volume_files_nocache(
     src: &Path,
     dst: &Path,
     copy_symlinks: bool,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     // avoid any cached directories when copying
     // see https://bford.info/cachedir/
@@ -190,7 +195,7 @@ pub fn copy_volume_container_xargo(
     xargo_dir: &Path,
     target: &Target,
     mount_prefix: &Path,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
     // only need to copy the rustlib files for our current target.
     let triple = target.triple();
@@ -211,7 +216,7 @@ pub fn copy_volume_container_cargo(
     cargo_dir: &Path,
     mount_prefix: &Path,
     copy_registry: bool,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
     let dst = mount_prefix.join("cargo");
     let copy_registry = env::var("CROSS_REMOTE_COPY_REGISTRY")
@@ -300,9 +305,9 @@ where
     Ok(had_symlinks)
 }
 
-fn warn_symlinks(had_symlinks: bool, msg_info: MessageInfo) -> Result<()> {
+fn warn_symlinks(had_symlinks: bool, msg_info: &mut MessageInfo) -> Result<()> {
     if had_symlinks {
-        shell::warn("copied directory contained symlinks. if the volume the link points to was not mounted, the remote build may fail", msg_info)
+        msg_info.warn("copied directory contained symlinks. if the volume the link points to was not mounted, the remote build may fail")
     } else {
         Ok(())
     }
@@ -314,7 +319,7 @@ fn copy_volume_container_rust_base(
     container: &str,
     sysroot: &Path,
     mount_prefix: &Path,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
     // the rust toolchain is quite large, but most of it isn't needed
     // we need the bin, libexec, and etc directories, and part of the lib directory.
@@ -361,7 +366,7 @@ fn copy_volume_container_rust_manifest(
     container: &str,
     sysroot: &Path,
     mount_prefix: &Path,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
     // copy over all the manifest files in rustlib
     // these are small text files containing names/paths to toolchains
@@ -392,7 +397,7 @@ pub fn copy_volume_container_rust_triple(
     triple: &str,
     mount_prefix: &Path,
     skip_exists: bool,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
     // copy over the files for a specific triple
     let dst = mount_prefix.join("rust");
@@ -426,7 +431,7 @@ pub fn copy_volume_container_rust(
     target: &Target,
     mount_prefix: &Path,
     skip_target: bool,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
     let target_triple = target.triple();
     let image_triple = Host::X86_64UnknownLinuxGnu.triple();
@@ -557,7 +562,7 @@ fn copy_volume_file_list(
     src: &Path,
     dst: &Path,
     files: &[&str],
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     // SAFETY: safe, single-threaded execution.
     let tempdir = unsafe { temp::TempDir::new()? };
@@ -578,11 +583,11 @@ fn remove_volume_file_list(
     container: &str,
     dst: &Path,
     files: &[&str],
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     const PATH: &str = "/tmp/remove_list";
     let mut script = vec![];
-    if msg_info.verbose() {
+    if msg_info.is_verbose() {
         script.push("set -x".to_string());
     }
     script.push(format!(
@@ -620,13 +625,13 @@ fn copy_volume_container_project(
     dst: &Path,
     volume: &VolumeId,
     copy_cache: bool,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
-    let copy_all = || {
+    let copy_all = |info: &mut MessageInfo| {
         if copy_cache {
-            copy_volume_files(engine, container, src, dst, msg_info)
+            copy_volume_files(engine, container, src, dst, info)
         } else {
-            copy_volume_files_nocache(engine, container, src, dst, true, msg_info)
+            copy_volume_files_nocache(engine, container, src, dst, true, info)
         }
     };
     match volume {
@@ -648,32 +653,40 @@ fn copy_volume_container_project(
                 }
             } else {
                 write_project_fingerprint(&fingerprint, &current)?;
-                copy_all()?;
+                copy_all(msg_info)?;
             }
         }
         VolumeId::Discard(_) => {
-            copy_all()?;
+            copy_all(msg_info)?;
         }
     }
 
     Ok(())
 }
 
-fn run_and_get_status(engine: &Engine, args: &[&str], msg_info: MessageInfo) -> Result<ExitStatus> {
+fn run_and_get_status(
+    engine: &Engine,
+    args: &[&str],
+    msg_info: &mut MessageInfo,
+) -> Result<ExitStatus> {
     command(engine)
         .args(args)
         .run_and_get_status(msg_info, true)
 }
 
-pub fn volume_create(engine: &Engine, volume: &str, msg_info: MessageInfo) -> Result<ExitStatus> {
+pub fn volume_create(
+    engine: &Engine,
+    volume: &str,
+    msg_info: &mut MessageInfo,
+) -> Result<ExitStatus> {
     run_and_get_status(engine, &["volume", "create", volume], msg_info)
 }
 
-pub fn volume_rm(engine: &Engine, volume: &str, msg_info: MessageInfo) -> Result<ExitStatus> {
+pub fn volume_rm(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
     run_and_get_status(engine, &["volume", "rm", volume], msg_info)
 }
 
-pub fn volume_exists(engine: &Engine, volume: &str, msg_info: MessageInfo) -> Result<bool> {
+pub fn volume_exists(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<bool> {
     command(engine)
         .args(&["volume", "inspect", volume])
         .run_and_get_output(msg_info)
@@ -683,19 +696,23 @@ pub fn volume_exists(engine: &Engine, volume: &str, msg_info: MessageInfo) -> Re
 pub fn container_stop(
     engine: &Engine,
     container: &str,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     run_and_get_status(engine, &["stop", container], msg_info)
 }
 
-pub fn container_rm(engine: &Engine, container: &str, msg_info: MessageInfo) -> Result<ExitStatus> {
+pub fn container_rm(
+    engine: &Engine,
+    container: &str,
+    msg_info: &mut MessageInfo,
+) -> Result<ExitStatus> {
     run_and_get_status(engine, &["rm", container], msg_info)
 }
 
 pub fn container_state(
     engine: &Engine,
     container: &str,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<ContainerState> {
     let stdout = command(engine)
         .args(&["ps", "-a"])
@@ -751,21 +768,15 @@ fn mount_path(val: &Path) -> Result<String> {
     canonicalize_mount_path(&host_path)
 }
 
-#[allow(clippy::too_many_arguments)] // TODO: refactor
 pub(crate) fn run(
-    engine: &Engine,
-    target: &Target,
+    options: DockerOptions,
+    paths: DockerPaths,
     args: &[String],
-    metadata: &CargoMetadata,
-    config: &Config,
-    uses_xargo: bool,
-    sysroot: &Path,
-    msg_info: MessageInfo,
-    docker_in_docker: bool,
-    cwd: &Path,
+    msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
-    let mount_finder = MountFinder::create(engine, docker_in_docker)?;
-    let dirs = Directories::create(&mount_finder, metadata, cwd, sysroot)?;
+    let engine = options.engine();
+    let target = options.target();
+    let dirs = &paths.directories();
 
     let mount_prefix = MOUNT_PREFIX;
 
@@ -790,20 +801,20 @@ pub(crate) fn run(
     // 1. get our unique identifiers and cleanup from a previous run.
     // this can happen if we didn't gracefully exit before
     let toolchain_id = unique_toolchain_identifier(&dirs.sysroot)?;
-    let container = unique_container_identifier(target, metadata, &dirs)?;
+    let container = unique_container_identifier(target, paths.metadata(), dirs)?;
     let volume = VolumeId::create(engine, &toolchain_id, &container, msg_info)?;
     let state = container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
-        shell::warn(format_args!("container {container} was running."), msg_info)?;
+        msg_info.warn(format_args!("container {container} was running."))?;
         container_stop(engine, &container, msg_info)?;
     }
     if state.exists() {
-        shell::warn(format_args!("container {container} was exited."), msg_info)?;
+        msg_info.warn(format_args!("container {container} was exited."))?;
         container_rm(engine, &container, msg_info)?;
     }
     if let VolumeId::Discard(ref id) = volume {
         if volume_exists(engine, id, msg_info)? {
-            shell::warn(format_args!("temporary volume {id} existed."), msg_info)?;
+            msg_info.warn(format_args!("temporary volume {id} existed."))?;
             volume_rm(engine, id, msg_info)?;
         }
     }
@@ -812,29 +823,26 @@ pub(crate) fn run(
     if let VolumeId::Discard(ref id) = volume {
         volume_create(engine, id, msg_info).wrap_err("when creating volume")?;
     }
-    let _volume_deletter = DeleteVolume(engine, &volume, msg_info);
+    let _volume_deletter = DeleteVolume(engine, &volume, msg_info.color_choice, msg_info.verbosity);
 
     // 3. create our start container command here
     let mut docker = subcommand(engine, "run");
     docker_userns(&mut docker);
     docker.args(&["--name", &container]);
     docker.args(&["-v", &format!("{}:{mount_prefix}", volume.as_ref())]);
-    docker_envvars(&mut docker, config, target, msg_info)?;
+    docker_envvars(&mut docker, options.config(), target, msg_info)?;
 
     let mut volumes = vec![];
     let mount_volumes = docker_mount(
         &mut docker,
-        metadata,
-        &mount_finder,
-        config,
-        target,
-        cwd,
+        &options,
+        &paths,
         |_, val| mount_path(val),
         |(src, dst)| volumes.push((src, dst)),
     )
     .wrap_err("could not determine mount points")?;
 
-    docker_seccomp(&mut docker, engine.kind, target, metadata)
+    docker_seccomp(&mut docker, engine.kind, target, paths.metadata())
         .wrap_err("when copying seccomp profile")?;
 
     // Prevent `bin` from being mounted inside the Docker container.
@@ -853,21 +861,26 @@ pub(crate) fn run(
     }
 
     docker
-        .arg(&image_name(config, target)?)
+        .arg(&image_name(options.config(), target)?)
         // ensure the process never exits until we stop it
         .args(&["sh", "-c", "sleep infinity"])
         .run_and_get_status(msg_info, true)?;
-    let _container_deletter = DeleteContainer(engine, &container, msg_info);
+    let _container_deletter = DeleteContainer(
+        engine,
+        &container,
+        msg_info.color_choice,
+        msg_info.verbosity,
+    );
 
     // 4. copy all mounted volumes over
     let copy_cache = env::var("CROSS_REMOTE_COPY_CACHE")
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
-    let copy = |src, dst: &PathBuf| {
+    let copy = |src, dst: &PathBuf, info: &mut MessageInfo| {
         if copy_cache {
-            copy_volume_files(engine, &container, src, dst, msg_info)
+            copy_volume_files(engine, &container, src, dst, info)
         } else {
-            copy_volume_files_nocache(engine, &container, src, dst, true, msg_info)
+            copy_volume_files_nocache(engine, &container, src, dst, true, info)
         }
     };
     let mount_prefix_path = mount_prefix.as_ref();
@@ -951,7 +964,7 @@ pub(crate) fn run(
         // only do if we're copying over cached files.
         let target_dir = mount_prefix_path.join("target");
         if copy_cache {
-            copy(&dirs.target, &target_dir)?;
+            copy(&dirs.target, &target_dir, msg_info)?;
         } else {
             create_volume_dir(engine, &container, &target_dir, msg_info)?;
         }
@@ -971,7 +984,7 @@ pub(crate) fn run(
             if !rel_dst.is_empty() {
                 create_volume_dir(engine, &container, mount_dst.parent().unwrap(), msg_info)?;
             }
-            copy(src, &mount_dst)?;
+            copy(src, &mount_dst, msg_info)?;
         }
     }
 
@@ -1002,12 +1015,12 @@ pub(crate) fn run(
         final_args.push("--target-dir".to_string());
         final_args.push(target_dir_string);
     }
-    let mut cmd = cargo_safe_command(uses_xargo);
+    let mut cmd = cargo_safe_command(options.uses_xargo());
     cmd.args(final_args);
 
     // 5. create symlinks for copied data
     let mut symlink = vec!["set -e pipefail".to_string()];
-    if msg_info.verbose() {
+    if msg_info.is_verbose() {
         symlink.push("set -x".to_string());
     }
     symlink.push(format!(
@@ -1048,7 +1061,7 @@ symlink_recurse \"${{prefix}}\"
     // 6. execute our cargo command inside the container
     let mut docker = subcommand(engine, "exec");
     docker_user_id(&mut docker, engine.kind);
-    docker_cwd(&mut docker, metadata, &dirs, cwd, mount_volumes)?;
+    docker_cwd(&mut docker, &paths, mount_volumes)?;
     docker.arg(&container);
     docker.args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)]);
     let status = docker

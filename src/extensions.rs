@@ -3,42 +3,45 @@ use std::fmt;
 use std::process::{Command, ExitStatus, Output};
 
 use crate::errors::*;
-use crate::shell::{self, MessageInfo, Verbosity};
+use crate::shell::MessageInfo;
 
 pub const STRIPPED_BINS: &[&str] = &[crate::docker::DOCKER, crate::docker::PODMAN, "cargo"];
 
 pub trait CommandExt {
-    fn fmt_message(&self, msg_info: MessageInfo) -> String;
+    fn fmt_message(&self, msg_info: &mut MessageInfo) -> String;
 
-    fn print(&self, msg_info: MessageInfo) -> Result<()> {
-        shell::print(&self.fmt_message(msg_info), msg_info)
+    fn print(&self, msg_info: &mut MessageInfo) -> Result<()> {
+        let msg = self.fmt_message(msg_info);
+        msg_info.print(&msg)
     }
 
-    fn info(&self, msg_info: MessageInfo) -> Result<()> {
-        shell::info(&self.fmt_message(msg_info), msg_info)
+    fn info(&self, msg_info: &mut MessageInfo) -> Result<()> {
+        let msg = self.fmt_message(msg_info);
+        msg_info.info(&msg)
     }
 
-    fn debug(&self, msg_info: MessageInfo) -> Result<()> {
-        shell::debug(&self.fmt_message(msg_info), msg_info)
+    fn debug(&self, msg_info: &mut MessageInfo) -> Result<()> {
+        let msg = self.fmt_message(msg_info);
+        msg_info.debug(&msg)
     }
 
     fn status_result(
         &self,
-        msg_info: MessageInfo,
+        msg_info: &mut MessageInfo,
         status: ExitStatus,
         output: Option<&Output>,
     ) -> Result<(), CommandError>;
-    fn run(&mut self, msg_info: MessageInfo, silence_stdout: bool) -> Result<()>;
+    fn run(&mut self, msg_info: &mut MessageInfo, silence_stdout: bool) -> Result<()>;
     fn run_and_get_status(
         &mut self,
-        msg_info: MessageInfo,
+        msg_info: &mut MessageInfo,
         silence_stdout: bool,
     ) -> Result<ExitStatus>;
-    fn run_and_get_stdout(&mut self, msg_info: MessageInfo) -> Result<String>;
-    fn run_and_get_output(&mut self, msg_info: MessageInfo) -> Result<std::process::Output>;
+    fn run_and_get_stdout(&mut self, msg_info: &mut MessageInfo) -> Result<String>;
+    fn run_and_get_output(&mut self, msg_info: &mut MessageInfo) -> Result<std::process::Output>;
     fn command_pretty(
         &self,
-        msg_info: MessageInfo,
+        msg_info: &mut MessageInfo,
         strip: impl for<'a> Fn(&'a str) -> bool,
     ) -> String;
 }
@@ -46,12 +49,12 @@ pub trait CommandExt {
 impl CommandExt for Command {
     fn command_pretty(
         &self,
-        msg_info: MessageInfo,
+        msg_info: &mut MessageInfo,
         strip: impl for<'a> Fn(&'a str) -> bool,
     ) -> String {
         // a dummy implementor of display to avoid using unwraps
-        struct C<'c, F>(&'c Command, MessageInfo, F);
-        impl<F> std::fmt::Display for C<'_, F>
+        struct C<'c, 'd, F>(&'c Command, &'d mut MessageInfo, F);
+        impl<'e, 'f, F> std::fmt::Display for C<'e, 'f, F>
         where
             F: for<'a> Fn(&'a str) -> bool,
         {
@@ -61,7 +64,7 @@ impl CommandExt for Command {
                     f,
                     "{}",
                     // if verbose, never strip, if not, let user choose
-                    crate::file::pretty_path(cmd.get_program(), move |c| if self.1.verbose() {
+                    crate::file::pretty_path(cmd.get_program(), move |c| if self.1.is_verbose() {
                         false
                     } else {
                         self.2(c)
@@ -81,18 +84,25 @@ impl CommandExt for Command {
         format!("{}", C(self, msg_info, strip))
     }
 
-    fn fmt_message(&self, msg_info: MessageInfo) -> String {
-        let verbose = (msg_info.color_choice, Verbosity::Verbose).into();
+    fn fmt_message(&self, mut msg_info: &mut MessageInfo) -> String {
+        let msg_info = &mut msg_info;
         if let Some(cwd) = self.get_current_dir() {
-            format!("+ {:?} {}", cwd, self.command_pretty(verbose, |_| false))
+            format!(
+                "+ {:?} {}",
+                cwd,
+                msg_info.as_verbose(|info| self.command_pretty(info, |_| false))
+            )
         } else {
-            format!("+ {}", self.command_pretty(verbose, |_| false))
+            format!(
+                "+ {}",
+                msg_info.as_verbose(|info| self.command_pretty(info, |_| false))
+            )
         }
     }
 
     fn status_result(
         &self,
-        msg_info: MessageInfo,
+        msg_info: &mut MessageInfo,
         status: ExitStatus,
         output: Option<&Output>,
     ) -> Result<(), CommandError> {
@@ -110,7 +120,7 @@ impl CommandExt for Command {
     }
 
     /// Runs the command to completion
-    fn run(&mut self, msg_info: MessageInfo, silence_stdout: bool) -> Result<()> {
+    fn run(&mut self, msg_info: &mut MessageInfo, silence_stdout: bool) -> Result<()> {
         let status = self.run_and_get_status(msg_info, silence_stdout)?;
         self.status_result(msg_info, status, None)
             .map_err(Into::into)
@@ -119,11 +129,11 @@ impl CommandExt for Command {
     /// Runs the command to completion
     fn run_and_get_status(
         &mut self,
-        msg_info: MessageInfo,
+        msg_info: &mut MessageInfo,
         silence_stdout: bool,
     ) -> Result<ExitStatus> {
         self.debug(msg_info)?;
-        if silence_stdout && !msg_info.verbose() {
+        if silence_stdout && msg_info.is_verbose() {
             self.stdout(std::process::Stdio::null());
         }
         self.status()
@@ -136,7 +146,7 @@ impl CommandExt for Command {
     }
 
     /// Runs the command to completion and returns its stdout
-    fn run_and_get_stdout(&mut self, msg_info: MessageInfo) -> Result<String> {
+    fn run_and_get_stdout(&mut self, msg_info: &mut MessageInfo) -> Result<String> {
         let out = self.run_and_get_output(msg_info)?;
         self.status_result(msg_info, out.status, Some(&out))
             .map_err(CommandError::to_section_report)?;
@@ -148,7 +158,7 @@ impl CommandExt for Command {
     /// # Notes
     ///
     /// This command does not check the status.
-    fn run_and_get_output(&mut self, msg_info: MessageInfo) -> Result<std::process::Output> {
+    fn run_and_get_output(&mut self, msg_info: &mut MessageInfo) -> Result<std::process::Output> {
         self.debug(msg_info)?;
         self.output().map_err(|e| {
             CommandError::CouldNotExecute {

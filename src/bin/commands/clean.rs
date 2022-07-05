@@ -3,7 +3,7 @@ use std::fs;
 use super::containers::*;
 use super::images::*;
 use clap::Args;
-use cross::shell::{self, MessageInfo};
+use cross::shell::MessageInfo;
 
 #[derive(Args, Debug)]
 pub struct Clean {
@@ -32,7 +32,7 @@ pub struct Clean {
 
 impl Clean {
     pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
-        let msg_info = MessageInfo::create(self.verbose, self.quiet, self.color.as_deref())?;
+        let mut msg_info = MessageInfo::create(self.verbose, self.quiet, self.color.as_deref())?;
         let tempdir = cross::temp::dir()?;
         match self.execute {
             true => {
@@ -40,13 +40,10 @@ impl Clean {
                     fs::remove_dir_all(tempdir)?;
                 }
             }
-            false => shell::print(
-                format!(
-                    "fs::remove_dir_all({})",
-                    cross::pretty_path(&tempdir, |_| false)
-                ),
-                msg_info,
-            )?,
+            false => msg_info.print(format_args!(
+                "fs::remove_dir_all({})",
+                cross::pretty_path(&tempdir, |_| false)
+            ))?,
         }
 
         // containers -> images -> volumes -> prune to ensure no conflicts.
@@ -92,5 +89,21 @@ impl Clean {
         prune_volumes.run(engine)?;
 
         Ok(())
+    }
+
+    pub fn engine(&self) -> Option<&str> {
+        self.engine.as_deref()
+    }
+
+    pub fn verbose(&self) -> bool {
+        self.verbose
+    }
+
+    pub fn quiet(&self) -> bool {
+        self.quiet
+    }
+
+    pub fn color(&self) -> Option<&str> {
+        self.color.as_deref()
     }
 }

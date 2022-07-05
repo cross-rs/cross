@@ -65,35 +65,52 @@ fn is_toolchain(toolchain: &str) -> cross::Result<String> {
     }
 }
 
+macro_rules! get_engine {
+    ($args:ident, $msg_info:ident) => {{
+        get_container_engine($args.engine.as_deref(), &mut $msg_info)
+    }};
+}
+
+macro_rules! get_msg_info {
+    ($args:ident, $verbose:expr) => {{
+        MessageInfo::create($verbose, $args.quiet, $args.color.as_deref())
+    }};
+}
+
 pub fn main() -> cross::Result<()> {
     cross::install_panic_hook()?;
     let cli = Cli::parse();
     match cli.command {
         Commands::TargetInfo(args) => {
-            let msg_info = MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
-            let engine = get_container_engine(args.engine.as_deref(), msg_info)?;
-            target_info::target_info(args, &engine)?;
+            let mut msg_info = get_msg_info!(args, args.verbose)?;
+            let engine = get_engine!(args, msg_info)?;
+            target_info::target_info(args, &engine, &mut msg_info)?;
         }
         Commands::BuildDockerImage(args) => {
-            let msg_info =
-                MessageInfo::create(args.verbose != 0, args.quiet, args.color.as_deref())?;
-            let engine = get_container_engine(args.engine.as_deref(), msg_info)?;
-            build_docker_image::build_docker_image(args, &engine)?;
+            let mut msg_info = get_msg_info!(args, args.verbose != 0)?;
+            let engine = get_engine!(args, msg_info)?;
+            build_docker_image::build_docker_image(args, &engine, &mut msg_info)?;
         }
         Commands::InstallGitHooks(args) => {
-            install_git_hooks::install_git_hooks(args)?;
+            let mut msg_info = get_msg_info!(args, args.verbose)?;
+            install_git_hooks::install_git_hooks(&mut msg_info)?;
         }
         Commands::Check(args) => {
-            hooks::check(args, cli.toolchain.as_deref())?;
+            let mut msg_info = get_msg_info!(args, args.verbose)?;
+            hooks::check(args, cli.toolchain.as_deref(), &mut msg_info)?;
         }
         Commands::Test(args) => {
-            hooks::test(args, cli.toolchain.as_deref())?;
+            let mut msg_info = get_msg_info!(args, args.verbose)?;
+            hooks::test(cli.toolchain.as_deref(), &mut msg_info)?;
         }
         Commands::CiJob(args) => {
-            let metadata = cargo_metadata(Verbosity::Verbose.into())?;
-            ci::ci(args, metadata)?
+            let metadata = cargo_metadata(&mut Verbosity::Verbose.into())?;
+            ci::ci(args, metadata)?;
         }
-        Commands::ConfigureCrosstool(args) => crosstool::configure_crosstool(args)?,
+        Commands::ConfigureCrosstool(args) => {
+            let mut msg_info = get_msg_info!(args, args.verbose)?;
+            crosstool::configure_crosstool(args, &mut msg_info)?;
+        }
     }
 
     Ok(())
@@ -101,12 +118,12 @@ pub fn main() -> cross::Result<()> {
 
 fn get_container_engine(
     engine: Option<&str>,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> cross::Result<docker::Engine> {
     let engine = if let Some(ce) = engine {
         which::which(ce)?
     } else {
         docker::get_container_engine()?
     };
-    docker::Engine::from_path(engine, None, msg_info)
+    docker::Engine::from_path(engine, None, None, msg_info)
 }

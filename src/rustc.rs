@@ -81,7 +81,7 @@ pub fn rustc_command() -> Command {
     Command::new(env_program("RUSTC", "rustc"))
 }
 
-pub fn target_list(msg_info: MessageInfo) -> Result<TargetList> {
+pub fn target_list(msg_info: &mut MessageInfo) -> Result<TargetList> {
     rustc_command()
         .args(&["--print", "target-list"])
         .run_and_get_stdout(msg_info)
@@ -90,7 +90,7 @@ pub fn target_list(msg_info: MessageInfo) -> Result<TargetList> {
         })
 }
 
-pub fn sysroot(host: &Host, target: &Target, msg_info: MessageInfo) -> Result<PathBuf> {
+pub fn sysroot(host: &Host, target: &Target, msg_info: &mut MessageInfo) -> Result<PathBuf> {
     let mut stdout = rustc_command()
         .args(&["--print", "sysroot"])
         .run_and_get_stdout(msg_info)?
@@ -109,7 +109,7 @@ pub fn get_sysroot(
     host: &Host,
     target: &Target,
     channel: Option<&str>,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<(String, PathBuf)> {
     let mut sysroot = sysroot(host, target, msg_info)?;
     let default_toolchain = sysroot

@@ -7,93 +7,6 @@ use std::io::{self, Write};
 use crate::errors::Result;
 use owo_colors::{self, OwoColorize};
 
-/// the requested verbosity of output.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Verbosity {
-    Quiet,
-    Normal,
-    Verbose,
-}
-
-impl Verbosity {
-    pub fn verbose(self) -> bool {
-        match self {
-            Self::Verbose => true,
-            Self::Normal | Self::Quiet => false,
-        }
-    }
-}
-
-/// Whether messages should use color output
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorChoice {
-    /// force color output
-    Always,
-    /// force disable color output
-    Never,
-    /// intelligently guess whether to use color output
-    Auto,
-}
-
-// Should simplify the APIs a lot.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MessageInfo {
-    pub color_choice: ColorChoice,
-    pub verbosity: Verbosity,
-}
-
-impl MessageInfo {
-    pub fn create(verbose: bool, quiet: bool, color: Option<&str>) -> Result<MessageInfo> {
-        let color_choice = get_color_choice(color)?;
-        let verbosity = get_verbosity(color_choice, verbose, quiet)?;
-
-        Ok(MessageInfo {
-            color_choice,
-            verbosity,
-        })
-    }
-
-    pub fn verbose(self) -> bool {
-        self.verbosity.verbose()
-    }
-}
-
-impl Default for MessageInfo {
-    fn default() -> MessageInfo {
-        MessageInfo {
-            color_choice: ColorChoice::Auto,
-            verbosity: Verbosity::Normal,
-        }
-    }
-}
-
-impl From<ColorChoice> for MessageInfo {
-    fn from(color_choice: ColorChoice) -> MessageInfo {
-        MessageInfo {
-            color_choice,
-            verbosity: Verbosity::Normal,
-        }
-    }
-}
-
-impl From<Verbosity> for MessageInfo {
-    fn from(verbosity: Verbosity) -> MessageInfo {
-        MessageInfo {
-            color_choice: ColorChoice::Auto,
-            verbosity,
-        }
-    }
-}
-
-impl From<(ColorChoice, Verbosity)> for MessageInfo {
-    fn from(info: (ColorChoice, Verbosity)) -> MessageInfo {
-        MessageInfo {
-            color_choice: info.0,
-            verbosity: info.1,
-        }
-    }
-}
-
 // get the prefix for stderr messages
 macro_rules! cross_prefix {
     ($s:literal) => {
@@ -149,106 +62,234 @@ macro_rules! status {
     }};
 }
 
-/// prints a red 'error' message and terminates.
-pub fn fatal<T: fmt::Display>(message: T, msg_info: MessageInfo, code: i32) -> ! {
-    error(message, msg_info).unwrap();
-    std::process::exit(code);
+/// the requested verbosity of output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Verbosity {
+    Quiet,
+    Normal,
+    Verbose,
 }
 
-/// prints a red 'error' message.
-pub fn error<T: fmt::Display>(message: T, msg_info: MessageInfo) -> Result<()> {
-    status!(@stderr cross_prefix!("error"), Some(&message), red, msg_info)
-}
-
-/// prints an amber 'warning' message.
-pub fn warn<T: fmt::Display>(message: T, msg_info: MessageInfo) -> Result<()> {
-    match msg_info.verbosity {
-        Verbosity::Quiet => Ok(()),
-        _ => status!(@stderr
-            cross_prefix!("warning"),
-            Some(&message),
-            yellow,
-            msg_info,
-        ),
-    }
-}
-
-/// prints a cyan 'note' message.
-pub fn note<T: fmt::Display>(message: T, msg_info: MessageInfo) -> Result<()> {
-    match msg_info.verbosity {
-        Verbosity::Quiet => Ok(()),
-        _ => status!(@stderr cross_prefix!("note"), Some(&message), cyan, msg_info),
-    }
-}
-
-pub fn status<T: fmt::Display>(message: T, msg_info: MessageInfo) -> Result<()> {
-    match msg_info.verbosity {
-        Verbosity::Quiet => Ok(()),
-        _ => {
-            eprintln!("{}", message);
-            Ok(())
+impl Verbosity {
+    pub fn verbose(self) -> bool {
+        match self {
+            Self::Verbose => true,
+            Self::Normal | Self::Quiet => false,
         }
     }
 }
 
-/// prints a high-priority message to stdout.
-pub fn print<T: fmt::Display>(message: T, _: MessageInfo) -> Result<()> {
-    println!("{}", message);
-    Ok(())
+/// Whether messages should use color output
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorChoice {
+    /// force color output
+    Always,
+    /// force disable color output
+    Never,
+    /// intelligently guess whether to use color output
+    Auto,
 }
 
-/// prints a normal message to stdout.
-pub fn info<T: fmt::Display>(message: T, msg_info: MessageInfo) -> Result<()> {
-    match msg_info.verbosity {
-        Verbosity::Quiet => Ok(()),
-        _ => {
-            println!("{}", message);
-            Ok(())
+// Should simplify the APIs a lot.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MessageInfo {
+    pub color_choice: ColorChoice,
+    pub verbosity: Verbosity,
+    pub stdout_needs_erase: bool,
+    pub stderr_needs_erase: bool,
+}
+
+impl MessageInfo {
+    pub const fn new(color_choice: ColorChoice, verbosity: Verbosity) -> MessageInfo {
+        MessageInfo {
+            color_choice,
+            verbosity,
+            stdout_needs_erase: false,
+            stderr_needs_erase: false,
         }
+    }
+
+    pub fn create(verbose: bool, quiet: bool, color: Option<&str>) -> Result<MessageInfo> {
+        let color_choice = get_color_choice(color)?;
+        let verbosity = get_verbosity(color_choice, verbose, quiet)?;
+
+        Ok(MessageInfo {
+            color_choice,
+            verbosity,
+            stdout_needs_erase: false,
+            stderr_needs_erase: false,
+        })
+    }
+
+    pub fn is_verbose(&self) -> bool {
+        self.verbosity.verbose()
+    }
+
+    fn as_verbosity<T, C: Fn(&mut MessageInfo) -> T>(&mut self, call: C, new: Verbosity) -> T {
+        let old = self.verbosity;
+        self.verbosity = new;
+        let result = call(self);
+        self.verbosity = old;
+
+        result
+    }
+
+    pub fn as_quiet<T, C: Fn(&mut MessageInfo) -> T>(&mut self, call: C) -> T {
+        self.as_verbosity(call, Verbosity::Quiet)
+    }
+
+    pub fn as_normal<T, C: Fn(&mut MessageInfo) -> T>(&mut self, call: C) -> T {
+        self.as_verbosity(call, Verbosity::Normal)
+    }
+
+    pub fn as_verbose<T, C: Fn(&mut MessageInfo) -> T>(&mut self, call: C) -> T {
+        self.as_verbosity(call, Verbosity::Verbose)
+    }
+
+    fn erase_line<S: Stream + Write>(&mut self, stream: &mut S) -> Result<()> {
+        // this is the Erase in Line sequence
+        stream.write_all(b"\x1B[K").map_err(Into::into)
+    }
+
+    fn stdout_check_erase(&mut self) -> Result<()> {
+        if self.stdout_needs_erase {
+            self.erase_line(&mut io::stdout())?;
+            self.stdout_needs_erase = false;
+        }
+        Ok(())
+    }
+
+    fn stderr_check_erase(&mut self) -> Result<()> {
+        if self.stderr_needs_erase {
+            self.erase_line(&mut io::stderr())?;
+            self.stderr_needs_erase = false;
+        }
+        Ok(())
+    }
+
+    /// prints a red 'error' message and terminates.
+    pub fn fatal<T: fmt::Display>(&mut self, message: T, code: i32) -> ! {
+        self.error(message).unwrap();
+        std::process::exit(code);
+    }
+
+    /// prints a red 'error' message.
+    pub fn error<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        self.stderr_check_erase()?;
+        status!(@stderr cross_prefix!("error"), Some(&message), red, self)
+    }
+
+    /// prints an amber 'warning' message.
+    pub fn warn<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        match self.verbosity {
+            Verbosity::Quiet => Ok(()),
+            _ => status!(@stderr
+                cross_prefix!("warning"),
+                Some(&message),
+                yellow,
+                self,
+            ),
+        }
+    }
+
+    /// prints a cyan 'note' message.
+    pub fn note<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        match self.verbosity {
+            Verbosity::Quiet => Ok(()),
+            _ => status!(@stderr cross_prefix!("note"), Some(&message), cyan, self),
+        }
+    }
+
+    pub fn status<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        match self.verbosity {
+            Verbosity::Quiet => Ok(()),
+            _ => {
+                eprintln!("{}", message);
+                Ok(())
+            }
+        }
+    }
+
+    /// prints a high-priority message to stdout.
+    pub fn print<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        self.stdout_check_erase()?;
+        println!("{}", message);
+        Ok(())
+    }
+
+    /// prints a normal message to stdout.
+    pub fn info<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        match self.verbosity {
+            Verbosity::Quiet => Ok(()),
+            _ => {
+                println!("{}", message);
+                Ok(())
+            }
+        }
+    }
+
+    /// prints a debugging message to stdout.
+    pub fn debug<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        match self.verbosity {
+            Verbosity::Quiet | Verbosity::Normal => Ok(()),
+            _ => {
+                println!("{}", message);
+                Ok(())
+            }
+        }
+    }
+
+    pub fn fatal_usage<T: fmt::Display>(&mut self, arg: T, code: i32) -> ! {
+        self.error_usage(arg).unwrap();
+        std::process::exit(code);
+    }
+
+    fn error_usage<T: fmt::Display>(&mut self, arg: T) -> Result<()> {
+        let mut stream = io::stderr();
+        write_style!(stream, self, cross_prefix!("error"), bold, red);
+        write_style!(stream, self, ":", bold);
+        write_style!(stream, self, " The argument '");
+        write_style!(stream, self, arg, yellow);
+        write_style!(stream, self, "' requires a value but none was supplied\n");
+        write_style!(stream, self, "Usage:\n");
+        write_style!(
+            stream,
+            self,
+            "    cross [+toolchain] [OPTIONS] [SUBCOMMAND]\n"
+        );
+        write_style!(stream, self, "\n");
+        write_style!(stream, self, "For more information try ");
+        write_style!(stream, self, "--help", green);
+        write_style!(stream, self, "\n");
+
+        stream.flush()?;
+
+        Ok(())
     }
 }
 
-/// prints a debugging message to stdout.
-pub fn debug<T: fmt::Display>(message: T, msg_info: MessageInfo) -> Result<()> {
-    match msg_info.verbosity {
-        Verbosity::Quiet | Verbosity::Normal => Ok(()),
-        _ => {
-            println!("{}", message);
-            Ok(())
-        }
+impl Default for MessageInfo {
+    fn default() -> MessageInfo {
+        MessageInfo::new(ColorChoice::Auto, Verbosity::Normal)
     }
 }
 
-pub fn fatal_usage<T: fmt::Display>(arg: T, msg_info: MessageInfo, code: i32) -> ! {
-    error_usage(arg, msg_info).unwrap();
-    std::process::exit(code);
+impl From<ColorChoice> for MessageInfo {
+    fn from(color_choice: ColorChoice) -> MessageInfo {
+        MessageInfo::new(color_choice, Verbosity::Normal)
+    }
 }
 
-fn error_usage<T: fmt::Display>(arg: T, msg_info: MessageInfo) -> Result<()> {
-    let mut stream = io::stderr();
-    write_style!(stream, msg_info, cross_prefix!("error"), bold, red);
-    write_style!(stream, msg_info, ":", bold);
-    write_style!(stream, msg_info, " The argument '");
-    write_style!(stream, msg_info, arg, yellow);
-    write_style!(
-        stream,
-        msg_info,
-        "' requires a value but none was supplied\n"
-    );
-    write_style!(stream, msg_info, "Usage:\n");
-    write_style!(
-        stream,
-        msg_info,
-        "    cross [+toolchain] [OPTIONS] [SUBCOMMAND]\n"
-    );
-    write_style!(stream, msg_info, "\n");
-    write_style!(stream, msg_info, "For more information try ");
-    write_style!(stream, msg_info, "--help", green);
-    write_style!(stream, msg_info, "\n");
+impl From<Verbosity> for MessageInfo {
+    fn from(verbosity: Verbosity) -> MessageInfo {
+        MessageInfo::new(ColorChoice::Auto, verbosity)
+    }
+}
 
-    stream.flush()?;
-
-    Ok(())
+impl From<(ColorChoice, Verbosity)> for MessageInfo {
+    fn from(info: (ColorChoice, Verbosity)) -> MessageInfo {
+        MessageInfo::new(info.0, info.1)
+    }
 }
 
 fn get_color_choice(color: Option<&str>) -> Result<ColorChoice> {
@@ -265,14 +306,7 @@ fn get_color_choice(color: Option<&str>) -> Result<ColorChoice> {
 fn get_verbosity(color_choice: ColorChoice, verbose: bool, quiet: bool) -> Result<Verbosity> {
     match (verbose, quiet) {
         (true, true) => {
-            let verbosity = Verbosity::Normal;
-            error(
-                "cannot set both --verbose and --quiet",
-                MessageInfo {
-                    color_choice,
-                    verbosity,
-                },
-            )?;
+            MessageInfo::from(color_choice).error("cannot set both --verbose and --quiet")?;
             std::process::exit(101);
         }
         (true, false) => Ok(Verbosity::Verbose),
