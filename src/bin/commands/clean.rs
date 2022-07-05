@@ -31,8 +31,11 @@ pub struct Clean {
 }
 
 impl Clean {
-    pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
-        let mut msg_info = MessageInfo::create(self.verbose, self.quiet, self.color.as_deref())?;
+    pub fn run(
+        self,
+        engine: cross::docker::Engine,
+        msg_info: &mut MessageInfo,
+    ) -> cross::Result<()> {
         let tempdir = cross::temp::dir()?;
         match self.execute {
             true => {
@@ -55,7 +58,7 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        remove_containers.run(engine.clone())?;
+        remove_containers.run(engine.clone(), msg_info)?;
 
         let remove_images = RemoveImages {
             targets: vec![],
@@ -67,7 +70,7 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        remove_images.run(engine.clone())?;
+        remove_images.run(engine.clone(), msg_info)?;
 
         let remove_volumes = RemoveAllVolumes {
             verbose: self.verbose,
@@ -77,7 +80,7 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        remove_volumes.run(engine.clone())?;
+        remove_volumes.run(engine.clone(), msg_info)?;
 
         let prune_volumes = PruneVolumes {
             verbose: self.verbose,
@@ -86,7 +89,7 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        prune_volumes.run(engine)?;
+        prune_volumes.run(engine, msg_info)?;
 
         Ok(())
     }

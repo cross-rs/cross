@@ -65,9 +65,14 @@ fn get_container_engine(
 }
 
 macro_rules! get_engine {
-    ($args:ident, $docker_in_docker:expr) => {{
-        let mut msg_info = MessageInfo::create($args.verbose(), $args.quiet(), $args.color())?;
-        get_container_engine($args.engine(), $docker_in_docker, &mut msg_info)
+    ($args:ident, $docker_in_docker:expr, $msg_info: ident) => {{
+        get_container_engine($args.engine(), $docker_in_docker, &mut $msg_info)
+    }};
+}
+
+macro_rules! get_msg_info {
+    ($args:ident) => {{
+        MessageInfo::create($args.verbose(), $args.quiet(), $args.color())
     }};
 }
 
@@ -76,20 +81,24 @@ pub fn main() -> cross::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Images(args) => {
-            let engine = get_engine!(args, false)?;
-            args.run(engine)?;
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, false, msg_info)?;
+            args.run(engine, &mut msg_info)?;
         }
         Commands::Volumes(args) => {
-            let engine = get_engine!(args, args.docker_in_docker())?;
-            args.run(engine, cli.toolchain.as_deref())?;
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, args.docker_in_docker(), msg_info)?;
+            args.run(engine, cli.toolchain.as_deref(), &mut msg_info)?;
         }
         Commands::Containers(args) => {
-            let engine = get_engine!(args, false)?;
-            args.run(engine)?;
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, false, msg_info)?;
+            args.run(engine, &mut msg_info)?;
         }
         Commands::Clean(args) => {
-            let engine = get_engine!(args, false)?;
-            args.run(engine)?;
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, false, msg_info)?;
+            args.run(engine, &mut msg_info)?;
         }
     }
 
