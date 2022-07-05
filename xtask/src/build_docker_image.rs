@@ -144,7 +144,8 @@ pub fn build_docker_image(
         }
     }
     let gha = std::env::var("GITHUB_ACTIONS").is_ok();
-    let docker_root = metadata.workspace_root.join("docker");
+    let root = metadata.workspace_root;
+    let docker_root = root.join("docker");
     let cross_toolchains_root = docker_root.join("cross-toolchains").join("docker");
     let targets = targets
         .into_iter()
@@ -240,7 +241,11 @@ pub fn build_docker_image(
             docker_build.args(&["--build-arg", "VERBOSE=1"]);
         }
 
-        docker_build.arg(".");
+        if target.needs_workspace_root_context() {
+            docker_build.arg(&root);
+        } else {
+            docker_build.arg(".");
+        }
 
         if !dry_run && (force || !push || gha) {
             let result = docker_build.run(msg_info, false);
