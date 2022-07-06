@@ -14,6 +14,7 @@ pub struct TargetList {
 }
 
 impl TargetList {
+    #[must_use]
     pub fn contains(&self, triple: &str) -> bool {
         self.triples.iter().any(|t| t == triple)
     }
@@ -35,10 +36,10 @@ impl VersionMetaExt for VersionMeta {
     }
 
     fn commit_hash(&self) -> String {
-        self.commit_hash
-            .as_ref()
-            .map(|x| short_commit_hash(x))
-            .unwrap_or_else(|| hash_from_version_string(&self.short_version_string, 2))
+        self.commit_hash.as_ref().map_or_else(
+            || hash_from_version_string(&self.short_version_string, 2),
+            |x| short_commit_hash(x),
+        )
     }
 }
 
@@ -49,9 +50,10 @@ fn short_commit_hash(hash: &str) -> String {
 
     hash.get(..LENGTH)
         .unwrap_or_else(|| panic!("commit hash must be at least {LENGTH} characters long"))
-        .to_string()
+        .to_owned()
 }
 
+#[must_use]
 pub fn hash_from_version_string(version: &str, index: usize) -> String {
     let is_hash = |x: &str| x.chars().all(|c| c.is_ascii_hexdigit());
     let is_date = |x: &str| x.chars().all(|c| matches!(c, '-' | '0'..='9'));
@@ -77,6 +79,7 @@ pub fn hash_from_version_string(version: &str, index: usize) -> String {
     short_commit_hash(&const_sha1::sha1(&buffer).to_string())
 }
 
+#[must_use]
 pub fn rustc_command() -> Command {
     Command::new(env_program("RUSTC", "rustc"))
 }
@@ -124,7 +127,7 @@ pub fn get_sysroot(
             .collect::<Vec<_>>()
             .join("-")
     } else {
-        default_toolchain.to_string()
+        default_toolchain.to_owned()
     };
     sysroot.set_file_name(&toolchain);
 

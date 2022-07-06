@@ -13,6 +13,19 @@
 //! </p>
 
 #![deny(missing_debug_implementations, rust_2018_idioms)]
+#![warn(
+    clippy::explicit_into_iter_loop,
+    clippy::explicit_iter_loop,
+    clippy::implicit_clone,
+    clippy::inefficient_to_string,
+    clippy::map_err_ignore,
+    clippy::map_unwrap_or,
+    clippy::ref_binding_to_reference,
+    clippy::semicolon_if_nothing_returned,
+    clippy::str_to_string,
+    clippy::string_to_string,
+    // needs clippy 1.61 clippy::unwrap_used
+)]
 
 #[cfg(test)]
 mod tests;
@@ -92,15 +105,15 @@ impl Host {
             // variable `CROSS_COMPATIBILITY_VERSION`.
             Ok("0.2.1") => match self {
                 Host::X86_64AppleDarwin | Host::Aarch64AppleDarwin => {
-                    target.map(|t| t.needs_docker()).unwrap_or(false)
+                    target.map_or(false, |t| t.needs_docker())
                 }
                 Host::X86_64UnknownLinuxGnu
                 | Host::Aarch64UnknownLinuxGnu
                 | Host::X86_64UnknownLinuxMusl
-                | Host::Aarch64UnknownLinuxMusl => target.map(|t| t.needs_docker()).unwrap_or(true),
-                Host::X86_64PcWindowsMsvc => target
-                    .map(|t| t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker())
-                    .unwrap_or(false),
+                | Host::Aarch64UnknownLinuxMusl => target.map_or(true, |t| t.needs_docker()),
+                Host::X86_64PcWindowsMsvc => target.map_or(false, |t| {
+                    t.triple() != Host::X86_64PcWindowsMsvc.triple() && t.needs_docker()
+                }),
                 Host::Other(_) => false,
             },
             // New behaviour, if a target is provided (--target ...) then always run with docker
@@ -113,7 +126,7 @@ impl Host {
             // example to test custom docker images. Cross should not try to recognize if host and
             // target are equal, it's a user decision and if user want's to bypass cross he can call
             // cargo directly or omit the `--target` option.
-            _ => target.map(|t| t.needs_docker()).unwrap_or(false),
+            _ => target.map_or(false, |t| t.needs_docker()),
         }
     }
 
@@ -142,7 +155,7 @@ impl<'a> From<&'a str> for Host {
             "aarch64-apple-darwin" => Host::Aarch64AppleDarwin,
             "aarch64-unknown-linux-gnu" => Host::Aarch64UnknownLinuxGnu,
             "aarch64-unknown-linux-musl" => Host::Aarch64UnknownLinuxMusl,
-            s => Host::Other(s.to_string()),
+            s => Host::Other(s.to_owned()),
         }
     }
 }
@@ -338,7 +351,8 @@ impl From<Host> for Target {
             Host::Aarch64UnknownLinuxMusl => Target::new_built_in("aarch64-unknown-linux-musl"),
             Host::Other(s) => Target::from(
                 s.as_str(),
-                &rustc::target_list(&mut Verbosity::Quiet.into()).unwrap(),
+                &rustc::target_list(&mut Verbosity::Quiet.into())
+                    .expect("should be able to query rustc"),
             ),
         }
     }
@@ -455,20 +469,14 @@ pub fn run() -> Result<ExitStatus> {
                 } else if !rustup::component_is_installed("rust-src", &toolchain, &mut msg_info)? {
                     rustup::install_component("rust-src", &toolchain, &mut msg_info)?;
                 }
-                if args
-                    .subcommand
-                    .map(|sc| sc == Subcommand::Clippy)
-                    .unwrap_or(false)
+                if args.subcommand.map_or(false, |sc| sc == Subcommand::Clippy)
                     && !rustup::component_is_installed("clippy", &toolchain, &mut msg_info)?
                 {
                     rustup::install_component("clippy", &toolchain, &mut msg_info)?;
                 }
             }
 
-            let needs_interpreter = args
-                .subcommand
-                .map(|sc| sc.needs_interpreter())
-                .unwrap_or(false);
+            let needs_interpreter = args.subcommand.map_or(false, |sc| sc.needs_interpreter());
 
             let mut filtered_args = if args
                 .subcommand
@@ -482,36 +490,32 @@ pub fn run() -> Result<ExitStatus> {
                     } else if arg.starts_with("--target=") {
                         // NOOP
                     } else {
-                        filtered_args.push(arg)
+                        filtered_args.push(arg);
                     }
                 }
                 filtered_args
             // Make sure --target is present
             } else if !args.all.iter().any(|a| a.starts_with("--target")) {
                 let mut args_with_target = args.all.clone();
-                args_with_target.push("--target".to_string());
-                args_with_target.push(target.triple().to_string());
+                args_with_target.push("--target".to_owned());
+                args_with_target.push(target.triple().to_owned());
                 args_with_target
             } else {
                 args.all.clone()
             };
 
-            let is_test = args
-                .subcommand
-                .map(|sc| sc == Subcommand::Test)
-                .unwrap_or(false);
+            let is_test = args.subcommand.map_or(false, |sc| sc == Subcommand::Test);
             if is_test && config.doctests().unwrap_or_default() && is_nightly {
-                filtered_args.push("-Zdoctest-xcompile".to_string());
+                filtered_args.push("-Zdoctest-xcompile".to_owned());
             }
             if uses_build_std {
-                filtered_args.push("-Zbuild-std".to_string());
+                filtered_args.push("-Zbuild-std".to_owned());
             }
 
             let is_remote = docker::Engine::is_remote();
             let needs_docker = args
                 .subcommand
-                .map(|sc| sc.needs_docker(is_remote))
-                .unwrap_or(false);
+                .map_or(false, |sc| sc.needs_docker(is_remote));
             if target.needs_docker() && needs_docker {
                 let engine = docker::Engine::new(None, Some(is_remote), &mut msg_info)?;
                 if host_version_meta.needs_interpreter()
@@ -519,7 +523,7 @@ pub fn run() -> Result<ExitStatus> {
                     && target.needs_interpreter()
                     && !interpreter::is_registered(&target)?
                 {
-                    docker::register(&engine, &target, &mut msg_info)?
+                    docker::register(&engine, &target, &mut msg_info)?;
                 }
 
                 let paths = docker::DockerPaths::create(&engine, metadata, cwd, sysroot)?;
@@ -527,10 +531,7 @@ pub fn run() -> Result<ExitStatus> {
                     docker::DockerOptions::new(engine, target.clone(), config, uses_xargo);
                 let status = docker::run(options, paths, &filtered_args, &mut msg_info)
                     .wrap_err("could not run container")?;
-                let needs_host = args
-                    .subcommand
-                    .map(|sc| sc.needs_host(is_remote))
-                    .unwrap_or(false);
+                let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
                 if !status.success() {
                     warn_on_failure(&target, &toolchain, &mut msg_info)?;
                 }
@@ -554,7 +555,7 @@ pub fn run() -> Result<ExitStatus> {
             } else {
                 // Not a list subcommand, which can happen with weird edge-cases.
                 print!("{}", stdout);
-                io::stdout().flush().unwrap();
+                io::stdout().flush().expect("could not flush");
             }
             Ok(out.status)
         }

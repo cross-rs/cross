@@ -55,13 +55,13 @@ pub fn fmt_subcommands(stdout: &str, msg_info: &mut MessageInfo) -> Result<()> {
     let (cross, host) = group_subcommands(stdout);
     if !cross.is_empty() {
         msg_info.print("Cross Commands:")?;
-        for line in cross.iter() {
+        for line in &cross {
             msg_info.print(line)?;
         }
     }
     if !host.is_empty() {
         msg_info.print("Host Commands:")?;
-        for line in cross.iter() {
+        for line in &cross {
             msg_info.print(line)?;
         }
     }
@@ -116,7 +116,7 @@ fn parse_next_arg<T>(
 }
 
 fn parse_equal_arg<T>(arg: String, out: &mut Vec<String>, parse: impl Fn(&str) -> T) -> T {
-    let result = parse(arg.split_once('=').unwrap().1);
+    let result = parse(arg.split_once('=').expect("argument should contain `=`").1);
     out.push(arg);
 
     result
@@ -177,7 +177,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                     ArgKind::Equal => parse_equal_arg(arg, &mut all, parse_manifest_path),
                 };
             } else if let ("+", ch) = arg.split_at(1) {
-                channel = Some(ch.to_string());
+                channel = Some(ch.to_owned());
             } else if let Some(kind) = is_value_arg(&arg, "--target") {
                 target = match kind {
                     ArgKind::Next => {
@@ -196,7 +196,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                         }
                     }
                     ArgKind::Equal => {
-                        features.push(parse_equal_arg(arg, &mut all, ToOwned::to_owned))
+                        features.push(parse_equal_arg(arg, &mut all, ToOwned::to_owned));
                     }
                 }
             } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
@@ -205,11 +205,13 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                         all.push(arg);
                         if let Some(td) = args.next() {
                             target_dir = Some(parse_target_dir(&td)?);
-                            all.push("/target".to_string());
+                            all.push("/target".to_owned());
                         }
                     }
                     ArgKind::Equal => {
-                        target_dir = Some(parse_target_dir(arg.split_once('=').unwrap().1)?);
+                        target_dir = Some(parse_target_dir(
+                            arg.split_once('=').expect("argument should contain `=`").1,
+                        )?);
                         all.push("--target-dir=/target".into());
                     }
                 }
@@ -218,7 +220,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                     sc = Some(Subcommand::from(arg.as_ref()));
                 }
 
-                all.push(arg.to_string());
+                all.push(arg.clone());
             }
         }
     }

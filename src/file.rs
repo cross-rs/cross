@@ -77,7 +77,7 @@ impl PathExt for Path {
                     Component::Prefix(prefix) => {
                         eyre::bail!("unix paths cannot handle windows prefix {prefix:?}.")
                     }
-                    Component::RootDir => output = "/".to_string(),
+                    Component::RootDir => output = "/".to_owned(),
                     Component::CurDir => push(&mut output, "."),
                     Component::ParentDir => push(&mut output, ".."),
                     Component::Normal(path) => push(&mut output, path.to_utf8()?),
@@ -85,7 +85,7 @@ impl PathExt for Path {
             }
             Ok(output)
         } else {
-            self.to_utf8().map(|x| x.to_string())
+            self.to_utf8().map(|x| x.to_owned())
         }
     }
 
@@ -109,13 +109,13 @@ impl PathExt for Path {
             match component {
                 Component::Prefix(prefix) => {
                     root_prefix = match prefix.kind() {
-                        Prefix::Verbatim(verbatim) => verbatim.to_utf8()?.to_string(),
+                        Prefix::Verbatim(verbatim) => verbatim.to_utf8()?.to_owned(),
                         Prefix::VerbatimUNC(server, volume) => fmt_unc(server, volume)?,
                         // we should never get this, but it's effectively just
                         // a root_prefix since we force absolute paths.
                         Prefix::VerbatimDisk(disk) => fmt_disk(disk),
                         Prefix::UNC(server, volume) => fmt_unc(server, volume)?,
-                        Prefix::DeviceNS(ns) => ns.to_utf8()?.to_string(),
+                        Prefix::DeviceNS(ns) => ns.to_utf8()?.to_owned(),
                         Prefix::Disk(disk) => fmt_disk(disk),
                     }
                 }
@@ -212,10 +212,12 @@ pub fn shell_escape(string: &str) -> Cow<'_, str> {
     }
 }
 
+#[must_use]
 pub fn maybe_canonicalize(path: &Path) -> Cow<'_, OsStr> {
-    canonicalize(path)
-        .map(|p| Cow::Owned(p.as_os_str().to_owned()))
-        .unwrap_or_else(|_| path.as_os_str().into())
+    canonicalize(path).map_or_else(
+        |_| path.as_os_str().into(),
+        |p| Cow::Owned(p.as_os_str().to_owned()),
+    )
 }
 
 pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
@@ -260,13 +262,10 @@ mod tests {
 
     #[test]
     fn as_posix() {
-        result_eq(p!(".").join("..").as_posix(), Ok("./..".to_string()));
-        result_eq(p!(".").join("/").as_posix(), Ok("/".to_string()));
-        result_eq(p!("foo").join("bar").as_posix(), Ok("foo/bar".to_string()));
-        result_eq(
-            p!("/foo").join("bar").as_posix(),
-            Ok("/foo/bar".to_string()),
-        );
+        result_eq(p!(".").join("..").as_posix(), Ok("./..".to_owned()));
+        result_eq(p!(".").join("/").as_posix(), Ok("/".to_owned()));
+        result_eq(p!("foo").join("bar").as_posix(), Ok("foo/bar".to_owned()));
+        result_eq(p!("/foo").join("bar").as_posix(), Ok("/foo/bar".to_owned()));
     }
 
     #[test]
@@ -279,16 +278,16 @@ mod tests {
     #[test]
     #[cfg(target_family = "windows")]
     fn as_wslpath() {
-        result_eq(p!(r"C:\").as_wslpath(), Ok("/mnt/c".to_string()));
-        result_eq(p!(r"C:\Users").as_wslpath(), Ok("/mnt/c/Users".to_string()));
+        result_eq(p!(r"C:\").as_wslpath(), Ok("/mnt/c".to_owned()));
+        result_eq(p!(r"C:\Users").as_wslpath(), Ok("/mnt/c/Users".to_owned()));
         result_eq(
             p!(r"\\localhost\c$\Users").as_wslpath(),
-            Ok("/mnt/c/Users".to_string()),
+            Ok("/mnt/c/Users".to_owned()),
         );
-        result_eq(p!(r"\\.\C:\").as_wslpath(), Ok("/mnt/c".to_string()));
+        result_eq(p!(r"\\.\C:\").as_wslpath(), Ok("/mnt/c".to_owned()));
         result_eq(
             p!(r"\\.\C:\Users").as_wslpath(),
-            Ok("/mnt/c/Users".to_string()),
+            Ok("/mnt/c/Users".to_owned()),
         );
     }
 
@@ -297,24 +296,24 @@ mod tests {
     fn pretty_path_windows() {
         assert_eq!(
             pretty_path("C:\\path\\bin\\cargo.exe", |f| f.contains("cargo")),
-            "cargo".to_string()
+            "cargo".to_owned()
         );
         assert_eq!(
             pretty_path("C:\\Program Files\\Docker\\bin\\docker.exe", |_| false),
-            "\"C:\\Program Files\\Docker\\bin\\docker.exe\"".to_string()
+            "\"C:\\Program Files\\Docker\\bin\\docker.exe\"".to_owned()
         );
         assert_eq!(
             pretty_path("C:\\Program Files\\single'quote\\cargo.exe", |c| c
                 .contains("cargo")),
-            "cargo".to_string()
+            "cargo".to_owned()
         );
         assert_eq!(
             pretty_path("C:\\Program Files\\single'quote\\cargo.exe", |_| false),
-            "\"C:\\Program Files\\single'quote\\cargo.exe\"".to_string()
+            "\"C:\\Program Files\\single'quote\\cargo.exe\"".to_owned()
         );
         assert_eq!(
             pretty_path("C:\\Program Files\\%not_var%\\cargo.exe", |_| false),
-            "\"C:\\\\Program Files\\\\%not_var%\\\\cargo.exe\"".to_string()
+            "\"C:\\\\Program Files\\\\%not_var%\\\\cargo.exe\"".to_owned()
         );
     }
 
@@ -323,19 +322,19 @@ mod tests {
     fn pretty_path_linux() {
         assert_eq!(
             pretty_path("/usr/bin/cargo", |f| f.contains("cargo")),
-            "cargo".to_string()
+            "cargo".to_owned()
         );
         assert_eq!(
             pretty_path("/home/user/my rust/bin/cargo", |_| false),
-            "\"/home/user/my rust/bin/cargo\"".to_string(),
+            "\"/home/user/my rust/bin/cargo\"".to_owned(),
         );
         assert_eq!(
             pretty_path("/home/user/single'quote/cargo", |c| c.contains("cargo")),
-            "cargo".to_string()
+            "cargo".to_owned()
         );
         assert_eq!(
             pretty_path("/home/user/single'quote/cargo", |_| false),
-            "\"/home/user/single'quote/cargo\"".to_string()
+            "\"/home/user/single'quote/cargo\"".to_owned()
         );
     }
 }

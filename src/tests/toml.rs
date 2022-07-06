@@ -10,7 +10,7 @@ static TOML_REGEX: Lazy<Regex> = Lazy::new(|| {
         .multi_line(true)
         .dot_matches_new_line(true)
         .build()
-        .unwrap()
+        .expect("regex should be valid")
 });
 
 #[test]
