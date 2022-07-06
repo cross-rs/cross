@@ -1,54 +1,40 @@
 use std::io;
-use std::path::Path;
 use std::process::ExitStatus;
 
-use super::engine::*;
 use super::shared::*;
-use crate::cargo::CargoMetadata;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::file::{PathExt, ToUtf8};
 use crate::shell::{MessageInfo, Stream};
-use crate::{Config, Target};
 use eyre::Context;
 
-#[allow(clippy::too_many_arguments)] // TODO: refactor
 pub(crate) fn run(
-    engine: &Engine,
-    target: &Target,
+    options: DockerOptions,
+    paths: DockerPaths,
     args: &[String],
-    metadata: &CargoMetadata,
-    config: &Config,
-    uses_xargo: bool,
-    sysroot: &Path,
-    msg_info: MessageInfo,
-    docker_in_docker: bool,
-    cwd: &Path,
+    msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
-    let mount_finder = MountFinder::create(engine, docker_in_docker)?;
-    let dirs = Directories::create(&mount_finder, metadata, cwd, sysroot)?;
+    let engine = &options.engine;
+    let dirs = &paths.directories;
 
-    let mut cmd = cargo_safe_command(uses_xargo);
+    let mut cmd = cargo_safe_command(options.uses_xargo);
     cmd.args(args);
 
     let mut docker = subcommand(engine, "run");
     docker_userns(&mut docker);
-    docker_envvars(&mut docker, config, target, msg_info)?;
+    docker_envvars(&mut docker, &options.config, &options.target, msg_info)?;
 
     let mount_volumes = docker_mount(
         &mut docker,
-        metadata,
-        &mount_finder,
-        config,
-        target,
-        cwd,
+        &options,
+        &paths,
         |docker, val| mount(docker, val, ""),
         |_| {},
     )?;
 
     docker.arg("--rm");
 
-    docker_seccomp(&mut docker, engine.kind, target, metadata)
+    docker_seccomp(&mut docker, engine.kind, &options.target, &paths.metadata)
         .wrap_err("when copying seccomp profile")?;
     docker_user_id(&mut docker, engine.kind);
 
@@ -68,7 +54,7 @@ pub(crate) fn run(
     docker
         .args(&["-v", &format!("{}:/rust:Z,ro", dirs.sysroot.to_utf8()?)])
         .args(&["-v", &format!("{}:/target:Z", dirs.target.to_utf8()?)]);
-    docker_cwd(&mut docker, metadata, &dirs, cwd, mount_volumes)?;
+    docker_cwd(&mut docker, &paths, mount_volumes)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
@@ -85,9 +71,10 @@ pub(crate) fn run(
             docker.arg("-t");
         }
     }
-    let mut image = image_name(config, target)?;
-    if needs_custom_image(target, config) {
-        image = custom_image_build(target, config, metadata, dirs, engine, msg_info)
+    let mut image = options.image_name()?;
+    if options.needs_custom_image() {
+        image = options
+            .custom_image_build(&paths, msg_info)
             .wrap_err("when building custom image")?
     }
 

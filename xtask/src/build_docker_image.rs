@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::util::{cargo_metadata, gha_error, gha_output, gha_print};
 use clap::Args;
-use cross::shell::{self, MessageInfo};
+use cross::shell::MessageInfo;
 use cross::{docker, CommandExt, ToUtf8};
 
 #[derive(Args, Debug)]
@@ -97,8 +97,6 @@ pub fn build_docker_image(
         repository,
         labels,
         verbose,
-        quiet,
-        color,
         dry_run,
         force,
         push,
@@ -112,8 +110,8 @@ pub fn build_docker_image(
         ..
     }: BuildDockerImage,
     engine: &docker::Engine,
+    msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose != 0, quiet, color.as_deref())?;
     let metadata = cargo_metadata(msg_info)?;
     let version = metadata
         .get_package("cross")
@@ -266,7 +264,7 @@ pub fn build_docker_image(
         } else {
             docker_build.print(msg_info)?;
             if !dry_run {
-                shell::fatal("refusing to push, use --force to override", msg_info, 1);
+                msg_info.fatal("refusing to push, use --force to override", 1);
             }
         }
         if gha {

@@ -338,7 +338,7 @@ impl From<Host> for Target {
             Host::Aarch64UnknownLinuxMusl => Target::new_built_in("aarch64-unknown-linux-musl"),
             Host::Other(s) => Target::from(
                 s.as_str(),
-                &rustc::target_list(Verbosity::Quiet.into()).unwrap(),
+                &rustc::target_list(&mut Verbosity::Quiet.into()).unwrap(),
             ),
         }
     }
@@ -360,18 +360,17 @@ impl Serialize for Target {
     }
 }
 
-fn warn_on_failure(target: &Target, toolchain: &str, msg_info: MessageInfo) -> Result<()> {
+fn warn_on_failure(target: &Target, toolchain: &str, msg_info: &mut MessageInfo) -> Result<()> {
     let rust_std = format!("rust-std-{target}");
     if target.is_builtin() {
         let component = rustup::check_component(&rust_std, toolchain, msg_info)?;
         if component.is_not_available() {
-            shell::warn(format!("rust-std is not available for {target}"), msg_info)?;
-            shell::note(
+            msg_info.warn(format!("rust-std is not available for {target}"))?;
+            msg_info.note(
                 format_args!(
                     r#"you may need to build components for the target via `-Z build-std=<components>` or in your cross configuration specify `target.{target}.build-std`
               the available components are core, std, alloc, and proc_macro"#
                 ),
-                msg_info,
             )?;
         }
     }
@@ -379,49 +378,47 @@ fn warn_on_failure(target: &Target, toolchain: &str, msg_info: MessageInfo) -> R
 }
 
 pub fn run() -> Result<ExitStatus> {
-    let target_list = rustc::target_list(Verbosity::Quiet.into())?;
+    let target_list = rustc::target_list(&mut Verbosity::Quiet.into())?;
     let args = cli::parse(&target_list)?;
+    let mut msg_info = shell::MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
 
     if args.version && args.subcommand.is_none() {
         let commit_info = include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt"));
-        shell::print(
-            format!(
-                concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
-                commit_info
-            ),
-            args.msg_info,
-        )?;
+        msg_info.print(format!(
+            concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
+            commit_info
+        ))?;
     }
 
     let host_version_meta = rustc::version_meta()?;
     let cwd = std::env::current_dir()?;
-    if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), args.msg_info)? {
+    if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), &mut msg_info)? {
         let host = host_version_meta.host();
-        let toml = toml(&metadata, args.msg_info)?;
+        let toml = toml(&metadata, &mut msg_info)?;
         let config = Config::new(toml);
         let target = args
             .target
             .or_else(|| config.target(&target_list))
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
-        config.confusable_target(&target, args.msg_info)?;
+        config.confusable_target(&target, &mut msg_info)?;
 
         let image_exists = match docker::image_name(&config, &target) {
             Ok(_) => true,
             Err(err) => {
-                shell::warn(err, args.msg_info)?;
+                msg_info.warn(err)?;
                 false
             }
         };
 
         if image_exists && host.is_supported(Some(&target)) {
             let (toolchain, sysroot) =
-                rustc::get_sysroot(&host, &target, args.channel.as_deref(), args.msg_info)?;
+                rustc::get_sysroot(&host, &target, args.channel.as_deref(), &mut msg_info)?;
             let mut is_nightly = toolchain.contains("nightly");
 
-            let installed_toolchains = rustup::installed_toolchains(args.msg_info)?;
+            let installed_toolchains = rustup::installed_toolchains(&mut msg_info)?;
 
             if !installed_toolchains.into_iter().any(|t| t == toolchain) {
-                rustup::install_toolchain(&toolchain, args.msg_info)?;
+                rustup::install_toolchain(&toolchain, &mut msg_info)?;
             }
             // TODO: Provide a way to pick/match the toolchain version as a consumer of `cross`.
             if let Some((rustc_version, channel, rustc_commit)) = rustup::rustc_version(&sysroot)? {
@@ -430,7 +427,7 @@ pub fn run() -> Result<ExitStatus> {
                     &toolchain,
                     &rustc_version,
                     &rustc_commit,
-                    args.msg_info,
+                    &mut msg_info,
                 )?;
                 is_nightly = channel == Channel::Nightly;
             }
@@ -438,10 +435,10 @@ pub fn run() -> Result<ExitStatus> {
             let uses_build_std = config.build_std(&target).unwrap_or(false);
             let uses_xargo =
                 !uses_build_std && config.xargo(&target).unwrap_or(!target.is_builtin());
-            if std::env::var("CROSS_CUSTOM_TOOLCHAIN").is_err() {
+            if !config.custom_toolchain() {
                 // build-std overrides xargo, but only use it if it's a built-in
                 // tool but not an available target or doesn't have rust-std.
-                let available_targets = rustup::available_targets(&toolchain, args.msg_info)?;
+                let available_targets = rustup::available_targets(&toolchain, &mut msg_info)?;
 
                 if !is_nightly && uses_build_std {
                     eyre::bail!(
@@ -454,17 +451,17 @@ pub fn run() -> Result<ExitStatus> {
                     && !available_targets.is_installed(&target)
                     && available_targets.contains(&target)
                 {
-                    rustup::install(&target, &toolchain, args.msg_info)?;
-                } else if !rustup::component_is_installed("rust-src", &toolchain, args.msg_info)? {
-                    rustup::install_component("rust-src", &toolchain, args.msg_info)?;
+                    rustup::install(&target, &toolchain, &mut msg_info)?;
+                } else if !rustup::component_is_installed("rust-src", &toolchain, &mut msg_info)? {
+                    rustup::install_component("rust-src", &toolchain, &mut msg_info)?;
                 }
                 if args
                     .subcommand
                     .map(|sc| sc == Subcommand::Clippy)
                     .unwrap_or(false)
-                    && !rustup::component_is_installed("clippy", &toolchain, args.msg_info)?
+                    && !rustup::component_is_installed("clippy", &toolchain, &mut msg_info)?
                 {
-                    rustup::install_component("clippy", &toolchain, args.msg_info)?;
+                    rustup::install_component("clippy", &toolchain, &mut msg_info)?;
                 }
             }
 
@@ -503,7 +500,7 @@ pub fn run() -> Result<ExitStatus> {
                 .subcommand
                 .map(|sc| sc == Subcommand::Test)
                 .unwrap_or(false);
-            if is_test && args.enable_doctests && is_nightly {
+            if is_test && config.doctests().unwrap_or_default() && is_nightly {
                 filtered_args.push("-Zdoctest-xcompile".to_string());
             }
             if uses_build_std {
@@ -516,34 +513,26 @@ pub fn run() -> Result<ExitStatus> {
                 .map(|sc| sc.needs_docker(is_remote))
                 .unwrap_or(false);
             if target.needs_docker() && needs_docker {
-                let engine = docker::Engine::new(Some(is_remote), args.msg_info)?;
+                let engine = docker::Engine::new(None, Some(is_remote), &mut msg_info)?;
                 if host_version_meta.needs_interpreter()
                     && needs_interpreter
                     && target.needs_interpreter()
                     && !interpreter::is_registered(&target)?
                 {
-                    docker::register(&engine, &target, args.msg_info)?
+                    docker::register(&engine, &target, &mut msg_info)?
                 }
 
-                let status = docker::run(
-                    &engine,
-                    &target,
-                    &filtered_args,
-                    &metadata,
-                    &config,
-                    uses_xargo,
-                    &sysroot,
-                    args.msg_info,
-                    args.docker_in_docker,
-                    &cwd,
-                )
-                .wrap_err("could not run container")?;
+                let paths = docker::DockerPaths::create(&engine, metadata, cwd, sysroot)?;
+                let options =
+                    docker::DockerOptions::new(engine, target.clone(), config, uses_xargo);
+                let status = docker::run(options, paths, &filtered_args, &mut msg_info)
+                    .wrap_err("could not run container")?;
                 let needs_host = args
                     .subcommand
                     .map(|sc| sc.needs_host(is_remote))
                     .unwrap_or(false);
                 if !status.success() {
-                    warn_on_failure(&target, &toolchain, args.msg_info)?;
+                    warn_on_failure(&target, &toolchain, &mut msg_info)?;
                 }
                 if !(status.success() && needs_host) {
                     return Ok(status);
@@ -554,14 +543,14 @@ pub fn run() -> Result<ExitStatus> {
 
     // if we fallback to the host cargo, use the same invocation that was made to cross
     let argv: Vec<String> = env::args().skip(1).collect();
-    shell::note("Falling back to `cargo` on the host.", args.msg_info)?;
+    msg_info.note("Falling back to `cargo` on the host.")?;
     match args.subcommand {
         Some(Subcommand::List) => {
             // this won't print in order if we have both stdout and stderr.
-            let out = cargo::run_and_get_output(&argv, args.msg_info)?;
+            let out = cargo::run_and_get_output(&argv, &mut msg_info)?;
             let stdout = out.stdout()?;
             if out.status.success() && cli::is_subcommand_list(&stdout) {
-                cli::fmt_subcommands(&stdout, args.msg_info)?;
+                cli::fmt_subcommands(&stdout, &mut msg_info)?;
             } else {
                 // Not a list subcommand, which can happen with weird edge-cases.
                 print!("{}", stdout);
@@ -569,7 +558,7 @@ pub fn run() -> Result<ExitStatus> {
             }
             Ok(out.status)
         }
-        _ => cargo::run(&argv, args.msg_info).map_err(Into::into),
+        _ => cargo::run(&argv, &mut msg_info).map_err(Into::into),
     }
 }
 
@@ -586,7 +575,7 @@ pub(crate) fn warn_host_version_mismatch(
     toolchain: &str,
     rustc_version: &rustc_version::Version,
     rustc_commit: &str,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<VersionMatch> {
     let host_commit = (&host_version_meta.short_version_string)
         .splitn(3, ' ')
@@ -605,16 +594,15 @@ pub(crate) fn warn_host_version_mismatch(
             host_version_meta.short_version_string
         );
         if versions.is_lt() || (versions.is_eq() && dates.is_lt()) {
-            shell::warn(format!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"), msg_info)?;
+            msg_info.warn(format!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"))?;
             return Ok(VersionMatch::OlderTarget);
         } else if versions.is_gt() || (versions.is_eq() && dates.is_gt()) {
-            shell::warn(
-                format!("using newer {rustc_warning}.\n > Update with `rustup update`"),
-                msg_info,
-            )?;
+            msg_info.warn(format!(
+                "using newer {rustc_warning}.\n > Update with `rustup update`"
+            ))?;
             return Ok(VersionMatch::NewerTarget);
         } else {
-            shell::warn(format!("using {rustc_warning}."), msg_info)?;
+            msg_info.warn(format!("using {rustc_warning}."))?;
             return Ok(VersionMatch::Different);
         }
     }
@@ -630,7 +618,7 @@ pub(crate) fn warn_host_version_mismatch(
 ///
 /// The values from `CROSS_CONFIG` or `Cross.toml` are concatenated with the package
 /// metadata in `Cargo.toml`, with `Cross.toml` having the highest priority.
-fn toml(metadata: &CargoMetadata, msg_info: MessageInfo) -> Result<Option<CrossToml>> {
+fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
     let root = &metadata.workspace_root;
     let cross_config_path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),
@@ -652,7 +640,7 @@ fn toml(metadata: &CargoMetadata, msg_info: MessageInfo) -> Result<Option<CrossT
     } else {
         // Checks if there is a lowercase version of this file
         if root.join("cross.toml").exists() {
-            shell::warn("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.", msg_info)?;
+            msg_info.warn("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.")?;
         }
 
         if let Some((cfg, _)) = CrossToml::parse_from_cargo(&cargo_toml_str, msg_info)? {

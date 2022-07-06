@@ -90,7 +90,7 @@ pub fn format_repo(registry: &str, repository: &str) -> String {
 pub fn pull_image(
     engine: &docker::Engine,
     image: &str,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
     let mut command = docker::subcommand(engine, "pull");
     command.arg(image);
@@ -169,7 +169,7 @@ impl std::fmt::Display for ImageTarget {
     }
 }
 
-pub fn has_nightly(msg_info: MessageInfo) -> cross::Result<bool> {
+pub fn has_nightly(msg_info: &mut MessageInfo) -> cross::Result<bool> {
     cross::cargo_command()
         .arg("+nightly")
         .run_and_get_output(msg_info)
@@ -177,10 +177,10 @@ pub fn has_nightly(msg_info: MessageInfo) -> cross::Result<bool> {
         .map_err(Into::into)
 }
 
-pub fn get_channel_prefer_nightly(
-    msg_info: MessageInfo,
-    toolchain: Option<&str>,
-) -> cross::Result<Option<&str>> {
+pub fn get_channel_prefer_nightly<'a>(
+    msg_info: &mut MessageInfo,
+    toolchain: Option<&'a str>,
+) -> cross::Result<Option<&'a str>> {
     Ok(match toolchain {
         Some(t) => Some(t),
         None => match has_nightly(msg_info)? {
@@ -198,12 +198,12 @@ pub fn cargo(channel: Option<&str>) -> Command {
     command
 }
 
-pub fn cargo_metadata(msg_info: MessageInfo) -> cross::Result<cross::CargoMetadata> {
+pub fn cargo_metadata(msg_info: &mut MessageInfo) -> cross::Result<cross::CargoMetadata> {
     cross::cargo_metadata_with_args(Some(Path::new(env!("CARGO_MANIFEST_DIR"))), None, msg_info)?
         .ok_or_else(|| eyre::eyre!("could not find cross workspace"))
 }
 
-pub fn project_dir(msg_info: MessageInfo) -> cross::Result<PathBuf> {
+pub fn project_dir(msg_info: &mut MessageInfo) -> cross::Result<PathBuf> {
     Ok(cargo_metadata(msg_info)?.workspace_root)
 }
 
@@ -226,7 +226,7 @@ pub fn gha_output(tag: &str, content: &str) {
     println!("::set-output name={tag}::{}", content)
 }
 
-pub fn read_dockerfiles(msg_info: MessageInfo) -> cross::Result<Vec<(PathBuf, String)>> {
+pub fn read_dockerfiles(msg_info: &mut MessageInfo) -> cross::Result<Vec<(PathBuf, String)>> {
     let root = project_dir(msg_info)?;
     let docker = root.join("docker");
     let mut dockerfiles = vec![];
@@ -254,7 +254,8 @@ mod tests {
     fn check_ubuntu_base() -> cross::Result<()> {
         // count all the entries of FROM for our images
         let mut counts = BTreeMap::new();
-        let dockerfiles = read_dockerfiles(Verbosity::Verbose.into())?;
+        let mut msg_info = Verbosity::Verbose.into();
+        let dockerfiles = read_dockerfiles(&mut msg_info)?;
         for (path, dockerfile) in dockerfiles {
             let lines: Vec<&str> = dockerfile.lines().collect();
             let index = lines

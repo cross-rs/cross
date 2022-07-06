@@ -85,7 +85,7 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
                 let search = cargo_command()
                     .args(&["search", "--limit", "1"])
                     .arg("cross")
-                    .run_and_get_stdout(Verbosity::Verbose.into())?;
+                    .run_and_get_stdout(&mut Verbosity::Verbose.into())?;
                 let (cross, rest) = search
                     .split_once(" = ")
                     .ok_or_else(|| eyre::eyre!("cargo search failed"))?;

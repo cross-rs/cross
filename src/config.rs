@@ -1,4 +1,4 @@
-use crate::shell::{self, MessageInfo};
+use crate::shell::MessageInfo;
 use crate::{CrossToml, Result, Target, TargetList};
 
 use std::collections::HashMap;
@@ -99,6 +99,16 @@ impl Environment {
         self.get_build_var("TARGET")
             .or_else(|| std::env::var("CARGO_BUILD_TARGET").ok())
     }
+
+    fn doctests(&self) -> Option<bool> {
+        env::var("CROSS_UNSTABLE_ENABLE_DOCTESTS")
+            .map(|s| bool_from_envvar(&s))
+            .ok()
+    }
+
+    fn custom_toolchain(&self) -> bool {
+        std::env::var("CROSS_CUSTOM_TOOLCHAIN").is_ok()
+    }
 }
 
 fn split_to_cloned_by_ws(string: &str) -> Vec<String> {
@@ -129,7 +139,7 @@ impl Config {
         }
     }
 
-    pub fn confusable_target(&self, target: &Target, msg_info: MessageInfo) -> Result<()> {
+    pub fn confusable_target(&self, target: &Target, msg_info: &mut MessageInfo) -> Result<()> {
         if let Some(keys) = self.toml.as_ref().map(|t| t.targets.keys()) {
             for mentioned_target in keys {
                 let mentioned_target_norm = mentioned_target
@@ -141,11 +151,8 @@ impl Config {
                     .replace(|c| c == '-' || c == '_', "")
                     .to_lowercase();
                 if mentioned_target != target && mentioned_target_norm == target_norm {
-                    shell::warn("a target named \"{mentioned_target}\" is mentioned in the Cross configuration, but the current specified target is \"{target}\".", msg_info)?;
-                    shell::status(
-                        " > Is the target misspelled in the Cross configuration?",
-                        msg_info,
-                    )?;
+                    msg_info.warn("a target named \"{mentioned_target}\" is mentioned in the Cross configuration, but the current specified target is \"{target}\".")?;
+                    msg_info.status(" > Is the target misspelled in the Cross configuration?")?;
                 }
             }
         }
@@ -265,6 +272,14 @@ impl Config {
 
     pub fn runner(&self, target: &Target) -> Result<Option<String>> {
         self.string_from_config(target, Environment::runner, CrossToml::runner)
+    }
+
+    pub fn doctests(&self) -> Option<bool> {
+        self.env.doctests()
+    }
+
+    pub fn custom_toolchain(&self) -> bool {
+        self.env.custom_toolchain()
     }
 
     pub fn env_passthrough(&self, target: &Target) -> Result<Option<Vec<String>>> {
@@ -457,9 +472,11 @@ mod tests {
         }
 
         fn toml(content: &str) -> Result<crate::CrossToml> {
-            Ok(CrossToml::parse_from_cross(content, MessageInfo::default())
-                .wrap_err("couldn't parse toml")?
-                .0)
+            Ok(
+                CrossToml::parse_from_cross(content, &mut MessageInfo::default())
+                    .wrap_err("couldn't parse toml")?
+                    .0,
+            )
         }
 
         #[test]

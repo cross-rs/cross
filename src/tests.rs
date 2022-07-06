@@ -13,15 +13,12 @@ static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 /// Returns the cargo workspace for the manifest
 pub fn get_cargo_workspace() -> &'static Path {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let mut msg_info = crate::shell::Verbosity::Verbose.into();
     WORKSPACE.get_or_init(|| {
-        crate::cargo_metadata_with_args(
-            Some(manifest_dir.as_ref()),
-            None,
-            crate::shell::Verbosity::Verbose.into(),
-        )
-        .unwrap()
-        .unwrap()
-        .workspace_root
+        crate::cargo_metadata_with_args(Some(manifest_dir.as_ref()), None, &mut msg_info)
+            .unwrap()
+            .unwrap()
+            .workspace_root
     })
 }
 
@@ -73,6 +70,7 @@ release: {version}
     fn compare(expected: VersionMatch, host: &str, targ: &str) {
         let host_meta = dbg!(make_meta(host));
         let target_meta = dbg!(make_rustc_version(targ));
+        let mut msg_info = crate::shell::MessageInfo::default();
         assert_eq!(
             expected,
             warn_host_version_mismatch(
@@ -80,7 +78,7 @@ release: {version}
                 "xxxx",
                 &target_meta.0,
                 &target_meta.1,
-                crate::shell::MessageInfo::default()
+                &mut msg_info,
             )
             .unwrap(),
             "\nhost = {}\ntarg = {}",

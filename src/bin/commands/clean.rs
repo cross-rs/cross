@@ -3,7 +3,7 @@ use std::fs;
 use super::containers::*;
 use super::images::*;
 use clap::Args;
-use cross::shell::{self, MessageInfo};
+use cross::shell::MessageInfo;
 
 #[derive(Args, Debug)]
 pub struct Clean {
@@ -31,8 +31,11 @@ pub struct Clean {
 }
 
 impl Clean {
-    pub fn run(self, engine: cross::docker::Engine) -> cross::Result<()> {
-        let msg_info = MessageInfo::create(self.verbose, self.quiet, self.color.as_deref())?;
+    pub fn run(
+        self,
+        engine: cross::docker::Engine,
+        msg_info: &mut MessageInfo,
+    ) -> cross::Result<()> {
         let tempdir = cross::temp::dir()?;
         match self.execute {
             true => {
@@ -40,13 +43,10 @@ impl Clean {
                     fs::remove_dir_all(tempdir)?;
                 }
             }
-            false => shell::print(
-                format!(
-                    "fs::remove_dir_all({})",
-                    cross::pretty_path(&tempdir, |_| false)
-                ),
-                msg_info,
-            )?,
+            false => msg_info.print(format_args!(
+                "fs::remove_dir_all({})",
+                cross::pretty_path(&tempdir, |_| false)
+            ))?,
         }
 
         // containers -> images -> volumes -> prune to ensure no conflicts.
@@ -58,7 +58,7 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        remove_containers.run(engine.clone())?;
+        remove_containers.run(engine.clone(), msg_info)?;
 
         let remove_images = RemoveImages {
             targets: vec![],
@@ -70,7 +70,7 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        remove_images.run(engine.clone())?;
+        remove_images.run(engine.clone(), msg_info)?;
 
         let remove_volumes = RemoveAllVolumes {
             verbose: self.verbose,
@@ -80,7 +80,7 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        remove_volumes.run(engine.clone())?;
+        remove_volumes.run(engine.clone(), msg_info)?;
 
         let prune_volumes = PruneVolumes {
             verbose: self.verbose,
@@ -89,8 +89,24 @@ impl Clean {
             execute: self.execute,
             engine: None,
         };
-        prune_volumes.run(engine)?;
+        prune_volumes.run(engine, msg_info)?;
 
         Ok(())
+    }
+
+    pub fn engine(&self) -> Option<&str> {
+        self.engine.as_deref()
+    }
+
+    pub fn verbose(&self) -> bool {
+        self.verbose
+    }
+
+    pub fn quiet(&self) -> bool {
+        self.quiet
+    }
+
+    pub fn color(&self) -> Option<&str> {
+        self.color.as_deref()
     }
 }

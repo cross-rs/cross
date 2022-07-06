@@ -12,7 +12,7 @@ use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
 use crate::rustc::{self, VersionMetaExt};
-use crate::shell::{self, MessageInfo, Verbosity};
+use crate::shell::{MessageInfo, Verbosity};
 use crate::Target;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
@@ -27,6 +27,181 @@ const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-image
 // note that we've allow listed `clone` and `clone3`, which is necessary
 // to fork the process, and which podman allows by default.
 pub(crate) const SECCOMP: &str = include_str!("seccomp.json");
+
+#[derive(Debug)]
+pub struct DockerOptions {
+    pub engine: Engine,
+    pub target: Target,
+    pub config: Config,
+    pub uses_xargo: bool,
+}
+
+impl DockerOptions {
+    pub fn new(engine: Engine, target: Target, config: Config, uses_xargo: bool) -> DockerOptions {
+        DockerOptions {
+            engine,
+            target,
+            config,
+            uses_xargo,
+        }
+    }
+
+    pub fn in_docker(&self) -> bool {
+        self.engine.in_docker
+    }
+
+    pub fn is_remote(&self) -> bool {
+        self.engine.is_remote
+    }
+
+    pub fn needs_custom_image(&self) -> bool {
+        self.config
+            .dockerfile(&self.target)
+            .unwrap_or_default()
+            .is_some()
+            || !self
+                .config
+                .pre_build(&self.target)
+                .unwrap_or_default()
+                .unwrap_or_default()
+                .is_empty()
+    }
+
+    pub(crate) fn custom_image_build(
+        &self,
+        paths: &DockerPaths,
+        msg_info: &mut MessageInfo,
+    ) -> Result<String> {
+        let mut image = image_name(&self.config, &self.target)?;
+
+        if let Some(path) = self.config.dockerfile(&self.target)? {
+            let context = self.config.dockerfile_context(&self.target)?;
+            let name = self.config.image(&self.target)?;
+
+            let build = Dockerfile::File {
+                path: &path,
+                context: context.as_deref(),
+                name: name.as_deref(),
+            };
+
+            image = build
+                .build(
+                    self,
+                    paths,
+                    self.config
+                        .dockerfile_build_args(&self.target)?
+                        .unwrap_or_default(),
+                    msg_info,
+                )
+                .wrap_err("when building dockerfile")?;
+        }
+        let pre_build = self.config.pre_build(&self.target)?;
+
+        if let Some(pre_build) = pre_build {
+            if !pre_build.is_empty() {
+                let custom = Dockerfile::Custom {
+                    content: format!(
+                        r#"
+        FROM {image}
+        ARG CROSS_DEB_ARCH=
+        ARG CROSS_CMD
+        RUN eval "${{CROSS_CMD}}""#
+                    ),
+                };
+                custom
+                    .build(
+                        self,
+                        paths,
+                        Some(("CROSS_CMD", pre_build.join("\n"))),
+                        msg_info,
+                    )
+                    .wrap_err("when pre-building")
+                    .with_note(|| format!("CROSS_CMD={}", pre_build.join("\n")))?;
+                image = custom.image_name(&self.target, &paths.metadata)?;
+            }
+        }
+        Ok(image)
+    }
+
+    pub(crate) fn image_name(&self) -> Result<String> {
+        if let Some(image) = self.config.image(&self.target)? {
+            return Ok(image);
+        }
+
+        if !DOCKER_IMAGES.contains(&self.target.triple()) {
+            eyre::bail!(
+                "`cross` does not provide a Docker image for target {target}, \
+                   specify a custom image in `Cross.toml`.",
+                target = self.target
+            );
+        }
+
+        let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
+            env!("CARGO_PKG_VERSION")
+        } else {
+            "main"
+        };
+
+        Ok(format!(
+            "{CROSS_IMAGE}/{target}:{version}",
+            target = self.target
+        ))
+    }
+}
+
+#[derive(Debug)]
+pub struct DockerPaths {
+    pub mount_finder: MountFinder,
+    pub metadata: CargoMetadata,
+    pub cwd: PathBuf,
+    pub sysroot: PathBuf,
+    pub directories: Directories,
+}
+
+impl DockerPaths {
+    pub fn create(
+        engine: &Engine,
+        metadata: CargoMetadata,
+        cwd: PathBuf,
+        sysroot: PathBuf,
+    ) -> Result<Self> {
+        let mount_finder = MountFinder::create(engine)?;
+        let directories = Directories::create(&mount_finder, &metadata, &cwd, &sysroot)?;
+        Ok(Self {
+            mount_finder,
+            metadata,
+            cwd,
+            sysroot,
+            directories,
+        })
+    }
+
+    pub fn workspace_root(&self) -> &Path {
+        &self.metadata.workspace_root
+    }
+
+    pub fn workspace_dependencies(&self) -> impl Iterator<Item = &Path> {
+        self.metadata.path_dependencies()
+    }
+
+    pub fn workspace_from_cwd(&self) -> Result<&Path> {
+        self.cwd
+            .strip_prefix(self.workspace_root())
+            .map_err(Into::into)
+    }
+
+    pub fn in_workspace(&self) -> bool {
+        self.workspace_from_cwd().is_ok()
+    }
+
+    pub fn mount_cwd(&self) -> &str {
+        &self.directories.mount_cwd
+    }
+
+    pub fn host_root(&self) -> &Path {
+        &self.directories.host_root
+    }
+}
 
 #[derive(Debug)]
 pub struct Directories {
@@ -141,10 +316,9 @@ pub fn get_package_info(
     engine: &Engine,
     target: &str,
     channel: Option<&str>,
-    docker_in_docker: bool,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<(Target, CargoMetadata, Directories)> {
-    let target_list = rustc::target_list((msg_info.color_choice, Verbosity::Quiet).into())?;
+    let target_list = msg_info.as_quiet(rustc::target_list)?;
     let target = Target::from(target, &target_list);
     let metadata = cargo_metadata_with_args(None, None, msg_info)?
         .ok_or(eyre::eyre!("unable to get project metadata"))?;
@@ -153,14 +327,14 @@ pub fn get_package_info(
     let host = host_meta.host();
 
     let sysroot = rustc::get_sysroot(&host, &target, channel, msg_info)?.1;
-    let mount_finder = MountFinder::create(engine, docker_in_docker)?;
+    let mount_finder = MountFinder::create(engine)?;
     let dirs = Directories::create(&mount_finder, &metadata, &cwd, &sysroot)?;
 
     Ok((target, metadata, dirs))
 }
 
 /// Register binfmt interpreters
-pub(crate) fn register(engine: &Engine, target: &Target, msg_info: MessageInfo) -> Result<()> {
+pub(crate) fn register(engine: &Engine, target: &Target, msg_info: &mut MessageInfo) -> Result<()> {
     let cmd = if target.is_windows() {
         // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
         "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
@@ -255,7 +429,7 @@ pub(crate) fn docker_envvars(
     docker: &mut Command,
     config: &Config,
     target: &Target,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
     for ref var in config.env_passthrough(target)?.unwrap_or_default() {
         validate_env_var(var)?;
@@ -289,10 +463,7 @@ pub(crate) fn docker_envvars(
 
     if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
         if env::var("DOCKER_OPTS").is_ok() {
-            shell::warn(
-                "using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.",
-                msg_info,
-            )?;
+            msg_info.warn("using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.")?;
         }
         docker.args(&parse_docker_opts(&value)?);
     } else if let Ok(value) = env::var("DOCKER_OPTS") {
@@ -305,44 +476,41 @@ pub(crate) fn docker_envvars(
 
 pub(crate) fn docker_cwd(
     docker: &mut Command,
-    metadata: &CargoMetadata,
-    dirs: &Directories,
-    cwd: &Path,
+    paths: &DockerPaths,
     mount_volumes: bool,
 ) -> Result<()> {
     if mount_volumes {
-        docker.args(&["-w", &dirs.mount_cwd]);
-    } else if dirs.mount_cwd == metadata.workspace_root.to_utf8()? {
+        docker.args(&["-w", paths.mount_cwd()]);
+    } else if paths.mount_cwd() == paths.workspace_root().to_utf8()? {
         docker.args(&["-w", "/project"]);
     } else {
         // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
-        let cwd = &cwd;
-        let working_dir = Path::new("/project").join(cwd.strip_prefix(&metadata.workspace_root)?);
+        let working_dir = Path::new("/project").join(paths.workspace_from_cwd()?);
         docker.args(&["-w", &working_dir.as_posix()?]);
     }
 
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)] // TODO: refactor
 pub(crate) fn docker_mount(
     docker: &mut Command,
-    metadata: &CargoMetadata,
-    mount_finder: &MountFinder,
-    config: &Config,
-    target: &Target,
-    cwd: &Path,
+    options: &DockerOptions,
+    paths: &DockerPaths,
     mount_cb: impl Fn(&mut Command, &Path) -> Result<String>,
     mut store_cb: impl FnMut((String, String)),
 ) -> Result<bool> {
     let mut mount_volumes = false;
     // FIXME(emilgardis 2022-04-07): This is a fallback so that if it's hard for us to do mounting logic, make it simple(r)
     // Preferably we would not have to do this.
-    if cwd.strip_prefix(&metadata.workspace_root).is_err() {
+    if !paths.in_workspace() {
         mount_volumes = true;
     }
 
-    for ref var in config.env_volumes(target)?.unwrap_or_default() {
+    for ref var in options
+        .config
+        .env_volumes(&options.target)?
+        .unwrap_or_default()
+    {
         let (var, value) = validate_env_var(var)?;
         let value = match value {
             Some(v) => Ok(v.to_string()),
@@ -351,7 +519,7 @@ pub(crate) fn docker_mount(
 
         if let Ok(val) = value {
             let canonical_val = file::canonicalize(&val)?;
-            let host_path = mount_finder.find_path(&canonical_val, true)?;
+            let host_path = paths.mount_finder.find_path(&canonical_val, true)?;
             let mount_path = mount_cb(docker, host_path.as_ref())?;
             docker.args(&["-e", &format!("{}={}", host_path, mount_path)]);
             store_cb((val, mount_path));
@@ -359,9 +527,9 @@ pub(crate) fn docker_mount(
         }
     }
 
-    for path in metadata.path_dependencies() {
+    for path in paths.workspace_dependencies() {
         let canonical_path = file::canonicalize(path)?;
-        let host_path = mount_finder.find_path(&canonical_path, true)?;
+        let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
         let mount_path = mount_cb(docker, host_path.as_ref())?;
         store_cb((path.to_utf8()?.to_string(), mount_path));
         mount_volumes = true;
@@ -454,78 +622,6 @@ pub(crate) fn docker_seccomp(
     Ok(())
 }
 
-pub fn needs_custom_image(target: &Target, config: &Config) -> bool {
-    config.dockerfile(target).unwrap_or_default().is_some()
-        || !config
-            .pre_build(target)
-            .unwrap_or_default()
-            .unwrap_or_default()
-            .is_empty()
-}
-
-pub(crate) fn custom_image_build(
-    target: &Target,
-    config: &Config,
-    metadata: &CargoMetadata,
-    Directories { host_root, .. }: Directories,
-    engine: &Engine,
-    msg_info: MessageInfo,
-) -> Result<String> {
-    let mut image = image_name(config, target)?;
-
-    if let Some(path) = config.dockerfile(target)? {
-        let context = config.dockerfile_context(target)?;
-        let name = config.image(target)?;
-
-        let build = Dockerfile::File {
-            path: &path,
-            context: context.as_deref(),
-            name: name.as_deref(),
-        };
-
-        image = build
-            .build(
-                config,
-                metadata,
-                engine,
-                &host_root,
-                config.dockerfile_build_args(target)?.unwrap_or_default(),
-                target,
-                msg_info,
-            )
-            .wrap_err("when building dockerfile")?;
-    }
-    let pre_build = config.pre_build(target)?;
-
-    if let Some(pre_build) = pre_build {
-        if !pre_build.is_empty() {
-            let custom = Dockerfile::Custom {
-                content: format!(
-                    r#"
-    FROM {image}
-    ARG CROSS_DEB_ARCH=
-    ARG CROSS_CMD
-    RUN eval "${{CROSS_CMD}}""#
-                ),
-            };
-            custom
-                .build(
-                    config,
-                    metadata,
-                    engine,
-                    &host_root,
-                    Some(("CROSS_CMD", pre_build.join("\n"))),
-                    target,
-                    msg_info,
-                )
-                .wrap_err("when pre-building")
-                .with_note(|| format!("CROSS_CMD={}", pre_build.join("\n")))?;
-            image = custom.image_name(target, metadata)?;
-        }
-    }
-    Ok(image)
-}
-
 pub(crate) fn image_name(config: &Config, target: &Target) -> Result<String> {
     if let Some(image) = config.image(target)? {
         return Ok(image);
@@ -556,7 +652,7 @@ fn docker_read_mount_paths(engine: &Engine) -> Result<Vec<MountDetail>> {
         command
     };
 
-    let output = docker.run_and_get_stdout(Verbosity::Quiet.into())?;
+    let output = docker.run_and_get_stdout(&mut Verbosity::Quiet.into())?;
     let info = serde_json::from_str(&output).wrap_err("failed to parse docker inspect output")?;
     dockerinfo_parse_mounts(&info)
 }
@@ -631,8 +727,8 @@ impl MountFinder {
         MountFinder { mounts }
     }
 
-    pub fn create(engine: &Engine, docker_in_docker: bool) -> Result<MountFinder> {
-        Ok(if docker_in_docker {
+    pub fn create(engine: &Engine) -> Result<MountFinder> {
+        Ok(if engine.in_docker {
             MountFinder::new(docker_read_mount_paths(engine)?)
         } else {
             MountFinder::default()
@@ -789,11 +885,11 @@ mod tests {
             }
         }
 
-        fn create_engine(msg_info: MessageInfo) -> Result<Engine> {
-            Engine::from_path(get_container_engine()?, Some(false), msg_info)
+        fn create_engine(msg_info: &mut MessageInfo) -> Result<Engine> {
+            Engine::from_path(get_container_engine()?, None, Some(false), msg_info)
         }
 
-        fn cargo_metadata(subdir: bool, msg_info: MessageInfo) -> Result<CargoMetadata> {
+        fn cargo_metadata(subdir: bool, msg_info: &mut MessageInfo) -> Result<CargoMetadata> {
             let mut metadata = cargo_metadata_with_args(
                 Some(Path::new(env!("CARGO_MANIFEST_DIR"))),
                 None,
@@ -860,7 +956,7 @@ mod tests {
         fn test_host() -> Result<()> {
             let vars = unset_env();
             let mount_finder = MountFinder::new(vec![]);
-            let metadata = cargo_metadata(false, MessageInfo::default())?;
+            let metadata = cargo_metadata(false, &mut MessageInfo::default())?;
             let directories = get_directories(&metadata, &mount_finder)?;
             paths_equal(&directories.cargo, &home()?.join(".cargo"))?;
             paths_equal(&directories.xargo, &home()?.join(".xargo"))?;
@@ -880,7 +976,8 @@ mod tests {
         fn test_docker_in_docker() -> Result<()> {
             let vars = unset_env();
 
-            let engine = create_engine(MessageInfo::default());
+            let mut msg_info = MessageInfo::default();
+            let engine = create_engine(&mut msg_info);
             let hostname = env::var("HOSTNAME");
             if engine.is_err() || hostname.is_err() {
                 eprintln!("could not get container engine or no hostname found");
@@ -888,18 +985,23 @@ mod tests {
                 return Ok(());
             }
             let engine = engine.unwrap();
+            if !engine.in_docker {
+                eprintln!("not in docker");
+                reset_env(vars);
+                return Ok(());
+            }
             let hostname = hostname.unwrap();
             let output = subcommand(&engine, "inspect")
                 .arg(hostname)
-                .run_and_get_output(MessageInfo::default())?;
+                .run_and_get_output(&mut msg_info)?;
             if !output.status.success() {
                 eprintln!("inspect failed");
                 reset_env(vars);
                 return Ok(());
             }
 
-            let mount_finder = MountFinder::create(&engine, true)?;
-            let metadata = cargo_metadata(true, MessageInfo::default())?;
+            let mount_finder = MountFinder::create(&engine)?;
+            let metadata = cargo_metadata(true, &mut msg_info)?;
             let directories = get_directories(&metadata, &mount_finder)?;
             let mount_finder = MountFinder::new(docker_read_mount_paths(&engine)?);
             let mount_path = |p| mount_finder.find_mount_path(p);

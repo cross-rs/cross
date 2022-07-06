@@ -15,14 +15,7 @@ pub struct InstallGitHooks {
     pub color: Option<String>,
 }
 
-pub fn install_git_hooks(
-    InstallGitHooks {
-        verbose,
-        quiet,
-        color,
-    }: InstallGitHooks,
-) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
+pub fn install_git_hooks(msg_info: &mut MessageInfo) -> cross::Result<()> {
     let root = project_dir(msg_info)?;
     let git_hooks = root.join(".git").join("hooks");
     let cross_dev = root.join("xtask").join("src");

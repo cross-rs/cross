@@ -5,7 +5,7 @@ use std::process::Command;
 
 use crate::util::{cargo, get_channel_prefer_nightly};
 use clap::Args;
-use cross::shell::{self, MessageInfo};
+use cross::shell::MessageInfo;
 use cross::CommandExt;
 
 const CARGO_FLAGS: &[&str] = &["--all-features", "--all-targets", "--workspace"];
@@ -39,14 +39,14 @@ pub struct Test {
     pub color: Option<String>,
 }
 
-fn cargo_fmt(msg_info: MessageInfo, channel: Option<&str>) -> cross::Result<()> {
+fn cargo_fmt(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Result<()> {
     cargo(channel)
         .args(&["fmt", "--", "--check"])
         .run(msg_info, false)
         .map_err(Into::into)
 }
 
-fn cargo_clippy(msg_info: MessageInfo, channel: Option<&str>) -> cross::Result<()> {
+fn cargo_clippy(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Result<()> {
     cargo(channel)
         .arg("clippy")
         .args(CARGO_FLAGS)
@@ -55,7 +55,7 @@ fn cargo_clippy(msg_info: MessageInfo, channel: Option<&str>) -> cross::Result<(
         .map_err(Into::into)
 }
 
-fn cargo_test(msg_info: MessageInfo, channel: Option<&str>) -> cross::Result<()> {
+fn cargo_test(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Result<()> {
     cargo(channel)
         .arg("test")
         .args(CARGO_FLAGS)
@@ -67,14 +67,14 @@ fn splitlines(string: String) -> Vec<String> {
     string.lines().map(|l| l.to_string()).collect()
 }
 
-fn staged_files(msg_info: MessageInfo) -> cross::Result<Vec<String>> {
+fn staged_files(msg_info: &mut MessageInfo) -> cross::Result<Vec<String>> {
     Command::new("git")
         .args(&["diff", "--cached", "--name-only", "--diff-filter=ACM"])
         .run_and_get_stdout(msg_info)
         .map(splitlines)
 }
 
-fn all_files(msg_info: MessageInfo) -> cross::Result<Vec<String>> {
+fn all_files(msg_info: &mut MessageInfo) -> cross::Result<Vec<String>> {
     Command::new("git")
         .arg("ls-files")
         .run_and_get_stdout(msg_info)
@@ -100,7 +100,7 @@ fn is_shell_script(path: impl AsRef<Path>) -> cross::Result<bool> {
     }
 }
 
-fn shellcheck(all: bool, msg_info: MessageInfo) -> cross::Result<()> {
+fn shellcheck(all: bool, msg_info: &mut MessageInfo) -> cross::Result<()> {
     if which::which("shellcheck").is_ok() {
         let files = match all {
             true => all_files(msg_info),
@@ -123,16 +123,11 @@ fn shellcheck(all: bool, msg_info: MessageInfo) -> cross::Result<()> {
 }
 
 pub fn check(
-    Check {
-        verbose,
-        quiet,
-        color,
-        all,
-    }: Check,
+    Check { all, .. }: Check,
     toolchain: Option<&str>,
+    msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
-    shell::info("Running rustfmt, clippy, and shellcheck checks.", msg_info)?;
+    msg_info.info("Running rustfmt, clippy, and shellcheck checks.")?;
 
     let channel = get_channel_prefer_nightly(msg_info, toolchain)?;
     cargo_fmt(msg_info, channel)?;
@@ -142,16 +137,8 @@ pub fn check(
     Ok(())
 }
 
-pub fn test(
-    Test {
-        verbose,
-        quiet,
-        color,
-    }: Test,
-    toolchain: Option<&str>,
-) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
-    shell::info("Running cargo fmt and tests", msg_info)?;
+pub fn test(toolchain: Option<&str>, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    msg_info.info("Running cargo fmt and tests")?;
 
     let channel = get_channel_prefer_nightly(msg_info, toolchain)?;
     cargo_fmt(msg_info, channel)?;

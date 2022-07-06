@@ -41,7 +41,7 @@ fn image_info(
     target: &crate::ImageTarget,
     image: &str,
     tag: &str,
-    msg_info: MessageInfo,
+    msg_info: &mut MessageInfo,
     has_test: bool,
 ) -> cross::Result<()> {
     if !tag.starts_with("local") {
@@ -60,24 +60,21 @@ fn image_info(
     command.arg(image);
     command.args(&["bash", "-c", TARGET_INFO_SCRIPT]);
     command
-        .run(msg_info, !msg_info.verbose())
+        .run(msg_info, msg_info.is_verbose())
         .map_err(Into::into)
 }
 
 pub fn target_info(
     TargetInfo {
         mut targets,
-        verbose,
-        quiet,
-        color,
         registry,
         repository,
         tag,
         ..
     }: TargetInfo,
     engine: &docker::Engine,
+    msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let msg_info = MessageInfo::create(verbose, quiet, color.as_deref())?;
     let matrix = crate::util::get_matrix();
     let test_map: BTreeMap<crate::ImageTarget, bool> = matrix
         .iter()

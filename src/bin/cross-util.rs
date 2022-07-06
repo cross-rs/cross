@@ -49,14 +49,31 @@ fn is_toolchain(toolchain: &str) -> cross::Result<String> {
 
 fn get_container_engine(
     engine: Option<&str>,
-    msg_info: MessageInfo,
+    docker_in_docker: bool,
+    msg_info: &mut MessageInfo,
 ) -> cross::Result<docker::Engine> {
     let engine = if let Some(ce) = engine {
         which::which(ce)?
     } else {
         docker::get_container_engine()?
     };
-    docker::Engine::from_path(engine, None, msg_info)
+    let in_docker = match docker_in_docker {
+        true => Some(true),
+        false => None,
+    };
+    docker::Engine::from_path(engine, in_docker, None, msg_info)
+}
+
+macro_rules! get_engine {
+    ($args:ident, $docker_in_docker:expr, $msg_info: ident) => {{
+        get_container_engine($args.engine(), $docker_in_docker, &mut $msg_info)
+    }};
+}
+
+macro_rules! get_msg_info {
+    ($args:ident) => {{
+        MessageInfo::create($args.verbose(), $args.quiet(), $args.color())
+    }};
 }
 
 pub fn main() -> cross::Result<()> {
@@ -64,24 +81,24 @@ pub fn main() -> cross::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Images(args) => {
-            let msg_info = MessageInfo::create(args.verbose(), args.quiet(), args.color())?;
-            let engine = get_container_engine(args.engine(), msg_info)?;
-            args.run(engine)?;
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, false, msg_info)?;
+            args.run(engine, &mut msg_info)?;
         }
         Commands::Volumes(args) => {
-            let msg_info = MessageInfo::create(args.verbose(), args.quiet(), args.color())?;
-            let engine = get_container_engine(args.engine(), msg_info)?;
-            args.run(engine, cli.toolchain.as_deref())?;
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, args.docker_in_docker(), msg_info)?;
+            args.run(engine, cli.toolchain.as_deref(), &mut msg_info)?;
         }
         Commands::Containers(args) => {
-            let msg_info = MessageInfo::create(args.verbose(), args.quiet(), args.color())?;
-            let engine = get_container_engine(args.engine(), msg_info)?;
-            args.run(engine)?;
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, false, msg_info)?;
+            args.run(engine, &mut msg_info)?;
         }
         Commands::Clean(args) => {
-            let msg_info = MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
-            let engine = get_container_engine(args.engine.as_deref(), msg_info)?;
-            args.run(engine)?;
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, false, msg_info)?;
+            args.run(engine, &mut msg_info)?;
         }
     }
 
