@@ -61,6 +61,7 @@ main() {
 
     local td
     td="$(mktemp -d)"
+    pushd "${td}"
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/freebsd"
 
@@ -69,8 +70,6 @@ main() {
 
     curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.gz" -O
     tar -C "${td}/gcc" --strip-components=1 -xf "gcc-${gcc}.tar.gz"
-
-    pushd "${td}"
 
     cd gcc
     sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites

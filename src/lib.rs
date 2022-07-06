@@ -197,6 +197,10 @@ impl Target {
         self.triple().contains("solaris")
     }
 
+    fn is_illumos(&self) -> bool {
+        self.triple().contains("illumos")
+    }
+
     fn is_android(&self) -> bool {
         self.triple().contains("android")
     }
@@ -219,6 +223,7 @@ impl Target {
             || self.is_bare_metal()
             || self.is_bsd()
             || self.is_solaris()
+            || self.is_illumos()
             || !self.is_builtin()
             || self.is_windows()
             || self.is_emscripten()

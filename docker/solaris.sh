@@ -25,6 +25,7 @@ main() {
 
     local td
     td="$(mktemp -d)"
+    pushd "${td}"
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/solaris"
 
@@ -33,8 +34,6 @@ main() {
 
     curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.xz" -O
     tar -C "${td}/gcc" --strip-components=1 -xJf "gcc-${gcc}.tar.xz"
-
-    pushd "${td}"
 
     cd gcc
     sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites
