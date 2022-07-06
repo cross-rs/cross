@@ -112,7 +112,7 @@ impl CommandExt for Command {
             Err(CommandError::NonZeroExitCode {
                 status,
                 command: self
-                    .command_pretty(msg_info, |ref cmd| STRIPPED_BINS.iter().any(|f| f == cmd)),
+                    .command_pretty(msg_info, |cmd| STRIPPED_BINS.iter().any(|f| f == &cmd)),
                 stderr: output.map(|out| out.stderr.clone()).unwrap_or_default(),
                 stdout: output.map(|out| out.stdout.clone()).unwrap_or_default(),
             })
@@ -140,7 +140,7 @@ impl CommandExt for Command {
             .map_err(|e| CommandError::CouldNotExecute {
                 source: Box::new(e),
                 command: self
-                    .command_pretty(msg_info, |ref cmd| STRIPPED_BINS.iter().any(|f| f == cmd)),
+                    .command_pretty(msg_info, |cmd| STRIPPED_BINS.iter().any(|f| f == &cmd)),
             })
             .map_err(Into::into)
     }
@@ -164,7 +164,7 @@ impl CommandExt for Command {
             CommandError::CouldNotExecute {
                 source: Box::new(e),
                 command: self
-                    .command_pretty(msg_info, |ref cmd| STRIPPED_BINS.iter().any(|f| f == cmd)),
+                    .command_pretty(msg_info, |cmd| STRIPPED_BINS.iter().any(|f| f == &cmd)),
             }
             .to_section_report()
         })
@@ -242,5 +242,5 @@ impl From<SafeCommand> for Command {
 pub(crate) fn env_program(envvar: &str, program: &str) -> String {
     std::env::var(envvar)
         .ok()
-        .unwrap_or_else(|| program.to_string())
+        .unwrap_or_else(|| program.to_owned())
 }

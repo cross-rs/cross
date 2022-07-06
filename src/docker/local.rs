@@ -75,7 +75,7 @@ pub(crate) fn run(
     if options.needs_custom_image() {
         image = options
             .custom_image_build(&paths, msg_info)
-            .wrap_err("when building custom image")?
+            .wrap_err("when building custom image")?;
     }
 
     docker

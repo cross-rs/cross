@@ -14,6 +14,7 @@ static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 pub fn get_cargo_workspace() -> &'static Path {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let mut msg_info = crate::shell::Verbosity::Verbose.into();
+    #[allow(clippy::unwrap_used)]
     WORKSPACE.get_or_init(|| {
         crate::cargo_metadata_with_args(Some(manifest_dir.as_ref()), None, &mut msg_info)
             .unwrap()

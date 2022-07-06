@@ -71,10 +71,12 @@ impl ContainerState {
         }
     }
 
+    #[must_use]
     pub fn is_stopped(&self) -> bool {
         matches!(self, Self::Exited | Self::DoesNotExist)
     }
 
+    #[must_use]
     pub fn exists(&self) -> bool {
         !matches!(self, Self::DoesNotExist)
     }
@@ -94,9 +96,9 @@ impl VolumeId {
         msg_info: &mut MessageInfo,
     ) -> Result<Self> {
         if volume_exists(engine, toolchain, msg_info)? {
-            Ok(Self::Keep(toolchain.to_string()))
+            Ok(Self::Keep(toolchain.to_owned()))
         } else {
-            Ok(Self::Discard(container.to_string()))
+            Ok(Self::Discard(container.to_owned()))
         }
     }
 }
@@ -203,7 +205,12 @@ pub fn copy_volume_container_xargo(
     let src = xargo_dir.join(&relpath);
     let dst = mount_prefix.join("xargo").join(&relpath);
     if Path::new(&src).exists() {
-        create_volume_dir(engine, container, dst.parent().unwrap(), msg_info)?;
+        create_volume_dir(
+            engine,
+            container,
+            dst.parent().expect("destination should have a parent"),
+            msg_info,
+        )?;
         copy_volume_files(engine, container, &src, &dst, msg_info)?;
     }
 
@@ -236,7 +243,7 @@ pub fn copy_volume_container_cargo(
                 .file_name()
                 .to_utf8()
                 .wrap_err_with(|| format!("when reading file {file:?}"))?
-                .to_string();
+                .to_owned();
             if !basename.starts_with('.') && !matches!(basename.as_ref(), "git" | "registry") {
                 copy_volume_files(engine, container, &file.path(), &dst, msg_info)?;
             }
@@ -475,7 +482,7 @@ fn parse_project_fingerprint(path: &Path) -> Result<FingerprintMap> {
             .split_once('\t')
             .ok_or_else(|| eyre::eyre!("unable to parse fingerprint line '{line}'"))?;
         let modified = epoch + time::Duration::from_millis(timestamp.parse::<u64>()?);
-        result.insert(relpath.to_string(), modified);
+        result.insert(relpath.to_owned(), modified);
     }
 
     Ok(result)
@@ -538,17 +545,12 @@ fn get_fingerprint_difference<'a, 'b>(
     // this can be added or updated
     let changed: Vec<&str> = current
         .iter()
-        .filter(|(ref k, ref v1)| {
-            previous
-                .get(&k.to_string())
-                .map(|ref v2| v1 != v2)
-                .unwrap_or(true)
-        })
+        .filter(|(k, v1)| previous.get(*k).map_or(true, |v2| v1 != &v2))
         .map(|(k, _)| k.as_str())
         .collect();
     let removed: Vec<&str> = previous
         .iter()
-        .filter(|(ref k, _)| !current.contains_key(&k.to_string()))
+        .filter(|(k, _)| !current.contains_key(*k))
         .map(|(k, _)| k.as_str())
         .collect();
     (changed, removed)
@@ -588,7 +590,7 @@ fn remove_volume_file_list(
     const PATH: &str = "/tmp/remove_list";
     let mut script = vec![];
     if msg_info.is_verbose() {
-        script.push("set -x".to_string());
+        script.push("set -x".to_owned());
     }
     script.push(format!(
         "cat \"{PATH}\" | while read line; do
@@ -731,7 +733,10 @@ pub fn unique_toolchain_identifier(sysroot: &Path) -> Result<String> {
         rustc::version_meta()?.commit_hash()
     };
 
-    let toolchain_name = sysroot.file_name().unwrap().to_utf8()?;
+    let toolchain_name = sysroot
+        .file_name()
+        .expect("should be able to get toolchain name")
+        .to_utf8()?;
     let toolchain_hash = path_hash(sysroot)?;
     Ok(format!(
         "cross-{toolchain_name}-{toolchain_hash}-{commit_hash}"
@@ -748,7 +753,12 @@ pub fn unique_container_identifier(
     let package = metadata
         .packages
         .iter()
-        .find(|p| p.manifest_path.parent().unwrap() == workspace_root)
+        .find(|p| {
+            p.manifest_path
+                .parent()
+                .expect("manifest path should have a parent directory")
+                == workspace_root
+        })
         .unwrap_or_else(|| {
             metadata
                 .packages
@@ -852,7 +862,7 @@ pub(crate) fn run(
     // Store to the running container so it can load the needed binaries.
     if let Some(ref nix_store) = dirs.nix_store {
         let nix_string = nix_store.to_utf8()?;
-        volumes.push((nix_string.to_string(), nix_string.to_string()))
+        volumes.push((nix_string.to_owned(), nix_string.to_owned()));
     }
 
     docker.arg("-d");
@@ -928,11 +938,21 @@ pub(crate) fn run(
     }
     let mount_root = if mount_volumes {
         // cannot panic: absolute unix path, must have root
-        let rel_mount_root = dirs.mount_root.strip_prefix('/').unwrap();
+        let rel_mount_root = dirs
+            .mount_root
+            .strip_prefix('/')
+            .expect("mount root should be absolute");
         let mount_root = mount_prefix_path.join(rel_mount_root);
         if !rel_mount_root.is_empty() {
-            create_volume_dir(engine, &container, mount_root.parent().unwrap(), msg_info)
-                .wrap_err("when creating mount root")?;
+            create_volume_dir(
+                engine,
+                &container,
+                mount_root
+                    .parent()
+                    .expect("mount root should have a parent directory"),
+                msg_info,
+            )
+            .wrap_err("when creating mount root")?;
         }
         mount_root
     } else {
@@ -972,17 +992,28 @@ pub(crate) fn run(
         copied.push((&dirs.target, target_dir.clone()));
         target_dir
     };
-    for (src, dst) in volumes.iter() {
+    for (src, dst) in &volumes {
         let src: &Path = src.as_ref();
         if let Some((psrc, pdst)) = copied.iter().find(|(p, _)| src.starts_with(p)) {
             // path has already been copied over
-            let relpath = src.strip_prefix(psrc).unwrap();
+            let relpath = src
+                .strip_prefix(psrc)
+                .expect("source should start with prefix");
             to_symlink.push((pdst.join(relpath), dst));
         } else {
-            let rel_dst = dst.strip_prefix('/').unwrap();
+            let rel_dst = dst
+                .strip_prefix('/')
+                .expect("destination should be absolute");
             let mount_dst = mount_prefix_path.join(rel_dst);
             if !rel_dst.is_empty() {
-                create_volume_dir(engine, &container, mount_dst.parent().unwrap(), msg_info)?;
+                create_volume_dir(
+                    engine,
+                    &container,
+                    mount_dst
+                        .parent()
+                        .expect("destination should have a parent directory"),
+                    msg_info,
+                )?;
             }
             copy(src, &mount_dst, msg_info)?;
         }
@@ -1012,16 +1043,16 @@ pub(crate) fn run(
         }
     }
     if !has_target_dir {
-        final_args.push("--target-dir".to_string());
+        final_args.push("--target-dir".to_owned());
         final_args.push(target_dir_string);
     }
     let mut cmd = cargo_safe_command(options.uses_xargo);
     cmd.args(final_args);
 
     // 5. create symlinks for copied data
-    let mut symlink = vec!["set -e pipefail".to_string()];
+    let mut symlink = vec!["set -e pipefail".to_owned()];
     if msg_info.is_verbose() {
-        symlink.push("set -x".to_string());
+        symlink.push("set -x".to_owned());
     }
     symlink.push(format!(
         "chown -R {uid}:{gid} {mount_prefix}",
@@ -1077,7 +1108,12 @@ symlink_recurse \"${{prefix}}\"
         subcommand(engine, "cp")
             .arg("-a")
             .arg(&format!("{container}:{}", target_dir.as_posix()?))
-            .arg(&dirs.target.parent().unwrap())
+            .arg(
+                &dirs
+                    .target
+                    .parent()
+                    .expect("target directory should have a parent"),
+            )
             .run_and_get_status(msg_info, false)
             .map_err::<eyre::ErrReport, _>(Into::into)?;
     }

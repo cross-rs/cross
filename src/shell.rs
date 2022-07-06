@@ -121,6 +121,7 @@ impl MessageInfo {
         })
     }
 
+    #[must_use]
     pub fn is_verbose(&self) -> bool {
         self.verbosity.verbose()
     }
@@ -169,7 +170,8 @@ impl MessageInfo {
 
     /// prints a red 'error' message and terminates.
     pub fn fatal<T: fmt::Display>(&mut self, message: T, code: i32) -> ! {
-        self.error(message).unwrap();
+        self.error(message)
+            .expect("could not display fatal message");
         std::process::exit(code);
     }
 
@@ -240,7 +242,8 @@ impl MessageInfo {
     }
 
     pub fn fatal_usage<T: fmt::Display>(&mut self, arg: T, code: i32) -> ! {
-        self.error_usage(arg).unwrap();
+        self.error_usage(arg)
+            .expect("could not display usage message");
         std::process::exit(code);
     }
 
@@ -319,6 +322,7 @@ pub trait Stream {
     const TTY: atty::Stream;
     const OWO: owo_colors::Stream;
 
+    #[must_use]
     fn is_atty() -> bool {
         atty::is(Self::TTY)
     }
@@ -347,6 +351,7 @@ pub fn default_ident() -> usize {
     cross_prefix!("").len()
 }
 
+#[must_use]
 pub fn indent(message: &str, spaces: usize) -> String {
     message
         .lines()

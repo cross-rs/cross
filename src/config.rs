@@ -20,7 +20,7 @@ impl Environment {
     fn get_var(&self, name: &str) -> Option<String> {
         self.1
             .as_ref()
-            .and_then(|internal_map| internal_map.get(name).map(|v| v.to_string()))
+            .and_then(|internal_map| internal_map.get(name).map(|v| (*v).to_owned()))
             .or_else(|| env::var(name).ok())
     }
 
@@ -45,7 +45,7 @@ impl Environment {
         if !key.starts_with("BUILD_") {
             format!("BUILD_{key}")
         } else {
-            key.to_string()
+            key.to_owned()
         }
     }
 
@@ -70,11 +70,11 @@ impl Environment {
     }
 
     fn dockerfile(&self, target: &Target) -> (Option<String>, Option<String>) {
-        self.get_values_for("DOCKERFILE", target, |s| s.to_string())
+        self.get_values_for("DOCKERFILE", target, |s| s.to_owned())
     }
 
     fn dockerfile_context(&self, target: &Target) -> (Option<String>, Option<String>) {
-        self.get_values_for("DOCKERFILE_CONTEXT", target, |s| s.to_string())
+        self.get_values_for("DOCKERFILE_CONTEXT", target, |s| s.to_owned())
     }
 
     fn pre_build(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
@@ -384,8 +384,8 @@ mod tests {
     fn target_list() -> TargetList {
         TargetList {
             triples: vec![
-                "aarch64-unknown-linux-gnu".to_string(),
-                "armv7-unknown-linux-musleabihf".to_string(),
+                "aarch64-unknown-linux-gnu".to_owned(),
+                "armv7-unknown-linux-musleabihf".to_owned(),
             ],
         }
     }
@@ -438,7 +438,7 @@ mod tests {
             assert_eq!(
                 env.build_var_name("target-aarch64-unknown-linux-gnu_image"),
                 "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_IMAGE"
-            )
+            );
         }
 
         #[test]
@@ -453,10 +453,10 @@ mod tests {
             let env = Environment::new(Some(map));
 
             let (build, target) = env.passthrough(&target());
-            assert!(build.as_ref().unwrap().contains(&"TEST1".to_string()));
-            assert!(build.as_ref().unwrap().contains(&"TEST2".to_string()));
-            assert!(target.as_ref().unwrap().contains(&"PASS1".to_string()));
-            assert!(target.as_ref().unwrap().contains(&"PASS2".to_string()));
+            assert!(build.as_ref().unwrap().contains(&"TEST1".to_owned()));
+            assert!(build.as_ref().unwrap().contains(&"TEST2".to_owned()));
+            assert!(target.as_ref().unwrap().contains(&"PASS1".to_owned()));
+            assert!(target.as_ref().unwrap().contains(&"PASS2".to_owned()));
         }
     }
 
@@ -467,7 +467,7 @@ mod tests {
 
         macro_rules! s {
             ($x:literal) => {
-                $x.to_string()
+                $x.to_owned()
             };
         }
 
@@ -627,7 +627,7 @@ mod tests {
             map.insert("CROSS_BUILD_ENV_VOLUMES", "VOLUME1 VOLUME2");
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
-            let expected = vec!["VOLUME1".to_string(), "VOLUME2".into()];
+            let expected = vec![s!("VOLUME1"), s!("VOLUME2")];
 
             let result = config.env_volumes(&target()).unwrap().unwrap_or_default();
             dbg!(&result);
@@ -643,7 +643,7 @@ mod tests {
             let map = HashMap::new();
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
-            let expected = vec!["VOLUME3".to_string(), "VOLUME4".into()];
+            let expected = vec![s!("VOLUME3"), s!("VOLUME4")];
 
             let result = config.env_volumes(&target()).unwrap().unwrap_or_default();
             dbg!(&result);

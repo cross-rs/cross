@@ -58,8 +58,8 @@ impl CommandError {
     pub fn to_section_report(self) -> eyre::Report {
         match &self {
             CommandError::NonZeroExitCode { stderr, stdout, .. } => {
-                let stderr = String::from_utf8_lossy(stderr).trim().to_string();
-                let stdout = String::from_utf8_lossy(stdout).trim().to_string();
+                let stderr = String::from_utf8_lossy(stderr).trim().to_owned();
+                let stdout = String::from_utf8_lossy(stdout).trim().to_owned();
                 eyre::eyre!(self)
                     .section(color_eyre::SectionExt::header(stderr, "Stderr:"))
                     .section(color_eyre::SectionExt::header(stdout, "Stdout:"))

@@ -54,7 +54,7 @@ impl<'a> Dockerfile<'a> {
         let image_name = self.image_name(&options.target, &paths.metadata)?;
         docker_build.args(["--tag", &image_name]);
 
-        for (key, arg) in build_args.into_iter() {
+        for (key, arg) in build_args {
             docker_build.args(["--build-arg", &format!("{}={}", key.as_ref(), arg.as_ref())]);
         }
 
@@ -107,7 +107,7 @@ impl<'a> Dockerfile<'a> {
         match self {
             Dockerfile::File {
                 name: Some(name), ..
-            } => Ok(name.to_string()),
+            } => Ok((*name).to_owned()),
             _ => Ok(format!(
                 "{}{package_name}:{target_triple}-{path_hash}{custom}",
                 CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX,
@@ -181,7 +181,7 @@ fn docker_tag_name(file_name: &str) -> String {
 
     // in case all characters were invalid, use a non-empty filename
     if result.is_empty() {
-        result = "empty".to_string();
+        result = "empty".to_owned();
     }
 
     result
@@ -193,7 +193,7 @@ mod tests {
 
     macro_rules! s {
         ($s:literal) => {
-            $s.to_string()
+            $s.to_owned()
         };
     }
 

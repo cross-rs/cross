@@ -1,3 +1,5 @@
 disallowed-methods = [
     { path = "std::path::Path::display", reason = "incorrect handling of non-Unicode paths, use path.to_utf8() or debug (`{path:?}`) instead" },
 ]
+# needs clippy 1.61
+# allow-unwrap-in-tests = true

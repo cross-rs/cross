@@ -58,7 +58,7 @@ impl FromStr for CrossTargetDockerfileConfig {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(CrossTargetDockerfileConfig {
-            file: s.to_string(),
+            file: s.to_owned(),
             context: None,
             build_args: None,
         })
@@ -154,7 +154,7 @@ impl CrossToml {
                 .wrap_err("could not convert CrossToml to serde_json::Value")?
                 .as_object()
             {
-                Ok(obj.to_owned())
+                Ok(obj.clone())
             } else {
                 eyre::bail!("failed to serialize CrossToml as object");
             }
@@ -408,7 +408,7 @@ mod tests {
 
     macro_rules! s {
         ($x:literal) => {
-            $x.to_string()
+            $x.to_owned()
         };
     }
 
@@ -432,13 +432,13 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig {
                 env: CrossEnvConfig {
-                    volumes: Some(vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()]),
-                    passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()]),
+                    volumes: Some(vec![s!("VOL1_ARG"), s!("VOL2_ARG")]),
+                    passthrough: Some(vec![s!("VAR1"), s!("VAR2")]),
                 },
                 xargo: Some(true),
                 build_std: None,
                 default_target: None,
-                pre_build: Some(vec!["echo 'Hello World!'".to_string()]),
+                pre_build: Some(vec![s!("echo 'Hello World!'")]),
                 dockerfile: None,
             },
         };
@@ -465,16 +465,16 @@ mod tests {
         let mut target_map = HashMap::new();
         target_map.insert(
             Target::BuiltIn {
-                triple: "aarch64-unknown-linux-gnu".to_string(),
+                triple: s!("aarch64-unknown-linux-gnu"),
             },
             CrossTargetConfig {
                 env: CrossEnvConfig {
-                    passthrough: Some(vec!["VAR1".to_string(), "VAR2".to_string()]),
-                    volumes: Some(vec!["VOL1_ARG".to_string(), "VOL2_ARG".to_string()]),
+                    passthrough: Some(vec![s!("VAR1"), s!("VAR2")]),
+                    volumes: Some(vec![s!("VOL1_ARG"), s!("VOL2_ARG")]),
                 },
                 xargo: Some(false),
                 build_std: Some(true),
-                image: Some("test-image".to_string()),
+                image: Some(s!("test-image")),
                 runner: None,
                 dockerfile: None,
                 pre_build: Some(vec![]),
@@ -509,22 +509,22 @@ mod tests {
         let mut target_map = HashMap::new();
         target_map.insert(
             Target::BuiltIn {
-                triple: "aarch64-unknown-linux-gnu".to_string(),
+                triple: s!("aarch64-unknown-linux-gnu"),
             },
             CrossTargetConfig {
                 xargo: Some(false),
                 build_std: None,
                 image: None,
                 dockerfile: Some(CrossTargetDockerfileConfig {
-                    file: "Dockerfile.test".to_string(),
+                    file: s!("Dockerfile.test"),
                     context: None,
                     build_args: None,
                 }),
-                pre_build: Some(vec!["echo 'Hello'".to_string()]),
+                pre_build: Some(vec![s!("echo 'Hello'")]),
                 runner: None,
                 env: CrossEnvConfig {
                     passthrough: None,
-                    volumes: Some(vec!["VOL".to_string()]),
+                    volumes: Some(vec![s!("VOL")]),
                 },
             },
         );

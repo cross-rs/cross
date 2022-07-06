@@ -46,14 +46,17 @@ impl DockerOptions {
         }
     }
 
+    #[must_use]
     pub fn in_docker(&self) -> bool {
         self.engine.in_docker
     }
 
+    #[must_use]
     pub fn is_remote(&self) -> bool {
         self.engine.is_remote
     }
 
+    #[must_use]
     pub fn needs_custom_image(&self) -> bool {
         self.config
             .dockerfile(&self.target)
@@ -190,6 +193,7 @@ impl DockerPaths {
             .map_err(Into::into)
     }
 
+    #[must_use]
     pub fn in_workspace(&self) -> bool {
         self.workspace_from_cwd().is_ok()
     }
@@ -226,9 +230,8 @@ impl Directories {
         let home_dir =
             home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
         let cargo = home::cargo_home()?;
-        let xargo = env::var_os("XARGO_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| home_dir.join(".xargo"));
+        let xargo =
+            env::var_os("XARGO_HOME").map_or_else(|| home_dir.join(".xargo"), PathBuf::from);
         let nix_store = env::var_os("NIX_STORE").map(PathBuf::from);
         let target = &metadata.target_directory;
 
@@ -261,7 +264,7 @@ impl Directories {
         #[cfg(not(target_os = "windows"))]
         {
             // NOTE: host root has already found the mount path
-            mount_root = host_root.to_utf8()?.to_string();
+            mount_root = host_root.to_utf8()?.to_owned();
         }
         let mount_cwd = mount_finder.find_path(cwd, false)?;
         let sysroot = mount_finder.find_mount_path(sysroot);
@@ -449,7 +452,7 @@ pub(crate) fn docker_envvars(
         .args(&["-e", &cross_runner]);
     add_cargo_configuration_envvars(docker);
 
-    if let Some(username) = id::username().unwrap() {
+    if let Some(username) = id::username().wrap_err("could not get username")? {
         docker.args(&["-e", &format!("USER={username}")]);
     }
 
@@ -513,7 +516,7 @@ pub(crate) fn docker_mount(
     {
         let (var, value) = validate_env_var(var)?;
         let value = match value {
-            Some(v) => Ok(v.to_string()),
+            Some(v) => Ok(v.to_owned()),
             None => env::var(var),
         };
 
@@ -531,7 +534,7 @@ pub(crate) fn docker_mount(
         let canonical_path = file::canonicalize(path)?;
         let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
         let mount_path = mount_cb(docker, host_path.as_ref())?;
-        store_cb((path.to_utf8()?.to_string(), mount_path));
+        store_cb((path.to_utf8()?.to_owned(), mount_path));
         mount_volumes = true;
     }
 
@@ -546,7 +549,7 @@ pub(crate) fn canonicalize_mount_path(path: &Path) -> Result<String> {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        path.to_utf8().map(|p| p.to_string())
+        path.to_utf8().map(|p| p.to_owned())
     }
 }
 
@@ -577,8 +580,8 @@ pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
 pub(crate) fn docker_userns(docker: &mut Command) {
     let userns = match env::var("CROSS_CONTAINER_USER_NAMESPACE").ok().as_deref() {
         Some("none") => None,
-        None | Some("auto") => Some("host".to_string()),
-        Some(ns) => Some(ns.to_string()),
+        None | Some("auto") => Some("host".to_owned()),
+        Some(ns) => Some(ns.to_owned()),
     };
     if let Some(ns) = userns {
         docker.args(&["--userns", &ns]);
@@ -597,7 +600,7 @@ pub(crate) fn docker_seccomp(
         let seccomp = if engine_type == EngineType::Docker && cfg!(target_os = "windows") {
             // docker on windows fails due to a bug in reading the profile
             // https://github.com/docker/for-win/issues/12760
-            "unconfined".to_string()
+            "unconfined".to_owned()
         } else {
             #[allow(unused_mut)] // target_os = "windows"
             let mut path = metadata
@@ -607,7 +610,7 @@ pub(crate) fn docker_seccomp(
             if !path.exists() {
                 write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
             }
-            let mut path_string = path.to_utf8()?.to_string();
+            let mut path_string = path.to_utf8()?.to_owned();
             #[cfg(target_os = "windows")]
             if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
                 // podman weirdly expects a WSL path here, and fails otherwise
@@ -688,8 +691,10 @@ fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDet
 fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
     info.pointer("/0/Mounts")
         .and_then(|v| v.as_array())
-        .map(|v| {
-            let make_path = |v: &serde_json::Value| PathBuf::from(&v.as_str().unwrap());
+        .map_or_else(Vec::new, |v| {
+            let make_path = |v: &serde_json::Value| {
+                PathBuf::from(&v.as_str().expect("docker mount should be defined"))
+            };
             let mut mounts = vec![];
             for details in v {
                 let source = make_path(&details["Source"]);
@@ -701,7 +706,6 @@ fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
             }
             mounts
         })
-        .unwrap_or_else(Vec::new)
 }
 
 #[derive(Debug, Default)]
@@ -753,14 +757,14 @@ impl MountFinder {
         {
             // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
             if host {
-                return Ok(path.to_utf8()?.to_string());
+                return Ok(path.to_utf8()?.to_owned());
             } else {
                 return path.as_wslpath();
             }
         }
         #[cfg(not(target_os = "windows"))]
         {
-            return Ok(self.find_mount_path(path).to_utf8()?.to_string());
+            return Ok(self.find_mount_path(path).to_utf8()?.to_owned());
         }
     }
 }
@@ -775,7 +779,7 @@ pub fn path_hash(path: &Path) -> Result<String> {
         .to_string()
         .get(..5)
         .expect("sha1 is expected to be at least 5 characters long")
-        .to_string())
+        .to_owned())
 }
 
 #[cfg(test)]
@@ -790,7 +794,7 @@ mod tests {
         env::remove_var(var);
 
         let rootful = format!("\"engine\" \"--user\" \"{}:{}\"", id::user(), id::group());
-        let rootless = "\"engine\"".to_string();
+        let rootless = "\"engine\"".to_owned();
 
         let test = |engine, expected| {
             let mut cmd = Command::new("engine");
@@ -832,9 +836,9 @@ mod tests {
         let old = env::var(var);
         env::remove_var(var);
 
-        let host = "\"engine\" \"--userns\" \"host\"".to_string();
-        let custom = "\"engine\" \"--userns\" \"custom\"".to_string();
-        let none = "\"engine\"".to_string();
+        let host = "\"engine\" \"--userns\" \"host\"".to_owned();
+        let custom = "\"engine\" \"--userns\" \"custom\"".to_owned();
+        let none = "\"engine\"".to_owned();
 
         let test = |expected| {
             let mut cmd = Command::new("engine");
@@ -899,7 +903,10 @@ mod tests {
 
             let root = match subdir {
                 true => get_cwd()?.join("member"),
-                false => get_cwd()?.parent().unwrap().to_path_buf(),
+                false => get_cwd()?
+                    .parent()
+                    .expect("current directory should have a parent")
+                    .to_path_buf(),
             };
             fs::create_dir_all(&root)?;
             metadata.workspace_root = root;
@@ -1050,7 +1057,7 @@ mod tests {
             assert_eq!(
                 PathBuf::from("/target/path/test"),
                 finder.find_mount_path("/project/target/test")
-            )
+            );
         }
 
         #[test]

@@ -24,6 +24,7 @@ pub enum Subcommand {
 }
 
 impl Subcommand {
+    #[must_use]
     pub fn needs_docker(self, is_remote: bool) -> bool {
         match self {
             Subcommand::Other | Subcommand::List => false,
@@ -32,14 +33,17 @@ impl Subcommand {
         }
     }
 
+    #[must_use]
     pub fn needs_host(self, is_remote: bool) -> bool {
         self == Subcommand::Clean && is_remote
     }
 
+    #[must_use]
     pub fn needs_interpreter(self) -> bool {
         matches!(self, Subcommand::Run | Subcommand::Test | Subcommand::Bench)
     }
 
+    #[must_use]
     pub fn needs_target_in_command(self) -> bool {
         !matches!(self, Subcommand::Metadata)
     }
@@ -85,6 +89,7 @@ impl CargoMetadata {
     }
 
     #[cfg(feature = "dev")]
+    #[must_use]
     pub fn get_package(&self, package: &str) -> Option<&Package> {
         self.packages.iter().find(|p| p.name == package)
     }
@@ -112,6 +117,7 @@ impl Package {
     }
 }
 
+#[must_use]
 pub fn cargo_command() -> Command {
     Command::new("cargo")
 }

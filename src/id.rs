@@ -2,10 +2,11 @@
 use nix::{
     errno::{errno, Errno},
     unistd::{Gid, Uid},
-    Error,
 };
 #[cfg(not(target_os = "windows"))]
 use std::ffi::CStr;
+
+use crate::errors::*;
 
 #[cfg(target_os = "windows")]
 pub fn group() -> u32 {
@@ -28,7 +29,7 @@ pub fn user() -> u32 {
 }
 
 #[cfg(target_os = "windows")]
-pub fn username() -> Result<Option<String>, String> {
+pub fn username() -> Result<Option<String>> {
     use std::ptr;
 
     use winapi::um::winbase::GetUserNameW;
@@ -44,7 +45,7 @@ pub fn username() -> Result<Option<String>, String> {
         let mut username = Vec::with_capacity(size as usize);
 
         if GetUserNameW(username.as_mut_ptr(), &mut size) == 0 {
-            return Err("Could not get UserName.".to_owned());
+            eyre::bail!("Could not get UserName.");
         }
 
         // Remove null terminator.
@@ -55,7 +56,7 @@ pub fn username() -> Result<Option<String>, String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn username() -> Result<Option<String>, Error> {
+pub fn username() -> Result<Option<String>> {
     let name = unsafe {
         Errno::clear();
 
@@ -68,7 +69,7 @@ pub fn username() -> Result<Option<String>, Error> {
                 return Ok(None);
             }
 
-            return Err(Errno::from_i32(errno));
+            return Err(Errno::from_i32(errno)).wrap_err("could not get username");
         }
 
         CStr::from_ptr((*passwd).pw_name)

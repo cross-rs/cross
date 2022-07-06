@@ -32,6 +32,7 @@ impl Engine {
         is_remote: Option<bool>,
         msg_info: &mut MessageInfo,
     ) -> Result<Engine> {
+        #[allow(clippy::map_err_ignore)]
         let path = get_container_engine()
             .map_err(|_| eyre::eyre!("no container engine found"))
             .with_suggestion(|| "is docker or podman installed?")?;
@@ -58,6 +59,7 @@ impl Engine {
         })
     }
 
+    #[must_use]
     pub fn needs_remote(&self) -> bool {
         self.is_remote && self.kind == EngineType::Podman
     }
@@ -80,6 +82,7 @@ impl Engine {
         )
     }
 
+    #[must_use]
     pub fn is_remote() -> bool {
         env::var("CROSS_REMOTE")
             .map(|s| bool_from_envvar(&s))

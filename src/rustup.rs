@@ -82,14 +82,18 @@ pub fn available_targets(toolchain: &str, msg_info: &mut MessageInfo) -> Result<
     let mut not_installed = vec![];
 
     for line in out.lines() {
-        let target = line.split(' ').next().unwrap().to_string();
+        let target = line
+            .split(' ')
+            .next()
+            .expect("rustup output should be consistent")
+            .to_owned();
         if line.contains("(default)") {
             assert!(default.is_empty());
             default = target;
         } else if line.contains("(installed)") {
-            installed.push(target)
+            installed.push(target);
         } else {
-            not_installed.push(target)
+            not_installed.push(target);
         }
     }
 
@@ -160,11 +164,13 @@ pub fn check_component<'a>(
                 false => None,
             }
         })
-        .map(|installed| match installed {
-            true => Component::Installed(component),
-            false => Component::Available(component),
-        })
-        .unwrap_or_else(|| Component::NotAvailable(component)))
+        .map_or_else(
+            || Component::NotAvailable(component),
+            |installed| match installed {
+                true => Component::Installed(component),
+                false => Component::Available(component),
+            },
+        ))
 }
 
 pub fn component_is_installed(
@@ -176,7 +182,12 @@ pub fn component_is_installed(
 }
 
 fn rustc_channel(version: &Version) -> Result<Channel> {
-    match version.pre.split('.').next().unwrap() {
+    match version
+        .pre
+        .split('.')
+        .next()
+        .expect("rust prerelease version should contain `.`")
+    {
         "" => Ok(Channel::Stable),
         "dev" => Ok(Channel::Dev),
         "beta" => Ok(Channel::Beta),
@@ -200,7 +211,7 @@ pub fn rustc_version_string(toolchain_path: &Path) -> Result<Option<String>> {
             .and_then(|pkg| pkg.get("rust"))
             .and_then(|rust| rust.get("version"))
             .and_then(|version| version.as_str())
-            .map(|version| version.to_string()));
+            .map(|version| version.to_owned()));
     }
     Ok(None)
 }

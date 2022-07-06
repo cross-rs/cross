@@ -39,7 +39,7 @@ unsafe fn push_tempfile() -> Result<&'static mut tempfile::NamedTempFile> {
     fs::create_dir_all(&parent).ok();
     let file = tempfile::NamedTempFile::new_in(&parent)?;
     FILES.push(file);
-    Ok(FILES.last_mut().unwrap())
+    Ok(FILES.last_mut().expect("file list should not be empty"))
 }
 
 /// # Safety
@@ -66,6 +66,7 @@ impl TempFile {
         self.file
     }
 
+    #[must_use]
     pub fn path(&self) -> &Path {
         self.file.path()
     }
@@ -87,7 +88,7 @@ unsafe fn push_tempdir() -> Result<&'static Path> {
     fs::create_dir_all(&parent).ok();
     let dir = tempfile::TempDir::new_in(&parent)?;
     DIRS.push(dir);
-    Ok(DIRS.last().unwrap().path())
+    Ok(DIRS.last().expect("should not be empty").path())
 }
 
 /// # Safety
@@ -110,6 +111,7 @@ impl TempDir {
         })
     }
 
+    #[must_use]
     pub fn path(&self) -> &'static Path {
         self.path
     }
