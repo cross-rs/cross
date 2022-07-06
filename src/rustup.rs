@@ -27,7 +27,7 @@ impl AvailableTargets {
     }
 }
 
-fn rustup_command(msg_info: &mut MessageInfo, no_flags: bool) -> Command {
+pub fn rustup_command(msg_info: &mut MessageInfo, no_flags: bool) -> Command {
     let mut cmd = Command::new("rustup");
     if no_flags {
         return cmd;
@@ -127,6 +127,7 @@ pub fn install_component(
         .wrap_err_with(|| format!("couldn't install the `{component}` component"))
 }
 
+#[derive(Debug)]
 pub enum Component<'a> {
     Installed(&'a str),
     Available(&'a str),

@@ -28,7 +28,7 @@ mod file;
 mod id;
 mod interpreter;
 pub mod rustc;
-mod rustup;
+pub mod rustup;
 pub mod shell;
 pub mod temp;
 
