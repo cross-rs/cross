@@ -11,6 +11,10 @@
 
 set -eo pipefail
 
+if [[ "${VERBOSE}" == 1 ]]; then
+    set -x
+fi
+
 # shellcheck disable=SC2153
 target="${TARGET}"
 arch="${target//-*/}"
@@ -111,6 +115,20 @@ readelf_all() {
     set -e
 }
 
+read_solaris_libc() {
+    # we can read the libc version from the libc symbols
+    # first, we need to use our compiler name to get the libdir
+    #    67: 0000000000000000     0 OBJECT  GLOBAL DEFAULT  ABS SUNW_1.21.1
+    # there will be many of these, so we want to grab the highest one.
+    local libc_so="${1}"
+    lines=$(readelf_all "${libc_so}" | grep 'ABS SUNW_')
+    lines=$(echo "${lines}" | grep -o 'ABS .*')
+    # shellcheck disable=SC2207
+    libc_versions=($(echo "$lines" | cut -d ' ' -f 2 | cut -d '_' -f 2))
+    max_solaris_libc_version "${libc_versions[@]}"
+}
+
+
 # output variables
 libc=
 cc=
@@ -147,6 +165,9 @@ case "${target}" in
         cc_regex=".*gcc \(GCC\) ([0-9]+.[0-9]+.[0-9]+).*"
         ;;
     *-*-solaris)
+        cc_regex=".*gcc \(GCC\) ([0-9]+.[0-9]+.[0-9]+).*"
+        ;;
+    *-*-illumos)
         cc_regex=".*gcc \(GCC\) ([0-9]+.[0-9]+.[0-9]+).*"
         ;;
     *-*-emscripten)
@@ -345,17 +366,13 @@ case "${target}" in
         fi
         ;;
     *-*-solaris)
-        # we can read the libc version from the libc symbols
-        # first, we need to use our compiler name to get the libdir
-        #    67: 0000000000000000     0 OBJECT  GLOBAL DEFAULT  ABS SUNW_1.21.1
-        # there will be many of these, so we want to grab the highest one.
         prefix="${cc_bin//-gcc/}"
         libdir="/usr/local/${prefix}/lib"
-        lines=$(readelf_all "${libdir}"/libc.so | grep 'ABS SUNW_')
-        lines=$(echo "${lines}" | grep -o 'ABS .*')
-        # shellcheck disable=SC2207
-        libc_versions=($(echo "$lines" | cut -d ' ' -f 2 | cut -d '_' -f 2))
-        libc=$(max_solaris_libc_version "${libc_versions[@]}")
+        libc=$(read_solaris_libc "${libdir}"/libc.so)
+        ;;
+    *-*-illumos)
+        libdir="/usr/local/${target}/sysroot/lib"
+        libc=$(read_solaris_libc "${libdir}"/libc.so)
         ;;
     *-*-emscripten)
         # we want the emsdk version, which is the image version
