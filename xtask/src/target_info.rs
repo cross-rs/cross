@@ -52,6 +52,9 @@ fn image_info(
     command.arg("run");
     command.arg("--rm");
     command.args(&["-e", &format!("TARGET={}", target.triplet)]);
+    if msg_info.is_verbose() {
+        command.args(&["-e", "VERBOSE=1"]);
+    }
     if has_test {
         command.args(&["-e", "HAS_TEST=1"]);
     } else {

@@ -368,6 +368,7 @@ terminate.
 | `x86_64-sun-solaris`                 | 1.22.7 | 8.4.0   | ✓   | N/A   |       |
 | `x86_64-unknown-freebsd`             | 1.5    | 6.4.0   | ✓   | N/A   |       |
 | `x86_64-unknown-dragonfly` [2] [3]   | 6.0.1  | 5.3.0   | ✓   | N/A   |       |
+| `x86_64-unknown-illumos`             | 1.20.4 | 8.4.0   | ✓   | N/A   |       |
 | `x86_64-unknown-linux-gnu`           | 2.23   | 5.4.0   | ✓   | 5.1.0 |   ✓    |
 | `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5   | ✓   | 4.2.1 |   ✓    |
 | `x86_64-unknown-linux-musl`          | 1.1.24  | 9.2.0   | ✓   | N/A   |   ✓    |
