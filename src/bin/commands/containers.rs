@@ -396,7 +396,7 @@ pub fn create_persistent_volume(
     let state = docker::remote::container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
         msg_info.warn("container {container} was running.")?;
-        docker::remote::container_stop(engine, &container, msg_info)?;
+        docker::remote::container_stop_default(engine, &container, msg_info)?;
     }
     if state.exists() {
         msg_info.warn("container {container} was exited.")?;
@@ -407,14 +407,24 @@ pub fn create_persistent_volume(
     let mount_prefix = docker::remote::MOUNT_PREFIX;
     let mut docker = docker::subcommand(engine, "run");
     docker.args(&["--name", &container]);
+    docker.arg("--rm");
     docker.args(&["-v", &format!("{}:{}", volume, mount_prefix)]);
     docker.arg("-d");
-    if io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty() {
+    let is_tty = io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty();
+    if is_tty {
         docker.arg("-t");
     }
     docker.arg(docker::UBUNTU_BASE);
-    // ensure the process never exits until we stop it
-    docker.args(&["sh", "-c", "sleep infinity"]);
+    if !is_tty {
+        // ensure the process never exits until we stop it
+        // we only need this infinite loop if we don't allocate
+        // a TTY. this has a few issues though: now, the
+        // container no longer responds to signals, so the
+        // container will need to be sig-killed.
+        docker.args(&["sh", "-c", "sleep infinity"]);
+    }
+    // store first, since failing to non-existing container is fine
+    docker::remote::create_container_deleter(engine.clone(), container.clone());
     docker.run_and_get_status(msg_info, false)?;
 
     docker::remote::copy_volume_container_xargo(
@@ -443,8 +453,7 @@ pub fn create_persistent_volume(
         msg_info,
     )?;
 
-    docker::remote::container_stop(engine, &container, msg_info)?;
-    docker::remote::container_rm(engine, &container, msg_info)?;
+    docker::remote::drop_container(is_tty, msg_info);
 
     Ok(())
 }

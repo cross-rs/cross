@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use std::io::{self, BufRead, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::ExitStatus;
+use std::process::{Command, ExitStatus, Output};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{env, fs, time};
 
 use eyre::Context;
@@ -21,28 +22,34 @@ use crate::{Host, Target};
 
 // the mount directory for the data volume.
 pub const MOUNT_PREFIX: &str = "/cross";
+// default timeout to stop a container (in seconds)
+pub const DEFAULT_TIMEOUT: u32 = 2;
+// instant kill in case of a non-graceful exit
+pub const NO_TIMEOUT: u32 = 0;
+
+// we need to specify drops for the containers, but we
+// also need to ensure the drops are called on a
+// termination handler. we use an atomic bool to ensure
+// that the drop only gets called once, even if we have
+// the signal handle invoked multiple times or it fails.
+pub(crate) static mut CONTAINER: Option<DeleteContainer> = None;
+pub(crate) static mut CONTAINER_EXISTS: AtomicBool = AtomicBool::new(false);
 
 // it's unlikely that we ever need to erase a line in the destructors,
 // and it's better than keep global state everywhere, or keeping a ref
 // cell which could have already deleted a line
-struct DeleteVolume<'a>(&'a Engine, &'a VolumeId, ColorChoice, Verbosity);
+pub(crate) struct DeleteContainer(Engine, String, u32, ColorChoice, Verbosity);
 
-impl<'a> Drop for DeleteVolume<'a> {
+impl Drop for DeleteContainer {
     fn drop(&mut self) {
-        if let VolumeId::Discard(id) = self.1 {
-            let mut msg_info = MessageInfo::new(self.2, self.3);
-            volume_rm(self.0, id, &mut msg_info).ok();
+        // SAFETY: safe, since guarded by a thread-safe atomic swap.
+        unsafe {
+            if CONTAINER_EXISTS.swap(false, Ordering::SeqCst) {
+                let mut msg_info = MessageInfo::new(self.3, self.4);
+                container_stop(&self.0, &self.1, self.2, &mut msg_info).ok();
+                container_rm(&self.0, &self.1, &mut msg_info).ok();
+            }
         }
-    }
-}
-
-struct DeleteContainer<'a>(&'a Engine, &'a str, ColorChoice, Verbosity);
-
-impl<'a> Drop for DeleteContainer<'a> {
-    fn drop(&mut self) {
-        let mut msg_info = MessageInfo::new(self.2, self.3);
-        container_stop(self.0, self.1, &mut msg_info).ok();
-        container_rm(self.0, self.1, &mut msg_info).ok();
     }
 }
 
@@ -82,34 +89,75 @@ impl ContainerState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum VolumeId {
     Keep(String),
-    Discard(String),
+    Discard,
 }
 
 impl VolumeId {
-    fn create(
-        engine: &Engine,
-        toolchain: &str,
-        container: &str,
-        msg_info: &mut MessageInfo,
-    ) -> Result<Self> {
+    fn create(engine: &Engine, toolchain: &str, msg_info: &mut MessageInfo) -> Result<Self> {
         if volume_exists(engine, toolchain, msg_info)? {
             Ok(Self::Keep(toolchain.to_owned()))
         } else {
-            Ok(Self::Discard(container.to_owned()))
+            Ok(Self::Discard)
         }
     }
 }
 
-impl AsRef<str> for VolumeId {
-    fn as_ref(&self) -> &str {
-        match self {
-            Self::Keep(s) => s,
-            Self::Discard(s) => s,
+// prevent further commands from running if we handled
+// a signal earlier, and the volume is exited.
+// this isn't required, but avoids unnecessary
+// commands while the container is cleaning up.
+macro_rules! bail_container_exited {
+    () => {{
+        if !container_exists() {
+            eyre::bail!("container already exited due to signal");
         }
+    }};
+}
+
+pub fn create_container_deleter(engine: Engine, container: String) {
+    // SAFETY: safe, since single-threaded execution.
+    unsafe {
+        CONTAINER_EXISTS.store(true, Ordering::Relaxed);
+        CONTAINER = Some(DeleteContainer(
+            engine,
+            container,
+            NO_TIMEOUT,
+            ColorChoice::Never,
+            Verbosity::Quiet,
+        ));
     }
+}
+
+pub fn drop_container(is_tty: bool, msg_info: &mut MessageInfo) {
+    // SAFETY: safe, since single-threaded execution.
+    unsafe {
+        // relax the no-timeout and lack of output
+        if let Some(container) = &mut CONTAINER {
+            if is_tty {
+                container.2 = DEFAULT_TIMEOUT;
+            }
+            container.3 = msg_info.color_choice;
+            container.4 = msg_info.verbosity;
+        }
+        CONTAINER = None;
+    }
+}
+
+fn container_exists() -> bool {
+    // SAFETY: safe, not mutating an atomic bool
+    // this can be more relaxed: just used to ensure
+    // that we don't make unnecessary calls, which are
+    // safe even if executed, after we've signaled a
+    // drop to our container.
+    unsafe { CONTAINER_EXISTS.load(Ordering::Relaxed) }
+}
+
+fn subcommand_or_exit(engine: &Engine, cmd: &str) -> Result<Command> {
+    bail_container_exited!();
+    Ok(subcommand(engine, cmd))
 }
 
 fn create_volume_dir(
@@ -119,7 +167,7 @@ fn create_volume_dir(
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     // make our parent directory if needed
-    subcommand(engine, "exec")
+    subcommand_or_exit(engine, "exec")?
         .arg(container)
         .args(&["sh", "-c", &format!("mkdir -p '{}'", dir.as_posix()?)])
         .run_and_get_status(msg_info, false)
@@ -133,7 +181,7 @@ fn copy_volume_files(
     dst: &Path,
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
-    subcommand(engine, "cp")
+    subcommand_or_exit(engine, "cp")?
         .arg("-a")
         .arg(src.to_utf8()?)
         .arg(format!("{container}:{}", dst.as_posix()?))
@@ -165,7 +213,7 @@ fn container_path_exists(
     path: &Path,
     msg_info: &mut MessageInfo,
 ) -> Result<bool> {
-    Ok(subcommand(engine, "exec")
+    Ok(subcommand_or_exit(engine, "exec")?
         .arg(container)
         .args(&["bash", "-c", &format!("[[ -d '{}' ]]", path.as_posix()?)])
         .run_and_get_status(msg_info, true)?
@@ -609,12 +657,12 @@ rm \"{PATH}\"
 
     // need to avoid having hundreds of files on the command, so
     // just provide a single file name.
-    subcommand(engine, "cp")
+    subcommand_or_exit(engine, "cp")?
         .arg(tempfile.path())
         .arg(format!("{container}:{PATH}"))
         .run_and_get_status(msg_info, true)?;
 
-    subcommand(engine, "exec")
+    subcommand_or_exit(engine, "exec")?
         .arg(container)
         .args(&["sh", "-c", &script.join("\n")])
         .run_and_get_status(msg_info, true)
@@ -642,7 +690,9 @@ fn copy_volume_container_project(
             fs::create_dir_all(&parent)?;
             let fingerprint = parent.join(container);
             let current = get_project_fingerprint(src, copy_cache)?;
-            if fingerprint.exists() {
+            // need to check if the container path exists, otherwise we might
+            // have stale data: the persistent volume was deleted & recreated.
+            if fingerprint.exists() && container_path_exists(engine, container, dst, msg_info)? {
                 let previous = parse_project_fingerprint(&fingerprint)?;
                 let (changed, removed) = get_fingerprint_difference(&previous, &current);
                 write_project_fingerprint(&fingerprint, &current)?;
@@ -658,7 +708,7 @@ fn copy_volume_container_project(
                 copy_all(msg_info)?;
             }
         }
-        VolumeId::Discard(_) => {
+        VolumeId::Discard => {
             copy_all(msg_info)?;
         }
     }
@@ -676,6 +726,14 @@ fn run_and_get_status(
         .run_and_get_status(msg_info, true)
 }
 
+fn run_and_get_output(
+    engine: &Engine,
+    args: &[&str],
+    msg_info: &mut MessageInfo,
+) -> Result<Output> {
+    command(engine).args(args).run_and_get_output(msg_info)
+}
+
 pub fn volume_create(
     engine: &Engine,
     volume: &str,
@@ -689,26 +747,42 @@ pub fn volume_rm(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> R
 }
 
 pub fn volume_exists(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<bool> {
-    command(engine)
-        .args(&["volume", "inspect", volume])
-        .run_and_get_output(msg_info)
+    run_and_get_output(engine, &["volume", "inspect", volume], msg_info)
         .map(|output| output.status.success())
 }
 
 pub fn container_stop(
     engine: &Engine,
     container: &str,
+    timeout: u32,
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
-    run_and_get_status(engine, &["stop", container], msg_info)
+    run_and_get_status(
+        engine,
+        &["stop", container, "--time", &timeout.to_string()],
+        msg_info,
+    )
 }
 
+pub fn container_stop_default(
+    engine: &Engine,
+    container: &str,
+    msg_info: &mut MessageInfo,
+) -> Result<ExitStatus> {
+    // we want a faster timeout, since this might happen in signal
+    // handler. our containers normally clean up pretty fast, it's
+    // only without a pseudo-tty that they don't.
+    container_stop(engine, container, DEFAULT_TIMEOUT, msg_info)
+}
+
+// if stop succeeds without a timeout, this can have a spurious error
+// that is, if the container no longer exists. just silence this.
 pub fn container_rm(
     engine: &Engine,
     container: &str,
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
-    run_and_get_status(engine, &["rm", container], msg_info)
+    run_and_get_output(engine, &["rm", container], msg_info).map(|output| output.status)
 }
 
 pub fn container_state(
@@ -810,37 +884,35 @@ pub(crate) fn run(
 
     // 1. get our unique identifiers and cleanup from a previous run.
     // this can happen if we didn't gracefully exit before
+    // note that since we use `docker run --rm`, it's very
+    // unlikely the container state existed before.
     let toolchain_id = unique_toolchain_identifier(&dirs.sysroot)?;
     let container = unique_container_identifier(target, &paths.metadata, dirs)?;
-    let volume = VolumeId::create(engine, &toolchain_id, &container, msg_info)?;
+    let volume = VolumeId::create(engine, &toolchain_id, msg_info)?;
     let state = container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
         msg_info.warn(format_args!("container {container} was running."))?;
-        container_stop(engine, &container, msg_info)?;
+        container_stop_default(engine, &container, msg_info)?;
     }
     if state.exists() {
         msg_info.warn(format_args!("container {container} was exited."))?;
         container_rm(engine, &container, msg_info)?;
     }
-    if let VolumeId::Discard(ref id) = volume {
-        if volume_exists(engine, id, msg_info)? {
-            msg_info.warn(format_args!("temporary volume {id} existed."))?;
-            volume_rm(engine, id, msg_info)?;
-        }
-    }
 
     // 2. create our volume to copy all our data over to
-    if let VolumeId::Discard(ref id) = volume {
-        volume_create(engine, id, msg_info).wrap_err("when creating volume")?;
-    }
-    let _volume_deletter = DeleteVolume(engine, &volume, msg_info.color_choice, msg_info.verbosity);
+    // we actually use an anonymous volume, so it's auto-cleaned up,
+    // if we're using a discarded volume.
 
     // 3. create our start container command here
     let mut docker = subcommand(engine, "run");
     docker_userns(&mut docker);
     docker.args(&["--name", &container]);
-    docker.args(&["-v", &format!("{}:{mount_prefix}", volume.as_ref())]);
-    docker_envvars(&mut docker, &options.config, target, msg_info)?;
+    docker.arg("--rm");
+    let volume_mount = match volume {
+        VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
+        VolumeId::Discard => mount_prefix.to_owned(),
+    };
+    docker.args(&["-v", &volume_mount]);
 
     let mut volumes = vec![];
     let mount_volumes = docker_mount(
@@ -866,21 +938,24 @@ pub(crate) fn run(
     }
 
     docker.arg("-d");
-    if io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty() {
+    let is_tty = io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty();
+    if is_tty {
         docker.arg("-t");
     }
 
-    docker
-        .arg(&image_name(&options.config, target)?)
+    docker.arg(&image_name(&options.config, target)?);
+    if !is_tty {
         // ensure the process never exits until we stop it
-        .args(&["sh", "-c", "sleep infinity"])
-        .run_and_get_status(msg_info, true)?;
-    let _container_deletter = DeleteContainer(
-        engine,
-        &container,
-        msg_info.color_choice,
-        msg_info.verbosity,
-    );
+        // we only need this infinite loop if we don't allocate
+        // a TTY. this has a few issues though: now, the
+        // container no longer responds to signals, so the
+        // container will need to be sig-killed.
+        docker.args(&["sh", "-c", "sleep infinity"]);
+    }
+
+    // store first, since failing to non-existing container is fine
+    create_container_deleter(engine.clone(), container.clone());
+    docker.run_and_get_status(msg_info, true)?;
 
     // 4. copy all mounted volumes over
     let copy_cache = env::var("CROSS_REMOTE_COPY_CACHE")
@@ -894,7 +969,7 @@ pub(crate) fn run(
         }
     };
     let mount_prefix_path = mount_prefix.as_ref();
-    if let VolumeId::Discard(_) = volume {
+    if let VolumeId::Discard = volume {
         copy_volume_container_xargo(
             engine,
             &container,
@@ -1083,7 +1158,7 @@ symlink_recurse \"${{prefix}}\"
     for (src, dst) in to_symlink {
         symlink.push(format!("ln -s \"{}\" \"{}\"", src.as_posix()?, dst));
     }
-    subcommand(engine, "exec")
+    subcommand_or_exit(engine, "exec")?
         .arg(&container)
         .args(&["sh", "-c", &symlink.join("\n")])
         .run_and_get_status(msg_info, false)
@@ -1092,9 +1167,11 @@ symlink_recurse \"${{prefix}}\"
     // 6. execute our cargo command inside the container
     let mut docker = subcommand(engine, "exec");
     docker_user_id(&mut docker, engine.kind);
+    docker_envvars(&mut docker, &options.config, target, msg_info)?;
     docker_cwd(&mut docker, &paths, mount_volumes)?;
     docker.arg(&container);
     docker.args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)]);
+    bail_container_exited!();
     let status = docker
         .run_and_get_status(msg_info, false)
         .map_err(Into::into);
@@ -1104,8 +1181,9 @@ symlink_recurse \"${{prefix}}\"
     let skip_artifacts = env::var("CROSS_REMOTE_SKIP_BUILD_ARTIFACTS")
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
+    bail_container_exited!();
     if !skip_artifacts && container_path_exists(engine, &container, &target_dir, msg_info)? {
-        subcommand(engine, "cp")
+        subcommand_or_exit(engine, "cp")?
             .arg("-a")
             .arg(&format!("{container}:{}", target_dir.as_posix()?))
             .arg(
@@ -1117,6 +1195,8 @@ symlink_recurse \"${{prefix}}\"
             .run_and_get_status(msg_info, false)
             .map_err::<eyre::ErrReport, _>(Into::into)?;
     }
+
+    drop_container(is_tty, msg_info);
 
     status
 }
