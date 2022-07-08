@@ -389,6 +389,7 @@ jobs:
       - name: Run Docker-in-Docker Test
         env:
           TARGET: aarch64-unknown-linux-gnu
+          IMAGE: 'ghcr.io/cross-rs/cross/aarch64-unknown-linux-gnu:main'
         run: ./ci/test-docker-in-docker.sh
         shell: bash
 

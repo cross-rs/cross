@@ -10,6 +10,11 @@ if [[ -z "${TARGET}" ]]; then
     export TARGET="aarch64-unknown-linux-gnu"
 fi
 
+if [[ "${IMAGE}" ]]; then
+    # shellcheck disable=SC2140
+    export "CROSS_TARGET_${TARGET//-/_}_IMAGE"="${IMAGE}"
+fi
+
 source=$(dirname "${BASH_SOURCE[0]}")
 source=$(realpath "${source}")
 home=$(dirname "${source}")
@@ -18,6 +23,7 @@ main() {
     docker run -v "${home}":"${home}" -w "${home}" \
         --rm -e TARGET -e RUSTFLAGS -e RUST_TEST_THREADS \
         -e LLVM_PROFILE_FILE -e CARGO_INCREMENTAL \
+        -e "CROSS_TARGET_${TARGET//-/_}_IMAGE" \
         -v /var/run/docker.sock:/var/run/docker.sock \
         docker:18.09-dind sh -c '
 #!/usr/bin/env sh
