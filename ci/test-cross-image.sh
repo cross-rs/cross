@@ -20,7 +20,7 @@ fi
 
 main() {
 
-    docker run --rm -e TARGET -e "CROSS_TARGET_${TARGET}_IMAGE" \
+    docker run --rm -e TARGET -e "CROSS_TARGET_${TARGET//-/_}_IMAGE" \
         -v /var/run/docker.sock:/var/run/docker.sock \
         "${CROSS_TARGET_CROSS_IMAGE}" sh -c '
 #!/usr/bin/env sh
