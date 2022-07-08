@@ -349,9 +349,9 @@ pub fn command(engine: &Engine) -> Command {
     command
 }
 
-pub fn subcommand(engine: &Engine, subcommand: &str) -> Command {
+pub fn subcommand(engine: &Engine, cmd: &str) -> Command {
     let mut command = command(engine);
-    command.arg(subcommand);
+    command.arg(cmd);
     command
 }
 
