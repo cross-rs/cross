@@ -3,7 +3,7 @@ use std::{env, path::PathBuf};
 use crate::cargo::Subcommand;
 use crate::errors::Result;
 use crate::rustc::TargetList;
-use crate::shell::MessageInfo;
+use crate::shell::{self, MessageInfo};
 use crate::Target;
 
 #[derive(Debug)]
@@ -143,7 +143,6 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut quiet = false;
     let mut verbose = false;
     let mut color = None;
-    let mut default_msg_info = MessageInfo::default();
 
     {
         let mut args = env::args().skip(1);
@@ -164,7 +163,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                     ArgKind::Next => {
                         match parse_next_arg(arg, &mut all, ToOwned::to_owned, &mut args) {
                             Some(c) => Some(c),
-                            None => default_msg_info.fatal_usage("--color <WHEN>", 1),
+                            None => shell::invalid_color(None),
                         }
                     }
                     ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, ToOwned::to_owned)),

@@ -1,8 +1,10 @@
 // This file was adapted from:
 //   https://github.com/rust-lang/cargo/blob/ca4edabb28fc96fdf2a1d56fe3851831ac166f8a/src/cargo/core/shell.rs
 
+use std::env;
 use std::fmt;
 use std::io::{self, Write};
+use std::str::FromStr;
 
 use crate::errors::Result;
 use owo_colors::{self, OwoColorize};
@@ -77,6 +79,23 @@ impl Verbosity {
             Self::Normal | Self::Quiet => false,
         }
     }
+
+    fn create(color_choice: ColorChoice, verbose: bool, quiet: bool) -> Option<Self> {
+        match (verbose, quiet) {
+            (true, true) => {
+                MessageInfo::from(color_choice).fatal("cannot set both --verbose and --quiet", 101)
+            }
+            (true, false) => Some(Verbosity::Verbose),
+            (false, true) => Some(Verbosity::Quiet),
+            (false, false) => None,
+        }
+    }
+}
+
+impl Default for Verbosity {
+    fn default() -> Verbosity {
+        Verbosity::Normal
+    }
 }
 
 /// Whether messages should use color output
@@ -88,6 +107,21 @@ pub enum ColorChoice {
     Never,
     /// intelligently guess whether to use color output
     Auto,
+}
+
+impl FromStr for ColorChoice {
+    type Err = eyre::ErrReport;
+
+    fn from_str(s: &str) -> Result<ColorChoice> {
+        match s {
+            "always" => Ok(ColorChoice::Always),
+            "never" => Ok(ColorChoice::Never),
+            "auto" => Ok(ColorChoice::Auto),
+            arg => eyre::bail!(
+                "argument for --color must be auto, always, or never, but found `{arg}`"
+            ),
+        }
+    }
 }
 
 // Should simplify the APIs a lot.
@@ -241,19 +275,62 @@ impl MessageInfo {
         }
     }
 
-    pub fn fatal_usage<T: fmt::Display>(&mut self, arg: T, code: i32) -> ! {
-        self.error_usage(arg)
+    pub fn fatal_usage<T: fmt::Display>(
+        &mut self,
+        arg: T,
+        provided: Option<&str>,
+        possible: Option<&[&str]>,
+        code: i32,
+    ) -> ! {
+        self.error_usage(arg, provided, possible)
             .expect("could not display usage message");
         std::process::exit(code);
     }
 
-    fn error_usage<T: fmt::Display>(&mut self, arg: T) -> Result<()> {
+    fn error_usage<T: fmt::Display>(
+        &mut self,
+        arg: T,
+        provided: Option<&str>,
+        possible: Option<&[&str]>,
+    ) -> Result<()> {
         let mut stream = io::stderr();
         write_style!(stream, self, cross_prefix!("error"), bold, red);
         write_style!(stream, self, ":", bold);
-        write_style!(stream, self, " The argument '");
-        write_style!(stream, self, arg, yellow);
-        write_style!(stream, self, "' requires a value but none was supplied\n");
+        match provided {
+            Some(value) => {
+                write_style!(
+                    stream,
+                    self,
+                    format_args!(" \"{value}\" isn't a valid value for '")
+                );
+                write_style!(stream, self, arg, yellow);
+                write_style!(stream, self, "'\n");
+            }
+            None => {
+                write_style!(stream, self, " The argument '");
+                write_style!(stream, self, arg, yellow);
+                write_style!(stream, self, "' requires a value but none was supplied\n");
+            }
+        }
+        match possible {
+            Some(values) if !values.is_empty() => {
+                let error_indent = cross_prefix!("error: ").len();
+                write_style!(
+                    stream,
+                    self,
+                    format_args!("{:error_indent$}[possible values: ", "")
+                );
+                let max_index = values.len() - 1;
+                for (index, value) in values.iter().enumerate() {
+                    write_style!(stream, self, value, green);
+                    if index < max_index {
+                        write_style!(stream, self, ", ");
+                    }
+                }
+                write_style!(stream, self, "]\n");
+            }
+            _ => (),
+        }
         write_style!(stream, self, "Usage:\n");
         write_style!(
             stream,
@@ -295,27 +372,39 @@ impl From<(ColorChoice, Verbosity)> for MessageInfo {
     }
 }
 
-fn get_color_choice(color: Option<&str>) -> Result<ColorChoice> {
-    match color {
-        Some("always") => Ok(ColorChoice::Always),
-        Some("never") => Ok(ColorChoice::Never),
-        Some("auto") | None => Ok(ColorChoice::Auto),
-        Some(arg) => {
-            eyre::bail!("argument for --color must be auto, always, or never, but found `{arg}`")
-        }
+// cargo only accepts literal booleans for some values.
+pub fn cargo_envvar_bool(var: &str) -> Result<bool> {
+    match env::var(var).ok() {
+        Some(value) => value.parse::<bool>().map_err(|_ignore| {
+            eyre::eyre!("environment variable for `{var}` was not `true` or `false`.")
+        }),
+        None => Ok(false),
     }
 }
 
+pub fn invalid_color(provided: Option<&str>) -> ! {
+    let possible = ["auto", "always", "never"];
+    MessageInfo::default().fatal_usage("--color <WHEN>", provided, Some(&possible), 1);
+}
+
+fn get_color_choice(color: Option<&str>) -> Result<ColorChoice> {
+    Ok(match color {
+        Some(arg) => arg.parse().unwrap_or_else(|_| invalid_color(color)),
+        None => match env::var("CARGO_TERM_COLOR").ok().as_deref() {
+            Some(arg) => arg.parse().unwrap_or_else(|_| invalid_color(color)),
+            None => ColorChoice::Auto,
+        },
+    })
+}
+
 fn get_verbosity(color_choice: ColorChoice, verbose: bool, quiet: bool) -> Result<Verbosity> {
-    match (verbose, quiet) {
-        (true, true) => {
-            MessageInfo::from(color_choice).error("cannot set both --verbose and --quiet")?;
-            std::process::exit(101);
-        }
-        (true, false) => Ok(Verbosity::Verbose),
-        (false, true) => Ok(Verbosity::Quiet),
-        (false, false) => Ok(Verbosity::Normal),
-    }
+    // cargo always checks the value of these variables.
+    let env_verbose = cargo_envvar_bool("CARGO_TERM_VERBOSE")?;
+    let env_quiet = cargo_envvar_bool("CARGO_TERM_QUIET")?;
+    Ok(match Verbosity::create(color_choice, verbose, quiet) {
+        Some(v) => v,
+        None => Verbosity::create(color_choice, env_verbose, env_quiet).unwrap_or_default(),
+    })
 }
 
 pub trait Stream {

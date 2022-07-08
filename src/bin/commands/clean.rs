@@ -13,7 +13,7 @@ pub struct Clean {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Force removal of images.

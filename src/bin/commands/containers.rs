@@ -12,7 +12,7 @@ pub struct ListVolumes {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Container engine (such as docker or podman).
@@ -34,7 +34,7 @@ pub struct RemoveAllVolumes {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Force removal of volumes.
@@ -62,7 +62,7 @@ pub struct PruneVolumes {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Remove volumes. Default is a dry run.
@@ -93,7 +93,7 @@ pub struct CreateVolume {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Container engine (such as docker or podman).
@@ -126,7 +126,7 @@ pub struct RemoveVolume {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Container engine (such as docker or podman).
@@ -223,7 +223,7 @@ pub struct ListContainers {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Container engine (such as docker or podman).
@@ -245,7 +245,7 @@ pub struct RemoveAllContainers {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Force removal of containers.

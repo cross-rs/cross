@@ -29,7 +29,7 @@ pub struct BuildDockerImage {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Print but do not execute the build commands.
@@ -112,6 +112,10 @@ pub fn build_docker_image(
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
+    let verbose = match verbose {
+        0 => msg_info.is_verbose() as u8,
+        v => v,
+    };
     let metadata = cargo_metadata(msg_info)?;
     let version = metadata
         .get_package("cross")
