@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use crate::docker::{DockerOptions, DockerPaths};
 use crate::shell::MessageInfo;
@@ -20,6 +21,43 @@ pub enum Dockerfile<'a> {
     Custom {
         content: String,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum PreBuild {
+    /// A path to a file to copy or a single line to `RUN` if line comes from env
+    Single { line: String, env: bool },
+    /// Lines to execute in a single `RUN`
+    Lines(Vec<String>),
+}
+
+impl FromStr for PreBuild {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(PreBuild::Single {
+            line: s.to_owned(),
+            env: false,
+        })
+    }
+}
+
+impl From<Vec<String>> for PreBuild {
+    fn from(vec: Vec<String>) -> Self {
+        PreBuild::Lines(vec)
+    }
+}
+
+impl PreBuild {
+    #[must_use]
+    pub fn is_single(&self) -> bool {
+        matches!(self, Self::Single { .. })
+    }
+
+    #[must_use]
+    pub fn is_lines(&self) -> bool {
+        matches!(self, Self::Lines(..))
+    }
 }
 
 impl<'a> Dockerfile<'a> {
@@ -96,7 +134,7 @@ impl<'a> Dockerfile<'a> {
         if let Some(context) = self.context() {
             docker_build.arg(&context);
         } else {
-            docker_build.arg(".");
+            docker_build.arg(paths.host_root());
         }
 
         docker_build.run(msg_info, true)?;

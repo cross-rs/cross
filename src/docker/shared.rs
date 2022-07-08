@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-use super::custom::Dockerfile;
+use super::custom::{Dockerfile, PreBuild};
 use super::engine::*;
 use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
 use crate::config::{bool_from_envvar, Config};
@@ -62,12 +62,11 @@ impl DockerOptions {
             .dockerfile(&self.target)
             .unwrap_or_default()
             .is_some()
-            || !self
+            || self
                 .config
                 .pre_build(&self.target)
                 .unwrap_or_default()
-                .unwrap_or_default()
-                .is_empty()
+                .is_some()
     }
 
     pub(crate) fn custom_image_build(
@@ -101,26 +100,67 @@ impl DockerOptions {
         let pre_build = self.config.pre_build(&self.target)?;
 
         if let Some(pre_build) = pre_build {
-            if !pre_build.is_empty() {
-                let custom = Dockerfile::Custom {
-                    content: format!(
-                        r#"
-        FROM {image}
-        ARG CROSS_DEB_ARCH=
-        ARG CROSS_CMD
-        RUN eval "${{CROSS_CMD}}""#
-                    ),
-                };
-                custom
-                    .build(
-                        self,
-                        paths,
-                        Some(("CROSS_CMD", pre_build.join("\n"))),
-                        msg_info,
-                    )
-                    .wrap_err("when pre-building")
-                    .with_note(|| format!("CROSS_CMD={}", pre_build.join("\n")))?;
-                image = custom.image_name(&self.target, &paths.metadata)?;
+            match pre_build {
+                super::custom::PreBuild::Single {
+                    line: pre_build_script,
+                    env,
+                } if !env
+                    || !pre_build_script.contains('\n')
+                        && paths.host_root().join(&pre_build_script).is_file() =>
+                {
+                    let custom = Dockerfile::Custom {
+                        content: format!(
+                            r#"
+                FROM {image}
+                ARG CROSS_DEB_ARCH=
+                ARG CROSS_SCRIPT
+                ARG CROSS_TARGET
+                COPY $CROSS_SCRIPT /pre-build-script
+                RUN chmod +x /pre-build-script
+                RUN ./pre-build-script $CROSS_TARGET"#
+                        ),
+                    };
+
+                    image = custom
+                        .build(
+                            self,
+                            paths,
+                            vec![
+                                ("CROSS_SCRIPT", &*pre_build_script),
+                                ("CROSS_TARGET", self.target.triple()),
+                            ],
+                            msg_info,
+                        )
+                        .wrap_err("when pre-building")
+                        .with_note(|| format!("CROSS_SCRIPT={pre_build_script}"))
+                        .with_note(|| format!("CROSS_TARGET={}", self.target))?;
+                }
+                this => {
+                    let pre_build = match this {
+                        PreBuild::Single { line, .. } => vec![line],
+                        PreBuild::Lines(lines) => lines,
+                    };
+                    if !pre_build.is_empty() {
+                        let custom = Dockerfile::Custom {
+                            content: format!(
+                                r#"
+                FROM {image}
+                ARG CROSS_DEB_ARCH=
+                ARG CROSS_CMD
+                RUN eval "${{CROSS_CMD}}""#
+                            ),
+                        };
+                        image = custom
+                            .build(
+                                self,
+                                paths,
+                                Some(("CROSS_CMD", pre_build.join("\n"))),
+                                msg_info,
+                            )
+                            .wrap_err("when pre-building")
+                            .with_note(|| format!("CROSS_CMD={}", pre_build.join("\n")))?;
+                    }
+                }
             }
         }
         Ok(image)

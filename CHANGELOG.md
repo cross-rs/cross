@@ -10,10 +10,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - #913 - added the `x86_64-unknown-illumos` target.
+- #910 - `pre-build` can now take a string pointing to a script file to run.
 - #905 - added `qemu-runner` for musl images, allowing use of native or emulated runners.
 - #905 - added qemu emulation to `i586-unknown-linux-gnu`, `i686-unknown-linux-musl`, and `i586-unknown-linux-gnu`, so they can run on an `x86` CPU, rather than an `x86_64` CPU.
 - #900 - add the option to skip copying build artifacts back to host when using remote cross via `CROSS_REMOTE_SKIP_BUILD_ARTIFACTS`.
-- #891 - support custom user namespace overrides by setting the `CROSS_CONTAINER_USER_NAMESPACE` environment variable. 
+- #891 - support custom user namespace overrides by setting the `CROSS_CONTAINER_USER_NAMESPACE` environment variable.
 - #890 - support rootless docker via the `CROSS_ROOTLESS_CONTAINER_ENGINE` environment variable.
 - #878 - added an image `ghcr.io/cross-rs/cross` containing cross.
 

@@ -34,8 +34,26 @@ The `target` key allows you to specify parameters for specific compilation targe
 xargo = false
 build-std = false
 image = "test-image"
-pre-build = ["apt-get update"]
+pre-build = ["apt-get update"] # can also be the path to a file to run
 runner = "custom-runner"
+```
+
+# `target.TARGET.pre-build`
+
+The `pre-build` field can also reference a file to copy and run. This file is relative to the container context, which would be the workspace root, or the current directory if `--manifest-path` is used. For more involved scripts, consider using `target.TARGET.dockerfile` instead to directly control the execution.
+
+This script will be invoked as `RUN ./pre-build-script $CROSS_TARGET` where `$CROSS_TARGET` is the target triple.
+
+```toml
+[target.aarch64-unknown-linux-gnu]
+pre-build = "./scripts/my-script.sh"
+```
+
+```sh
+$ cat ./scripts/my-script.sh
+#!/usr/bin/env bash
+
+apt-get install libssl-dev -y
 ```
 
 # `target.TARGET.env`

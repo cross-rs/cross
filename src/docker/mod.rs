@@ -1,4 +1,4 @@
-mod custom;
+pub mod custom;
 mod engine;
 mod local;
 pub mod remote;
