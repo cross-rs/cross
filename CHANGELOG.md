@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- #921 - use `CARGO_TERM_VERBOSE`, `CARGO_TERM_QUIET`, and `CARGO_TERM_COLOR` environment variables for cross terminal output.
 - #913 - added the `x86_64-unknown-illumos` target.
 - #905 - added `qemu-runner` for musl images, allowing use of native or emulated runners.
 - #905 - added qemu emulation to `i586-unknown-linux-gnu`, `i686-unknown-linux-musl`, and `i586-unknown-linux-gnu`, so they can run on an `x86` CPU, rather than an `x86_64` CPU.

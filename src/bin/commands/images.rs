@@ -20,7 +20,7 @@ pub struct ListImages {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Container engine (such as docker or podman).
@@ -46,7 +46,7 @@ pub struct RemoveImages {
     /// Do not print cross log messages.
     #[clap(short, long)]
     pub quiet: bool,
-    /// Whether messages should use color output.
+    /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
     /// Force removal of images.
