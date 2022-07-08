@@ -307,6 +307,7 @@ jobs:
         run: ./ci/test-cross-image.sh
         env:
           TARGET: 'aarch64-unknown-linux-gnu'
+          IMAGE: 'ghcr.io/cross-rs/cross/aarch64-unknown-linux-gnu:main'
         shell: bash
 
       - name: Login to GitHub Container Registry
