@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+## [v0.2.3] - 2022-07-09
+
 ### Added
 
 - #921 - use `CARGO_TERM_VERBOSE`, `CARGO_TERM_QUIET`, and `CARGO_TERM_COLOR` environment variables for cross terminal output.
@@ -355,7 +357,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 <!-- prettier-ignore-start -->
 <!-- next-url -->
 
-[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.3...HEAD
+
+[v0.2.3]: https://github.com/cross-rs/cross/compare/v0.2.2...v0.2.3
 
 [v0.2.2]: https://github.com/cross-rs/cross/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/cross-rs/cross/compare/v0.2.0...v0.2.1
