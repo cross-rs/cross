@@ -394,7 +394,7 @@ jobs:
         shell: bash
 
   publish:
-    needs: [build, check, fmt, clippy, cargo-deny, remote, bisect, docker-in-docker]
+    needs: [build, check, fmt, clippy, cargo-deny]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -405,7 +405,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check]
+    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker]
     if: always()
     runs-on: ubuntu-latest
     steps:
