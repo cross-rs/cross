@@ -1,6 +1,7 @@
 #![deny(missing_debug_implementations, rust_2018_idioms)]
 
 pub mod build_docker_image;
+pub mod changelog;
 pub mod ci;
 pub mod crosstool;
 pub mod hooks;
@@ -15,6 +16,7 @@ use cross::shell::{MessageInfo, Verbosity};
 use util::{cargo_metadata, ImageTarget};
 
 use self::build_docker_image::BuildDockerImage;
+use self::changelog::{BuildChangelog, ValidateChangelog};
 use self::crosstool::ConfigureCrosstool;
 use self::hooks::{Check, Test};
 use self::install_git_hooks::InstallGitHooks;
@@ -54,6 +56,11 @@ enum Commands {
     CiJob(CiJob),
     /// Configure crosstool config files.
     ConfigureCrosstool(ConfigureCrosstool),
+    /// Build the changelog.
+    BuildChangelog(BuildChangelog),
+    /// Validate changelog entries.
+    #[clap(hide = true)]
+    ValidateChangelog(ValidateChangelog),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<String> {
@@ -110,6 +117,14 @@ pub fn main() -> cross::Result<()> {
         Commands::ConfigureCrosstool(args) => {
             let mut msg_info = get_msg_info!(args, args.verbose)?;
             crosstool::configure_crosstool(args, &mut msg_info)?;
+        }
+        Commands::BuildChangelog(args) => {
+            let mut msg_info = get_msg_info!(args, args.verbose)?;
+            changelog::build_changelog(args, &mut msg_info)?;
+        }
+        Commands::ValidateChangelog(args) => {
+            let mut msg_info = get_msg_info!(args, args.verbose)?;
+            changelog::validate_changelog(args, &mut msg_info)?;
         }
     }
 

@@ -1,30 +1,17 @@
 # Change Log
 
-All notable changes to this project will be documented in this file. This is an automatically-generated document: entries are added via changesets present in the `.changes` directory.
-This project adheres to [Semantic Versioning](http://semver.org/).
+This is a template changelog. This represents an older state of this repository, used to test parsing/formatting.
 
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
 
-## [v0.2.4] - 2022-07-10
-
-## Fixed
-
-- #930 - fix any parsing of 1-character subcommands
-- #929 - Fixed issue where `--verbose` would not output data when it should
-
-## [v0.2.3] - 2022-07-09
-
 ### Added
 
-- #921 - use `CARGO_TERM_VERBOSE`, `CARGO_TERM_QUIET`, and `CARGO_TERM_COLOR` environment variables for cross terminal output.
-- #913 - added the `x86_64-unknown-illumos` target.
-- #910 - `pre-build` can now take a string pointing to a script file to run.
 - #905 - added `qemu-runner` for musl images, allowing use of native or emulated runners.
 - #905 - added qemu emulation to `i586-unknown-linux-gnu`, `i686-unknown-linux-musl`, and `i586-unknown-linux-gnu`, so they can run on an `x86` CPU, rather than an `x86_64` CPU.
 - #900 - add the option to skip copying build artifacts back to host when using remote cross via `CROSS_REMOTE_SKIP_BUILD_ARTIFACTS`.
-- #891 - support custom user namespace overrides by setting the `CROSS_CONTAINER_USER_NAMESPACE` environment variable.
+- #891 - support custom user namespace overrides by setting the `CROSS_CONTAINER_USER_NAMESPACE` environment variable. 
 - #890 - support rootless docker via the `CROSS_ROOTLESS_CONTAINER_ENGINE` environment variable.
 - #878 - added an image `ghcr.io/cross-rs/cross` containing cross.
 
@@ -364,11 +351,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 <!-- prettier-ignore-start -->
 <!-- next-url -->
 
-[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.4...HEAD
-
-[v0.2.4]: https://github.com/cross-rs/cross/compare/v0.2.3...v0.2.4
-
-[v0.2.3]: https://github.com/cross-rs/cross/compare/v0.2.2...v0.2.3
+[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.2...HEAD
 
 [v0.2.2]: https://github.com/cross-rs/cross/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/cross-rs/cross/compare/v0.2.0...v0.2.1

@@ -1,0 +1,5 @@
+{
+    "description": "use JSON-based files to autogenerate CHANGELOG.md",
+    "issues": [662],
+    "type": "internal"
+}

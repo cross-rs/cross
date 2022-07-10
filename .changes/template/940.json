@@ -1,0 +1,22 @@
+[
+    {
+        "description": "this is one added entry.",
+        "issues": [630],
+        "type": "added"
+    },
+    {
+        "description": "this is another added entry.",
+        "issues": [642],
+        "type": "added"
+    },
+    {
+        "description": "this is a fixed entry that has no attached issue.",
+        "type": "fixed"
+    },
+    {
+        "description": "this is a breaking change.",
+        "issues": [679],
+        "breaking": true,
+        "type": "changed"
+    }
+]

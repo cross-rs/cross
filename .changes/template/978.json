@@ -1,0 +1,5 @@
+{
+    "description": "sample description for a PR adding one CHANGELOG entry.",
+    "issues": [437],
+    "type": "fixed"
+}
