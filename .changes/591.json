@@ -1,0 +1,6 @@
+{
+    "description": "Update Ubuntu images to 20.04 LTS.",
+    "type": "changed",
+    "breaking": true,
+    "issues": [417, 517, 556, 616]
+}

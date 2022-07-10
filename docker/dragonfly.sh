@@ -10,14 +10,14 @@ main() {
     local nproc=
     local binutils=2.32 \
           dragonfly=6.0.1_REL \
-          gcc=5.3.0 \
+          gcc=10.3.0 \
           target=x86_64-unknown-dragonfly \
           url="https://mirror-master.dragonflybsd.org/iso-images"
     if [[ $# != "0" ]]; then
         nproc="${1}"
     fi
 
-    install_packages bsdtar \
+    install_packages libarchive-tools \
         bzip2 \
         ca-certificates \
         curl \
@@ -42,47 +42,11 @@ main() {
     cd gcc
     sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites
     ./contrib/download_prerequisites
-    patch -p0 <<'EOF'
---- libatomic/configure.tgt.orig   2015-07-09 16:08:55 UTC
-+++ libatomic/configure.tgt
-@@ -110,7 +110,7 @@ case "${target}" in
-   ;;
-
-   *-*-linux* | *-*-gnu* | *-*-k*bsd*-gnu \
--  | *-*-netbsd* | *-*-freebsd* | *-*-openbsd* \
-+  | *-*-netbsd* | *-*-freebsd* | *-*-openbsd* | *-*-dragonfly* \
-   | *-*-solaris2* | *-*-sysv4* | *-*-irix6* | *-*-osf* | *-*-hpux11* \
-   | *-*-darwin* | *-*-aix* | *-*-cygwin*)
-   # POSIX system.  The OS is supported.
-EOF
-
-    patch -p0 <<'EOF'
---- libstdc++-v3/config/os/bsd/dragonfly/os_defines.h.orig  2015-07-09 16:08:54 UTC
-+++ libstdc++-v3/config/os/bsd/dragonfly/os_defines.h
-@@ -29,4 +29,9 @@
- // System-specific #define, typedefs, corrections, etc, go here.  This
- // file will come before all others.
-
-+#define _GLIBCXX_USE_C99_CHECK 1
-+#define _GLIBCXX_USE_C99_DYNAMIC (!(__ISO_C_VISIBLE >= 1999))
-+#define _GLIBCXX_USE_C99_LONG_LONG_CHECK 1
-+#define _GLIBCXX_USE_C99_LONG_LONG_DYNAMIC (_GLIBCXX_USE_C99_DYNAMIC || !defined __LONG_LONG_SUPPORTED)
-+
- #endif
-EOF
-
-    patch -p0 <<'EOF'
---- libstdc++-v3/configure.orig    2016-05-26 18:34:47.163132921 +0200
-+++ libstdc++-v3/configure 2016-05-26 18:35:29.594590648 +0200
-@@ -52013,7 +52013,7 @@
-
-     ;;
-
--  *-freebsd*)
-+  *-freebsd* | *-dragonfly*)
-     SECTION_FLAGS='-ffunction-sections -fdata-sections'
-
-
+    patch libstdc++-v3/configure <<'EOF'
+47159c47159
+<   *-freebsd*)
+---
+>   *-freebsd* | *-dragonfly*)
 EOF
     cd ..
 

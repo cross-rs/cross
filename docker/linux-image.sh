@@ -6,39 +6,101 @@ set -euo pipefail
 # shellcheck disable=SC1091
 . lib.sh
 
+max_kernel_version() {
+    # kernel versions have the following format:
+    #   `5.10.0-10-$arch`, where the `$arch` may be optional.
+    local IFS=$'\n'
+    local -a versions
+    local major=0
+    local minor=0
+    local patch=0
+    local release=0
+    local index=0
+    local version
+    local x
+    local y
+    local z
+    local r
+    local is_larger
+
+    read -r -d '' -a versions <<< "$1"
+    for i in "${!versions[@]}"; do
+        version="${versions[$i]}"
+        x=$(echo "$version" | cut -d '.' -f 1)
+        y=$(echo "$version" | cut -d '.' -f 2)
+        z=$(echo "$version" | cut -d '.' -f 3 | cut -d '-' -f 1)
+        r=$(echo "$version" | cut -d '-' -f 2)
+        is_larger=
+
+        if [ "$x" -gt "$major" ]; then
+            is_larger=1
+        elif [ "$x" -eq "$major" ] && [ "$y" -gt "$minor" ]; then
+            is_larger=1
+        elif [ "$x" -eq "$major" ] && [ "$y" -eq "$minor" ] && [ "$z" -gt "$patch" ]; then
+            is_larger=1
+        elif [ "$x" -eq "$major" ] && [ "$y" -eq "$minor" ] && [ "$z" -eq "$patch" ] && [ "$r" -gt "$release" ]; then
+            is_larger=1
+        fi
+
+        if [ -n "$is_larger" ]; then
+            index="$i"
+            major="$x"
+            minor="$y"
+            patch="$z"
+            release="$r"
+        fi
+    done
+
+    echo "${versions[index]}"
+}
+
 main() {
     # arch in the rust target
     local arch="${1}" \
-          kversion=4.19.0-20
+          kversion=5.10.0-8
 
-    local debsource="deb http://http.debian.net/debian/ buster main"
-    debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
+    local debsource="deb http://http.debian.net/debian/ bullseye main"
+    debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"
 
     local dropbear="dropbear-bin"
 
     local -a deps
     local kernel=
-    local libgcc="libgcc1"
+    local libgcc="libgcc-s1"
+    local ncurses=
 
     # select debian arch and kernel version
     case "${arch}" in
         aarch64)
             arch=arm64
             kernel="${kversion}-arm64"
+            deps=(libcrypt1:"${arch}")
             ;;
         armv7)
             arch=armhf
-            kernel="${kversion}-armmp"
+            kernel="5.*-armmp"
+            deps=(libcrypt1:"${arch}")
             ;;
         i686)
             arch=i386
             kernel="${kversion}-686"
+            deps=(libcrypt1:"${arch}")
             ;;
-        mips|mipsel)
-            kernel="${kversion}-4kc-malta"
+        mips)
+            # mips was discontinued in bullseye, so we have to use buster.
+            libgcc="libgcc1"
+            debsource="deb http://http.debian.net/debian/ buster main"
+            debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
+            kernel="4.*-4kc-malta"
+            ncurses="=6.1*"
+            ;;
+        mipsel)
+            kernel="5.*-4kc-malta"
+            deps=(libcrypt1:"${arch}")
             ;;
         mips64el)
-            kernel="${kversion}-5kc-malta"
+            kernel="5.*-5kc-malta"
+            deps=(libcrypt1:"${arch}")
             ;;
         powerpc)
             # there is no buster powerpc port, so we use jessie
@@ -61,9 +123,7 @@ main() {
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kversion='5.*'
-            kernel="${kversion}-powerpc64"
-            libgcc="libgcc-s1"
+            kernel='5.*-powerpc64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
@@ -71,17 +131,18 @@ main() {
             ;;
         powerpc64le)
             arch=ppc64el
-            kernel="${kversion}-powerpc64le"
+            kernel="5.*-powerpc64le"
+            deps=(libcrypt1:"${arch}")
             ;;
         s390x)
             arch=s390x
-            kernel="${kversion}-s390x"
+            kernel="5.*-s390x"
+            deps=(libcrypt1:"${arch}")
             ;;
         sparc64)
             # there is no stable port
             # https://packages.debian.org/en/sid/linux-image-sparc64
-            kernel='*-sparc64'
-            libgcc="libgcc-s1"
+            kernel='5.*-sparc64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
@@ -90,6 +151,7 @@ main() {
         x86_64)
             arch=amd64
             kernel="${kversion}-amd64"
+            deps=(libcrypt1:"${arch}")
             ;;
         *)
             echo "Invalid arch: ${arch}"
@@ -102,6 +164,19 @@ main() {
         cpio \
         sharutils \
         gnupg
+
+    # amd64 has conflicting versions of the packages installed, so
+    # we need to remove the system installs later. since apt relies
+    # on these packages, we need to download them and reinstall
+    # using dpkg later, since we cannot redownload via apt.
+    local libgcc_packages=("${libgcc}:${arch}" "libstdc++6:${arch}")
+    if [[ "${arch}" == "amd64" ]]; then
+        local libgcc_root=/qemu/libgcc
+        mkdir -p "${libgcc_root}"
+        pushd "${libgcc_root}"
+        apt-get -d --no-install-recommends download "${libgcc_packages[@]}"
+        popd
+    fi
 
     # Download packages
     mv /etc/apt/sources.list /etc/apt/sources.list.bak
@@ -132,6 +207,20 @@ main() {
     mkdir -p "/qemu/${arch}"
     chmod 777 /qemu "/qemu/${arch}"
 
+    # Need to limit the kernel version and select the best version
+    # if we have a wildcard. This is because some matches, such as
+    # `linux-image-4.*-4kc-malta` can match more than 1 package,
+    # which will prevent further steps from working.
+    if [[ "$kernel" == *'*'* ]]; then
+        # Need an exact match for start and end, to avoid debug kernels.
+        # Afterwards, need to do a complex sort for the best kernel version,
+        # since the sort is non-trivial and must extract subcomponents.
+        packages=$(apt-cache search ^linux-image-"$kernel$" --names-only)
+        names=$(echo "$packages" | cut -d ' ' -f 1)
+        kversions="${names//linux-image-/}"
+        kernel=$(max_kernel_version "$kversions")
+    fi
+
     cd "/qemu/${arch}"
     apt-get -d --no-install-recommends download \
         ${deps[@]+"${deps[@]}"} \
@@ -141,11 +230,40 @@ main() {
         "libtomcrypt1:${arch}" \
         "libgmp10:${arch}" \
         "libc6:${arch}" \
-        "${libgcc}:${arch}" \
-        "libstdc++6:${arch}" \
         "linux-image-${kernel}:${arch}" \
-        ncurses-base \
+        ncurses-base"${ncurses}" \
         "zlib1g:${arch}"
+
+    if [[ "${arch}" != "amd64" ]]; then
+        apt-get -d --no-install-recommends download "${libgcc_packages[@]}"
+    else
+        # amd64 has conflicting versions of the packages installed
+        # this prevents us from downloading them, so we need to
+        # simply grab the last version from the debian sources.
+        # we're search for a paragraph with:
+        #   Maintainer: Debian
+        # but not
+        #   Original-Maintainer: Debian
+        #
+        # then, we extract the version record and download **only**
+        # packages matching that specific version.
+        local version_info
+        local version_record
+        local version
+        for package in "${libgcc_packages[@]}"; do
+            version_info=$(apt-cache show "${package}")
+            version_record=$(echo "${version_info}" | perl -n00e 'print if /^Maintainer: Debian/m')
+            version=$(echo "${version_record}" | grep 'Version: ' | cut -d ' ' -f 2)
+            apt-get -d --no-install-recommends download "${package}=${version}"
+        done
+
+        # now, if we don't remove the system installs, qemu-system won't
+        # be able to find these libgcc packages after building, since it
+        # will prefer the system packages, which it can't find later.
+        # removing these packages needs to occur after download via apt,
+        # since apt-get relies on libgcc_s1 and libstdc++6.
+        dpkg -r --force-depends "${libgcc_packages[@]}"
+    fi
     cd /qemu
 
     # Install packages
@@ -256,6 +374,14 @@ EOF
     find . | cpio --create --format='newc' --quiet | gzip > ../initrd.gz
     cd -
 
+    if [[ "${arch}" == "amd64" ]]; then
+        # need to reinstall these packages, since basic utilities rely on them.
+        pushd "${libgcc_root}"
+        dpkg -i --force-depends "${libgcc_root}"/*.deb
+        popd
+        rm -rf "${libgcc_root}"
+    fi
+
     # Clean up
     rm -rf "/qemu/${root}" "/qemu/${arch}"
     mv -f /etc/apt/sources.list.bak /etc/apt/sources.list
@@ -265,6 +391,11 @@ EOF
     # can fail if arch is used (amd64 and/or i386)
     dpkg --remove-architecture "${arch}" || true
     apt-get update
+
+    # need to reinstall the removed libgcc packages, which are required for apt
+    if [[ "${arch}" == "amd64" ]]; then
+        apt-get install --no-install-recommends --assume-yes "${packages[@]}"
+    fi
 
     purge_packages
 

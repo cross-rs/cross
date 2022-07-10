@@ -267,7 +267,7 @@ jobs:
       - name: Build Docker image
         id: build-docker-image
         if: steps.prepare-meta.outputs.has-image
-        timeout-minutes: 60
+        timeout-minutes: 120
         run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
         env:
           TARGET: ${{ matrix.target }}

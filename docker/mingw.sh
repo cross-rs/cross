@@ -34,7 +34,7 @@ main() {
     pushd gcc-mingw-w64-*
 
     # We are using dwarf exceptions instead of sjlj
-    sed -i -e 's/libgcc_s_sjlj-1/libgcc_s_dw2-1/g' debian/gcc-mingw-w64-i686.install
+    sed -i -e 's/libgcc_s_sjlj-1/libgcc_s_dw2-1/g' debian/gcc-mingw-w64-i686.install.in
 
     # Only build i686 packages (disable x86_64)
     patch -p0 <<'EOF'
@@ -96,7 +96,7 @@ EOF
  threads := posix win32
 
  # Hardening on the host, none on the target
-@@ -216,6 +216,10 @@
+@@ -220,6 +220,10 @@
  # Enable libatomic
  CONFFLAGS += \
  	--enable-libatomic
@@ -104,10 +104,15 @@ EOF
 +CONFFLAGS += \
 +	--disable-sjlj-exceptions \
 +	--with-dwarf2
- # Enable experimental::filesystem
+ # Enable experimental::filesystem and std::filesystem
  CONFFLAGS += \
  	--enable-libstdcxx-filesystem-ts=yes
 EOF
+
+    # Need symlinks for specific autoconf versions, since it
+    # attempts to use autoconf2.69 and autom4te2.69.
+    ln -s /usr/bin/autoconf /usr/bin/autoconf2.69
+    ln -s /usr/bin/autom4te /usr/bin/autom4te2.69
 
     # Build the modified mingw packages
     MAKEFLAGS=--silent dpkg-buildpackage -nc -B --jobs=auto
@@ -122,6 +127,10 @@ EOF
 
     rm -rf "${td}"
     rm "${0}"
+
+    # Unlink our temporary aliases
+    unlink /usr/bin/autoconf2.69
+    unlink /usr/bin/autom4te2.69
 }
 
 main "${@}"
