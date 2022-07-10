@@ -133,7 +133,7 @@ impl CommandExt for Command {
         silence_stdout: bool,
     ) -> Result<ExitStatus> {
         self.debug(msg_info)?;
-        if silence_stdout && msg_info.is_verbose() {
+        if silence_stdout && !msg_info.is_verbose() {
             self.stdout(std::process::Stdio::null());
         }
         self.status()

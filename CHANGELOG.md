@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Fixed
 
 - #930 - fix any parsing of 1-character subcommands
+- #929 - Fixed issue where `--verbose` would not output data when it should
 
 ## [v0.2.3] - 2022-07-09
 
