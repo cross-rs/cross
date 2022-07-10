@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+## Fixed
+
+- #930 - fix any parsing of 1-character subcommands
+
 ## [v0.2.3] - 2022-07-09
 
 ### Added

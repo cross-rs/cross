@@ -72,10 +72,13 @@ fn is_verbose(arg: &str) -> bool {
     match arg {
         "--verbose" => true,
         // cargo can handle any number of "v"s
-        a => a
-            .get(1..)
-            .map(|a| a.chars().all(|x| x == 'v'))
-            .unwrap_or_default(),
+        a => {
+            a.starts_with('-')
+                && a.len() >= 2
+                && a.get(1..)
+                    .map(|a| a.chars().all(|x| x == 'v'))
+                    .unwrap_or_default()
+        }
     }
 }
 
@@ -237,4 +240,21 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         quiet,
         color,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_verbose_test() {
+        assert!(!is_verbose("b"));
+        assert!(!is_verbose("x"));
+        assert!(!is_verbose("-"));
+        assert!(!is_verbose("-V"));
+        assert!(is_verbose("-v"));
+        assert!(is_verbose("--verbose"));
+        assert!(is_verbose("-vvvv"));
+        assert!(!is_verbose("-version"));
+    }
 }
