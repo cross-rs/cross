@@ -9,12 +9,35 @@ jobs:
     name: Changelog check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
 
-      - name: Changelog updated
-        uses: Zomzog/changelog-checker@v1.2.0
+      - name: Get Changed Files
+        id: files
+        uses: Ana06/get-changed-files@v2.1.0
         with:
-          fileName: CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # use JSON so we don't have to worry about filenames with spaces
+          format: 'json'
+          filter: '.changes/*.json'
+
+      - name: Validate Changelog Files
+        id: changelog
+        run: |
+          set -x
+          set -e
+          readarray -t added_modified <<<"$(jq -r '.[]' <<<'${{ steps.files.outputs.added_modified }}')"
+          readarray -t removed <<<"$(jq -r '.[]' <<<'${{ steps.files.outputs.removed }}')"
+          added_count=${#added_modified[@]}
+          removed_count=${#removed[@]}
+          if ${{ !contains(github.event.pull_request.labels.*.name, 'no changelog' ) }}; then
+            if [[ "$added_count" -eq "0" ]] && [[ "$removed_count" -eq "0" ]]; then
+              echo "Must add or remove changes or add the 'no changelog' label"
+              exit 1
+            else
+              basenames=()
+              for path in "${added_modified[@]}"; do
+                basenames+=($(basename "${path}"))
+              done
+              cargo xtask validate-changelog "${basenames[@]}"
+            fi
+          fi
