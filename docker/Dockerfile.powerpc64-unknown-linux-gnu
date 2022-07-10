@@ -14,6 +14,11 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-powerpc64-linux-gnu \
     libc6-dev-ppc64-cross
 
+COPY deny-debian-packages.sh /
+RUN TARGET_ARCH=ppc64 /deny-debian-packages.sh \
+    binutils \
+    binutils-powerpc64-linux-gnu
+
 COPY qemu.sh /
 RUN /qemu.sh ppc64 softmmu
 

@@ -10,12 +10,18 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY qemu.sh /
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-arm-linux-gnueabi \
     crossbuild-essential-armel \
-    libc6-dev-armel-cross && \
-    /qemu.sh arm
+    libc6-dev-armel-cross
+
+COPY deny-debian-packages.sh /
+RUN TARGET_ARCH=armel /deny-debian-packages.sh \
+    binutils \
+    binutils-arm-linux-gnueabi
+
+COPY qemu.sh /
+RUN /qemu.sh arm
 
 COPY qemu-runner /
 

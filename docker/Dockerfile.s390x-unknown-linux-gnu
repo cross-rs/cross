@@ -14,6 +14,11 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-s390x-linux-gnu \
     libc6-dev-s390x-cross
 
+COPY deny-debian-packages.sh /
+RUN TARGET_ARCH=s390x /deny-debian-packages.sh \
+    binutils \
+    binutils-s390x-linux-gnu
+
 COPY qemu.sh /
 RUN /qemu.sh s390x softmmu
 
