@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+## [v0.2.4] - 2022-07-10
+
 ## Fixed
 
 - #930 - fix any parsing of 1-character subcommands
@@ -362,7 +364,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 <!-- prettier-ignore-start -->
 <!-- next-url -->
 
-[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.4...HEAD
+
+[v0.2.4]: https://github.com/cross-rs/cross/compare/v0.2.3...v0.2.4
 
 [v0.2.3]: https://github.com/cross-rs/cross/compare/v0.2.2...v0.2.3
 
