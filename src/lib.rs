@@ -583,9 +583,7 @@ pub(crate) fn warn_host_version_mismatch(
     rustc_commit: &str,
     msg_info: &mut MessageInfo,
 ) -> Result<VersionMatch> {
-    let host_commit = (&host_version_meta.short_version_string)
-        .splitn(3, ' ')
-        .nth(2);
+    let host_commit = host_version_meta.short_version_string.splitn(3, ' ').nth(2);
     let rustc_commit_date = rustc_commit
         .split_once(' ')
         .and_then(|x| x.1.strip_suffix(')'));

@@ -25,6 +25,7 @@ fn toml_check() -> Result<(), Box<dyn std::error::Error>> {
             "CODE_OF_CONDUCT.md",
             "CHANGELOG.md",
         ],
+        |p| p == Some("md".as_ref()),
     );
 
     for dir_entry in walk {
