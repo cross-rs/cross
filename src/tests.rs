@@ -8,6 +8,8 @@ use std::{
 use once_cell::sync::OnceCell;
 use rustc_version::VersionMeta;
 
+use crate::ToUtf8;
+
 static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 
 /// Returns the cargo workspace for the manifest
@@ -26,19 +28,22 @@ pub fn get_cargo_workspace() -> &'static Path {
 pub fn walk_dir<'a>(
     root: &'_ Path,
     skip: &'a [impl AsRef<OsStr>],
+    ext: impl for<'s> Fn(Option<&'s std::ffi::OsStr>) -> bool + 'static,
 ) -> impl Iterator<Item = Result<walkdir::DirEntry, walkdir::Error>> + 'a {
-    walkdir::WalkDir::new(root).into_iter().filter_entry(|e| {
-        if skip
-            .iter()
-            .map(|s| -> &std::ffi::OsStr { s.as_ref() })
-            .any(|dir| e.file_name() == dir)
-        {
-            return false;
-        } else if e.file_type().is_dir() {
-            return true;
-        }
-        e.path().extension() == Some("md".as_ref())
-    })
+    walkdir::WalkDir::new(root)
+        .into_iter()
+        .filter_entry(move |e| {
+            if skip
+                .iter()
+                .map(|s| -> &std::ffi::OsStr { s.as_ref() })
+                .any(|dir| e.file_name() == dir)
+            {
+                return false;
+            } else if e.file_type().is_dir() {
+                return true;
+            }
+            ext(e.path().extension())
+        })
 }
 
 #[test]
@@ -123,4 +128,22 @@ release: {version}
         "1.0.0-nightly (11111111 2022-01-01)",
         "1.0.0-nightly (22222222 2022-02-02)",
     );
+}
+
+#[test]
+fn check_newlines() -> crate::Result<()> {
+    for file in walk_dir(get_cargo_workspace(), &[".git", "target"], |_| true) {
+        let file = file?;
+        if !file.file_type().is_file() {
+            continue;
+        }
+        assert!(
+            crate::file::read(file.path())
+                .unwrap_or_else(|_| String::from("\n"))
+                .ends_with('\n'),
+            "file {:?} does not end with a newline",
+            file.path().to_utf8()?
+        );
+    }
+    Ok(())
 }
