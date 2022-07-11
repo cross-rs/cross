@@ -1,7 +1,9 @@
-use std::{env, path::PathBuf};
+use std::env;
+use std::path::{Path, PathBuf};
 
 use crate::cargo::Subcommand;
 use crate::errors::Result;
+use crate::file::PathExt;
 use crate::rustc::TargetList;
 use crate::shell::{self, MessageInfo};
 use crate::Target;
@@ -104,34 +106,71 @@ fn is_value_arg(arg: &str, field: &str) -> Option<ArgKind> {
 fn parse_next_arg<T>(
     arg: String,
     out: &mut Vec<String>,
-    parse: impl Fn(&str) -> T,
+    parse: impl Fn(&str) -> Result<T>,
+    store_cb: impl Fn(String) -> Result<String>,
     iter: &mut impl Iterator<Item = String>,
-) -> Option<T> {
+) -> Result<Option<T>> {
     out.push(arg);
     match iter.next() {
         Some(next) => {
-            let result = parse(&next);
-            out.push(next);
-            Some(result)
+            let result = parse(&next)?;
+            out.push(store_cb(next)?);
+            Ok(Some(result))
         }
-        None => None,
+        None => Ok(None),
     }
 }
 
-fn parse_equal_arg<T>(arg: String, out: &mut Vec<String>, parse: impl Fn(&str) -> T) -> T {
-    let result = parse(arg.split_once('=').expect("argument should contain `=`").1);
-    out.push(arg);
+fn parse_equal_arg<T>(
+    arg: String,
+    out: &mut Vec<String>,
+    parse: impl Fn(&str) -> Result<T>,
+    store_cb: impl Fn(String) -> Result<String>,
+) -> Result<T> {
+    let (first, second) = arg.split_once('=').expect("argument should contain `=`");
+    let result = parse(second)?;
+    out.push(format!("{first}={}", store_cb(second.to_owned())?));
 
-    result
+    Ok(result)
 }
 
-fn parse_manifest_path(path: &str) -> Option<PathBuf> {
+fn parse_manifest_path(path: &str) -> Result<Option<PathBuf>> {
     let p = PathBuf::from(path);
-    env::current_dir().ok().map(|cwd| cwd.join(p))
+    Ok(absolute_path(p).ok())
 }
 
 fn parse_target_dir(path: &str) -> Result<PathBuf> {
     absolute_path(PathBuf::from(path))
+}
+
+fn identity(arg: String) -> Result<String> {
+    Ok(arg)
+}
+
+fn str_to_owned(arg: &str) -> Result<String> {
+    Ok(arg.to_owned())
+}
+
+#[allow(clippy::needless_return)]
+fn store_manifest_path(path: String) -> Result<String> {
+    let p = Path::new(&path);
+    if p.is_absolute() {
+        #[cfg(target_os = "windows")]
+        {
+            return p.as_wslpath();
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            use crate::file::ToUtf8;
+            return p.to_utf8().map(ToOwned::to_owned);
+        }
+    } else {
+        p.as_posix()
+    }
+}
+
+fn store_target_dir(_: String) -> Result<String> {
+    Ok("/target".to_owned())
 }
 
 pub fn parse(target_list: &TargetList) -> Result<Args> {
@@ -164,57 +203,68 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
             } else if let Some(kind) = is_value_arg(&arg, "--color") {
                 color = match kind {
                     ArgKind::Next => {
-                        match parse_next_arg(arg, &mut all, ToOwned::to_owned, &mut args) {
+                        match parse_next_arg(arg, &mut all, str_to_owned, identity, &mut args)? {
                             Some(c) => Some(c),
                             None => shell::invalid_color(None),
                         }
                     }
-                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, ToOwned::to_owned)),
+                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, str_to_owned, identity)?),
                 };
             } else if let Some(kind) = is_value_arg(&arg, "--manifest-path") {
                 manifest_path = match kind {
-                    ArgKind::Next => {
-                        parse_next_arg(arg, &mut all, parse_manifest_path, &mut args).flatten()
+                    ArgKind::Next => parse_next_arg(
+                        arg,
+                        &mut all,
+                        parse_manifest_path,
+                        store_manifest_path,
+                        &mut args,
+                    )?
+                    .flatten(),
+                    ArgKind::Equal => {
+                        parse_equal_arg(arg, &mut all, parse_manifest_path, store_manifest_path)?
                     }
-                    ArgKind::Equal => parse_equal_arg(arg, &mut all, parse_manifest_path),
                 };
             } else if let ("+", ch) = arg.split_at(1) {
                 channel = Some(ch.to_owned());
             } else if let Some(kind) = is_value_arg(&arg, "--target") {
+                let parse_target = |t: &str| Ok(Target::from(t, target_list));
                 target = match kind {
                     ArgKind::Next => {
-                        parse_next_arg(arg, &mut all, |t| Target::from(t, target_list), &mut args)
+                        parse_next_arg(arg, &mut all, parse_target, identity, &mut args)?
                     }
-                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, |t| {
-                        Target::from(t, target_list)
-                    })),
+                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, parse_target, identity)?),
                 };
             } else if let Some(kind) = is_value_arg(&arg, "--features") {
                 match kind {
                     ArgKind::Next => {
-                        let next = parse_next_arg(arg, &mut all, ToOwned::to_owned, &mut args);
+                        let next =
+                            parse_next_arg(arg, &mut all, str_to_owned, identity, &mut args)?;
                         if let Some(feature) = next {
                             features.push(feature);
                         }
                     }
                     ArgKind::Equal => {
-                        features.push(parse_equal_arg(arg, &mut all, ToOwned::to_owned));
+                        features.push(parse_equal_arg(arg, &mut all, str_to_owned, identity)?);
                     }
                 }
             } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
                 match kind {
                     ArgKind::Next => {
-                        all.push(arg);
-                        if let Some(td) = args.next() {
-                            target_dir = Some(parse_target_dir(&td)?);
-                            all.push("/target".to_owned());
-                        }
+                        target_dir = parse_next_arg(
+                            arg,
+                            &mut all,
+                            parse_target_dir,
+                            store_target_dir,
+                            &mut args,
+                        )?;
                     }
                     ArgKind::Equal => {
-                        target_dir = Some(parse_target_dir(
-                            arg.split_once('=').expect("argument should contain `=`").1,
+                        target_dir = Some(parse_equal_arg(
+                            arg,
+                            &mut all,
+                            parse_target_dir,
+                            store_target_dir,
                         )?);
-                        all.push("--target-dir=/target".into());
                     }
                 }
             } else {

@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "support Windows-style and absolute manifest paths",
+    "issues": [935]
+}
