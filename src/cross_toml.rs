@@ -11,7 +11,9 @@ use std::str::FromStr;
 
 /// Environment configuration
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
 pub struct CrossEnvConfig {
+    ignore_cargo_config: Option<bool>,
     volumes: Option<Vec<String>>,
     passthrough: Option<Vec<String>>,
 }
@@ -273,6 +275,15 @@ impl CrossToml {
         self.get_value(target, |b| b.build_std, |t| t.build_std)
     }
 
+    /// Returns the whether to ignore cargo config files.
+    pub fn ignore_cargo_config(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+        self.get_value(
+            target,
+            |b| b.env.ignore_cargo_config,
+            |t| t.env.ignore_cargo_config,
+        )
+    }
+
     /// Returns the list of environment variables to pass through for `build` and `target`
     pub fn env_passthrough(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
         self.get_ref(
@@ -489,6 +500,7 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig {
                 env: CrossEnvConfig {
+                    ignore_cargo_config: Some(false),
                     volumes: Some(vec![s!("VOL1_ARG"), s!("VOL2_ARG")]),
                     passthrough: Some(vec![s!("VAR1"), s!("VAR2")]),
                 },
@@ -506,6 +518,7 @@ mod tests {
           pre-build = ["echo 'Hello World!'"]
 
           [build.env]
+          ignore-cargo-config = false
           volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
         "#;
@@ -526,6 +539,7 @@ mod tests {
             },
             CrossTargetConfig {
                 env: CrossEnvConfig {
+                    ignore_cargo_config: None,
                     passthrough: Some(vec![s!("VAR1"), s!("VAR2")]),
                     volumes: Some(vec![s!("VOL1_ARG"), s!("VOL2_ARG")]),
                 },
@@ -580,6 +594,7 @@ mod tests {
                 pre_build: Some(PreBuild::Lines(vec![s!("echo 'Hello'")])),
                 runner: None,
                 env: CrossEnvConfig {
+                    ignore_cargo_config: None,
                     passthrough: None,
                     volumes: Some(vec![s!("VOL")]),
                 },
@@ -590,6 +605,7 @@ mod tests {
             targets: target_map,
             build: CrossBuildConfig {
                 env: CrossEnvConfig {
+                    ignore_cargo_config: Some(true),
                     volumes: None,
                     passthrough: Some(vec![]),
                 },
@@ -607,6 +623,7 @@ mod tests {
             pre-build = []
 
             [build.env]
+            ignore-cargo-config = true
             passthrough = []
 
             [target.aarch64-unknown-linux-gnu]
@@ -648,6 +665,7 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig {
                 env: CrossEnvConfig {
+                    ignore_cargo_config: None,
                     passthrough: None,
                     volumes: None,
                 },

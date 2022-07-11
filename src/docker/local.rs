@@ -50,7 +50,7 @@ pub(crate) fn run(
     docker
         .args(&["-v", &format!("{}:/rust:Z,ro", dirs.sysroot.to_utf8()?)])
         .args(&["-v", &format!("{}:/target:Z", dirs.target.to_utf8()?)]);
-    docker_cwd(&mut docker, &paths)?;
+    docker_cwd(&mut docker, &paths, options.ignore_cargo_config)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.

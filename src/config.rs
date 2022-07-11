@@ -96,6 +96,10 @@ impl Environment {
         self.get_target_var(target, "RUNNER")
     }
 
+    fn ignore_cargo_config(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+        self.get_values_for("ENV_IGNORE_CARGO_CONFIG", target, bool_from_envvar)
+    }
+
     fn passthrough(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
         self.get_values_for("ENV_PASSTHROUGH", target, split_to_cloned_by_ws)
     }
@@ -273,6 +277,14 @@ impl Config {
 
     pub fn build_std(&self, target: &Target) -> Option<bool> {
         self.bool_from_config(target, Environment::build_std, CrossToml::build_std)
+    }
+
+    pub fn ignore_cargo_config(&self, target: &Target) -> Option<bool> {
+        self.bool_from_config(
+            target,
+            Environment::ignore_cargo_config,
+            CrossToml::ignore_cargo_config,
+        )
     }
 
     pub fn image(&self, target: &Target) -> Result<Option<String>> {

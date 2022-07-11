@@ -532,8 +532,14 @@ pub fn run() -> Result<ExitStatus> {
                 }
 
                 let paths = docker::DockerPaths::create(&engine, metadata, cwd, sysroot)?;
-                let options =
-                    docker::DockerOptions::new(engine, target.clone(), config, uses_xargo);
+                let ignore_cargo_config = config.ignore_cargo_config(&target).unwrap_or_default();
+                let options = docker::DockerOptions::new(
+                    engine,
+                    target.clone(),
+                    config,
+                    uses_xargo,
+                    ignore_cargo_config,
+                );
                 let status = docker::run(options, paths, &filtered_args, &mut msg_info)
                     .wrap_err("could not run container")?;
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));

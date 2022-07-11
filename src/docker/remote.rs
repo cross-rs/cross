@@ -1170,7 +1170,7 @@ symlink_recurse \"${{prefix}}\"
     let mut docker = subcommand(engine, "exec");
     docker_user_id(&mut docker, engine.kind);
     docker_envvars(&mut docker, &options.config, target, msg_info)?;
-    docker_cwd(&mut docker, &paths)?;
+    docker_cwd(&mut docker, &paths, options.ignore_cargo_config)?;
     docker.arg(&container);
     docker.args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)]);
     bail_container_exited!();

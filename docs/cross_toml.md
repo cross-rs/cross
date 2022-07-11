@@ -21,6 +21,7 @@ For example:
 
 ```toml
 [build.env]
+ignore-cargo-config = false
 volumes = ["VOL1_ARG", "VOL2_ARG"]
 passthrough = ["IMPORTANT_ENV_VARIABLES"]
 ```

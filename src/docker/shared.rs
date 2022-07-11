@@ -9,14 +9,11 @@ use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
 use crate::config::{bool_from_envvar, Config};
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
-use crate::file::{self, write_file, ToUtf8};
+use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
 use crate::rustc::{self, VersionMetaExt};
 use crate::shell::{MessageInfo, Verbosity};
 use crate::Target;
-
-#[cfg(target_os = "windows")]
-use crate::file::PathExt;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 
@@ -37,15 +34,23 @@ pub struct DockerOptions {
     pub target: Target,
     pub config: Config,
     pub uses_xargo: bool,
+    pub ignore_cargo_config: bool,
 }
 
 impl DockerOptions {
-    pub fn new(engine: Engine, target: Target, config: Config, uses_xargo: bool) -> DockerOptions {
+    pub fn new(
+        engine: Engine,
+        target: Target,
+        config: Config,
+        uses_xargo: bool,
+        ignore_cargo_config: bool,
+    ) -> DockerOptions {
         DockerOptions {
             engine,
             target,
             config,
             uses_xargo,
+            ignore_cargo_config,
         }
     }
 
@@ -220,8 +225,16 @@ impl DockerPaths {
         self.workspace_from_cwd().is_ok()
     }
 
+    pub fn cargo_home(&self) -> &Path {
+        &self.directories.cargo
+    }
+
     pub fn mount_cwd(&self) -> &str {
         &self.directories.mount_cwd
+    }
+
+    pub fn mount_root(&self) -> &str {
+        &self.directories.mount_root
     }
 
     pub fn host_root(&self) -> &Path {
@@ -499,8 +512,44 @@ pub(crate) fn docker_envvars(
     Ok(())
 }
 
-pub(crate) fn docker_cwd(docker: &mut Command, paths: &DockerPaths) -> Result<()> {
+fn mount_to_ignore_cargo_config(
+    docker: &mut Command,
+    paths: &DockerPaths,
+    ignore_cargo_config: bool,
+) -> Result<()> {
+    let check_mount =
+        |cmd: &mut Command, host: &Path, mount: &Path, relpath: &Path| -> Result<()> {
+            let cargo_dir = relpath.join(".cargo");
+            if host.join(&cargo_dir).exists() {
+                // this is fine, since it has to be a POSIX path on the mount.
+                cmd.args(&["-v", &mount.join(&cargo_dir).as_posix()?]);
+            }
+
+            Ok(())
+        };
+    if ignore_cargo_config {
+        let mount_root = Path::new(paths.mount_root());
+        let mount_cwd = Path::new(paths.mount_cwd());
+        check_mount(docker, &paths.cwd, mount_cwd, Path::new(""))?;
+        // CWD isn't guaranteed to be a subdirectory of the mount root.
+        if let Ok(mut relpath) = mount_cwd.strip_prefix(mount_root) {
+            while let Some(parent) = relpath.parent() {
+                check_mount(docker, paths.host_root(), mount_root, parent)?;
+                relpath = parent;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub(crate) fn docker_cwd(
+    docker: &mut Command,
+    paths: &DockerPaths,
+    ignore_cargo_config: bool,
+) -> Result<()> {
     docker.args(&["-w", paths.mount_cwd()]);
+    mount_to_ignore_cargo_config(docker, paths, ignore_cargo_config)?;
 
     Ok(())
 }
@@ -787,9 +836,6 @@ pub fn path_hash(path: &Path) -> Result<String> {
 mod tests {
     use super::*;
     use crate::id;
-
-    #[cfg(not(target_os = "windows"))]
-    use crate::file::PathExt;
 
     #[test]
     fn test_docker_user_id() {

@@ -1,0 +1,5 @@
+{
+    "type": "added",
+    "description": "allow users to ignore config files in the package.",
+    "issues": [621]
+}
