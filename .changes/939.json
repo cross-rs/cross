@@ -1,0 +1,5 @@
+{
+    "type": "changed",
+    "description": "Remove `/project` mounting, instead always mount in the same path as on the host",
+    "issues": [938]
+}

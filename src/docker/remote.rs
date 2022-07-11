@@ -915,7 +915,7 @@ pub(crate) fn run(
     docker.args(&["-v", &volume_mount]);
 
     let mut volumes = vec![];
-    let mount_volumes = docker_mount(
+    docker_mount(
         &mut docker,
         &options,
         &paths,
@@ -1018,28 +1018,23 @@ pub(crate) fn run(
         )
         .wrap_err("when copying rust target files")?;
     }
-    let mount_root = if mount_volumes {
-        // cannot panic: absolute unix path, must have root
-        let rel_mount_root = dirs
-            .mount_root
-            .strip_prefix('/')
-            .expect("mount root should be absolute");
-        let mount_root = mount_prefix_path.join(rel_mount_root);
-        if !rel_mount_root.is_empty() {
-            create_volume_dir(
-                engine,
-                &container,
-                mount_root
-                    .parent()
-                    .expect("mount root should have a parent directory"),
-                msg_info,
-            )
-            .wrap_err("when creating mount root")?;
-        }
-        mount_root
-    } else {
-        mount_prefix_path.join("project")
-    };
+    // cannot panic: absolute unix path, must have root
+    let rel_mount_root = dirs
+        .mount_root
+        .strip_prefix('/')
+        .expect("mount root should be absolute");
+    let mount_root = mount_prefix_path.join(rel_mount_root);
+    if !rel_mount_root.is_empty() {
+        create_volume_dir(
+            engine,
+            &container,
+            mount_root
+                .parent()
+                .expect("mount root should have a parent directory"),
+            msg_info,
+        )
+        .wrap_err("when creating mount root")?;
+    }
     copy_volume_container_project(
         engine,
         &container,
@@ -1175,7 +1170,7 @@ symlink_recurse \"${{prefix}}\"
     let mut docker = subcommand(engine, "exec");
     docker_user_id(&mut docker, engine.kind);
     docker_envvars(&mut docker, &options.config, target, msg_info)?;
-    docker_cwd(&mut docker, &paths, mount_volumes)?;
+    docker_cwd(&mut docker, &paths)?;
     docker.arg(&container);
     docker.args(&["sh", "-c", &format!("PATH=$PATH:/rust/bin {:?}", cmd)]);
     bail_container_exited!();
