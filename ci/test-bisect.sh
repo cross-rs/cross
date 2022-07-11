@@ -32,10 +32,12 @@ main() {
     # shellcheck disable=SC2016
     echo '#!/usr/bin/env bash
 export CROSS_CUSTOM_TOOLCHAIN=1
-exec "${CROSS}" run --target '"${TARGET}" > bisect.sh
+"${CROSS}" run --target '"${TARGET}"'
+cargo -V | grep 2022-06
+' > bisect.sh
     chmod +x bisect.sh
 
-    if ! err=$(cargo bisect-rustc --script=./bisect.sh --target "${TARGET}" 2>&1 >/dev/null); then
+    if ! err=$(cargo bisect-rustc --start 2022-07-01 --end 2022-07-03 --script=./bisect.sh --target "${TARGET}" 2>&1); then
         if [[ "${err}" != *"does not reproduce the regression"* ]]; then
             echo "${err}"
             exit 1
