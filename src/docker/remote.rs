@@ -943,7 +943,14 @@ pub(crate) fn run(
         docker.arg("-t");
     }
 
-    docker.arg(&image_name(&options.config, target)?);
+    let mut image = options.image_name()?;
+    if options.needs_custom_image() {
+        image = options
+            .custom_image_build(&paths, msg_info)
+            .wrap_err("when building custom image")?;
+    }
+
+    docker.arg(&image);
     if !is_tty {
         // ensure the process never exits until we stop it
         // we only need this infinite loop if we don't allocate
