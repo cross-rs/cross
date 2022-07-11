@@ -30,7 +30,7 @@ fn toml_check() -> Result<(), Box<dyn std::error::Error>> {
 
     for dir_entry in walk {
         let dir_entry = dir_entry?;
-        if dir_entry.file_type().is_dir() {
+        if dir_entry.file_type().map_or(true, |f| f.is_dir()) {
             continue;
         }
         eprintln!("File: {:?}", dir_entry.path());
