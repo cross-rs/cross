@@ -9,11 +9,14 @@ use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
 use crate::config::{bool_from_envvar, Config};
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
-use crate::file::{self, write_file, PathExt, ToUtf8};
+use crate::file::{self, write_file, ToUtf8};
 use crate::id;
 use crate::rustc::{self, VersionMetaExt};
 use crate::shell::{MessageInfo, Verbosity};
 use crate::Target;
+
+#[cfg(target_os = "windows")]
+use crate::file::PathExt;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 
@@ -496,20 +499,8 @@ pub(crate) fn docker_envvars(
     Ok(())
 }
 
-pub(crate) fn docker_cwd(
-    docker: &mut Command,
-    paths: &DockerPaths,
-    mount_volumes: bool,
-) -> Result<()> {
-    if mount_volumes {
-        docker.args(&["-w", paths.mount_cwd()]);
-    } else if paths.mount_cwd() == paths.workspace_root().to_utf8()? {
-        docker.args(&["-w", "/project"]);
-    } else {
-        // We do this to avoid clashes with path separators. Windows uses `\` as a path separator on Path::join
-        let working_dir = Path::new("/project").join(paths.workspace_from_cwd()?);
-        docker.args(&["-w", &working_dir.as_posix()?]);
-    }
+pub(crate) fn docker_cwd(docker: &mut Command, paths: &DockerPaths) -> Result<()> {
+    docker.args(&["-w", paths.mount_cwd()]);
 
     Ok(())
 }
@@ -520,14 +511,7 @@ pub(crate) fn docker_mount(
     paths: &DockerPaths,
     mount_cb: impl Fn(&mut Command, &Path) -> Result<String>,
     mut store_cb: impl FnMut((String, String)),
-) -> Result<bool> {
-    let mut mount_volumes = false;
-    // FIXME(emilgardis 2022-04-07): This is a fallback so that if it's hard for us to do mounting logic, make it simple(r)
-    // Preferably we would not have to do this.
-    if !paths.in_workspace() {
-        mount_volumes = true;
-    }
-
+) -> Result<()> {
     for ref var in options
         .config
         .env_volumes(&options.target)?
@@ -545,7 +529,6 @@ pub(crate) fn docker_mount(
             let mount_path = mount_cb(docker, host_path.as_ref())?;
             docker.args(&["-e", &format!("{}={}", host_path, mount_path)]);
             store_cb((val, mount_path));
-            mount_volumes = true;
         }
     }
 
@@ -554,10 +537,9 @@ pub(crate) fn docker_mount(
         let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
         let mount_path = mount_cb(docker, host_path.as_ref())?;
         store_cb((path.to_utf8()?.to_owned(), mount_path));
-        mount_volumes = true;
     }
 
-    Ok(mount_volumes)
+    Ok(())
 }
 
 pub(crate) fn canonicalize_mount_path(path: &Path) -> Result<String> {
@@ -805,6 +787,9 @@ pub fn path_hash(path: &Path) -> Result<String> {
 mod tests {
     use super::*;
     use crate::id;
+
+    #[cfg(not(target_os = "windows"))]
+    use crate::file::PathExt;
 
     #[test]
     fn test_docker_user_id() {

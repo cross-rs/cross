@@ -24,7 +24,7 @@ pub(crate) fn run(
     docker_userns(&mut docker);
     docker_envvars(&mut docker, &options.config, &options.target, msg_info)?;
 
-    let mount_volumes = docker_mount(
+    docker_mount(
         &mut docker,
         &options,
         &paths,
@@ -43,18 +43,14 @@ pub(crate) fn run(
         .args(&["-v", &format!("{}:/cargo:Z", dirs.cargo.to_utf8()?)])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"]);
-    if mount_volumes {
-        docker.args(&[
-            "-v",
-            &format!("{}:{}:Z", dirs.host_root.to_utf8()?, dirs.mount_root),
-        ]);
-    } else {
-        docker.args(&["-v", &format!("{}:/project:Z", dirs.host_root.to_utf8()?)]);
-    }
+    docker.args(&[
+        "-v",
+        &format!("{}:{}:Z", dirs.host_root.to_utf8()?, dirs.mount_root),
+    ]);
     docker
         .args(&["-v", &format!("{}:/rust:Z,ro", dirs.sysroot.to_utf8()?)])
         .args(&["-v", &format!("{}:/target:Z", dirs.target.to_utf8()?)]);
-    docker_cwd(&mut docker, &paths, mount_volumes)?;
+    docker_cwd(&mut docker, &paths)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
