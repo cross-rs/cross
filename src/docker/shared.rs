@@ -74,7 +74,7 @@ impl DockerOptions {
         paths: &DockerPaths,
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
-        let mut image = image_name(&self.config, &self.target)?;
+        let mut image = self.image_name()?;
 
         if let Some(path) = self.config.dockerfile(&self.target)? {
             let context = self.config.dockerfile_context(&self.target)?;
@@ -167,28 +167,7 @@ impl DockerOptions {
     }
 
     pub(crate) fn image_name(&self) -> Result<String> {
-        if let Some(image) = self.config.image(&self.target)? {
-            return Ok(image);
-        }
-
-        if !DOCKER_IMAGES.contains(&self.target.triple()) {
-            eyre::bail!(
-                "`cross` does not provide a Docker image for target {target}, \
-                   specify a custom image in `Cross.toml`.",
-                target = self.target
-            );
-        }
-
-        let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
-            env!("CARGO_PKG_VERSION")
-        } else {
-            "main"
-        };
-
-        Ok(format!(
-            "{CROSS_IMAGE}/{target}:{version}",
-            target = self.target
-        ))
+        image_name(&self.config, &self.target)
     }
 }
 

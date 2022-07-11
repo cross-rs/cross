@@ -1,0 +1,5 @@
+{
+    "type": "added",
+    "description": "add support for pre-build hooks with remote docker",
+    "issues": [928]
+}
