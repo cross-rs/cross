@@ -15,6 +15,10 @@ inputs:
 runs:
   using: composite
   steps:
+    # Work around for sporadic issues with rustup self-update on windows
+    - run: rustup set auto-self-update disable
+      if: contains(runner.os, 'windows')
+      shell: bash
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
