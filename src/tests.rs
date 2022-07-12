@@ -27,11 +27,10 @@ pub fn get_cargo_workspace() -> &'static Path {
 
 pub fn walk_dir<'a>(
     root: &'_ Path,
-    skip: &'a [impl AsRef<OsStr>],
-    ext: impl for<'s> Fn(Option<&'s std::ffi::OsStr>) -> bool + 'static,
-) -> impl Iterator<Item = Result<walkdir::DirEntry, walkdir::Error>> + 'a {
-    walkdir::WalkDir::new(root)
-        .into_iter()
+    skip: &'static [impl AsRef<OsStr> + Send + Sync + 'a],
+    ext: impl for<'s> Fn(Option<&'s std::ffi::OsStr>) -> bool + Sync + Send + 'static,
+) -> impl Iterator<Item = Result<ignore::DirEntry, ignore::Error>> {
+    ignore::WalkBuilder::new(root)
         .filter_entry(move |e| {
             if skip
                 .iter()
@@ -39,11 +38,12 @@ pub fn walk_dir<'a>(
                 .any(|dir| e.file_name() == dir)
             {
                 return false;
-            } else if e.file_type().is_dir() {
+            } else if e.file_type().map_or(false, |f| f.is_dir()) {
                 return true;
             }
             ext(e.path().extension())
         })
+        .build()
 }
 
 #[test]
@@ -134,9 +134,10 @@ release: {version}
 fn check_newlines() -> crate::Result<()> {
     for file in walk_dir(get_cargo_workspace(), &[".git", "target"], |_| true) {
         let file = file?;
-        if !file.file_type().is_file() {
+        if !file.file_type().map_or(true, |f| f.is_file()) {
             continue;
         }
+        eprintln!("File: {:?}", file.path());
         assert!(
             crate::file::read(file.path())
                 .unwrap_or_else(|_| String::from("\n"))
