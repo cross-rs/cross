@@ -183,7 +183,7 @@ pub fn build_docker_image(
 
         if push {
             docker_build.arg("--push");
-        } else if no_output {
+        } else if engine.kind.is_docker() && no_output {
             docker_build.args(&["--output", "type=tar,dest=/dev/null"]);
         } else {
             docker_build.arg("--load");

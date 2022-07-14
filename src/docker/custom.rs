@@ -2,10 +2,10 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use crate::docker::{DockerOptions, DockerPaths};
+use crate::docker::{self, DockerOptions, DockerPaths};
 use crate::shell::MessageInfo;
-use crate::{docker, CargoMetadata, TargetTriple};
 use crate::{errors::*, file, CommandExt, ToUtf8};
+use crate::{CargoMetadata, TargetTriple};
 
 use super::{get_image_name, parse_docker_opts, path_hash, ImagePlatform};
 
@@ -70,7 +70,8 @@ impl<'a> Dockerfile<'a> {
         build_args: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
-        let mut docker_build = docker::subcommand(&options.engine, "build");
+        let mut docker_build = docker::subcommand(&options.engine, "buildx");
+        docker_build.arg("build");
         docker_build.env("DOCKER_SCAN_SUGGEST", "false");
         self.runs_with()
             .specify_platform(&options.engine, &mut docker_build);
@@ -140,9 +141,16 @@ impl<'a> Dockerfile<'a> {
         docker_build.args(["--file".into(), path]);
 
         if let Some(build_opts) = options.config.build_opts() {
-            // FIXME: Use shellwords
             docker_build.args(parse_docker_opts(&build_opts)?);
         }
+
+        let has_output = options.config.build_opts().map_or(false, |opts| {
+            opts.contains("--load") || opts.contains("--output")
+        });
+        if options.engine.kind.is_docker() && !has_output {
+            docker_build.args(&["--output", "type=docker"]);
+        };
+
         if let Some(context) = self.context() {
             docker_build.arg(&context);
         } else {

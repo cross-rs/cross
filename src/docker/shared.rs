@@ -612,7 +612,7 @@ pub(crate) fn docker_seccomp(
 ) -> Result<()> {
     // docker uses seccomp now on all installations
     if target.needs_docker_seccomp() {
-        let seccomp = if engine_type == EngineType::Docker && cfg!(target_os = "windows") {
+        let seccomp = if engine_type.is_docker() && cfg!(target_os = "windows") {
             // docker on windows fails due to a bug in reading the profile
             // https://github.com/docker/for-win/issues/12760
             "unconfined".to_owned()

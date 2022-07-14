@@ -20,6 +20,20 @@ pub enum EngineType {
     Other,
 }
 
+impl EngineType {
+    /// Returns `true` if the engine type is [`Podman`](Self::Podman) or [`PodmanRemote`](Self::PodmanRemote).
+    #[must_use]
+    pub fn is_podman(&self) -> bool {
+        matches!(self, Self::Podman | Self::PodmanRemote)
+    }
+
+    /// Returns `true` if the engine type is [`Docker`](EngineType::Docker).
+    #[must_use]
+    pub fn is_docker(&self) -> bool {
+        matches!(self, Self::Docker)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Engine {
     pub kind: EngineType,
@@ -117,82 +131,97 @@ fn get_engine_info(
         EngineType::Other
     };
 
-    let mut cmd = Command::new(ce);
-    cmd.args(&["version", "-f", "{{ .Server.Os }},,,{{ .Server.Arch }}"]);
+    // this can fail: podman can give partial output
+    //   linux,,,Error: template: version:1:15: executing "version" at <.Arch>:
+    //   can't evaluate field Arch in type *define.Version
+    let os_arch_server = engine_info(
+        ce,
+        &["version", "-f", "{{ .Server.Os }},,,{{ .Server.Arch }}"],
+        ",,,",
+        msg_info,
+    );
 
-    let out = cmd.run_and_get_output(msg_info)?;
-
-    let stdout = out.stdout()?.to_lowercase();
-
-    let osarch = stdout
-        .trim()
-        .split_once(",,,")
-        .map(|(os, arch)| -> Result<_> { Ok((ContainerOs::new(os)?, Architecture::new(arch)?)) })
-        .transpose();
-
-    let osarch = match (kind, osarch) {
-        (_, Ok(Some(osarch))) => Some(osarch),
-        (EngineType::PodmanRemote | EngineType::Podman, Ok(None)) => get_podman_info(ce, msg_info)?,
-        (_, Err(e)) => {
-            return Err(e.wrap_err(format!(
-                "command `{}` returned unexpected data",
-                cmd.command_pretty(msg_info, |_| false)
-            )));
+    let (os_arch_other, os_arch_server_result) = match os_arch_server {
+        Ok(Some(os_arch)) => (Ok(Some(os_arch)), None),
+        result => {
+            if kind.is_podman() {
+                (get_podman_info(ce, msg_info), result.err())
+            } else {
+                (get_custom_info(ce, msg_info), result.err())
+            }
         }
-        (EngineType::Docker | EngineType::Other, Ok(None)) => None,
     };
 
-    let osarch = if osarch.is_some() {
-        osarch
-    } else if !out.status.success() {
-        get_custom_info(ce, msg_info).with_error(|| {
-            cmd.status_result(msg_info, out.status, Some(&out))
-                .expect_err("status_result should error")
-        })?
-    } else {
-        get_custom_info(ce, msg_info)?
+    let os_arch = match (os_arch_other, os_arch_server_result) {
+        (Ok(os_arch), _) => os_arch,
+        (Err(e), Some(server_err)) => return Err(server_err.to_section_report().with_error(|| e)),
+        (Err(e), None) => return Err(e.to_section_report()),
     };
 
-    let (os, arch) = osarch.map_or(<_>::default(), |(os, arch)| (Some(os), Some(arch)));
+    let (os, arch) = os_arch.map_or(<_>::default(), |(os, arch)| (Some(os), Some(arch)));
     Ok((kind, arch, os))
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum EngineInfoError {
+    #[error(transparent)]
+    Eyre(eyre::Report),
+    #[error("could not get os and arch")]
+    CommandError(#[from] CommandError),
+}
+
+impl EngineInfoError {
+    pub fn to_section_report(self) -> eyre::Report {
+        match self {
+            EngineInfoError::Eyre(e) => e,
+            EngineInfoError::CommandError(e) => {
+                e.to_section_report().wrap_err("could not get os and arch")
+            }
+        }
+    }
+}
+
+/// Get engine info
+fn engine_info(
+    ce: &Path,
+    args: &[&str],
+    sep: &str,
+    msg_info: &mut MessageInfo,
+) -> Result<Option<(ContainerOs, Architecture)>, EngineInfoError> {
+    let mut cmd = Command::new(ce);
+    cmd.args(args);
+    let out = cmd
+        .run_and_get_output(msg_info)
+        .map_err(EngineInfoError::Eyre)?;
+
+    cmd.status_result(msg_info, out.status, Some(&out))?;
+
+    out.stdout()?
+        .to_lowercase()
+        .trim()
+        .split_once(sep)
+        .map(|(os, arch)| -> Result<_> { Ok((ContainerOs::new(os)?, Architecture::new(arch)?)) })
+        .transpose()
+        .map_err(EngineInfoError::Eyre)
 }
 
 fn get_podman_info(
     ce: &Path,
     msg_info: &mut MessageInfo,
-) -> Result<Option<(ContainerOs, Architecture)>> {
-    let mut cmd = Command::new(ce);
-    cmd.args(&["info", "-f", "{{ .Version.OsArch }}"]);
-    cmd.run_and_get_stdout(msg_info)
-        .map(|s| {
-            s.to_lowercase()
-                .trim()
-                .split_once('/')
-                .map(|(os, arch)| -> Result<_> {
-                    Ok((ContainerOs::new(os)?, Architecture::new(arch)?))
-                })
-        })
-        .wrap_err("could not determine os and architecture of vm")?
-        .transpose()
+) -> Result<Option<(ContainerOs, Architecture)>, EngineInfoError> {
+    engine_info(ce, &["info", "-f", "{{ .Version.OsArch }}"], "/", msg_info)
 }
 
 fn get_custom_info(
     ce: &Path,
     msg_info: &mut MessageInfo,
-) -> Result<Option<(ContainerOs, Architecture)>> {
-    let mut cmd = Command::new(ce);
-    cmd.args(&["info", "-f", "{{ .Client.Os }},,,{{ .Client.Arch }}"]);
-    cmd.run_and_get_stdout(msg_info)
-        .map(|s| {
-            s.to_lowercase()
-                .trim()
-                .split_once(",,,")
-                .map(|(os, arch)| -> Result<_> {
-                    Ok((ContainerOs::new(os)?, Architecture::new(arch)?))
-                })
-        })
-        .unwrap_or_default()
-        .transpose()
+) -> Result<Option<(ContainerOs, Architecture)>, EngineInfoError> {
+    engine_info(
+        ce,
+        &["version", "-f", "{{ .Client.Os }},,,{{ .Client.Arch }}"],
+        ",,,",
+        msg_info,
+    )
 }
 
 pub fn get_container_engine() -> Result<PathBuf, which::Error> {
