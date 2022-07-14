@@ -1059,6 +1059,7 @@ mod tests {
         }
 
         #[test]
+        #[cfg_attr(cross_sandboxed, ignore)]
         fn test_host() -> Result<()> {
             let vars = unset_env();
             let mount_finder = MountFinder::new(vec![]);
