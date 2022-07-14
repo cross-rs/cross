@@ -9,7 +9,7 @@ use crate::{errors::*, file, CommandExt, ToUtf8};
 
 use super::{image_name, parse_docker_opts, path_hash};
 
-pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "cross-custom-";
+pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "localhost/cross-rs/cross-custom-";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Dockerfile<'a> {
