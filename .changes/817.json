@@ -1,10 +1,16 @@
 [
   {
     "description": "Images can now specify a certain toolchain via `target.{target}.image.toolchain`",
-    "type": "changed"
+    "breaking": true,
+    "type": "added"
   },
   {
     "description": "made `cross +channel` parsing more compliant to parsing a toolchain",
     "type": "fixed"
+  },
+  {
+    "description": "`pre-build` and `dockerfile` now uses buildx/buildkit",
+    "breaking": true,
+    "type": "changed"
   }
 ]
