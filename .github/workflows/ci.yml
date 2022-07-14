@@ -333,7 +333,7 @@ jobs:
 
   # we should always have an artifact from a previous build.
   remote:
-    needs: [shellcheck, test, check]
+    needs: [test, check]
     runs-on: ubuntu-latest
     if: github.actor == 'bors[bot]'
     steps:
@@ -352,7 +352,7 @@ jobs:
         shell: bash
 
   bisect:
-    needs: [shellcheck, test, check]
+    needs: [test, check]
     runs-on: ubuntu-latest
     if: github.actor == 'bors[bot]'
     steps:
@@ -371,7 +371,7 @@ jobs:
         shell: bash
 
   foreign:
-    needs: [shellcheck, test, check]
+    needs: [test, check]
     runs-on: ubuntu-latest
     if: github.actor == 'bors[bot]'
     steps:
@@ -382,13 +382,21 @@ jobs:
         uses: ./.github/actions/cargo-llvm-cov
         with:
           name: integration-bisect
-
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+      - name: Set up docker buildx
+        uses: docker/setup-buildx-action@v2
+        id: buildx
+        with:
+          install: true
       - name: Run Foreign toolchain test
         run: ./ci/test-foreign-toolchain.sh
         shell: bash
 
   docker-in-docker:
-    needs: [shellcheck, test, check]
+    needs: [test, check]
     runs-on: ubuntu-latest
     if: github.actor == 'bors[bot]'
     steps:
