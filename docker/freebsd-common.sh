@@ -3,6 +3,9 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. freebsd-arch.sh
+
 export BSD_ARCH=
 case "${ARCH}" in
     x86_64)
