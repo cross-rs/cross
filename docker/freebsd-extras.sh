@@ -22,22 +22,26 @@ main() {
 
     curl --retry 3 -sSfL "${pkg_source}/packagesite.txz" -O
     tar -C "${td}/packagesite" -xJf packagesite.txz
-    local openssl_ver
-    local sqlite_ver
-    openssl_ver=$(jq -c '. | select ( .name == "openssl" ) | .version' "${td}/packagesite/packagesite.yaml")
-    sqlite_ver=$(jq -c '. | select ( .name == "sqlite3" ) | .version' "${td}/packagesite/packagesite.yaml")
-    openssl_ver=${openssl_ver//'"'/}
-    sqlite_ver=${sqlite_ver//'"'/}
+    local openssl_path
+    local sqlite_path
+    local openssl_pkg
+    local sqlite_pkg
+    openssl_path=$(jq -c '. | select ( .name == "openssl" ) | .repopath' "${td}/packagesite/packagesite.yaml")
+    sqlite_path=$(jq -c '. | select ( .name == "sqlite3" ) | .repopath' "${td}/packagesite/packagesite.yaml")
+    openssl_path=${openssl_path//'"'/}
+    sqlite_path=${sqlite_path//'"'/}
+    openssl_pkg=$(basename "${openssl_path}")
+    sqlite_pkg=$(basename "${sqlite_path}")
 
     local target="${ARCH}-unknown-freebsd${BSD_MAJOR}"
 
     # Adding openssl lib
-    curl --retry 3 -sSfL "${pkg_source}/All/openssl-${openssl_ver}.txz" -O
-    tar -C "${td}/openssl" -xJf "openssl-${openssl_ver}.txz" /usr/local/lib /usr/local/include/
+    curl --retry 3 -sSfL "${pkg_source}/${openssl_path}" -O
+    tar -C "${td}/openssl" -xJf "${openssl_pkg}" /usr/local/lib /usr/local/include/
 
     # Adding sqlite3
-    curl --retry 3 -sSfL "${pkg_source}/All/sqlite3-${sqlite_ver}.txz" -O
-    tar -C "${td}/sqlite" -xJf "sqlite3-${sqlite_ver}.txz" /usr/local/lib
+    curl --retry 3 -sSfL "${pkg_source}/${sqlite_path}" -O
+    tar -C "${td}/sqlite" -xJf "${sqlite_pkg}" /usr/local/lib
 
     # Copy the linked library
     local destdir="/usr/local/${target}"
