@@ -10,12 +10,14 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
+RUN echo "export ARCH=i686" > /freebsd-arch.sh
 COPY freebsd-common.sh /
 COPY freebsd.sh /
-RUN /freebsd.sh i686
+RUN /freebsd.sh
 
+COPY freebsd-install.sh /
 COPY freebsd-extras.sh /
-RUN /freebsd-extras.sh i686
+RUN /freebsd-extras.sh
 
 ENV CARGO_TARGET_I686_UNKNOWN_FREEBSD_LINKER=i686-unknown-freebsd12-gcc \
     CC_i686_unknown_freebsd=i686-unknown-freebsd12-gcc \

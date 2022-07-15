@@ -3,7 +3,6 @@
 set -x
 set -euo pipefail
 
-export ARCH="${1}"
 # shellcheck disable=SC1091
 . freebsd-common.sh
 # shellcheck disable=SC1091
