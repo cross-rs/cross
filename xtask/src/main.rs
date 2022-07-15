@@ -3,6 +3,7 @@
 pub mod build_docker_image;
 pub mod changelog;
 pub mod ci;
+pub mod codegen;
 pub mod crosstool;
 pub mod hooks;
 pub mod install_git_hooks;
@@ -11,6 +12,7 @@ pub mod util;
 
 use ci::CiJob;
 use clap::{CommandFactory, Parser, Subcommand};
+use codegen::Codegen;
 use cross::docker;
 use cross::shell::{MessageInfo, Verbosity};
 use util::{cargo_metadata, ImageTarget};
@@ -61,6 +63,8 @@ enum Commands {
     /// Validate changelog entries.
     #[clap(hide = true)]
     ValidateChangelog(ValidateChangelog),
+    /// Code generation
+    Codegen(Codegen),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<String> {
@@ -126,6 +130,7 @@ pub fn main() -> cross::Result<()> {
             let mut msg_info = get_msg_info!(args, args.verbose)?;
             changelog::validate_changelog(args, &mut msg_info)?;
         }
+        Commands::Codegen(args) => codegen::codegen(args)?,
     }
 
     Ok(())

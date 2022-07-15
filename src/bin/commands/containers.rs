@@ -2,7 +2,11 @@ use std::io;
 
 use clap::{Args, Subcommand};
 use cross::shell::{MessageInfo, Stream};
-use cross::{docker, CommandExt};
+use cross::{docker, CommandExt, TargetTriple};
+use cross::{
+    docker::ImagePlatform,
+    rustc::{QualifiedToolchain, Toolchain},
+};
 
 #[derive(Args, Debug)]
 pub struct ListVolumes {
@@ -99,13 +103,16 @@ pub struct CreateVolume {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
+    /// Toolchain to create a volume for
+    #[clap(long, default_value = TargetTriple::DEFAULT.triple(), )]
+    pub toolchain: TargetTriple,
 }
 
 impl CreateVolume {
     pub fn run(
         self,
         engine: docker::Engine,
-        channel: Option<&str>,
+        channel: Option<&Toolchain>,
         msg_info: &mut MessageInfo,
     ) -> cross::Result<()> {
         create_persistent_volume(self, &engine, channel, msg_info)
@@ -132,16 +139,19 @@ pub struct RemoveVolume {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
+    /// Toolchain to remove the volume for
+    #[clap(long, default_value = TargetTriple::DEFAULT.triple(), )]
+    pub toolchain: TargetTriple,
 }
 
 impl RemoveVolume {
     pub fn run(
         self,
         engine: docker::Engine,
-        channel: Option<&str>,
+        channel: Option<&Toolchain>,
         msg_info: &mut MessageInfo,
     ) -> cross::Result<()> {
-        remove_persistent_volume(&engine, channel, msg_info)
+        remove_persistent_volume(self, &engine, channel, msg_info)
     }
 }
 
@@ -153,9 +163,9 @@ pub enum Volumes {
     RemoveAll(RemoveAllVolumes),
     /// Prune volumes not used by any container.
     Prune(PruneVolumes),
-    /// Create a persistent data volume for the current toolchain.
+    /// Create a persistent data volume for a given toolchain.
     Create(CreateVolume),
-    /// Remove a persistent data volume for the current toolchain.
+    /// Remove a persistent data volume for a given toolchain.
     Remove(RemoveVolume),
 }
 
@@ -175,15 +185,15 @@ impl Volumes {
     pub fn run(
         self,
         engine: docker::Engine,
-        toolchain: Option<&str>,
+        channel: Option<&Toolchain>,
         msg_info: &mut MessageInfo,
     ) -> cross::Result<()> {
         match self {
             Volumes::List(args) => args.run(engine, msg_info),
             Volumes::RemoveAll(args) => args.run(engine, msg_info),
             Volumes::Prune(args) => args.run(engine, msg_info),
-            Volumes::Create(args) => args.run(engine, toolchain, msg_info),
-            Volumes::Remove(args) => args.run(engine, toolchain, msg_info),
+            Volumes::Create(args) => args.run(engine, channel, msg_info),
+            Volumes::Remove(args) => args.run(engine, channel, msg_info),
         }
     }
 
@@ -373,16 +383,27 @@ pub fn prune_volumes(
 }
 
 pub fn create_persistent_volume(
-    CreateVolume { copy_registry, .. }: CreateVolume,
+    CreateVolume {
+        copy_registry,
+        toolchain,
+        ..
+    }: CreateVolume,
     engine: &docker::Engine,
-    channel: Option<&str>,
+    channel: Option<&Toolchain>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    // we only need a triple that needs docker: the actual target doesn't matter.
-    let triple = cross::Host::X86_64UnknownLinuxGnu.triple();
-    let (target, metadata, dirs) = docker::get_package_info(engine, triple, channel, msg_info)?;
-    let container = docker::remote::unique_container_identifier(&target, &metadata, &dirs)?;
-    let volume = docker::remote::unique_toolchain_identifier(&dirs.sysroot)?;
+    let config = cross::config::Config::new(None);
+    let toolchain_host: cross::Target = toolchain.into();
+    let mut toolchain = QualifiedToolchain::default(&config, msg_info)?;
+    toolchain.replace_host(&ImagePlatform::from_target(
+        toolchain_host.target().clone(),
+    )?);
+    if let Some(channel) = channel {
+        toolchain = toolchain.with_picked(&config, channel.clone(), msg_info)?;
+    };
+    let (metadata, dirs) = docker::get_package_info(engine, toolchain.clone(), msg_info)?;
+    let container = docker::remote::unique_container_identifier(&toolchain_host, &metadata, &dirs)?;
+    let volume = dirs.toolchain.unique_toolchain_identifier()?;
 
     if docker::remote::volume_exists(engine, &volume, msg_info)? {
         eyre::bail!("Error: volume {volume} already exists.");
@@ -431,7 +452,7 @@ pub fn create_persistent_volume(
         engine,
         &container,
         &dirs.xargo,
-        &target,
+        &toolchain_host,
         mount_prefix.as_ref(),
         msg_info,
     )?;
@@ -446,10 +467,9 @@ pub fn create_persistent_volume(
     docker::remote::copy_volume_container_rust(
         engine,
         &container,
-        &dirs.sysroot,
-        &target,
+        &toolchain,
+        None,
         mount_prefix.as_ref(),
-        true,
         msg_info,
     )?;
 
@@ -459,14 +479,20 @@ pub fn create_persistent_volume(
 }
 
 pub fn remove_persistent_volume(
+    RemoveVolume { toolchain, .. }: RemoveVolume,
     engine: &docker::Engine,
-    channel: Option<&str>,
+    channel: Option<&Toolchain>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    // we only need a triple that needs docker: the actual target doesn't matter.
-    let triple = cross::Host::X86_64UnknownLinuxGnu.triple();
-    let (_, _, dirs) = docker::get_package_info(engine, triple, channel, msg_info)?;
-    let volume = docker::remote::unique_toolchain_identifier(&dirs.sysroot)?;
+    let config = cross::config::Config::new(None);
+    let target_host: cross::Target = toolchain.into();
+    let mut toolchain = QualifiedToolchain::default(&config, msg_info)?;
+    toolchain.replace_host(&ImagePlatform::from_target(target_host.target().clone())?);
+    if let Some(channel) = channel {
+        toolchain = toolchain.with_picked(&config, channel.clone(), msg_info)?;
+    };
+    let (_, dirs) = docker::get_package_info(engine, toolchain.clone(), msg_info)?;
+    let volume = dirs.toolchain.unique_toolchain_identifier()?;
 
     if !docker::remote::volume_exists(engine, &volume, msg_info)? {
         eyre::bail!("Error: volume {volume} does not exist.");

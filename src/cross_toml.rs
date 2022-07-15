@@ -1,6 +1,7 @@
 #![doc = include_str!("../docs/cross_toml.md")]
 
 use crate::docker::custom::PreBuild;
+use crate::docker::PossibleImage;
 use crate::shell::MessageInfo;
 use crate::{config, errors::*};
 use crate::{Target, TargetList};
@@ -37,7 +38,8 @@ pub struct CrossBuildConfig {
 pub struct CrossTargetConfig {
     xargo: Option<bool>,
     build_std: Option<bool>,
-    image: Option<String>,
+    #[serde(default, deserialize_with = "opt_string_or_struct")]
+    image: Option<PossibleImage>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
     dockerfile: Option<CrossTargetDockerfileConfig>,
     #[serde(default, deserialize_with = "opt_string_or_string_vec")]
@@ -215,8 +217,8 @@ impl CrossToml {
     }
 
     /// Returns the `target.{}.image` part of `Cross.toml`
-    pub fn image(&self, target: &Target) -> Option<String> {
-        self.get_string(target, |_| None, |t| t.image.as_ref())
+    pub fn image(&self, target: &Target) -> Option<&PossibleImage> {
+        self.get_target(target).and_then(|t| t.image.as_ref())
     }
 
     /// Returns the `{}.dockerfile` or `{}.dockerfile.file` part of `Cross.toml`
@@ -259,8 +261,8 @@ impl CrossToml {
     }
 
     /// Returns the `target.{}.runner` part of `Cross.toml`
-    pub fn runner(&self, target: &Target) -> Option<String> {
-        self.get_string(target, |_| None, |t| t.runner.as_ref())
+    pub fn runner(&self, target: &Target) -> Option<&String> {
+        self.get_target(target).and_then(|t| t.runner.as_ref())
     }
 
     /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
@@ -302,18 +304,6 @@ impl CrossToml {
     /// Returns a reference to the [`CrossTargetConfig`] of a specific `target`
     fn get_target(&self, target: &Target) -> Option<&CrossTargetConfig> {
         self.targets.get(target)
-    }
-
-    fn get_string<'a>(
-        &'a self,
-        target: &Target,
-        get_build: impl Fn(&'a CrossBuildConfig) -> Option<&'a String>,
-        get_target: impl Fn(&'a CrossTargetConfig) -> Option<&'a String>,
-    ) -> Option<String> {
-        self.get_target(target)
-            .and_then(get_target)
-            .or_else(|| get_build(&self.build))
-            .map(ToOwned::to_owned)
     }
 
     fn get_value<T>(
@@ -454,6 +444,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::docker::ImagePlatform;
+
     use super::*;
     use crate::shell;
 
@@ -463,9 +455,9 @@ mod tests {
         };
     }
 
-    macro_rules! s {
+    macro_rules! p {
         ($x:literal) => {
-            $x.to_owned()
+            $x.parse()?
         };
     }
 
@@ -489,13 +481,13 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig {
                 env: CrossEnvConfig {
-                    volumes: Some(vec![s!("VOL1_ARG"), s!("VOL2_ARG")]),
-                    passthrough: Some(vec![s!("VAR1"), s!("VAR2")]),
+                    volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
+                    passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
                 },
                 xargo: Some(true),
                 build_std: None,
                 default_target: None,
-                pre_build: Some(PreBuild::Lines(vec![s!("echo 'Hello World!'")])),
+                pre_build: Some(PreBuild::Lines(vec![p!("echo 'Hello World!'")])),
                 dockerfile: None,
             },
         };
@@ -522,16 +514,16 @@ mod tests {
         let mut target_map = HashMap::new();
         target_map.insert(
             Target::BuiltIn {
-                triple: s!("aarch64-unknown-linux-gnu"),
+                triple: "aarch64-unknown-linux-gnu".into(),
             },
             CrossTargetConfig {
                 env: CrossEnvConfig {
-                    passthrough: Some(vec![s!("VAR1"), s!("VAR2")]),
-                    volumes: Some(vec![s!("VOL1_ARG"), s!("VOL2_ARG")]),
+                    passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
+                    volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                 },
                 xargo: Some(false),
                 build_std: Some(true),
-                image: Some(s!("test-image")),
+                image: Some("test-image".into()),
                 runner: None,
                 dockerfile: None,
                 pre_build: Some(PreBuild::Lines(vec![])),
@@ -566,22 +558,27 @@ mod tests {
         let mut target_map = HashMap::new();
         target_map.insert(
             Target::BuiltIn {
-                triple: s!("aarch64-unknown-linux-gnu"),
+                triple: "aarch64-unknown-linux-gnu".into(),
             },
             CrossTargetConfig {
                 xargo: Some(false),
                 build_std: None,
-                image: None,
+                image: Some(PossibleImage {
+                    name: "test-image".to_owned(),
+                    toolchain: vec![ImagePlatform::from_target(
+                        "aarch64-unknown-linux-musl".into(),
+                    )?],
+                }),
                 dockerfile: Some(CrossTargetDockerfileConfig {
-                    file: s!("Dockerfile.test"),
+                    file: p!("Dockerfile.test"),
                     context: None,
                     build_args: None,
                 }),
-                pre_build: Some(PreBuild::Lines(vec![s!("echo 'Hello'")])),
+                pre_build: Some(PreBuild::Lines(vec![p!("echo 'Hello'")])),
                 runner: None,
                 env: CrossEnvConfig {
                     passthrough: None,
-                    volumes: Some(vec![s!("VOL")]),
+                    volumes: Some(vec![p!("VOL")]),
                 },
             },
         );
@@ -613,6 +610,8 @@ mod tests {
             xargo = false
             dockerfile = "Dockerfile.test"
             pre-build = ["echo 'Hello'"]
+            image.name = "test-image"
+            image.toolchain = ["aarch64-unknown-linux-musl"]
 
             [target.aarch64-unknown-linux-gnu.env]
             volumes = ["VOL"]
@@ -792,39 +791,39 @@ mod tests {
         let build = &cfg_expected.build;
         assert_eq!(build.build_std, Some(true));
         assert_eq!(build.xargo, Some(false));
-        assert_eq!(build.default_target, Some(s!("aarch64-unknown-linux-gnu")));
+        assert_eq!(build.default_target, Some(p!("aarch64-unknown-linux-gnu")));
         assert_eq!(build.pre_build, None);
         assert_eq!(build.dockerfile, None);
-        assert_eq!(build.env.passthrough, Some(vec![s!("VAR3"), s!("VAR4")]));
+        assert_eq!(build.env.passthrough, Some(vec![p!("VAR3"), p!("VAR4")]));
         assert_eq!(build.env.volumes, Some(vec![]));
 
         let targets = &cfg_expected.targets;
         let aarch64 = &targets[&Target::new_built_in("aarch64-unknown-linux-gnu")];
         assert_eq!(aarch64.build_std, Some(true));
         assert_eq!(aarch64.xargo, Some(false));
-        assert_eq!(aarch64.image, Some(s!("test-image1")));
+        assert_eq!(aarch64.image, Some(p!("test-image1")));
         assert_eq!(aarch64.pre_build, None);
         assert_eq!(aarch64.dockerfile, None);
-        assert_eq!(aarch64.env.passthrough, Some(vec![s!("VAR1")]));
-        assert_eq!(aarch64.env.volumes, Some(vec![s!("VOL1_ARG")]));
+        assert_eq!(aarch64.env.passthrough, Some(vec![p!("VAR1")]));
+        assert_eq!(aarch64.env.volumes, Some(vec![p!("VOL1_ARG")]));
 
         let target2 = &targets[&Target::new_custom("target2")];
         assert_eq!(target2.build_std, Some(false));
         assert_eq!(target2.xargo, Some(false));
-        assert_eq!(target2.image, Some(s!("test-image2-precedence")));
+        assert_eq!(target2.image, Some(p!("test-image2-precedence")));
         assert_eq!(target2.pre_build, None);
         assert_eq!(target2.dockerfile, None);
-        assert_eq!(target2.env.passthrough, Some(vec![s!("VAR2_PRECEDENCE")]));
-        assert_eq!(target2.env.volumes, Some(vec![s!("VOL2_ARG_PRECEDENCE")]));
+        assert_eq!(target2.env.passthrough, Some(vec![p!("VAR2_PRECEDENCE")]));
+        assert_eq!(target2.env.volumes, Some(vec![p!("VOL2_ARG_PRECEDENCE")]));
 
         let target3 = &targets[&Target::new_custom("target3")];
         assert_eq!(target3.build_std, Some(true));
         assert_eq!(target3.xargo, Some(false));
-        assert_eq!(target3.image, Some(s!("test-image3")));
+        assert_eq!(target3.image, Some(p!("test-image3")));
         assert_eq!(target3.pre_build, None);
         assert_eq!(target3.dockerfile, None);
-        assert_eq!(target3.env.passthrough, Some(vec![s!("VAR3")]));
-        assert_eq!(target3.env.volumes, Some(vec![s!("VOL3_ARG")]));
+        assert_eq!(target3.env.passthrough, Some(vec![p!("VAR3")]));
+        assert_eq!(target3.env.volumes, Some(vec![p!("VOL3_ARG")]));
 
         Ok(())
     }

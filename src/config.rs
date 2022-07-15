@@ -1,4 +1,5 @@
 use crate::docker::custom::PreBuild;
+use crate::docker::{ImagePlatform, PossibleImage};
 use crate::shell::MessageInfo;
 use crate::{CrossToml, Result, Target, TargetList};
 
@@ -66,8 +67,21 @@ impl Environment {
         self.get_values_for("BUILD_STD", target, bool_from_envvar)
     }
 
-    fn image(&self, target: &Target) -> Option<String> {
+    fn image(&self, target: &Target) -> Result<Option<PossibleImage>> {
         self.get_target_var(target, "IMAGE")
+            .map(Into::into)
+            .map(|mut i: PossibleImage| {
+                if let Some(toolchain) = self.get_target_var(target, "IMAGE_TOOLCHAIN") {
+                    i.toolchain = toolchain
+                        .split(',')
+                        .map(|t| ImagePlatform::from_target(t.trim().into()))
+                        .collect::<Result<Vec<_>>>()?;
+                    Ok(i)
+                } else {
+                    Ok(i)
+                }
+            })
+            .transpose()
     }
 
     fn dockerfile(&self, target: &Target) -> (Option<String>, Option<String>) {
@@ -110,13 +124,21 @@ impl Environment {
     }
 
     fn doctests(&self) -> Option<bool> {
-        env::var("CROSS_UNSTABLE_ENABLE_DOCTESTS")
+        self.get_var("CROSS_UNSTABLE_ENABLE_DOCTESTS")
             .map(|s| bool_from_envvar(&s))
-            .ok()
     }
 
     fn custom_toolchain(&self) -> bool {
-        std::env::var("CROSS_CUSTOM_TOOLCHAIN").is_ok()
+        self.get_var("CROSS_CUSTOM_TOOLCHAIN")
+            .map_or(false, |s| bool_from_envvar(&s))
+    }
+
+    fn custom_toolchain_compat(&self) -> Option<String> {
+        self.get_var("CUSTOM_TOOLCHAIN_COMPAT")
+    }
+
+    fn build_opts(&self) -> Option<String> {
+        self.get_var("CROSS_BUILD_OPTS")
     }
 }
 
@@ -196,21 +218,6 @@ impl Config {
         None
     }
 
-    fn string_from_config(
-        &self,
-        target: &Target,
-        env: impl Fn(&Environment, &Target) -> Option<String>,
-        config: impl Fn(&CrossToml, &Target) -> Option<String>,
-    ) -> Result<Option<String>> {
-        let env_value = env(&self.env, target);
-        if let Some(env_value) = env_value {
-            return Ok(Some(env_value));
-        }
-        self.toml
-            .as_ref()
-            .map_or(Ok(None), |t| Ok(config(t, target)))
-    }
-
     fn vec_from_config(
         &self,
         target: &Target,
@@ -275,12 +282,21 @@ impl Config {
         self.bool_from_config(target, Environment::build_std, CrossToml::build_std)
     }
 
-    pub fn image(&self, target: &Target) -> Result<Option<String>> {
-        self.string_from_config(target, Environment::image, CrossToml::image)
+    pub fn image(&self, target: &Target) -> Result<Option<PossibleImage>> {
+        let env = self.env.image(target)?;
+        self.get_from_ref(
+            target,
+            move |_, _| (None, env.clone()),
+            |toml, target| (None, toml.image(target)),
+        )
     }
 
     pub fn runner(&self, target: &Target) -> Result<Option<String>> {
-        self.string_from_config(target, Environment::runner, CrossToml::runner)
+        self.get_from_ref(
+            target,
+            |env, target| (None, env.runner(target)),
+            |toml, target| (None, toml.runner(target)),
+        )
     }
 
     pub fn doctests(&self) -> Option<bool> {
@@ -289,6 +305,14 @@ impl Config {
 
     pub fn custom_toolchain(&self) -> bool {
         self.env.custom_toolchain()
+    }
+
+    pub fn custom_toolchain_compat(&self) -> Option<String> {
+        self.env.custom_toolchain_compat()
+    }
+
+    pub fn build_opts(&self) -> Option<String> {
+        self.env.build_opts()
     }
 
     pub fn env_passthrough(&self, target: &Target) -> Result<Option<Vec<String>>> {

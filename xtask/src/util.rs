@@ -5,11 +5,28 @@ use std::process::Command;
 
 use cross::shell::MessageInfo;
 use cross::{docker, CommandExt, ToUtf8};
+
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
 const WORKFLOW: &str = include_str!("../../.github/workflows/ci.yml");
 
+static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
+
+/// Returns the cargo workspace for the manifest
+pub fn get_cargo_workspace() -> &'static Path {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    WORKSPACE.get_or_init(|| {
+        cross::cargo_metadata_with_args(
+            Some(manifest_dir.as_ref()),
+            None,
+            &mut MessageInfo::create(true, false, None).expect("should not fail"),
+        )
+        .unwrap()
+        .unwrap()
+        .workspace_root
+    })
+}
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 struct Workflow {
     jobs: Jobs,
@@ -43,6 +60,7 @@ pub struct Matrix {
     #[serde(default)]
     pub run: i64,
     pub os: String,
+    pub platforms: Option<Vec<String>>,
 }
 
 impl Matrix {
@@ -53,7 +71,7 @@ impl Matrix {
 
     pub fn to_image_target(&self) -> crate::ImageTarget {
         crate::ImageTarget {
-            triplet: self.target.clone(),
+            name: self.target.clone(),
             sub: self.sub.clone(),
         }
     }
@@ -101,24 +119,20 @@ pub fn pull_image(
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ImageTarget {
-    pub triplet: String,
+    pub name: String,
     pub sub: Option<String>,
 }
 
 impl ImageTarget {
     pub fn image_name(&self, repository: &str, tag: &str) -> String {
-        if let Some(sub) = &self.sub {
-            format!("{repository}/{}:{tag}-{sub}", self.triplet)
-        } else {
-            format!("{repository}/{}:{tag}", self.triplet)
-        }
+        cross::docker::image_name(&self.name, self.sub.as_deref(), repository, tag)
     }
 
     pub fn alt(&self) -> String {
         if let Some(sub) = &self.sub {
-            format!("{}:{sub}", self.triplet,)
+            format!("{}:{sub}", self.name)
         } else {
-            self.triplet.to_string()
+            self.name.to_string()
         }
     }
 
@@ -127,17 +141,17 @@ impl ImageTarget {
         let matrix = get_matrix();
         matrix
             .iter()
-            .any(|m| m.builds_image() && m.target == self.triplet && m.sub == self.sub)
+            .any(|m| m.builds_image() && m.target == self.name && m.sub == self.sub)
     }
 
-    /// Determine if this target uses the default test script
-    pub fn is_default_test_image(&self) -> bool {
-        self.triplet != "cross"
+    /// Determine if this target is a "normal" target for a triplet
+    pub fn is_standard_target_image(&self) -> bool {
+        self.name != "cross" && self.has_ci_image()
     }
 
     /// Determine if this target needs to interact with the project root.
     pub fn needs_workspace_root_context(&self) -> bool {
-        self.triplet == "cross"
+        self.name == "cross"
     }
 }
 
@@ -147,12 +161,12 @@ impl std::str::FromStr for ImageTarget {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((target, sub)) = s.split_once('.') {
             Ok(ImageTarget {
-                triplet: target.to_string(),
+                name: target.to_string(),
                 sub: Some(sub.to_string()),
             })
         } else {
             Ok(ImageTarget {
-                triplet: s.to_string(),
+                name: s.to_string(),
                 sub: None,
             })
         }
@@ -162,9 +176,9 @@ impl std::str::FromStr for ImageTarget {
 impl std::fmt::Display for ImageTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(sub) = &self.sub {
-            write!(f, "{}.{sub}", self.triplet,)
+            write!(f, "{}.{sub}", self.name)
         } else {
-            write!(f, "{}", self.triplet)
+            write!(f, "{}", self.name)
         }
     }
 }

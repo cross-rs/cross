@@ -2,12 +2,12 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use crate::docker::{DockerOptions, DockerPaths};
+use crate::docker::{self, DockerOptions, DockerPaths};
 use crate::shell::MessageInfo;
-use crate::{docker, CargoMetadata, Target};
 use crate::{errors::*, file, CommandExt, ToUtf8};
+use crate::{CargoMetadata, TargetTriple};
 
-use super::{image_name, parse_docker_opts, path_hash};
+use super::{get_image_name, parse_docker_opts, path_hash, ImagePlatform};
 
 pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "localhost/cross-rs/cross-custom-";
 
@@ -17,9 +17,11 @@ pub enum Dockerfile<'a> {
         path: &'a str,
         context: Option<&'a str>,
         name: Option<&'a str>,
+        runs_with: &'a ImagePlatform,
     },
     Custom {
         content: String,
+        runs_with: &'a ImagePlatform,
     },
 }
 
@@ -68,15 +70,26 @@ impl<'a> Dockerfile<'a> {
         build_args: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
-        let mut docker_build = docker::subcommand(&options.engine, "build");
-        docker_build.current_dir(paths.host_root());
+        let mut docker_build = docker::subcommand(&options.engine, "buildx");
+        docker_build.arg("build");
         docker_build.env("DOCKER_SCAN_SUGGEST", "false");
+        self.runs_with()
+            .specify_platform(&options.engine, &mut docker_build);
+
         docker_build.args([
             "--label",
             &format!(
                 "{}.for-cross-target={}",
                 crate::CROSS_LABEL_DOMAIN,
                 options.target,
+            ),
+        ]);
+        docker_build.args([
+            "--label",
+            &format!(
+                "{}.runs-with={}",
+                crate::CROSS_LABEL_DOMAIN,
+                self.runs_with().target
             ),
         ]);
 
@@ -89,20 +102,20 @@ impl<'a> Dockerfile<'a> {
             ),
         ]);
 
-        let image_name = self.image_name(&options.target, &paths.metadata)?;
+        let image_name = self.image_name(options.target.target(), &paths.metadata)?;
         docker_build.args(["--tag", &image_name]);
 
         for (key, arg) in build_args {
             docker_build.args(["--build-arg", &format!("{}={}", key.as_ref(), arg.as_ref())]);
         }
 
-        if let Some(arch) = options.target.deb_arch() {
+        if let Some(arch) = options.target.target().deb_arch() {
             docker_build.args(["--build-arg", &format!("CROSS_DEB_ARCH={arch}")]);
         }
 
         let path = match self {
             Dockerfile::File { path, .. } => PathBuf::from(path),
-            Dockerfile::Custom { content } => {
+            Dockerfile::Custom { content, .. } => {
                 let path = paths
                     .metadata
                     .target_directory
@@ -117,7 +130,7 @@ impl<'a> Dockerfile<'a> {
         };
 
         if matches!(self, Dockerfile::File { .. }) {
-            if let Ok(cross_base_image) = self::image_name(&options.config, &options.target) {
+            if let Ok(cross_base_image) = self::get_image_name(&options.config, &options.target) {
                 docker_build.args([
                     "--build-arg",
                     &format!("CROSS_BASE_IMAGE={cross_base_image}"),
@@ -127,10 +140,17 @@ impl<'a> Dockerfile<'a> {
 
         docker_build.args(["--file".into(), path]);
 
-        if let Ok(build_opts) = std::env::var("CROSS_BUILD_OPTS") {
-            // FIXME: Use shellwords
+        if let Some(build_opts) = options.config.build_opts() {
             docker_build.args(parse_docker_opts(&build_opts)?);
         }
+
+        let has_output = options.config.build_opts().map_or(false, |opts| {
+            opts.contains("--load") || opts.contains("--output")
+        });
+        if options.engine.kind.is_docker() && !has_output {
+            docker_build.args(&["--output", "type=docker"]);
+        };
+
         if let Some(context) = self.context() {
             docker_build.arg(&context);
         } else {
@@ -141,7 +161,11 @@ impl<'a> Dockerfile<'a> {
         Ok(image_name)
     }
 
-    pub fn image_name(&self, target_triple: &Target, metadata: &CargoMetadata) -> Result<String> {
+    pub fn image_name(
+        &self,
+        target_triple: &TargetTriple,
+        metadata: &CargoMetadata,
+    ) -> Result<String> {
         match self {
             Dockerfile::File {
                 name: Some(name), ..
@@ -167,6 +191,12 @@ impl<'a> Dockerfile<'a> {
                 ..
             } => Some(context),
             _ => None,
+        }
+    }
+    fn runs_with(&self) -> &ImagePlatform {
+        match self {
+            Dockerfile::File { runs_with, .. } => runs_with,
+            Dockerfile::Custom { runs_with, .. } => runs_with,
         }
     }
 }

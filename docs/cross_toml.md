@@ -56,6 +56,16 @@ $ cat ./scripts/my-script.sh
 apt-get install libssl-dev -y
 ```
 
+# `target.TARGET.image`
+
+The `image` key can also take the toolchains/platforms supported by the image.
+
+```toml
+[target.aarch64-unknown-linux-gnu]
+image.name = "alpine:edge"
+image.toolchain = ["x86_64-unknown-linux-musl", "linux/arm64=aarch64-unknown-linux-musl"] # Defaults to `x86_64-unknown-linux-gnu`
+```
+
 # `target.TARGET.env`
 
 The `target` key allows you to specify environment variables that should be used for a specific compilation target.

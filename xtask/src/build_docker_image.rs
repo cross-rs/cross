@@ -3,6 +3,7 @@ use std::path::Path;
 
 use crate::util::{cargo_metadata, gha_error, gha_output, gha_print};
 use clap::Args;
+use cross::docker::ImagePlatform;
 use cross::shell::MessageInfo;
 use cross::{docker, CommandExt, ToUtf8};
 
@@ -66,6 +67,9 @@ pub struct BuildDockerImage {
     /// Additional build arguments to pass to Docker.
     #[clap(long)]
     pub build_arg: Vec<String>,
+    // [os/arch[/variant]=]toolchain
+    #[clap(long, short = 'a', action = clap::builder::ArgAction::Append)]
+    pub platform: Vec<ImagePlatform>,
     /// Targets to build for
     #[clap()]
     pub targets: Vec<crate::ImageTarget>,
@@ -106,6 +110,7 @@ pub fn build_docker_image(
         no_fastfail,
         from_ci,
         build_arg,
+        platform,
         mut targets,
         ..
     }: BuildDockerImage,
@@ -154,18 +159,31 @@ pub fn build_docker_image(
         .map(|t| locate_dockerfile(t, &docker_root, &cross_toolchains_root))
         .collect::<cross::Result<Vec<_>>>()?;
 
+    let platforms = if platform.is_empty() {
+        vec![ImagePlatform::DEFAULT]
+    } else {
+        platform
+    };
+
     let mut results = vec![];
-    for (target, dockerfile) in &targets {
+    for (platform, (target, dockerfile)) in targets
+        .iter()
+        .flat_map(|t| platforms.iter().map(move |p| (p, t)))
+    {
         if gha && targets.len() > 1 {
             gha_print("::group::Build {target}");
+        } else {
+            msg_info.note(format_args!("Build {target} for {}", platform.target))?;
         }
         let mut docker_build = docker::command(engine);
         docker_build.args(&["buildx", "build"]);
         docker_build.current_dir(&docker_root);
 
+        docker_build.args(&["--platform", &platform.docker_platform()]);
+
         if push {
             docker_build.arg("--push");
-        } else if no_output {
+        } else if engine.kind.is_docker() && no_output {
             docker_build.args(&["--output", "type=tar,dest=/dev/null"]);
         } else {
             docker_build.arg("--load");
@@ -226,7 +244,19 @@ pub fn build_docker_image(
 
         docker_build.args([
             "--label",
-            &format!("{}.for-cross-target={target}", cross::CROSS_LABEL_DOMAIN),
+            &format!(
+                "{}.for-cross-target={}",
+                cross::CROSS_LABEL_DOMAIN,
+                target.name
+            ),
+        ]);
+        docker_build.args([
+            "--label",
+            &format!(
+                "{}.runs-with={}",
+                cross::CROSS_LABEL_DOMAIN,
+                platform.target
+            ),
         ]);
 
         docker_build.args(&["-f", dockerfile]);

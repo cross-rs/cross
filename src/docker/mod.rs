@@ -1,16 +1,43 @@
 pub mod custom;
 mod engine;
+mod image;
 mod local;
+mod provided_images;
 pub mod remote;
 mod shared;
 
 pub use self::engine::*;
+pub use self::provided_images::PROVIDED_IMAGES;
 pub use self::shared::*;
+
+pub use image::{Architecture, Image, ImagePlatform, Os as ContainerOs, PossibleImage};
 
 use std::process::ExitStatus;
 
 use crate::errors::*;
 use crate::shell::MessageInfo;
+
+#[derive(Debug)]
+pub struct ProvidedImage {
+    /// The `name` of the image, usually the target triplet
+    pub name: &'static str,
+    pub platforms: &'static [ImagePlatform],
+    pub sub: Option<&'static str>,
+}
+
+impl ProvidedImage {
+    pub fn image_name(&self, repository: &str, tag: &str) -> String {
+        image_name(self.name, self.sub, repository, tag)
+    }
+}
+
+pub fn image_name(target: &str, sub: Option<&str>, repository: &str, tag: &str) -> String {
+    if let Some(sub) = sub {
+        format!("{repository}/{target}:{tag}-{sub}")
+    } else {
+        format!("{repository}/{target}:{tag}")
+    }
+}
 
 pub fn run(
     options: DockerOptions,

@@ -5,13 +5,16 @@ use std::{env, fs};
 
 use super::custom::{Dockerfile, PreBuild};
 use super::engine::*;
+use super::image::PossibleImage;
+use super::Image;
+use super::PROVIDED_IMAGES;
 use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
 use crate::config::{bool_from_envvar, Config};
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{self, write_file, ToUtf8};
 use crate::id;
-use crate::rustc::{self, VersionMetaExt};
+use crate::rustc::QualifiedToolchain;
 use crate::shell::{MessageInfo, Verbosity};
 use crate::Target;
 
@@ -23,7 +26,6 @@ pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:16.04";
-const DOCKER_IMAGES: &[&str] = &include!(concat!(env!("OUT_DIR"), "/docker-images.rs"));
 
 // secured profile based off the docker documentation for denied syscalls:
 // https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
@@ -36,15 +38,23 @@ pub struct DockerOptions {
     pub engine: Engine,
     pub target: Target,
     pub config: Config,
+    pub image: Image,
     pub uses_xargo: bool,
 }
 
 impl DockerOptions {
-    pub fn new(engine: Engine, target: Target, config: Config, uses_xargo: bool) -> DockerOptions {
+    pub fn new(
+        engine: Engine,
+        target: Target,
+        config: Config,
+        image: Image,
+        uses_xargo: bool,
+    ) -> DockerOptions {
         DockerOptions {
             engine,
             target,
             config,
+            image,
             uses_xargo,
         }
     }
@@ -77,19 +87,25 @@ impl DockerOptions {
         paths: &DockerPaths,
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
-        let mut image = self.image_name()?;
+        let mut image = self.image.clone();
 
         if let Some(path) = self.config.dockerfile(&self.target)? {
             let context = self.config.dockerfile_context(&self.target)?;
-            let name = self.config.image(&self.target)?;
+
+            let is_custom_image = self.config.image(&self.target)?.is_some();
 
             let build = Dockerfile::File {
                 path: &path,
                 context: context.as_deref(),
-                name: name.as_deref(),
+                name: if is_custom_image {
+                    Some(&image.name)
+                } else {
+                    None
+                },
+                runs_with: &image.platform,
             };
 
-            image = build
+            image.name = build
                 .build(
                     self,
                     paths,
@@ -122,9 +138,10 @@ impl DockerOptions {
                 RUN chmod +x /pre-build-script
                 RUN ./pre-build-script $CROSS_TARGET"#
                         ),
+                        runs_with: &image.platform,
                     };
 
-                    image = custom
+                    image.name = custom
                         .build(
                             self,
                             paths,
@@ -152,8 +169,9 @@ impl DockerOptions {
                 ARG CROSS_CMD
                 RUN eval "${{CROSS_CMD}}""#
                             ),
+                            runs_with: &image.platform,
                         };
-                        image = custom
+                        image.name = custom
                             .build(
                                 self,
                                 paths,
@@ -166,11 +184,7 @@ impl DockerOptions {
                 }
             }
         }
-        Ok(image)
-    }
-
-    pub(crate) fn image_name(&self) -> Result<String> {
-        image_name(&self.config, &self.target)
+        Ok(image.name.clone())
     }
 }
 
@@ -179,7 +193,6 @@ pub struct DockerPaths {
     pub mount_finder: MountFinder,
     pub metadata: CargoMetadata,
     pub cwd: PathBuf,
-    pub sysroot: PathBuf,
     pub directories: Directories,
 }
 
@@ -188,17 +201,20 @@ impl DockerPaths {
         engine: &Engine,
         metadata: CargoMetadata,
         cwd: PathBuf,
-        sysroot: PathBuf,
+        toolchain: QualifiedToolchain,
     ) -> Result<Self> {
         let mount_finder = MountFinder::create(engine)?;
-        let directories = Directories::create(&mount_finder, &metadata, &cwd, &sysroot)?;
+        let directories = Directories::create(&mount_finder, &metadata, &cwd, toolchain)?;
         Ok(Self {
             mount_finder,
             metadata,
             cwd,
-            sysroot,
             directories,
         })
+    }
+
+    pub fn get_sysroot(&self) -> &Path {
+        self.directories.get_sysroot()
     }
 
     pub fn workspace_root(&self) -> &Path {
@@ -239,7 +255,7 @@ pub struct Directories {
     // both mount fields are WSL paths on windows: they already are POSIX paths
     pub mount_root: String,
     pub mount_cwd: String,
-    pub sysroot: PathBuf,
+    pub toolchain: QualifiedToolchain,
 }
 
 impl Directories {
@@ -247,7 +263,7 @@ impl Directories {
         mount_finder: &MountFinder,
         metadata: &CargoMetadata,
         cwd: &Path,
-        sysroot: &Path,
+        mut toolchain: QualifiedToolchain,
     ) -> Result<Self> {
         let home_dir =
             home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
@@ -289,7 +305,8 @@ impl Directories {
             mount_root = host_root.to_utf8()?.to_owned();
         }
         let mount_cwd = mount_finder.find_path(cwd, false)?;
-        let sysroot = mount_finder.find_mount_path(sysroot);
+
+        toolchain.set_sysroot(|p| mount_finder.find_mount_path(p));
 
         Ok(Directories {
             cargo,
@@ -299,8 +316,12 @@ impl Directories {
             host_root,
             mount_root,
             mount_cwd,
-            sysroot,
+            toolchain,
         })
+    }
+
+    pub fn get_sysroot(&self) -> &Path {
+        self.toolchain.get_sysroot()
     }
 }
 
@@ -339,23 +360,16 @@ pub fn subcommand(engine: &Engine, cmd: &str) -> Command {
 
 pub fn get_package_info(
     engine: &Engine,
-    target: &str,
-    channel: Option<&str>,
+    toolchain: QualifiedToolchain,
     msg_info: &mut MessageInfo,
-) -> Result<(Target, CargoMetadata, Directories)> {
-    let target_list = msg_info.as_quiet(rustc::target_list)?;
-    let target = Target::from(target, &target_list);
+) -> Result<(CargoMetadata, Directories)> {
     let metadata = cargo_metadata_with_args(None, None, msg_info)?
         .ok_or(eyre::eyre!("unable to get project metadata"))?;
-    let cwd = std::env::current_dir()?;
-    let host_meta = rustc::version_meta()?;
-    let host = host_meta.host();
-
-    let sysroot = rustc::get_sysroot(&host, &target, channel, msg_info)?.1;
     let mount_finder = MountFinder::create(engine)?;
-    let dirs = Directories::create(&mount_finder, &metadata, &cwd, &sysroot)?;
+    let cwd = std::env::current_dir()?;
+    let dirs = Directories::create(&mount_finder, &metadata, &cwd, toolchain)?;
 
-    Ok((target, metadata, dirs))
+    Ok((metadata, dirs))
 }
 
 /// Register binfmt interpreters
@@ -598,7 +612,7 @@ pub(crate) fn docker_seccomp(
 ) -> Result<()> {
     // docker uses seccomp now on all installations
     if target.needs_docker_seccomp() {
-        let seccomp = if engine_type == EngineType::Docker && cfg!(target_os = "windows") {
+        let seccomp = if engine_type.is_docker() && cfg!(target_os = "windows") {
             // docker on windows fails due to a bug in reading the profile
             // https://github.com/docker/for-win/issues/12760
             "unconfined".to_owned()
@@ -626,12 +640,47 @@ pub(crate) fn docker_seccomp(
     Ok(())
 }
 
-pub(crate) fn image_name(config: &Config, target: &Target) -> Result<String> {
+/// Simpler version of [get_image]
+pub fn get_image_name(config: &Config, target: &Target) -> Result<String> {
+    if let Some(image) = config.image(target)? {
+        return Ok(image.name);
+    }
+
+    let compatible = PROVIDED_IMAGES
+        .iter()
+        .filter(|p| p.name == target.triple())
+        .collect::<Vec<_>>();
+
+    if compatible.is_empty() {
+        eyre::bail!(
+            "`cross` does not provide a Docker image for target {target}, \
+                   specify a custom image in `Cross.toml`."
+        );
+    }
+
+    let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
+        env!("CARGO_PKG_VERSION")
+    } else {
+        "main"
+    };
+
+    Ok(compatible
+        .get(0)
+        .expect("should not be empty")
+        .image_name(CROSS_IMAGE, version))
+}
+
+pub(crate) fn get_image(config: &Config, target: &Target) -> Result<PossibleImage> {
     if let Some(image) = config.image(target)? {
         return Ok(image);
     }
 
-    if !DOCKER_IMAGES.contains(&target.triple()) {
+    let compatible = PROVIDED_IMAGES
+        .iter()
+        .filter(|p| p.name == target.triple())
+        .collect::<Vec<_>>();
+
+    if compatible.is_empty() {
         eyre::bail!(
             "`cross` does not provide a Docker image for target {target}, \
                specify a custom image in `Cross.toml`."
@@ -644,7 +693,47 @@ pub(crate) fn image_name(config: &Config, target: &Target) -> Result<String> {
         "main"
     };
 
-    Ok(format!("{CROSS_IMAGE}/{target}:{version}"))
+    let pick = if compatible.len() == 1 {
+        // If only one match, use that
+        compatible.get(0).expect("should not be empty")
+    } else if compatible
+        .iter()
+        .filter(|provided| provided.sub.is_none())
+        .count()
+        == 1
+    {
+        // if multiple matches, but only one is not a sub-target, pick that one
+        compatible
+            .iter()
+            .find(|provided| provided.sub.is_none())
+            .expect("should exists at least one non-sub image in list")
+    } else {
+        // if there's multiple targets and no option can be chosen, bail
+        return Err(eyre::eyre!(
+            "`cross` provides multiple images for target {target}, \
+               specify toolchain in `Cross.toml`."
+        )
+        .with_note(|| {
+            format!(
+                "candidates: {}",
+                compatible
+                    .iter()
+                    .map(|provided| format!("\"{}\"", provided.image_name(CROSS_IMAGE, version)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }));
+    };
+
+    let mut image: PossibleImage = pick.image_name(CROSS_IMAGE, version).into();
+
+    eyre::ensure!(
+        !pick.platforms.is_empty(),
+        "platforms for provided image `{image}` are not specified, this is a bug in cross"
+    );
+
+    image.toolchain = pick.platforms.to_vec();
+    Ok(image)
 }
 
 fn docker_read_mount_paths(engine: &Engine) -> Result<Vec<MountDetail>> {
@@ -930,11 +1019,17 @@ mod tests {
             Ok(path)
         }
 
-        fn get_sysroot() -> Result<PathBuf> {
-            Ok(home()?
+        fn get_toolchain() -> Result<QualifiedToolchain> {
+            let sysroot = home()?
                 .join(".rustup")
                 .join("toolchains")
-                .join("stable-x86_64-unknown-linux-gnu"))
+                .join("stable-x86_64-unknown-linux-gnu");
+            Ok(QualifiedToolchain::new(
+                "stable",
+                &None,
+                &crate::docker::ImagePlatform::X86_64_UNKNOWN_LINUX_GNU,
+                &sysroot,
+            ))
         }
 
         fn get_directories(
@@ -942,8 +1037,8 @@ mod tests {
             mount_finder: &MountFinder,
         ) -> Result<Directories> {
             let cwd = get_cwd()?;
-            let sysroot = get_sysroot()?;
-            Directories::create(mount_finder, metadata, &cwd, &sysroot)
+            let toolchain = get_toolchain()?;
+            Directories::create(mount_finder, metadata, &cwd, toolchain)
         }
 
         fn path_to_posix(path: &Path) -> Result<String> {

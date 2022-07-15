@@ -1,12 +1,14 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rustc_version::{Version, VersionMeta};
+use serde::Deserialize;
 
+use crate::docker::ImagePlatform;
 use crate::errors::*;
 use crate::extensions::{env_program, CommandExt};
 use crate::shell::MessageInfo;
-use crate::{Host, Target};
+use crate::TargetTriple;
 
 #[derive(Debug)]
 pub struct TargetList {
@@ -21,14 +23,14 @@ impl TargetList {
 }
 
 pub trait VersionMetaExt {
-    fn host(&self) -> Host;
+    fn host(&self) -> TargetTriple;
     fn needs_interpreter(&self) -> bool;
     fn commit_hash(&self) -> String;
 }
 
 impl VersionMetaExt for VersionMeta {
-    fn host(&self) -> Host {
-        Host::from(&*self.host)
+    fn host(&self) -> TargetTriple {
+        TargetTriple::from(&*self.host)
     }
 
     fn needs_interpreter(&self) -> bool {
@@ -79,6 +81,255 @@ pub fn hash_from_version_string(version: &str, index: usize) -> String {
     short_commit_hash(&const_sha1::sha1(&buffer).to_string())
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct QualifiedToolchain {
+    pub channel: String,
+    pub date: Option<String>,
+    pub(self) host: ImagePlatform,
+    pub is_custom: bool,
+    pub full: String,
+    pub(self) sysroot: PathBuf,
+}
+
+impl QualifiedToolchain {
+    pub fn new(channel: &str, date: &Option<String>, host: &ImagePlatform, sysroot: &Path) -> Self {
+        let mut this = Self {
+            channel: channel.to_owned(),
+            date: date.clone(),
+            host: host.clone(),
+            is_custom: false,
+            full: if let Some(date) = date {
+                format!("{}-{}-{}", channel, date, host.target)
+            } else {
+                format!("{}-{}", channel, host.target)
+            },
+            sysroot: sysroot.to_owned(),
+        };
+        this.sysroot.set_file_name(&this.full);
+        this
+    }
+
+    /// Replace the host, does nothing if ran on a custom toolchain
+    pub fn replace_host(&mut self, host: &ImagePlatform) -> &mut Self {
+        if !self.is_custom {
+            *self = Self::new(&self.channel, &self.date, host, &self.sysroot);
+            self.sysroot.set_file_name(&self.full);
+        }
+        self
+    }
+
+    /// Makes a good guess as to what the toolchain is compiled to run on.
+    pub(crate) fn custom(
+        name: &str,
+        sysroot: &Path,
+        config: &crate::config::Config,
+        msg_info: &mut MessageInfo,
+    ) -> Result<QualifiedToolchain> {
+        if let Some(compat) = config.custom_toolchain_compat() {
+            let mut toolchain: QualifiedToolchain = QualifiedToolchain::parse(
+                sysroot.to_owned(),
+                &compat,
+                config,
+                msg_info,
+            )
+            .wrap_err(
+                "could not parse CROSS_CUSTOM_TOOLCHAIN_COMPAT as a fully qualified toolchain name",
+            )?;
+            toolchain.is_custom = true;
+            toolchain.full = name.to_owned();
+            return Ok(toolchain);
+        }
+        // a toolchain installed by https://github.com/rust-lang/cargo-bisect-rustc
+        if name.starts_with("bisector-nightly") {
+            let (_, toolchain) = name.split_once('-').expect("should include -");
+            let mut toolchain =
+                QualifiedToolchain::parse(sysroot.to_owned(), toolchain, config, msg_info)
+                    .wrap_err("could not parse bisector toolchain")?;
+            toolchain.is_custom = true;
+            toolchain.full = name.to_owned();
+            return Ok(toolchain);
+        } else if let Ok(stdout) = Command::new(sysroot.join("bin/rustc"))
+            .arg("-Vv")
+            .run_and_get_stdout(msg_info)
+        {
+            let rustc_version::VersionMeta {
+                build_date,
+                channel,
+                host,
+                ..
+            } = rustc_version::version_meta_for(&stdout)?;
+            let mut toolchain = QualifiedToolchain::new(
+                match channel {
+                    rustc_version::Channel::Dev => "dev",
+                    rustc_version::Channel::Nightly => "nightly",
+                    rustc_version::Channel::Beta => "beta",
+                    rustc_version::Channel::Stable => "stable",
+                },
+                &build_date,
+                &ImagePlatform::from_target(host.into())?,
+                sysroot,
+            );
+            toolchain.is_custom = true;
+            toolchain.full = name.to_owned();
+            return Ok(toolchain);
+        }
+        Err(eyre::eyre!(
+            "cross can not figure out what your custom toolchain is"
+        ))
+        .suggestion("set `CROSS_CUSTOM_TOOLCHAIN_COMPAT` to a fully qualified toolchain name: i.e `nightly-aarch64-unknown-linux-musl`")
+    }
+
+    pub fn host(&self) -> &ImagePlatform {
+        &self.host
+    }
+
+    pub fn get_sysroot(&self) -> &Path {
+        &self.sysroot
+    }
+
+    /// Grab the current default toolchain
+    pub fn default(config: &crate::config::Config, msg_info: &mut MessageInfo) -> Result<Self> {
+        let sysroot = sysroot(msg_info)?;
+
+        let default_toolchain_name = sysroot
+            .file_name()
+            .ok_or_else(|| eyre::eyre!("couldn't get name of active toolchain"))?
+            .to_str()
+            .ok_or_else(|| eyre::eyre!("toolchain was not utf-8"))?;
+
+        if !config.custom_toolchain() {
+            QualifiedToolchain::parse(sysroot.clone(), default_toolchain_name, config, msg_info)
+        } else {
+            QualifiedToolchain::custom(default_toolchain_name, &sysroot, config, msg_info)
+        }
+    }
+
+    /// Merge a "picked" toolchain, overriding set fields.
+    pub fn with_picked(
+        self,
+        config: &crate::config::Config,
+        picked: Toolchain,
+        msg_info: &mut MessageInfo,
+    ) -> Result<Self> {
+        let toolchain = Self::default(config, msg_info)?;
+        let date = picked.date.or(self.date);
+        let host = picked
+            .host
+            .map_or(Ok(self.host), ImagePlatform::from_target)?;
+        let channel = picked.channel;
+
+        Ok(QualifiedToolchain::new(
+            &channel,
+            &date,
+            &host,
+            &toolchain.sysroot,
+        ))
+    }
+
+    pub fn set_sysroot(&mut self, convert: impl Fn(&Path) -> PathBuf) {
+        self.sysroot = convert(&self.sysroot);
+    }
+}
+
+impl std::fmt::Display for QualifiedToolchain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.full)
+    }
+}
+
+impl QualifiedToolchain {
+    fn parse(
+        sysroot: PathBuf,
+        toolchain: &str,
+        config: &crate::config::Config,
+        msg_info: &mut MessageInfo,
+    ) -> Result<Self> {
+        match toolchain.parse::<Toolchain>() {
+            Ok(Toolchain {
+                channel,
+                date,
+                host: Some(host),
+                is_custom,
+                full,
+            }) => Ok(QualifiedToolchain {
+                channel,
+                date,
+                host: ImagePlatform::from_target(host)?,
+                is_custom,
+                full,
+                sysroot,
+            }),
+            Ok(_) | Err(_) if config.custom_toolchain() => {
+                QualifiedToolchain::custom(toolchain, &sysroot, config, msg_info)
+            }
+            Ok(_) => eyre::bail!("toolchain is not fully qualified"),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct Toolchain {
+    pub channel: String,
+    pub date: Option<String>,
+    pub host: Option<TargetTriple>,
+    pub is_custom: bool,
+    pub full: String,
+}
+
+impl std::fmt::Display for Toolchain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.full)
+    }
+}
+
+impl std::str::FromStr for Toolchain {
+    type Err = eyre::Report;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        fn dig(s: &str) -> bool {
+            s.chars().all(|c: char| c.is_ascii_digit())
+        }
+        if let Some((channel, parts)) = s.split_once('-') {
+            if parts.starts_with(|c: char| c.is_ascii_digit()) {
+                // a date, YYYY-MM-DD
+                let mut split = parts.splitn(4, '-');
+                let ymd = [split.next(), split.next(), split.next()];
+                let ymd = match ymd {
+                    [Some(y), Some(m), Some(d)] if dig(y) && dig(m) && dig(d) => {
+                        format!("{y}-{m}-{d}")
+                    }
+                    _ => eyre::bail!("invalid toolchain `{s}`"),
+                };
+                Ok(Toolchain {
+                    channel: channel.to_owned(),
+                    date: Some(ymd),
+                    host: split.next().map(|s| s.into()),
+                    is_custom: false,
+                    full: s.to_owned(),
+                })
+            } else {
+                // channel-host
+                Ok(Toolchain {
+                    channel: channel.to_owned(),
+                    date: None,
+                    host: Some(parts.into()),
+                    is_custom: false,
+                    full: s.to_owned(),
+                })
+            }
+        } else {
+            Ok(Toolchain {
+                channel: s.to_owned(),
+                date: None,
+                host: None,
+                is_custom: false,
+                full: s.to_owned(),
+            })
+        }
+    }
+}
+
 #[must_use]
 pub fn rustc_command() -> Command {
     Command::new(env_program("RUSTC", "rustc"))
@@ -93,45 +344,13 @@ pub fn target_list(msg_info: &mut MessageInfo) -> Result<TargetList> {
         })
 }
 
-pub fn sysroot(host: &Host, target: &Target, msg_info: &mut MessageInfo) -> Result<PathBuf> {
-    let mut stdout = rustc_command()
+pub fn sysroot(msg_info: &mut MessageInfo) -> Result<PathBuf> {
+    let stdout = rustc_command()
         .args(&["--print", "sysroot"])
         .run_and_get_stdout(msg_info)?
         .trim()
         .to_owned();
-
-    // On hosts other than Linux, specify the correct toolchain path.
-    if host != &Host::X86_64UnknownLinuxGnu && target.needs_docker() {
-        stdout = stdout.replacen(host.triple(), Host::X86_64UnknownLinuxGnu.triple(), 1);
-    }
-
     Ok(PathBuf::from(stdout))
-}
-
-pub fn get_sysroot(
-    host: &Host,
-    target: &Target,
-    channel: Option<&str>,
-    msg_info: &mut MessageInfo,
-) -> Result<(String, PathBuf)> {
-    let mut sysroot = sysroot(host, target, msg_info)?;
-    let default_toolchain = sysroot
-        .file_name()
-        .and_then(|file_name| file_name.to_str())
-        .ok_or_else(|| eyre::eyre!("couldn't get toolchain name"))?;
-    let toolchain = if let Some(channel) = channel {
-        [channel]
-            .iter()
-            .cloned()
-            .chain(default_toolchain.splitn(2, '-').skip(1))
-            .collect::<Vec<_>>()
-            .join("-")
-    } else {
-        default_toolchain.to_owned()
-    };
-    sysroot.set_file_name(&toolchain);
-
-    Ok((toolchain, sysroot))
 }
 
 pub fn version_meta() -> Result<rustc_version::VersionMeta> {
@@ -141,6 +360,17 @@ pub fn version_meta() -> Result<rustc_version::VersionMeta> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bisect() {
+        QualifiedToolchain::custom(
+            "bisector-nightly-2022-04-26-x86_64-unknown-linux-gnu",
+            "/tmp/cross/sysroot".as_ref(),
+            &crate::config::Config::new(None),
+            &mut MessageInfo::create(true, false, None).unwrap(),
+        )
+        .unwrap();
+    }
 
     #[test]
     fn hash_from_rustc() {

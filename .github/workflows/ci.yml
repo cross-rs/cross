@@ -333,7 +333,7 @@ jobs:
 
   # we should always have an artifact from a previous build.
   remote:
-    needs: [shellcheck, test, check]
+    needs: [test, check]
     runs-on: ubuntu-latest
     if: github.actor == 'bors[bot]'
     steps:
@@ -341,7 +341,6 @@ jobs:
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
-        id: remote-cov
         uses: ./.github/actions/cargo-llvm-cov
         with:
           name: integration-remote
@@ -353,7 +352,7 @@ jobs:
         shell: bash
 
   bisect:
-    needs: [shellcheck, test, check]
+    needs: [test, check]
     runs-on: ubuntu-latest
     if: github.actor == 'bors[bot]'
     steps:
@@ -361,7 +360,6 @@ jobs:
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
-        id: bisect-cov
         uses: ./.github/actions/cargo-llvm-cov
         with:
           name: integration-bisect
@@ -372,8 +370,8 @@ jobs:
         run: ./ci/test-bisect.sh
         shell: bash
 
-  docker-in-docker:
-    needs: [shellcheck, test, check]
+  foreign:
+    needs: [test, check]
     runs-on: ubuntu-latest
     if: github.actor == 'bors[bot]'
     steps:
@@ -381,7 +379,31 @@ jobs:
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
-        id: docker-in-docker-cov
+        uses: ./.github/actions/cargo-llvm-cov
+        with:
+          name: integration-bisect
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+      - name: Set up docker buildx
+        uses: docker/setup-buildx-action@v2
+        id: buildx
+        with:
+          install: true
+      - name: Run Foreign toolchain test
+        run: ./ci/test-foreign-toolchain.sh
+        shell: bash
+
+  docker-in-docker:
+    needs: [test, check]
+    runs-on: ubuntu-latest
+    if: github.actor == 'bors[bot]'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: LLVM instrument coverage
         uses: ./.github/actions/cargo-llvm-cov
         with:
           name: integration-docker-in-docker
@@ -405,7 +427,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker]
+    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker, foreign]
     if: always()
     runs-on: ubuntu-latest
     steps:

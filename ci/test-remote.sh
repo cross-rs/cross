@@ -14,15 +14,14 @@ fi
 ci_dir=$(dirname "${BASH_SOURCE[0]}")
 ci_dir=$(realpath "${ci_dir}")
 . "${ci_dir}"/shared.sh
-project_home=$(dirname "${ci_dir}")
 
 main() {
     local err=
 
     retry cargo fetch
     cargo build
-    export CROSS="${project_home}/target/debug/cross"
-    export CROSS_UTIL="${project_home}/target/debug/cross-util"
+    export CROSS="${PROJECT_HOME}/target/debug/cross"
+    export CROSS_UTIL="${PROJECT_HOME}/target/debug/cross-util"
 
     # if the create volume fails, ensure it exists.
     if ! err=$("${CROSS_UTIL}" volumes create 2>&1 >/dev/null); then
@@ -40,7 +39,7 @@ main() {
 
 cross_test_cpp() {
     local td=
-    td="$(mktemp -d)"
+    td="$(mkcargotemp -d)"
 
     git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"
 

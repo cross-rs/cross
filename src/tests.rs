@@ -8,7 +8,7 @@ use std::{
 use once_cell::sync::OnceCell;
 use rustc_version::VersionMeta;
 
-use crate::ToUtf8;
+use crate::{docker::ImagePlatform, rustc::QualifiedToolchain, TargetTriple, ToUtf8};
 
 static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 
@@ -81,7 +81,12 @@ release: {version}
             expected,
             warn_host_version_mismatch(
                 &host_meta,
-                "xxxx",
+                &QualifiedToolchain::new(
+                    "xxxx",
+                    &None,
+                    &ImagePlatform::from_const_target(TargetTriple::X86_64UnknownLinuxGnu),
+                    Path::new("/toolchains/xxxx-x86_64-unknown-linux-gnu"),
+                ),
                 &target_meta.0,
                 &target_meta.1,
                 &mut msg_info,

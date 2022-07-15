@@ -46,11 +46,11 @@ One of these container engines is required. If both are installed, `cross` will
 default to `docker`.
 
 - [Docker]. Note that on Linux non-sudo users need to be in the `docker` group.
-  Read the official [post-installation steps][post]. Requires version 1.24 or later.
+  Read the official [post-installation steps][post]. Requires version 20.10 (API 1.40) or later.
 
 [post]: https://docs.docker.com/install/linux/linux-postinstall/
 
-- [Podman]. Requires version 1.6.3 or later.
+- [Podman]. Requires version 3.4.0 or later.
 
 ## Installation
 

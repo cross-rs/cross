@@ -10,8 +10,6 @@ version = "0.2.4"
 edition = "2021"
 include = [
   "src/**/*",
-  "docker/Dockerfile.*",
-  "docker/*.sh",
   "docs/*.md",
   "Cargo.toml",
   "Cargo.lock",
