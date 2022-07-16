@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::cargo::Subcommand;
 use crate::errors::Result;
-use crate::file::PathExt;
+use crate::file::{absolute_path, PathExt};
 use crate::rustc::TargetList;
 use crate::shell::{self, MessageInfo};
 use crate::Target;
@@ -21,15 +21,6 @@ pub struct Args {
     pub verbose: bool,
     pub quiet: bool,
     pub color: Option<String>,
-}
-
-// Fix for issue #581. target_dir must be absolute.
-fn absolute_path(path: PathBuf) -> Result<PathBuf> {
-    Ok(if path.is_absolute() {
-        path
-    } else {
-        env::current_dir()?.join(path)
-    })
 }
 
 pub fn is_subcommand_list(stdout: &str) -> bool {
@@ -151,22 +142,8 @@ fn str_to_owned(arg: &str) -> Result<String> {
     Ok(arg.to_owned())
 }
 
-#[allow(clippy::needless_return)]
 fn store_manifest_path(path: String) -> Result<String> {
-    let p = Path::new(&path);
-    if p.is_absolute() {
-        #[cfg(target_os = "windows")]
-        {
-            return p.as_wslpath();
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            use crate::file::ToUtf8;
-            return p.to_utf8().map(ToOwned::to_owned);
-        }
-    } else {
-        p.as_posix()
-    }
+    Path::new(&path).as_posix_relative()
 }
 
 fn store_target_dir(_: String) -> Result<String> {

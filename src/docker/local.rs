@@ -1,5 +1,6 @@
 use std::io;
-use std::process::ExitStatus;
+use std::path::Path;
+use std::process::{Command, ExitStatus};
 
 use super::shared::*;
 use crate::errors::Result;
@@ -7,6 +8,16 @@ use crate::extensions::CommandExt;
 use crate::file::{PathExt, ToUtf8};
 use crate::shell::{MessageInfo, Stream};
 use eyre::Context;
+
+// NOTE: host path must be absolute
+fn mount(docker: &mut Command, host_path: &Path, absolute_path: &Path, prefix: &str) -> Result<()> {
+    let mount_path = absolute_path.as_posix_absolute()?;
+    docker.args(&[
+        "-v",
+        &format!("{}:{prefix}{}", host_path.to_utf8()?, mount_path),
+    ]);
+    Ok(())
+}
 
 pub(crate) fn run(
     options: DockerOptions,
@@ -39,7 +50,7 @@ pub(crate) fn run(
         &mut docker,
         &options,
         &paths,
-        |docker, val| mount(docker, val, ""),
+        |docker, host, absolute| mount(docker, host, absolute, ""),
         |_| {},
     )?;
 
@@ -81,7 +92,11 @@ pub(crate) fn run(
     if let Some(ref nix_store) = dirs.nix_store {
         docker.args(&[
             "-v",
-            &format!("{}:{}:Z", nix_store.to_utf8()?, nix_store.as_posix()?),
+            &format!(
+                "{}:{}:Z",
+                nix_store.to_utf8()?,
+                nix_store.as_posix_absolute()?
+            ),
         ]);
     }
 

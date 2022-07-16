@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::env;
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::Read;
@@ -26,9 +27,8 @@ impl ToUtf8 for Path {
 }
 
 pub trait PathExt {
-    fn as_posix(&self) -> Result<String>;
-    #[cfg(target_family = "windows")]
-    fn as_wslpath(&self) -> Result<String>;
+    fn as_posix_relative(&self) -> Result<String>;
+    fn as_posix_absolute(&self) -> Result<String>;
 }
 
 #[cfg(target_family = "windows")]
@@ -42,6 +42,23 @@ fn format_prefix(prefix: &str) -> Result<String> {
 #[cfg(target_family = "windows")]
 fn fmt_disk(disk: u8) -> String {
     (disk as char).to_string()
+}
+
+#[cfg(target_family = "windows")]
+fn fmt_ns_disk(disk: &std::ffi::OsStr) -> Result<String> {
+    let disk = disk.to_utf8()?;
+    Ok(match disk.len() {
+        // ns can be similar to `\\.\COM42`, or also `\\.\C:\`
+        2 => {
+            let c = disk.chars().next().expect("cannot be empty");
+            if c.is_ascii_alphabetic() && disk.ends_with(':') {
+                fmt_disk(c as u8)
+            } else {
+                disk.to_owned()
+            }
+        }
+        _ => disk.to_owned(),
+    })
 }
 
 #[cfg(target_family = "windows")]
@@ -61,7 +78,7 @@ fn fmt_unc(server: &std::ffi::OsStr, volume: &std::ffi::OsStr) -> Result<String>
 }
 
 impl PathExt for Path {
-    fn as_posix(&self) -> Result<String> {
+    fn as_posix_relative(&self) -> Result<String> {
         if cfg!(target_os = "windows") {
             let push = |p: &mut String, c: &str| {
                 if !p.is_empty() && p != "/" {
@@ -89,11 +106,16 @@ impl PathExt for Path {
         }
     }
 
-    // this is similar to as_posix, but it handles drive separators
-    // and doesn't assume a relative path.
+    #[cfg(not(target_family = "windows"))]
+    fn as_posix_absolute(&self) -> Result<String> {
+        absolute_path(self)?.to_utf8().map(ToOwned::to_owned)
+    }
+
+    // this is similar to as_posix_relative, but it handles drive
+    // separators and will only work with absolute paths.
     #[cfg(target_family = "windows")]
-    fn as_wslpath(&self) -> Result<String> {
-        let path = canonicalize(self)?;
+    fn as_posix_absolute(&self) -> Result<String> {
+        let path = absolute_path(self)?;
 
         let push = |p: &mut String, c: &str, r: bool| {
             if !r {
@@ -115,7 +137,7 @@ impl PathExt for Path {
                         // a root_prefix since we force absolute paths.
                         Prefix::VerbatimDisk(disk) => fmt_disk(disk),
                         Prefix::UNC(server, volume) => fmt_unc(server, volume)?,
-                        Prefix::DeviceNS(ns) => ns.to_utf8()?.to_owned(),
+                        Prefix::DeviceNS(ns) => fmt_ns_disk(ns)?,
                         Prefix::Disk(disk) => fmt_disk(disk),
                     }
                 }
@@ -172,6 +194,15 @@ fn _canonicalize(path: &Path) -> Result<PathBuf> {
     {
         Path::new(&path).canonicalize().map_err(Into::into)
     }
+}
+
+// Fix for issue #581. target_dir must be absolute.
+pub fn absolute_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+    Ok(if path.as_ref().is_absolute() {
+        path.as_ref().to_path_buf()
+    } else {
+        env::current_dir()?.join(path)
+    })
 }
 
 /// Pretty format a file path. Also removes the path prefix from a command if wanted
@@ -257,6 +288,7 @@ mod tests {
         };
     }
 
+    #[track_caller]
     fn result_eq<T: PartialEq + Eq + Debug>(x: Result<T>, y: Result<T>) {
         match (x, y) {
             (Ok(x), Ok(y)) => assert_eq!(x, y),
@@ -265,32 +297,44 @@ mod tests {
     }
 
     #[test]
-    fn as_posix() {
-        result_eq(p!(".").join("..").as_posix(), Ok("./..".to_owned()));
-        result_eq(p!(".").join("/").as_posix(), Ok("/".to_owned()));
-        result_eq(p!("foo").join("bar").as_posix(), Ok("foo/bar".to_owned()));
-        result_eq(p!("/foo").join("bar").as_posix(), Ok("/foo/bar".to_owned()));
+    fn as_posix_relative() {
+        result_eq(
+            p!(".").join("..").as_posix_relative(),
+            Ok("./..".to_owned()),
+        );
+        result_eq(p!(".").join("/").as_posix_relative(), Ok("/".to_owned()));
+        result_eq(
+            p!("foo").join("bar").as_posix_relative(),
+            Ok("foo/bar".to_owned()),
+        );
+        result_eq(
+            p!("/foo").join("bar").as_posix_relative(),
+            Ok("/foo/bar".to_owned()),
+        );
     }
 
     #[test]
     #[cfg(target_family = "windows")]
     fn as_posix_prefix() {
         assert_eq!(p!("C:").join(".."), p!("C:.."));
-        assert!(p!("C:").join("..").as_posix().is_err());
+        assert!(p!("C:").join("..").as_posix_relative().is_err());
     }
 
     #[test]
     #[cfg(target_family = "windows")]
-    fn as_wslpath() {
-        result_eq(p!(r"C:\").as_wslpath(), Ok("/mnt/c".to_owned()));
-        result_eq(p!(r"C:\Users").as_wslpath(), Ok("/mnt/c/Users".to_owned()));
+    fn as_posix_with_drive() {
+        result_eq(p!(r"C:\").as_posix_absolute(), Ok("/mnt/c".to_owned()));
         result_eq(
-            p!(r"\\localhost\c$\Users").as_wslpath(),
+            p!(r"C:\Users").as_posix_absolute(),
             Ok("/mnt/c/Users".to_owned()),
         );
-        result_eq(p!(r"\\.\C:\").as_wslpath(), Ok("/mnt/c".to_owned()));
         result_eq(
-            p!(r"\\.\C:\Users").as_wslpath(),
+            p!(r"\\localhost\c$\Users").as_posix_absolute(),
+            Ok("/mnt/c/Users".to_owned()),
+        );
+        result_eq(p!(r"\\.\C:\").as_posix_absolute(), Ok("/mnt/c".to_owned()));
+        result_eq(
+            p!(r"\\.\C:\Users").as_posix_absolute(),
             Ok("/mnt/c/Users".to_owned()),
         );
     }

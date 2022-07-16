@@ -12,14 +12,11 @@ use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
 use crate::config::{bool_from_envvar, Config};
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
-use crate::file::{self, write_file, ToUtf8};
+use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{MessageInfo, Verbosity};
 use crate::Target;
-
-#[cfg(target_os = "windows")]
-use crate::file::PathExt;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 
@@ -287,6 +284,10 @@ impl Directories {
         }
         create_target_dir(target)?;
 
+        // get our mount paths prior to canonicalizing them
+        let cargo_mount_path = cargo.as_posix_absolute()?;
+        let xargo_mount_path = xargo.as_posix_absolute()?;
+
         // now that we know the paths exist, canonicalize them. this avoids creating
         // directories after failed canonicalization into a shared directory.
         let cargo = file::canonicalize(&cargo)?;
@@ -307,17 +308,15 @@ impl Directories {
             &metadata.workspace_root
         });
 
-        // root is either workspace_root, or, if we're outside the workspace root, the current directory
-        // NOTE: host root has already found the mount path
-        let mount_root = canonicalize_mount_path(&host_root)?;
+        // on Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        // NOTE: on unix, host root has already found the mount path
+        let mount_root = host_root.as_posix_absolute()?;
         let mount_cwd = mount_finder.find_path(cwd, false)?;
 
         toolchain.set_sysroot(|p| mount_finder.find_mount_path(p));
 
         // canonicalize these once to avoid syscalls
-        let cargo_mount_path = canonicalize_mount_path(&cargo)?;
-        let xargo_mount_path = canonicalize_mount_path(&xargo)?;
-        let sysroot_mount_path = canonicalize_mount_path(toolchain.get_sysroot())?;
+        let sysroot_mount_path = toolchain.get_sysroot().as_posix_absolute()?;
 
         Ok(Directories {
             cargo,
@@ -501,16 +500,6 @@ fn add_cargo_configuration_envvars(docker: &mut Command) {
     }
 }
 
-// NOTE: host path must be canonical
-pub(crate) fn mount(docker: &mut Command, host_path: &Path, prefix: &str) -> Result<String> {
-    let mount_path = canonicalize_mount_path(host_path)?;
-    docker.args(&[
-        "-v",
-        &format!("{}:{prefix}{}", host_path.to_utf8()?, mount_path),
-    ]);
-    Ok(mount_path)
-}
-
 pub(crate) fn docker_envvars(
     docker: &mut Command,
     config: &Config,
@@ -579,7 +568,7 @@ pub(crate) fn docker_mount(
     docker: &mut Command,
     options: &DockerOptions,
     paths: &DockerPaths,
-    mount_cb: impl Fn(&mut Command, &Path) -> Result<String>,
+    mount_cb: impl Fn(&mut Command, &Path, &Path) -> Result<()>,
     mut store_cb: impl FnMut((String, String)),
 ) -> Result<()> {
     for ref var in options
@@ -593,35 +582,42 @@ pub(crate) fn docker_mount(
             None => env::var(var),
         };
 
+        // NOTE: we use canonical paths on the host, since it's unambiguous.
+        // however, for the mounted paths, we use the same path as was
+        // provided. this avoids canonicalizing symlinks which then causes
+        // the mounted path to differ from the path expected on the host.
+        // for example, if `/tmp` is a symlink to `/private/tmp`, canonicalizing
+        // it would lead to us mounting `/tmp/process` to `/private/tmp/process`,
+        // which would cause any code relying on `/tmp/process` to break.
+
         if let Ok(val) = value {
-            let canonical_val = file::canonicalize(&val)?;
-            let host_path = paths.mount_finder.find_path(&canonical_val, true)?;
-            let mount_path = mount_cb(docker, host_path.as_ref())?;
-            docker.args(&["-e", &format!("{}={}", host_path, mount_path)]);
+            let canonical_path = file::canonicalize(&val)?;
+            let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
+            let absolute_path = Path::new(&val).as_posix_absolute()?;
+            let mount_path = paths
+                .mount_finder
+                .find_path(Path::new(&absolute_path), true)?;
+            mount_cb(docker, host_path.as_ref(), mount_path.as_ref())?;
+            docker.args(&["-e", &format!("{}={}", var, mount_path)]);
             store_cb((val, mount_path));
         }
     }
 
     for path in paths.workspace_dependencies() {
+        // NOTE: we use canonical paths here since cargo metadata
+        // always canonicalizes paths, so these should be relative
+        // to the mounted project directory.
         let canonical_path = file::canonicalize(path)?;
         let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
-        let mount_path = mount_cb(docker, host_path.as_ref())?;
+        let absolute_path = Path::new(path).as_posix_absolute()?;
+        let mount_path = paths
+            .mount_finder
+            .find_path(Path::new(&absolute_path), true)?;
+        mount_cb(docker, host_path.as_ref(), mount_path.as_ref())?;
         store_cb((path.to_utf8()?.to_owned(), mount_path));
     }
 
     Ok(())
-}
-
-pub(crate) fn canonicalize_mount_path(path: &Path) -> Result<String> {
-    #[cfg(target_os = "windows")]
-    {
-        // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-        path.as_wslpath()
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        path.to_utf8().map(|p| p.to_owned())
-    }
 }
 
 pub(crate) fn user_id() -> String {
@@ -685,7 +681,7 @@ pub(crate) fn docker_seccomp(
             #[cfg(target_os = "windows")]
             if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
                 // podman weirdly expects a WSL path here, and fails otherwise
-                path_string = path.as_wslpath()?;
+                path_string = path.as_posix_absolute()?;
             }
             path_string
         };
@@ -897,20 +893,15 @@ impl MountFinder {
         path.to_path_buf()
     }
 
-    #[allow(unused_variables, clippy::needless_return)]
     fn find_path(&self, path: &Path, host: bool) -> Result<String> {
-        #[cfg(target_os = "windows")]
-        {
-            // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-            if host {
-                return Ok(path.to_utf8()?.to_owned());
-            } else {
-                return path.as_wslpath();
-            }
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            return Ok(self.find_mount_path(path).to_utf8()?.to_owned());
+        if cfg!(target_os = "windows") && host {
+            // On Windows, we can not mount the directory name directly.
+            // Instead, we convert the path to a linux compatible path.
+            return path.to_utf8().map(ToOwned::to_owned);
+        } else if cfg!(target_os = "windows") {
+            path.as_posix_absolute()
+        } else {
+            self.find_mount_path(path).as_posix_absolute()
         }
     }
 }
@@ -1102,20 +1093,9 @@ mod tests {
             Directories::create(mount_finder, metadata, &cwd, toolchain)
         }
 
-        fn path_to_posix(path: &Path) -> Result<String> {
-            #[cfg(target_os = "windows")]
-            {
-                path.as_wslpath()
-            }
-            #[cfg(not(target_os = "windows"))]
-            {
-                path.as_posix()
-            }
-        }
-
         #[track_caller]
         fn paths_equal(x: &Path, y: &Path) -> Result<()> {
-            assert_eq!(path_to_posix(x)?, path_to_posix(y)?);
+            assert_eq!(x.as_posix_absolute()?, y.as_posix_absolute()?);
             Ok(())
         }
 
@@ -1130,9 +1110,9 @@ mod tests {
             paths_equal(&directories.host_root, &metadata.workspace_root)?;
             assert_eq!(
                 &directories.mount_root,
-                &path_to_posix(&metadata.workspace_root)?
+                &metadata.workspace_root.as_posix_absolute()?
             );
-            assert_eq!(&directories.mount_cwd, &path_to_posix(&get_cwd()?)?);
+            assert_eq!(&directories.mount_cwd, &get_cwd()?.as_posix_absolute()?);
 
             reset_env(vars);
             Ok(())
@@ -1178,11 +1158,11 @@ mod tests {
             paths_equal(&directories.host_root, &mount_path(get_cwd()?))?;
             assert_eq!(
                 &directories.mount_root,
-                &path_to_posix(&mount_path(get_cwd()?))?
+                &mount_path(get_cwd()?).as_posix_absolute()?
             );
             assert_eq!(
                 &directories.mount_cwd,
-                &path_to_posix(&mount_path(get_cwd()?))?
+                &mount_path(get_cwd()?).as_posix_absolute()?
             );
 
             reset_env(vars);
