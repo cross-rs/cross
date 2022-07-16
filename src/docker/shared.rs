@@ -256,6 +256,9 @@ pub struct Directories {
     pub mount_root: String,
     pub mount_cwd: String,
     pub toolchain: QualifiedToolchain,
+    pub cargo_mount_path: String,
+    pub xargo_mount_path: String,
+    pub sysroot_mount_path: String,
 }
 
 impl Directories {
@@ -277,9 +280,21 @@ impl Directories {
         // otherwise `docker` will create them but they will be owned by `root`
         // cargo builds all intermediate directories, but fails
         // if it has other issues (such as permission errors).
-        fs::create_dir_all(&cargo)?;
-        fs::create_dir_all(&xargo)?;
+        file::create_dir_all(&cargo)?;
+        file::create_dir_all(&xargo)?;
+        if let Some(ref nix_store) = nix_store {
+            file::create_dir_all(nix_store)?;
+        }
         create_target_dir(target)?;
+
+        // now that we know the paths exist, canonicalize them. this avoids creating
+        // directories after failed canonicalization into a shared directory.
+        let cargo = file::canonicalize(&cargo)?;
+        let xargo = file::canonicalize(&xargo)?;
+        let nix_store = match nix_store {
+            Some(store) => Some(file::canonicalize(&store)?),
+            None => None,
+        };
 
         let cargo = mount_finder.find_mount_path(cargo);
         let xargo = mount_finder.find_mount_path(xargo);
@@ -293,20 +308,16 @@ impl Directories {
         });
 
         // root is either workspace_root, or, if we're outside the workspace root, the current directory
-        let mount_root: String;
-        #[cfg(target_os = "windows")]
-        {
-            // On Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-            mount_root = host_root.as_wslpath()?;
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            // NOTE: host root has already found the mount path
-            mount_root = host_root.to_utf8()?.to_owned();
-        }
+        // NOTE: host root has already found the mount path
+        let mount_root = canonicalize_mount_path(&host_root)?;
         let mount_cwd = mount_finder.find_path(cwd, false)?;
 
         toolchain.set_sysroot(|p| mount_finder.find_mount_path(p));
+
+        // canonicalize these once to avoid syscalls
+        let cargo_mount_path = canonicalize_mount_path(&cargo)?;
+        let xargo_mount_path = canonicalize_mount_path(&xargo)?;
+        let sysroot_mount_path = canonicalize_mount_path(toolchain.get_sysroot())?;
 
         Ok(Directories {
             cargo,
@@ -317,11 +328,47 @@ impl Directories {
             mount_root,
             mount_cwd,
             toolchain,
+            cargo_mount_path,
+            xargo_mount_path,
+            sysroot_mount_path,
         })
     }
 
     pub fn get_sysroot(&self) -> &Path {
         self.toolchain.get_sysroot()
+    }
+
+    pub fn cargo_mount_path(&self) -> &str {
+        &self.cargo_mount_path
+    }
+
+    pub fn xargo_mount_path(&self) -> &str {
+        &self.xargo_mount_path
+    }
+
+    pub fn sysroot_mount_path(&self) -> &str {
+        &self.sysroot_mount_path
+    }
+
+    pub fn cargo_mount_path_relative(&self) -> Result<String> {
+        self.cargo_mount_path()
+            .strip_prefix('/')
+            .map(ToOwned::to_owned)
+            .ok_or_else(|| eyre::eyre!("cargo directory must be relative to root"))
+    }
+
+    pub fn xargo_mount_path_relative(&self) -> Result<String> {
+        self.xargo_mount_path()
+            .strip_prefix('/')
+            .map(ToOwned::to_owned)
+            .ok_or_else(|| eyre::eyre!("xargo directory must be relative to root"))
+    }
+
+    pub fn sysroot_mount_path_relative(&self) -> Result<String> {
+        self.sysroot_mount_path()
+            .strip_prefix('/')
+            .map(ToOwned::to_owned)
+            .ok_or_else(|| eyre::eyre!("sysroot directory must be relative to root"))
     }
 }
 
@@ -333,7 +380,7 @@ fn create_target_dir(path: &Path) -> Result<()> {
     // cargo creates all paths to the target directory, and writes
     // a cache dir tag only if the path doesn't previously exist.
     if !path.exists() {
-        fs::create_dir_all(&path)?;
+        file::create_dir_all(&path)?;
         fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -467,6 +514,7 @@ pub(crate) fn mount(docker: &mut Command, host_path: &Path, prefix: &str) -> Res
 pub(crate) fn docker_envvars(
     docker: &mut Command,
     config: &Config,
+    dirs: &Directories,
     target: &Target,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
@@ -482,8 +530,8 @@ pub(crate) fn docker_envvars(
     let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
     docker
         .args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
-        .args(&["-e", "XARGO_HOME=/xargo"])
-        .args(&["-e", "CARGO_HOME=/cargo"])
+        .args(&["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
+        .args(&["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
         .args(&["-e", &cross_runner]);
     add_cargo_configuration_envvars(docker);
@@ -511,6 +559,14 @@ pub(crate) fn docker_envvars(
     };
 
     Ok(())
+}
+
+pub(crate) fn build_command(dirs: &Directories, cmd: &SafeCommand) -> String {
+    format!(
+        "PATH=\"$PATH\":\"{}/bin\" {:?}",
+        dirs.sysroot_mount_path(),
+        cmd
+    )
 }
 
 pub(crate) fn docker_cwd(docker: &mut Command, paths: &DockerPaths) -> Result<()> {
@@ -961,6 +1017,7 @@ mod tests {
     mod directories {
         use super::*;
         use crate::cargo::cargo_metadata_with_args;
+        use crate::rustc::{self, VersionMetaExt};
         use crate::temp;
 
         fn unset_env() -> Vec<(&'static str, Option<String>)> {
@@ -1020,14 +1077,18 @@ mod tests {
         }
 
         fn get_toolchain() -> Result<QualifiedToolchain> {
+            let host_version_meta = rustc::version_meta()?;
+            let host = host_version_meta.host();
+            let image_platform =
+                crate::docker::ImagePlatform::from_const_target(host.triple().into());
             let sysroot = home()?
                 .join(".rustup")
                 .join("toolchains")
-                .join("stable-x86_64-unknown-linux-gnu");
+                .join(host.triple());
             Ok(QualifiedToolchain::new(
                 "stable",
                 &None,
-                &crate::docker::ImagePlatform::X86_64_UNKNOWN_LINUX_GNU,
+                &image_platform,
                 &sysroot,
             ))
         }

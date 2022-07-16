@@ -135,6 +135,12 @@ impl ImagePlatform {
     }
 }
 
+impl Default for ImagePlatform {
+    fn default() -> ImagePlatform {
+        ImagePlatform::DEFAULT
+    }
+}
+
 impl TryFrom<&str> for ImagePlatform {
     type Error = <Self as std::str::FromStr>::Err;
 
