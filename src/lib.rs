@@ -235,6 +235,12 @@ impl<'a> From<&'a str> for TargetTriple {
     }
 }
 
+impl Default for TargetTriple {
+    fn default() -> TargetTriple {
+        TargetTriple::DEFAULT
+    }
+}
+
 impl std::str::FromStr for TargetTriple {
     type Err = std::convert::Infallible;
 
@@ -364,6 +370,12 @@ impl Target {
             || self.triple().starts_with("i686");
 
         arch_32bit && self.is_android()
+    }
+}
+
+impl Default for Target {
+    fn default() -> Target {
+        Target::DEFAULT
     }
 }
 

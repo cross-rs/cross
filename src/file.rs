@@ -143,6 +143,11 @@ where
     read_(path.as_ref())
 }
 
+pub fn create_dir_all(path: impl AsRef<Path>) -> Result<()> {
+    fs::create_dir_all(path.as_ref())
+        .wrap_err_with(|| format!("couldn't create directory {:?}", path.as_ref()))
+}
+
 fn read_(path: &Path) -> Result<String> {
     let mut s = String::new();
     File::open(path)
@@ -222,12 +227,11 @@ pub fn maybe_canonicalize(path: &Path) -> Cow<'_, OsStr> {
 
 pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
     let path = path.as_ref();
-    fs::create_dir_all(
+    create_dir_all(
         &path
             .parent()
             .ok_or_else(|| eyre::eyre!("could not find parent directory for `{path:?}`"))?,
-    )
-    .wrap_err_with(|| format!("couldn't create directory `{path:?}`"))?;
+    )?;
 
     let mut open = fs::OpenOptions::new();
     open.write(true);

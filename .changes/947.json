@@ -1,0 +1,12 @@
+[
+    {
+        "type": "internal",
+        "description": "resolve symlinks to cargo and xargo home before mounting",
+        "issues": [373]
+    },
+    {
+        "type": "fixed",
+        "description": "mount cargo, xargo, and the sysroot at the same path as on the host to avoid unnecessary recompilation.",
+        "issues": [551]
+    }
+]
