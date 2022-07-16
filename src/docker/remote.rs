@@ -168,7 +168,11 @@ fn create_volume_dir(
     // make our parent directory if needed
     subcommand_or_exit(engine, "exec")?
         .arg(container)
-        .args(&["sh", "-c", &format!("mkdir -p '{}'", dir.as_posix()?)])
+        .args(&[
+            "sh",
+            "-c",
+            &format!("mkdir -p '{}'", dir.as_posix_absolute()?),
+        ])
         .run_and_get_status(msg_info, false)
 }
 
@@ -183,7 +187,7 @@ fn copy_volume_files(
     subcommand_or_exit(engine, "cp")?
         .arg("-a")
         .arg(src.to_utf8()?)
-        .arg(format!("{container}:{}", dst.as_posix()?))
+        .arg(format!("{container}:{}", dst.as_posix_absolute()?))
         .run_and_get_status(msg_info, false)
 }
 
@@ -214,7 +218,11 @@ fn container_path_exists(
 ) -> Result<bool> {
     Ok(subcommand_or_exit(engine, "exec")?
         .arg(container)
-        .args(&["bash", "-c", &format!("[[ -d '{}' ]]", path.as_posix()?)])
+        .args(&[
+            "bash",
+            "-c",
+            &format!("[[ -d '{}' ]]", path.as_posix_absolute()?),
+        ])
         .run_and_get_status(msg_info, true)?
         .success())
 }
@@ -567,7 +575,7 @@ fn read_dir_fingerprint(
             let modified = file.metadata()?.modified()?;
             let millis = modified.duration_since(epoch)?.as_millis() as u64;
             let rounded = epoch + time::Duration::from_millis(millis);
-            let relpath = file.path().strip_prefix(home)?.as_posix()?;
+            let relpath = file.path().strip_prefix(home)?.as_posix_relative()?;
             map.insert(relpath, rounded);
         }
     }
@@ -647,7 +655,7 @@ rm \"{PATH}\"
     // SAFETY: safe, single-threaded execution.
     let mut tempfile = unsafe { temp::TempFile::new()? };
     for file in files {
-        writeln!(tempfile.file(), "{}", dst.join(file).as_posix()?)?;
+        writeln!(tempfile.file(), "{}", dst.join(file).as_posix_relative()?)?;
     }
 
     // need to avoid having hundreds of files on the command, so
@@ -845,11 +853,6 @@ pub fn unique_container_identifier(
     Ok(format!("{toolchain_id}-{triple}-{name}-{project_hash}"))
 }
 
-fn mount_path(val: &Path) -> Result<String> {
-    let host_path = file::canonicalize(val)?;
-    canonicalize_mount_path(&host_path)
-}
-
 pub(crate) fn run(
     options: DockerOptions,
     paths: DockerPaths,
@@ -921,7 +924,7 @@ pub(crate) fn run(
         &mut docker,
         &options,
         &paths,
-        |_, val| mount_path(val),
+        |_, _, _| Ok(()),
         |(src, dst)| volumes.push((src, dst)),
     )
     .wrap_err("could not determine mount points")?;
@@ -1100,7 +1103,7 @@ pub(crate) fn run(
     let mut final_args = vec![];
     let mut iter = args.iter().cloned();
     let mut has_target_dir = false;
-    let target_dir_string = target_dir.as_posix()?;
+    let target_dir_string = target_dir.as_posix_absolute()?;
     while let Some(arg) = iter.next() {
         if arg == "--target-dir" {
             has_target_dir = true;
@@ -1156,7 +1159,11 @@ symlink_recurse \"${{prefix}}\"
 "
     ));
     for (src, dst) in to_symlink {
-        symlink.push(format!("ln -s \"{}\" \"{}\"", src.as_posix()?, dst));
+        symlink.push(format!(
+            "ln -s \"{}\" \"{}\"",
+            src.as_posix_absolute()?,
+            dst
+        ));
     }
     subcommand_or_exit(engine, "exec")?
         .arg(&container)
@@ -1185,7 +1192,7 @@ symlink_recurse \"${{prefix}}\"
     if !skip_artifacts && container_path_exists(engine, &container, &target_dir, msg_info)? {
         subcommand_or_exit(engine, "cp")?
             .arg("-a")
-            .arg(&format!("{container}:{}", target_dir.as_posix()?))
+            .arg(&format!("{container}:{}", target_dir.as_posix_absolute()?))
             .arg(
                 &dirs
                     .target

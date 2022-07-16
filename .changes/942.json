@@ -1,0 +1,15 @@
+[
+    {
+        "description": "use non-canonical paths for mount locations.",
+        "type": "changed",
+        "issues": [920]
+    },
+    {
+        "description": "fixed DeviceNS drive parsing in creating WSL-style paths on windows.",
+        "type": "fixed"
+    },
+    {
+        "description": "fixed the environment variable name for mounted volumes.",
+        "type": "fixed"
+    }
+]
