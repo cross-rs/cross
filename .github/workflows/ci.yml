@@ -163,7 +163,7 @@ jobs:
             - { target: thumbv7neon-unknown-linux-gnueabihf, os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: i586-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: i686-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
-            - { target: mips-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: mips-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user }
             - { target: mipsel-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: mips64-unknown-linux-gnuabi64,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: mips64el-unknown-linux-gnuabi64,  os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
@@ -267,7 +267,7 @@ jobs:
       - name: Build Docker image
         id: build-docker-image
         if: steps.prepare-meta.outputs.has-image
-        timeout-minutes: 60
+        timeout-minutes: 120
         run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
         env:
           TARGET: ${{ matrix.target }}

@@ -16,7 +16,9 @@ main() {
     install_packages bzip2 \
         ca-certificates \
         curl \
+        dirmngr \
         g++ \
+        gpg-agent \
         make \
         patch \
         software-properties-common \
