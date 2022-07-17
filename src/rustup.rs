@@ -130,10 +130,31 @@ cross will not attempt to configure the toolchain further so that it can run you
     })
 }
 
+fn version(msg_info: &mut MessageInfo) -> Result<Version> {
+    let out = rustup_command(msg_info, false)
+        .arg("--version")
+        .run_and_get_stdout(msg_info)?;
+
+    match out
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+    {
+        Some(version) => {
+            semver::Version::parse(version).wrap_err_with(|| "failed to parse rustup version")
+        }
+        None => eyre::bail!("failed to get rustup version"),
+    }
+}
+
 pub fn install_toolchain(toolchain: &QualifiedToolchain, msg_info: &mut MessageInfo) -> Result<()> {
+    let mut command = rustup_command(msg_info, false);
     let toolchain = toolchain.to_string();
-    rustup_command(msg_info, false)
-        .args(&["toolchain", "add", &toolchain, "--profile", "minimal"])
+    command.args(&["toolchain", "add", &toolchain, "--profile", "minimal"]);
+    if version(msg_info)? >= semver::Version::new(1, 25, 0) {
+        command.arg("--force-non-host");
+    }
+    command
         .run(msg_info, false)
         .wrap_err_with(|| format!("couldn't install toolchain `{toolchain}`"))
 }

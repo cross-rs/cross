@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "add the `--force-non-host` flag for newer rustup versions",
+    "issues": [536]
+}
