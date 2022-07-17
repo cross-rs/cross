@@ -146,7 +146,13 @@ impl ImageTarget {
 
     /// Determine if this target is a "normal" target for a triplet
     pub fn is_standard_target_image(&self) -> bool {
-        self.name != "cross" && self.has_ci_image()
+        !matches!(self.name.as_ref(), "cross" | "zig") && self.has_ci_image()
+    }
+
+    // this exists solely for zig, since we also want it as a provided target.
+    /// Determine if this target has a toolchain image
+    pub fn is_toolchain_image(&self) -> bool {
+        !matches!(self.name.as_ref(), "cross") && self.has_ci_image()
     }
 
     /// Determine if this target needs to interact with the project root.

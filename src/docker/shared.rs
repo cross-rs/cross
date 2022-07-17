@@ -16,7 +16,7 @@ use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{MessageInfo, Verbosity};
-use crate::Target;
+use crate::{CargoVariant, Target};
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 
@@ -36,7 +36,7 @@ pub struct DockerOptions {
     pub target: Target,
     pub config: Config,
     pub image: Image,
-    pub uses_xargo: bool,
+    pub cargo_variant: CargoVariant,
 }
 
 impl DockerOptions {
@@ -45,14 +45,14 @@ impl DockerOptions {
         target: Target,
         config: Config,
         image: Image,
-        uses_xargo: bool,
+        cargo_variant: CargoVariant,
     ) -> DockerOptions {
         DockerOptions {
             engine,
             target,
             config,
             image,
-            uses_xargo,
+            cargo_variant,
         }
     }
 
@@ -458,12 +458,8 @@ pub fn parse_docker_opts(value: &str) -> Result<Vec<String>> {
     shell_words::split(value).wrap_err_with(|| format!("could not parse docker opts of {}", value))
 }
 
-pub(crate) fn cargo_safe_command(uses_xargo: bool) -> SafeCommand {
-    if uses_xargo {
-        SafeCommand::new("xargo")
-    } else {
-        SafeCommand::new("cargo")
-    }
+pub(crate) fn cargo_safe_command(cargo_variant: CargoVariant) -> SafeCommand {
+    SafeCommand::new(cargo_variant.to_str())
 }
 
 fn add_cargo_configuration_envvars(docker: &mut Command) {
@@ -505,6 +501,7 @@ pub(crate) fn docker_envvars(
     config: &Config,
     dirs: &Directories,
     target: &Target,
+    cargo_variant: CargoVariant,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
     for ref var in config.env_passthrough(target)?.unwrap_or_default() {
@@ -523,6 +520,10 @@ pub(crate) fn docker_envvars(
         .args(&["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
         .args(&["-e", "CARGO_TARGET_DIR=/target"])
         .args(&["-e", &cross_runner]);
+    if cargo_variant.uses_zig() {
+        // otherwise, zig has a permission error trying to create the cache
+        docker.args(&["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
+    }
     add_cargo_configuration_envvars(docker);
 
     if let Some(username) = id::username().wrap_err("could not get username")? {
@@ -693,19 +694,26 @@ pub(crate) fn docker_seccomp(
 }
 
 /// Simpler version of [get_image]
-pub fn get_image_name(config: &Config, target: &Target) -> Result<String> {
+pub fn get_image_name(config: &Config, target: &Target, uses_zig: bool) -> Result<String> {
     if let Some(image) = config.image(target)? {
         return Ok(image.name);
     }
 
+    let target_name = match uses_zig {
+        true => match config.zig_image(target)? {
+            Some(image) => return Ok(image.name),
+            None => "zig",
+        },
+        false => target.triple(),
+    };
     let compatible = PROVIDED_IMAGES
         .iter()
-        .filter(|p| p.name == target.triple())
+        .filter(|p| p.name == target_name)
         .collect::<Vec<_>>();
 
     if compatible.is_empty() {
         eyre::bail!(
-            "`cross` does not provide a Docker image for target {target}, \
+            "`cross` does not provide a Docker image for target {target_name}, \
                    specify a custom image in `Cross.toml`."
         );
     }
@@ -722,19 +730,26 @@ pub fn get_image_name(config: &Config, target: &Target) -> Result<String> {
         .image_name(CROSS_IMAGE, version))
 }
 
-pub(crate) fn get_image(config: &Config, target: &Target) -> Result<PossibleImage> {
+pub(crate) fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Result<PossibleImage> {
     if let Some(image) = config.image(target)? {
         return Ok(image);
     }
 
+    let target_name = match uses_zig {
+        true => match config.zig_image(target)? {
+            Some(image) => return Ok(image),
+            None => "zig",
+        },
+        false => target.triple(),
+    };
     let compatible = PROVIDED_IMAGES
         .iter()
-        .filter(|p| p.name == target.triple())
+        .filter(|p| p.name == target_name)
         .collect::<Vec<_>>();
 
     if compatible.is_empty() {
         eyre::bail!(
-            "`cross` does not provide a Docker image for target {target}, \
+            "`cross` does not provide a Docker image for target {target_name}, \
                specify a custom image in `Cross.toml`."
         );
     }
@@ -762,7 +777,7 @@ pub(crate) fn get_image(config: &Config, target: &Target) -> Result<PossibleImag
     } else {
         // if there's multiple targets and no option can be chosen, bail
         return Err(eyre::eyre!(
-            "`cross` provides multiple images for target {target}, \
+            "`cross` provides multiple images for target {target_name}, \
                specify toolchain in `Cross.toml`."
         )
         .with_note(|| {

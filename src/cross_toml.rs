@@ -25,6 +25,8 @@ pub struct CrossBuildConfig {
     env: CrossEnvConfig,
     xargo: Option<bool>,
     build_std: Option<bool>,
+    #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
+    zig: Option<CrossZigConfig>,
     default_target: Option<String>,
     #[serde(default, deserialize_with = "opt_string_or_string_vec")]
     pre_build: Option<PreBuild>,
@@ -38,6 +40,8 @@ pub struct CrossBuildConfig {
 pub struct CrossTargetConfig {
     xargo: Option<bool>,
     build_std: Option<bool>,
+    #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
+    zig: Option<CrossZigConfig>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
     image: Option<PossibleImage>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
@@ -67,6 +71,44 @@ impl FromStr for CrossTargetDockerfileConfig {
             context: None,
             build_args: None,
         })
+    }
+}
+
+/// Zig configuration
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct CrossZigConfig {
+    enable: Option<bool>,
+    version: Option<String>,
+    #[serde(default, deserialize_with = "opt_string_or_struct")]
+    image: Option<PossibleImage>,
+}
+
+impl From<&str> for CrossZigConfig {
+    fn from(s: &str) -> CrossZigConfig {
+        CrossZigConfig {
+            enable: Some(true),
+            version: Some(s.to_owned()),
+            image: None,
+        }
+    }
+}
+
+impl From<bool> for CrossZigConfig {
+    fn from(s: bool) -> CrossZigConfig {
+        CrossZigConfig {
+            enable: Some(s),
+            version: None,
+            image: None,
+        }
+    }
+}
+
+impl FromStr for CrossZigConfig {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(s.into())
     }
 }
 
@@ -275,6 +317,33 @@ impl CrossToml {
         self.get_value(target, |b| b.build_std, |t| t.build_std)
     }
 
+    /// Returns the `{}.zig` or `{}.zig.version` part of `Cross.toml`
+    pub fn zig(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+        self.get_value(
+            target,
+            |b| b.zig.as_ref().and_then(|z| z.enable),
+            |t| t.zig.as_ref().and_then(|z| z.enable),
+        )
+    }
+
+    /// Returns the `{}.zig` or `{}.zig.version` part of `Cross.toml`
+    pub fn zig_version(&self, target: &Target) -> (Option<String>, Option<String>) {
+        self.get_value(
+            target,
+            |b| b.zig.as_ref().and_then(|c| c.version.clone()),
+            |t| t.zig.as_ref().and_then(|c| c.version.clone()),
+        )
+    }
+
+    /// Returns the  `{}.zig.image` part of `Cross.toml`
+    pub fn zig_image(&self, target: &Target) -> (Option<PossibleImage>, Option<PossibleImage>) {
+        self.get_value(
+            target,
+            |b| b.zig.as_ref().and_then(|c| c.image.clone()),
+            |t| t.zig.as_ref().and_then(|c| c.image.clone()),
+        )
+    }
+
     /// Returns the list of environment variables to pass through for `build` and `target`
     pub fn env_passthrough(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
         self.get_ref(
@@ -442,6 +511,68 @@ where
     deserializer.deserialize_any(StringOrStringVec(PhantomData))
 }
 
+fn opt_string_bool_or_struct<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: Deserialize<'de> + From<bool> + std::str::FromStr<Err = std::convert::Infallible>,
+    D: serde::Deserializer<'de>,
+{
+    use std::{fmt, marker::PhantomData};
+
+    use serde::de::{self, MapAccess, Visitor};
+
+    struct StringBoolOrStruct<T>(PhantomData<fn() -> T>);
+
+    impl<'de, T> Visitor<'de> for StringBoolOrStruct<T>
+    where
+        T: Deserialize<'de> + From<bool> + std::str::FromStr<Err = std::convert::Infallible>,
+    {
+        type Value = Option<T>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("string, bool, or map")
+        }
+
+        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(From::from(value)))
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(FromStr::from_str(value).ok())
+        }
+
+        fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            let t: Result<T, _> =
+                Deserialize::deserialize(de::value::MapAccessDeserializer::new(map));
+            t.map(Some)
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_any(StringBoolOrStruct(PhantomData))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::docker::ImagePlatform;
@@ -486,6 +617,7 @@ mod tests {
                 },
                 xargo: Some(true),
                 build_std: None,
+                zig: None,
                 default_target: None,
                 pre_build: Some(PreBuild::Lines(vec![p!("echo 'Hello World!'")])),
                 dockerfile: None,
@@ -523,10 +655,33 @@ mod tests {
                 },
                 xargo: Some(false),
                 build_std: Some(true),
+                zig: None,
                 image: Some("test-image".into()),
                 runner: None,
                 dockerfile: None,
                 pre_build: Some(PreBuild::Lines(vec![])),
+            },
+        );
+        target_map.insert(
+            Target::BuiltIn {
+                triple: "aarch64-unknown-linux-musl".into(),
+            },
+            CrossTargetConfig {
+                env: CrossEnvConfig {
+                    passthrough: None,
+                    volumes: None,
+                },
+                xargo: None,
+                build_std: None,
+                zig: Some(CrossZigConfig {
+                    enable: Some(true),
+                    version: Some(p!("2.17")),
+                    image: Some("zig:local".into()),
+                }),
+                image: None,
+                runner: None,
+                dockerfile: None,
+                pre_build: None,
             },
         );
 
@@ -544,6 +699,11 @@ mod tests {
             build-std = true
             image = "test-image"
             pre-build = []
+
+            [target.aarch64-unknown-linux-musl.zig]
+            enable = true
+            version = "2.17"
+            image = "zig:local"
         "#;
         let (parsed_cfg, unused) = CrossToml::parse_from_cross(test_str, &mut m!())?;
 
@@ -563,6 +723,7 @@ mod tests {
             CrossTargetConfig {
                 xargo: Some(false),
                 build_std: None,
+                zig: None,
                 image: Some(PossibleImage {
                     name: "test-image".to_owned(),
                     toolchain: vec![ImagePlatform::from_target(
@@ -592,6 +753,16 @@ mod tests {
                 },
                 xargo: Some(true),
                 build_std: None,
+                zig: Some(CrossZigConfig {
+                    enable: None,
+                    version: None,
+                    image: Some(PossibleImage {
+                        name: "zig:local".to_owned(),
+                        toolchain: vec![ImagePlatform::from_target(
+                            "aarch64-unknown-linux-gnu".into(),
+                        )?],
+                    }),
+                }),
                 default_target: None,
                 pre_build: Some(PreBuild::Lines(vec![])),
                 dockerfile: None,
@@ -602,6 +773,10 @@ mod tests {
             [build]
             xargo = true
             pre-build = []
+
+            [build.zig.image]
+            name = "zig:local"
+            toolchain = ["aarch64-unknown-linux-gnu"]
 
             [build.env]
             passthrough = []
@@ -652,6 +827,7 @@ mod tests {
                 },
                 build_std: None,
                 xargo: Some(true),
+                zig: None,
                 default_target: None,
                 pre_build: None,
                 dockerfile: None,

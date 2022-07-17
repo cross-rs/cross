@@ -67,29 +67,46 @@ impl Environment {
         self.get_values_for("BUILD_STD", target, bool_from_envvar)
     }
 
+    fn zig(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+        self.get_values_for("ZIG", target, bool_from_envvar)
+    }
+
+    fn zig_version(&self, target: &Target) -> (Option<String>, Option<String>) {
+        self.get_values_for("ZIG_VERSION", target, ToOwned::to_owned)
+    }
+
+    fn zig_image(&self, target: &Target) -> Result<(Option<PossibleImage>, Option<PossibleImage>)> {
+        let get_build = |env: &Environment, var: &str| env.get_build_var(var);
+        let get_target = |env: &Environment, var: &str| env.get_target_var(target, var);
+        let env_build = get_possible_image(
+            self,
+            "ZIG_IMAGE",
+            "ZIG_IMAGE_TOOLCHAIN",
+            get_build,
+            get_build,
+        )?;
+        let env_target = get_possible_image(
+            self,
+            "ZIG_IMAGE",
+            "ZIG_IMAGE_TOOLCHAIN",
+            get_target,
+            get_target,
+        )?;
+
+        Ok((env_build, env_target))
+    }
+
     fn image(&self, target: &Target) -> Result<Option<PossibleImage>> {
-        self.get_target_var(target, "IMAGE")
-            .map(Into::into)
-            .map(|mut i: PossibleImage| {
-                if let Some(toolchain) = self.get_target_var(target, "IMAGE_TOOLCHAIN") {
-                    i.toolchain = toolchain
-                        .split(',')
-                        .map(|t| ImagePlatform::from_target(t.trim().into()))
-                        .collect::<Result<Vec<_>>>()?;
-                    Ok(i)
-                } else {
-                    Ok(i)
-                }
-            })
-            .transpose()
+        let get_target = |env: &Environment, var: &str| env.get_target_var(target, var);
+        get_possible_image(self, "IMAGE", "IMAGE_TOOLCHAIN", get_target, get_target)
     }
 
     fn dockerfile(&self, target: &Target) -> (Option<String>, Option<String>) {
-        self.get_values_for("DOCKERFILE", target, |s| s.to_owned())
+        self.get_values_for("DOCKERFILE", target, ToOwned::to_owned)
     }
 
     fn dockerfile_context(&self, target: &Target) -> (Option<String>, Option<String>) {
-        self.get_values_for("DOCKERFILE_CONTEXT", target, |s| s.to_owned())
+        self.get_values_for("DOCKERFILE_CONTEXT", target, ToOwned::to_owned)
     }
 
     fn pre_build(&self, target: &Target) -> (Option<PreBuild>, Option<PreBuild>) {
@@ -140,6 +157,29 @@ impl Environment {
     fn build_opts(&self) -> Option<String> {
         self.get_var("CROSS_BUILD_OPTS")
     }
+}
+
+fn get_possible_image(
+    env: &Environment,
+    image_var: &str,
+    toolchain_var: &str,
+    get_image: impl Fn(&Environment, &str) -> Option<String>,
+    get_toolchain: impl Fn(&Environment, &str) -> Option<String>,
+) -> Result<Option<PossibleImage>> {
+    get_image(env, image_var)
+        .map(Into::into)
+        .map(|mut i: PossibleImage| {
+            if let Some(toolchain) = get_toolchain(env, toolchain_var) {
+                i.toolchain = toolchain
+                    .split(',')
+                    .map(|t| ImagePlatform::from_target(t.trim().into()))
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(i)
+            } else {
+                Ok(i)
+            }
+        })
+        .transpose()
 }
 
 fn split_to_cloned_by_ws(string: &str) -> Vec<String> {
@@ -269,6 +309,36 @@ impl Config {
         }
     }
 
+    fn get_from_value<T>(
+        &self,
+        target: &Target,
+        env: impl Fn(&Environment, &Target) -> (Option<T>, Option<T>),
+        config: impl Fn(&CrossToml, &Target) -> (Option<T>, Option<T>),
+    ) -> Result<Option<T>> {
+        let (env_build, env_target) = env(&self.env, target);
+
+        if let Some(env_target) = env_target {
+            return Ok(Some(env_target));
+        }
+
+        let (build, target) = self
+            .toml
+            .as_ref()
+            .map(|t| config(t, target))
+            .unwrap_or_default();
+
+        // FIXME: let expression
+        if target.is_none() && env_build.is_some() {
+            return Ok(env_build);
+        }
+
+        if target.is_none() {
+            Ok(build)
+        } else {
+            Ok(target)
+        }
+    }
+
     #[cfg(test)]
     fn new_with(toml: Option<CrossToml>, env: Environment) -> Self {
         Config { toml, env }
@@ -280,6 +350,19 @@ impl Config {
 
     pub fn build_std(&self, target: &Target) -> Option<bool> {
         self.bool_from_config(target, Environment::build_std, CrossToml::build_std)
+    }
+
+    pub fn zig(&self, target: &Target) -> Option<bool> {
+        self.bool_from_config(target, Environment::zig, CrossToml::zig)
+    }
+
+    pub fn zig_version(&self, target: &Target) -> Result<Option<String>> {
+        self.get_from_value(target, Environment::zig_version, CrossToml::zig_version)
+    }
+
+    pub fn zig_image(&self, target: &Target) -> Result<Option<PossibleImage>> {
+        let (b, t) = self.env.zig_image(target)?;
+        self.get_from_value(target, |_, _| (b.clone(), t.clone()), CrossToml::zig_image)
     }
 
     pub fn image(&self, target: &Target) -> Result<Option<PossibleImage>> {
@@ -438,24 +521,36 @@ mod tests {
         use super::*;
 
         #[test]
-        pub fn parse_error_in_env() {
+        pub fn parse_error_in_env() -> Result<()> {
             let mut map = std::collections::HashMap::new();
             map.insert("CROSS_BUILD_XARGO", "tru");
             map.insert("CROSS_BUILD_STD", "false");
+            map.insert("CROSS_BUILD_ZIG_IMAGE", "zig:local");
 
             let env = Environment::new(Some(map));
             assert_eq!(env.xargo(&target()), (Some(true), None));
             assert_eq!(env.build_std(&target()), (Some(false), None));
+            assert_eq!(env.zig(&target()), (None, None));
+            assert_eq!(env.zig_version(&target()), (None, None));
+            assert_eq!(env.zig_image(&target())?, (Some("zig:local".into()), None));
+
+            Ok(())
         }
 
         #[test]
-        pub fn build_and_target_set_returns_tuple() {
+        pub fn build_and_target_set_returns_tuple() -> Result<()> {
             let mut map = std::collections::HashMap::new();
             map.insert("CROSS_BUILD_XARGO", "true");
+            map.insert("CROSS_BUILD_ZIG", "true");
+            map.insert("CROSS_BUILD_ZIG_VERSION", "2.17");
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
 
             let env = Environment::new(Some(map));
             assert_eq!(env.xargo(&target()), (Some(true), Some(false)));
+            assert_eq!(env.zig(&target()), (Some(true), None));
+            assert_eq!(env.zig_version(&target()), (Some("2.17".into()), None));
+
+            Ok(())
         }
 
         #[test]

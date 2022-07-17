@@ -28,7 +28,7 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &["##,
 
     for image_target in get_matrix()
         .iter()
-        .filter(|i| i.to_image_target().is_standard_target_image())
+        .filter(|i| i.to_image_target().is_toolchain_image())
     {
         write!(
             &mut images,
