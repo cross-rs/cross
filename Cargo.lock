@@ -190,6 +190,7 @@ dependencies = [
  "owo-colors",
  "regex",
  "rustc_version",
+ "semver",
  "serde",
  "serde_ignored",
  "serde_json",
