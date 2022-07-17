@@ -28,7 +28,7 @@ pub(crate) fn run(
     let engine = &options.engine;
     let dirs = &paths.directories;
 
-    let mut cmd = cargo_safe_command(options.uses_xargo);
+    let mut cmd = cargo_safe_command(options.cargo_variant);
     cmd.args(args);
 
     let mut docker = subcommand(engine, "run");
@@ -43,6 +43,7 @@ pub(crate) fn run(
         &options.config,
         dirs,
         &options.target,
+        options.cargo_variant,
         msg_info,
     )?;
 

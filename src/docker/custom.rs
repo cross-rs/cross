@@ -70,6 +70,7 @@ impl<'a> Dockerfile<'a> {
         build_args: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
+        let uses_zig = options.cargo_variant.uses_zig();
         let mut docker_build = docker::subcommand(&options.engine, "buildx");
         docker_build.arg("build");
         docker_build.env("DOCKER_SCAN_SUGGEST", "false");
@@ -130,7 +131,9 @@ impl<'a> Dockerfile<'a> {
         };
 
         if matches!(self, Dockerfile::File { .. }) {
-            if let Ok(cross_base_image) = self::get_image_name(&options.config, &options.target) {
+            if let Ok(cross_base_image) =
+                self::get_image_name(&options.config, &options.target, uses_zig)
+            {
                 docker_build.args([
                     "--build-arg",
                     &format!("CROSS_BASE_IMAGE={cross_base_image}"),

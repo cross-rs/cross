@@ -209,6 +209,7 @@ jobs:
             - { target: thumbv7em-none-eabihf,            os: ubuntu-latest,                    std: 1 }
             - { target: thumbv7m-none-eabi,               os: ubuntu-latest,                    std: 1 }
             - { target: cross,                            os: ubuntu-latest }
+            - { target: zig,                              os: ubuntu-latest }
 
   build:
     name: target (${{ matrix.pretty }},${{ matrix.os }})
@@ -247,7 +248,7 @@ jobs:
       - name: LLVM instrument coverage
         id: cov
         uses: ./.github/actions/cargo-llvm-cov
-        if: steps.prepare-meta.outputs.has-image
+        if: steps.prepare-meta.outputs.has-image  && steps.prepare-meta.outputs.test-variant != 'zig'
         with:
           name: cross-${{matrix.pretty}}
 
@@ -301,6 +302,11 @@ jobs:
         with:
           target: ${{ matrix.target }}
           image: ${{ steps.build-docker-image.outputs.image }}
+
+      - name: Test Zig Image
+        if: steps.prepare-meta.outputs.has-image && steps.prepare-meta.outputs.test-variant == 'zig'
+        run: ./ci/test-zig-image.sh
+        shell: bash
 
       - name: Test Cross Image
         if: steps.prepare-meta.outputs.has-image && steps.prepare-meta.outputs.test-variant == 'cross'

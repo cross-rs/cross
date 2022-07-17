@@ -1124,7 +1124,7 @@ pub(crate) fn run(
         final_args.push("--target-dir".to_owned());
         final_args.push(target_dir_string);
     }
-    let mut cmd = cargo_safe_command(options.uses_xargo);
+    let mut cmd = cargo_safe_command(options.cargo_variant);
     cmd.args(final_args);
 
     // 5. create symlinks for copied data
@@ -1174,7 +1174,14 @@ symlink_recurse \"${{prefix}}\"
     // 6. execute our cargo command inside the container
     let mut docker = subcommand(engine, "exec");
     docker_user_id(&mut docker, engine.kind);
-    docker_envvars(&mut docker, &options.config, dirs, target, msg_info)?;
+    docker_envvars(
+        &mut docker,
+        &options.config,
+        dirs,
+        target,
+        options.cargo_variant,
+        msg_info,
+    )?;
     docker_cwd(&mut docker, &paths)?;
     docker.arg(&container);
     docker.args(&["sh", "-c", &build_command(dirs, &cmd)]);

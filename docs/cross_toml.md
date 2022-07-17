@@ -33,6 +33,7 @@ The `target` key allows you to specify parameters for specific compilation targe
 [target.aarch64-unknown-linux-gnu]
 xargo = false
 build-std = false
+zig = "2.17"
 image = "test-image"
 pre-build = ["apt-get update"] # can also be the path to a file to run
 runner = "custom-runner"
@@ -91,4 +92,27 @@ also supports
 ```toml
 [target.x86_64-unknown-linux-gnu]
 dockerfile = "./Dockerfile"
+```
+
+# `target.TARGET.zig`
+
+```toml
+[target.x86_64-unknown-linux-gnu.zig]
+enable = true       # enable use of the zig image
+version = "2.17"    # glibc version to use
+image = "zig:local" # custom zig image to use
+```
+
+also supports
+
+```toml
+[target.x86_64-unknown-linux-gnu]
+zig = true
+```
+
+or
+
+```toml
+[target.x86_64-unknown-linux-gnu]
+zig = "2.17"
 ```

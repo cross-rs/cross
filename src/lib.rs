@@ -433,6 +433,40 @@ impl Serialize for Target {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CargoVariant {
+    Cargo,
+    Xargo,
+    Zig,
+}
+
+impl CargoVariant {
+    pub fn create(uses_zig: bool, uses_xargo: bool) -> Result<CargoVariant> {
+        match (uses_zig, uses_xargo) {
+            (true, true) => eyre::bail!("cannot use both zig and xargo"),
+            (true, false) => Ok(CargoVariant::Zig),
+            (false, true) => Ok(CargoVariant::Xargo),
+            (false, false) => Ok(CargoVariant::Cargo),
+        }
+    }
+
+    pub fn to_str(self) -> &'static str {
+        match self {
+            CargoVariant::Cargo => "cargo",
+            CargoVariant::Xargo => "xargo",
+            CargoVariant::Zig => "cargo-zigbuild",
+        }
+    }
+
+    pub fn uses_xargo(self) -> bool {
+        self == CargoVariant::Xargo
+    }
+
+    pub fn uses_zig(self) -> bool {
+        self == CargoVariant::Zig
+    }
+}
+
 fn warn_on_failure(
     target: &Target,
     toolchain: &QualifiedToolchain,
@@ -453,6 +487,14 @@ fn warn_on_failure(
     }
     Ok(())
 }
+
+fn add_libc_version(triple: &str, zig_version: Option<&str>) -> String {
+    match zig_version {
+        Some(libc) => format!("{triple}.{libc}"),
+        None => triple.to_owned(),
+    }
+}
+
 pub fn run(
     args: Args,
     target_list: TargetList,
@@ -479,10 +521,12 @@ pub fn run(
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
         config.confusable_target(&target, msg_info)?;
 
+        let uses_zig = config.zig(&target).unwrap_or(false);
+        let zig_version = config.zig_version(&target)?;
         // Get the image we're supposed to base all our next actions on.
         // The image we actually run in might get changed with
         // `target.{{TARGET}}.dockerfile` or `target.{{TARGET}}.pre-build`
-        let image = match docker::get_image(&config, &target) {
+        let image = match docker::get_image(&config, &target, uses_zig) {
             Ok(i) => i,
             Err(err) => {
                 msg_info.warn(err)?;
@@ -568,6 +612,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
             let uses_build_std = config.build_std(&target).unwrap_or(false);
             let uses_xargo =
                 !uses_build_std && config.xargo(&target).unwrap_or(!target.is_builtin());
+            let cargo_variant = CargoVariant::create(uses_zig, uses_xargo)?;
             if !toolchain.is_custom {
                 // build-std overrides xargo, but only use it if it's a built-in
                 // tool but not an available target or doesn't have rust-std.
@@ -596,6 +641,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
 
             let needs_interpreter = args.subcommand.map_or(false, |sc| sc.needs_interpreter());
 
+            let add_libc = |triple: &str| add_libc_version(triple, zig_version.as_deref());
             let mut filtered_args = if args
                 .subcommand
                 .map_or(false, |s| !s.needs_target_in_command())
@@ -616,8 +662,24 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
             } else if !args.all.iter().any(|a| a.starts_with("--target")) {
                 let mut args_with_target = args.all.clone();
                 args_with_target.push("--target".to_owned());
-                args_with_target.push(target.triple().to_owned());
+                args_with_target.push(add_libc(target.triple()));
                 args_with_target
+            } else if zig_version.is_some() {
+                let mut filtered_args = Vec::new();
+                let mut args_iter = args.all.clone().into_iter();
+                while let Some(arg) = args_iter.next() {
+                    if arg == "--target" {
+                        filtered_args.push("--target".to_owned());
+                        if let Some(triple) = args_iter.next() {
+                            filtered_args.push(add_libc(&triple));
+                        }
+                    } else if let Some(stripped) = arg.strip_prefix("--target=") {
+                        filtered_args.push(format!("--target={}", add_libc(stripped)));
+                    } else {
+                        filtered_args.push(arg);
+                    }
+                }
+                filtered_args
             } else {
                 args.all.clone()
             };
@@ -643,8 +705,13 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 }
 
                 let paths = docker::DockerPaths::create(&engine, metadata, cwd, toolchain.clone())?;
-                let options =
-                    docker::DockerOptions::new(engine, target.clone(), config, image, uses_xargo);
+                let options = docker::DockerOptions::new(
+                    engine,
+                    target.clone(),
+                    config,
+                    image,
+                    cargo_variant,
+                );
                 let status = docker::run(options, paths, &filtered_args, msg_info)
                     .wrap_err("could not run container")?;
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));

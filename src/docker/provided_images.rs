@@ -273,4 +273,9 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             platforms: &[ImagePlatform::DEFAULT],
             sub: None
         },
+        ProvidedImage {
+            name: "zig",
+            platforms: &[ImagePlatform::DEFAULT],
+            sub: None
+        },
 ];
