@@ -442,7 +442,7 @@ fn warn_on_failure(
     if target.is_builtin() {
         let component = rustup::check_component(&rust_std, toolchain, msg_info)?;
         if component.is_not_available() {
-            msg_info.warn(format!("rust-std is not available for {target}"))?;
+            msg_info.warn(format_args!("rust-std is not available for {target}"))?;
             msg_info.note(
                 format_args!(
                     r#"you may need to build components for the target via `-Z build-std=<components>` or in your cross configuration specify `target.{target}.build-std`
@@ -460,7 +460,7 @@ pub fn run(
 ) -> Result<Option<ExitStatus>> {
     if args.version && args.subcommand.is_none() {
         let commit_info = include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt"));
-        msg_info.print(format!(
+        msg_info.print(format_args!(
             concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
             commit_info
         ))?;
@@ -689,15 +689,15 @@ pub(crate) fn warn_host_version_mismatch(
             host_version_meta.short_version_string
         );
         if versions.is_lt() || (versions.is_eq() && dates.is_lt()) {
-            msg_info.warn(format!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"))?;
+            msg_info.warn(format_args!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"))?;
             return Ok(VersionMatch::OlderTarget);
         } else if versions.is_gt() || (versions.is_eq() && dates.is_gt()) {
-            msg_info.warn(format!(
+            msg_info.warn(format_args!(
                 "using newer {rustc_warning}.\n > Update with `rustup update`"
             ))?;
             return Ok(VersionMatch::NewerTarget);
         } else {
-            msg_info.warn(format!("using {rustc_warning}."))?;
+            msg_info.warn(format_args!("using {rustc_warning}."))?;
             return Ok(VersionMatch::Different);
         }
     }

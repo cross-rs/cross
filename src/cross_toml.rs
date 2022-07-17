@@ -141,7 +141,7 @@ impl CrossToml {
         })?;
 
         if !unused.is_empty() {
-            msg_info.warn(format!(
+            msg_info.warn(format_args!(
                 "found unused key(s) in Cross configuration:\n > {}",
                 unused.clone().into_iter().collect::<Vec<_>>().join(", ")
             ))?;

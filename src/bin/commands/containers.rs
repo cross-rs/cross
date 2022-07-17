@@ -416,11 +416,11 @@ pub fn create_persistent_volume(
     // stop the container if it's already running
     let state = docker::remote::container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
-        msg_info.warn("container {container} was running.")?;
+        msg_info.warn(format_args!("container {container} was running."))?;
         docker::remote::container_stop_default(engine, &container, msg_info)?;
     }
     if state.exists() {
-        msg_info.warn("container {container} was exited.")?;
+        msg_info.warn(format_args!("container {container} was exited."))?;
         docker::remote::container_rm(engine, &container, msg_info)?;
     }
 

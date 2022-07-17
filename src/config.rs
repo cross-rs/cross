@@ -182,7 +182,7 @@ impl Config {
                     .replace(|c| c == '-' || c == '_', "")
                     .to_lowercase();
                 if mentioned_target != target && mentioned_target_norm == target_norm {
-                    msg_info.warn("a target named \"{mentioned_target}\" is mentioned in the Cross configuration, but the current specified target is \"{target}\".")?;
+                    msg_info.warn(format_args!("a target named \"{mentioned_target}\" is mentioned in the Cross configuration, but the current specified target is \"{target}\"."))?;
                     msg_info.status(" > Is the target misspelled in the Cross configuration?")?;
                 }
             }
