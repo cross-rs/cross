@@ -1,0 +1,5 @@
+{
+    "description": "Update QEMU to version 7.0.0 for Ubuntu targets",
+    "type": "changed",
+    "breaking": false
+}
