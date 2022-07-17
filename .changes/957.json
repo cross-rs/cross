@@ -1,0 +1,5 @@
+{
+    "description": "use latest Debian kernel images",
+    "type": "changed",
+    "breaking": false
+}
