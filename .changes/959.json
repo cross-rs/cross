@@ -1,0 +1,5 @@
+{
+    "description": "support `x86_64-unknown-linux-gnu` with a runner using Intel SDE emulation.",
+    "type": "added",
+    "issues": [159]
+}

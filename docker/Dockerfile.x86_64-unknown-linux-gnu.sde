@@ -1,0 +1,16 @@
+FROM ubuntu:20.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+COPY intel-sde.sh /
+RUN /intel-sde.sh
+
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="/opt/intel/sde64 -rtm_mode full --"

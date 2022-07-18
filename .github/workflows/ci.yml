@@ -155,6 +155,7 @@ jobs:
             - { target: x86_64-pc-windows-msvc,           os: windows-2019,                                                                            deploy: true }
 
             - { target: x86_64-unknown-linux-gnu, sub: centos, os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
+            - { target: x86_64-unknown-linux-gnu, sub: sde, os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: aarch64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: arm-unknown-linux-gnueabi,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: arm-unknown-linux-gnueabihf,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
