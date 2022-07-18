@@ -14,7 +14,7 @@ fn mount(docker: &mut Command, host_path: &Path, absolute_path: &Path, prefix: &
     let mount_path = absolute_path.as_posix_absolute()?;
     docker.args(&[
         "-v",
-        &format!("{}:{prefix}{}", host_path.to_utf8()?, mount_path),
+        &format!("{}:{prefix}{}:z", host_path.to_utf8()?, mount_path),
     ]);
     Ok(())
 }
@@ -64,28 +64,28 @@ pub(crate) fn run(
     docker
         .args(&[
             "-v",
-            &format!("{}:{}:Z", dirs.xargo.to_utf8()?, dirs.xargo_mount_path()),
+            &format!("{}:{}:z", dirs.xargo.to_utf8()?, dirs.xargo_mount_path()),
         ])
         .args(&[
             "-v",
-            &format!("{}:{}:Z", dirs.cargo.to_utf8()?, dirs.cargo_mount_path()),
+            &format!("{}:{}:z", dirs.cargo.to_utf8()?, dirs.cargo_mount_path()),
         ])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", &format!("{}/bin", dirs.cargo_mount_path())]);
     docker.args(&[
         "-v",
-        &format!("{}:{}:Z", dirs.host_root.to_utf8()?, dirs.mount_root),
+        &format!("{}:{}:z", dirs.host_root.to_utf8()?, dirs.mount_root),
     ]);
     docker
         .args(&[
             "-v",
             &format!(
-                "{}:{}:Z,ro",
+                "{}:{}:z,ro",
                 dirs.get_sysroot().to_utf8()?,
                 dirs.sysroot_mount_path()
             ),
         ])
-        .args(&["-v", &format!("{}:/target:Z", dirs.target.to_utf8()?)]);
+        .args(&["-v", &format!("{}:/target:z", dirs.target.to_utf8()?)]);
     docker_cwd(&mut docker, &paths)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
@@ -94,7 +94,7 @@ pub(crate) fn run(
         docker.args(&[
             "-v",
             &format!(
-                "{}:{}:Z",
+                "{}:{}:z",
                 nix_store.to_utf8()?,
                 nix_store.as_posix_absolute()?
             ),
