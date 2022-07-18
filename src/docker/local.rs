@@ -39,21 +39,21 @@ pub(crate) fn run(
     docker_user_id(&mut docker, engine.kind);
 
     docker
-        .args(&["-v", &format!("{}:/xargo:Z", dirs.xargo.to_utf8()?)])
-        .args(&["-v", &format!("{}:/cargo:Z", dirs.cargo.to_utf8()?)])
+        .args(&["-v", &format!("{}:/xargo:z", dirs.xargo.to_utf8()?)])
+        .args(&["-v", &format!("{}:/cargo:z", dirs.cargo.to_utf8()?)])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(&["-v", "/cargo/bin"]);
     if mount_volumes {
         docker.args(&[
             "-v",
-            &format!("{}:{}:Z", dirs.host_root.to_utf8()?, dirs.mount_root),
+            &format!("{}:{}:z", dirs.host_root.to_utf8()?, dirs.mount_root),
         ]);
     } else {
-        docker.args(&["-v", &format!("{}:/project:Z", dirs.host_root.to_utf8()?)]);
+        docker.args(&["-v", &format!("{}:/project:z", dirs.host_root.to_utf8()?)]);
     }
     docker
-        .args(&["-v", &format!("{}:/rust:Z,ro", dirs.sysroot.to_utf8()?)])
-        .args(&["-v", &format!("{}:/target:Z", dirs.target.to_utf8()?)]);
+        .args(&["-v", &format!("{}:/rust:z,ro", dirs.sysroot.to_utf8()?)])
+        .args(&["-v", &format!("{}:/target:z", dirs.target.to_utf8()?)]);
     docker_cwd(&mut docker, &paths, mount_volumes)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
@@ -61,7 +61,7 @@ pub(crate) fn run(
     if let Some(ref nix_store) = dirs.nix_store {
         docker.args(&[
             "-v",
-            &format!("{}:{}:Z", nix_store.to_utf8()?, nix_store.as_posix()?),
+            &format!("{}:{}:z", nix_store.to_utf8()?, nix_store.as_posix()?),
         ]);
     }
 
