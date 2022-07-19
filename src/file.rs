@@ -277,6 +277,16 @@ pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
         .wrap_err(format!("couldn't write to file `{path:?}`"))
 }
 
+fn data_dir() -> Result<PathBuf> {
+    directories::BaseDirs::new()
+        .map(|d| d.data_dir().to_path_buf())
+        .ok_or(eyre::eyre!("unable to get data directory"))
+}
+
+pub fn cross_dir() -> Result<PathBuf> {
+    Ok(data_dir()?.join("cross-rs"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

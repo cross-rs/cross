@@ -23,7 +23,7 @@ default = []
 dev = []
 
 [workspace]
-members = ["xtask"]
+members = ["small-lock", "xtask"]
 
 [dependencies]
 atty = "0.2"
@@ -47,6 +47,7 @@ walkdir = { version = "2", optional = true }
 tempfile = "3.3.0"
 owo-colors = { version = "3.4.0", features = ["supports-colors"] }
 semver = "1"
+small-lock = { version = "0.0.1", path = "small-lock" }
 
 [target.'cfg(not(windows))'.dependencies]
 nix = { version = "0.24", default-features = false, features = ["user"] }

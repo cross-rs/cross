@@ -1,0 +1,23 @@
+[package]
+documentation = "https://github.com/cross-rs/cross"
+license = "MIT OR Apache-2.0"
+name = "small-lock"
+repository = "https://github.com/cross-rs/cross"
+version = "0.0.1"
+edition = "2021"
+
+[target.'cfg(not(windows))'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies.winapi]
+version = "0.3"
+features = [
+    "errhandlingapi",
+    "handleapi",
+    "synchapi",
+    "winbase",
+    "winerror",
+]
+
+[dev-dependencies]
+threadpool = "1.8.1"

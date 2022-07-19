@@ -1,0 +1,5 @@
+{
+    "description": "add lock to prevent deadlock with docker when invoked multiple times.",
+    "type": "fixed",
+    "issues": [496]
+}

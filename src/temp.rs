@@ -2,19 +2,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::errors::Result;
+use crate::file;
 
 // open temporary directories and files so we ensure we cleanup on exit.
 static mut FILES: Vec<tempfile::NamedTempFile> = vec![];
 static mut DIRS: Vec<tempfile::TempDir> = vec![];
 
-fn data_dir() -> Option<PathBuf> {
-    directories::BaseDirs::new().map(|d| d.data_dir().to_path_buf())
-}
-
 pub fn dir() -> Result<PathBuf> {
-    data_dir()
-        .map(|p| p.join("cross-rs").join("tmp"))
-        .ok_or(eyre::eyre!("unable to get data directory"))
+    Ok(file::cross_dir()?.join("tmp"))
 }
 
 pub(crate) fn has_tempfiles() -> bool {

@@ -39,6 +39,22 @@ pub fn image_name(target: &str, sub: Option<&str>, repository: &str, tag: &str) 
     }
 }
 
+fn create_lock(name: &str) -> Result<small_lock::NamedLock> {
+    #[cfg(target_family = "windows")]
+    {
+        small_lock::NamedLock::create(name).map_err(Into::into)
+    }
+    #[cfg(target_family = "unix")]
+    {
+        use crate::file;
+        use std::fs;
+
+        let cross_dir = file::cross_dir()?;
+        fs::create_dir_all(&cross_dir)?;
+        small_lock::NamedLock::with_path(&cross_dir.join(name)).map_err(Into::into)
+    }
+}
+
 pub fn run(
     options: DockerOptions,
     paths: DockerPaths,
@@ -51,6 +67,19 @@ pub fn run(
             1,
         );
     }
+
+    // lock to avoid issues with docker failing with multiple processes at once just
+    // lock on any container engine, since we don't want to deal with engine aliases.
+    let lock = create_lock("cross-rs-container-engine")?;
+    let _guard = match lock.try_lock() {
+        Ok(guard) => Ok(guard),
+        Err(small_lock::Error::WouldBlock) => {
+            msg_info.note("Blocking waiting for file lock on container engine")?;
+            lock.lock()
+        }
+        Err(e) => Err(e),
+    }?;
+
     if options.is_remote() {
         remote::run(options, paths, args, msg_info).wrap_err("could not complete remote run")
     } else {
