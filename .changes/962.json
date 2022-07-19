@@ -1,0 +1,5 @@
+{
+    "description": "fix SELinux labels to allow use in multiple containers and/or the host filesystem.",
+    "type": "fixed",
+    "issues": [961]
+}
