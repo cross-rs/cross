@@ -23,6 +23,11 @@ fn main() {
         .unwrap()
         .write_all(commit_info().as_bytes())
         .unwrap();
+
+    if env::var("CROSS_SANDBOXED").is_ok() {
+        println!("cargo:rustc-cfg=cross_sandboxed");
+    }
+    println!("cargo:rerun-if-env-changed=CROSS_SANDBOXED");
 }
 
 fn commit_info() -> String {
