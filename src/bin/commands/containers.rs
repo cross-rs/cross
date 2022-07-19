@@ -392,7 +392,7 @@ pub fn create_persistent_volume(
     channel: Option<&Toolchain>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let config = cross::config::Config::new(None);
+    let config = cross::CrossConfig::new(None);
     let toolchain_host: cross::Target = toolchain.into();
     let mut toolchain = QualifiedToolchain::default(&config, msg_info)?;
     toolchain.replace_host(&ImagePlatform::from_target(
@@ -483,7 +483,7 @@ pub fn remove_persistent_volume(
     channel: Option<&Toolchain>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let config = cross::config::Config::new(None);
+    let config = cross::CrossConfig::new(None);
     let target_host: cross::Target = toolchain.into();
     let mut toolchain = QualifiedToolchain::default(&config, msg_info)?;
     toolchain.replace_host(&ImagePlatform::from_target(target_host.target().clone())?);

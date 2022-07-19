@@ -31,8 +31,11 @@
 mod tests;
 
 pub mod cargo;
+mod cargo_config;
+mod cargo_toml;
 pub mod cli;
 pub mod config;
+mod cross_config;
 mod cross_toml;
 pub mod docker;
 pub mod errors;
@@ -46,19 +49,21 @@ pub mod shell;
 pub mod temp;
 
 use std::env;
-use std::path::PathBuf;
 use std::process::ExitStatus;
 
 use cli::Args;
 use color_eyre::owo_colors::OwoColorize;
 use color_eyre::{Help, SectionExt};
-use config::Config;
 use rustc::{QualifiedToolchain, Toolchain};
 use rustc_version::Channel;
 use serde::{Deserialize, Serialize, Serializer};
 
 pub use self::cargo::{cargo_command, cargo_metadata_with_args, CargoMetadata, Subcommand};
-use self::cross_toml::CrossToml;
+pub use self::cargo_config::CargoConfig;
+pub use self::cargo_toml::CargoToml;
+pub use self::config::Config;
+pub use self::cross_config::CrossConfig;
+pub use self::cross_toml::CrossToml;
 use self::errors::Context;
 use self::shell::{MessageInfo, Verbosity};
 
@@ -498,6 +503,7 @@ fn add_libc_version(triple: &str, zig_version: Option<&str>) -> String {
 pub fn run(
     args: Args,
     target_list: TargetList,
+    cargo_config: CargoConfig,
     msg_info: &mut MessageInfo,
 ) -> Result<Option<ExitStatus>> {
     if args.version && args.subcommand.is_none() {
@@ -513,30 +519,30 @@ pub fn run(
     let cwd = std::env::current_dir()?;
     if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), msg_info)? {
         let host = host_version_meta.host();
-        let toml = toml(&metadata, msg_info)?;
-        let config = Config::new(toml);
+        let cross_toml = CrossToml::read(&metadata, msg_info)?;
+        let cross_config = CrossConfig::new(cross_toml);
+        let config = Config::new(cargo_config, cross_config);
         let target = args
             .target
-            .or_else(|| config.target(&target_list))
+            .or_else(|| config.cross.target(&target_list))
             .unwrap_or_else(|| Target::from(host.triple(), &target_list));
-        config.confusable_target(&target, msg_info)?;
+        config.cross.confusable_target(&target, msg_info)?;
 
-        let uses_zig = config.zig(&target).unwrap_or(false);
-        let zig_version = config.zig_version(&target)?;
+        let uses_zig = config.cross.zig(&target).unwrap_or(false);
+        let zig_version = config.cross.zig_version(&target)?;
         // Get the image we're supposed to base all our next actions on.
         // The image we actually run in might get changed with
         // `target.{{TARGET}}.dockerfile` or `target.{{TARGET}}.pre-build`
-        let image = match docker::get_image(&config, &target, uses_zig) {
+        let image = match docker::get_image(&config.cross, &target, uses_zig) {
             Ok(i) => i,
             Err(err) => {
                 msg_info.warn(err)?;
-
                 return Ok(None);
             }
         };
 
         // Grab the current toolchain, this might be the one we mount in the image later
-        let default_toolchain = QualifiedToolchain::default(&config, msg_info)?;
+        let default_toolchain = QualifiedToolchain::default(&config.cross, msg_info)?;
 
         // `cross +channel`, where channel can be `+channel[-YYYY-MM-DD]`
         let mut toolchain = if let Some(channel) = args.channel {
@@ -557,7 +563,7 @@ r#"Overriding the toolchain in cross is only possible in CLI by specifying a cha
 To override the toolchain mounted in the image, set `target.{}.image.toolchain = "{picked_host}"`"#, target).header("Note:".bright_cyan()));
             }
 
-            default_toolchain.with_picked(&config, picked_toolchain, msg_info)?
+            default_toolchain.with_picked(&config.cross, picked_toolchain, msg_info)?
         } else {
             default_toolchain
         };
@@ -609,9 +615,9 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 is_nightly = channel == Channel::Nightly;
             }
 
-            let uses_build_std = config.build_std(&target).unwrap_or(false);
+            let uses_build_std = config.cross.build_std(&target).unwrap_or(false);
             let uses_xargo =
-                !uses_build_std && config.xargo(&target).unwrap_or(!target.is_builtin());
+                !uses_build_std && config.cross.xargo(&target).unwrap_or(!target.is_builtin());
             let cargo_variant = CargoVariant::create(uses_zig, uses_xargo)?;
             if !toolchain.is_custom {
                 // build-std overrides xargo, but only use it if it's a built-in
@@ -685,7 +691,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
             };
 
             let is_test = args.subcommand.map_or(false, |sc| sc == Subcommand::Test);
-            if is_test && config.doctests().unwrap_or_default() && is_nightly {
+            if is_test && config.cross.doctests().unwrap_or_default() && is_nightly {
                 filtered_args.push("-Zdoctest-xcompile".to_owned());
             }
             if uses_build_std {
@@ -705,12 +711,15 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 }
 
                 let paths = docker::DockerPaths::create(&engine, metadata, cwd, toolchain.clone())?;
+                let cargo_config_behavior =
+                    config.cross.env_cargo_config(&target)?.unwrap_or_default();
                 let options = docker::DockerOptions::new(
                     engine,
                     target.clone(),
                     config,
                     image,
                     cargo_variant,
+                    cargo_config_behavior,
                 );
                 let status = docker::run(options, paths, &filtered_args, msg_info)
                     .wrap_err("could not run container")?;
@@ -769,46 +778,4 @@ pub(crate) fn warn_host_version_mismatch(
         }
     }
     Ok(VersionMatch::Same)
-}
-
-/// Obtains the [`CrossToml`] from one of the possible locations
-///
-/// These locations are checked in the following order:
-/// 1. If the `CROSS_CONFIG` variable is set, it tries to read the config from its value
-/// 2. Otherwise, the `Cross.toml` in the project root is used
-/// 3. Package metadata in the Cargo.toml
-///
-/// The values from `CROSS_CONFIG` or `Cross.toml` are concatenated with the package
-/// metadata in `Cargo.toml`, with `Cross.toml` having the highest priority.
-fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
-    let root = &metadata.workspace_root;
-    let cross_config_path = match env::var("CROSS_CONFIG") {
-        Ok(var) => PathBuf::from(var),
-        Err(_) => root.join("Cross.toml"),
-    };
-
-    // Attempts to read the cross config from the Cargo.toml
-    let cargo_toml_str =
-        file::read(root.join("Cargo.toml")).wrap_err("failed to read Cargo.toml")?;
-
-    if cross_config_path.exists() {
-        let cross_toml_str = file::read(&cross_config_path)
-            .wrap_err_with(|| format!("could not read file `{cross_config_path:?}`"))?;
-
-        let (config, _) = CrossToml::parse(&cargo_toml_str, &cross_toml_str, msg_info)
-            .wrap_err_with(|| format!("failed to parse file `{cross_config_path:?}` as TOML",))?;
-
-        Ok(Some(config))
-    } else {
-        // Checks if there is a lowercase version of this file
-        if root.join("cross.toml").exists() {
-            msg_info.warn("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.")?;
-        }
-
-        if let Some((cfg, _)) = CrossToml::parse_from_cargo(&cargo_toml_str, msg_info)? {
-            Ok(Some(cfg))
-        } else {
-            Ok(None)
-        }
-    }
 }

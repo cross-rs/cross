@@ -1,18 +1,24 @@
 #![doc = include_str!("../docs/cross_toml.md")]
 
+use std::collections::{BTreeSet, HashMap};
+use std::env;
+use std::path::PathBuf;
+use std::str::FromStr;
+
+use crate::cargo::CargoMetadata;
 use crate::docker::custom::PreBuild;
 use crate::docker::PossibleImage;
 use crate::shell::MessageInfo;
-use crate::{config, errors::*};
+use crate::{errors::*, file};
 use crate::{Target, TargetList};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::collections::{BTreeSet, HashMap};
-use std::str::FromStr;
 
 /// Environment configuration
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
 pub struct CrossEnvConfig {
+    cargo_config: Option<CargoConfigBehavior>,
     volumes: Option<Vec<String>>,
     passthrough: Option<Vec<String>>,
 }
@@ -112,8 +118,37 @@ impl FromStr for CrossZigConfig {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[serde(rename_all = "kebab-case")]
+pub enum CargoConfigBehavior {
+    Ignore,
+    #[serde(rename = "default")]
+    Normal,
+    Complete,
+}
+
+impl Default for CargoConfigBehavior {
+    fn default() -> CargoConfigBehavior {
+        CargoConfigBehavior::Normal
+    }
+}
+
+impl FromStr for CargoConfigBehavior {
+    type Err = eyre::Error;
+
+    fn from_str(s: &str) -> Result<CargoConfigBehavior> {
+        match s {
+            "ignore" => Ok(CargoConfigBehavior::Ignore),
+            "default" => Ok(CargoConfigBehavior::Normal),
+            "complete" => Ok(CargoConfigBehavior::Complete),
+            _ => eyre::bail!("invalid cargo config behavior, got {s}"),
+        }
+    }
+}
+
 /// Cross configuration
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
 pub struct CrossToml {
     #[serde(default, rename = "target")]
     pub targets: HashMap<Target, CrossTargetConfig>,
@@ -122,6 +157,50 @@ pub struct CrossToml {
 }
 
 impl CrossToml {
+    /// Obtains the [`CrossToml`] from one of the possible locations
+    ///
+    /// These locations are checked in the following order:
+    /// 1. If the `CROSS_CONFIG` variable is set, it tries to read the config from its value
+    /// 2. Otherwise, the `Cross.toml` in the project root is used
+    /// 3. Package metadata in the Cargo.toml
+    ///
+    /// The values from `CROSS_CONFIG` or `Cross.toml` are concatenated with the package
+    /// metadata in `Cargo.toml`, with `Cross.toml` having the highest priority.
+    pub fn read(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
+        let root = &metadata.workspace_root;
+        let cross_config_path = match env::var("CROSS_CONFIG") {
+            Ok(var) => PathBuf::from(var),
+            Err(_) => root.join("Cross.toml"),
+        };
+
+        // Attempts to read the cross config from the Cargo.toml
+        let cargo_toml_str =
+            file::read(root.join("Cargo.toml")).wrap_err("failed to read Cargo.toml")?;
+
+        if cross_config_path.exists() {
+            let cross_toml_str = file::read(&cross_config_path)
+                .wrap_err_with(|| format!("could not read file `{cross_config_path:?}`"))?;
+
+            let (config, _) = CrossToml::parse(&cargo_toml_str, &cross_toml_str, msg_info)
+                .wrap_err_with(|| {
+                    format!("failed to parse file `{cross_config_path:?}` as TOML",)
+                })?;
+
+            Ok(Some(config))
+        } else {
+            // Checks if there is a lowercase version of this file
+            if root.join("cross.toml").exists() {
+                msg_info.warn("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.")?;
+            }
+
+            if let Some((cfg, _)) = CrossToml::parse_from_cargo(&cargo_toml_str, msg_info)? {
+                Ok(Some(cfg))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
     /// Parses the [`CrossToml`] from all of the config sources
     pub fn parse(
         cargo_toml: &str,
@@ -294,7 +373,7 @@ impl CrossToml {
             .as_ref()
             .and_then(|d| d.build_args.as_ref());
 
-        config::opt_merge(target.cloned(), build.cloned())
+        opt_merge(target.cloned(), build.cloned())
     }
 
     /// Returns the `build.dockerfile.pre-build` and `target.{}.dockerfile.pre-build` part of `Cross.toml`
@@ -342,6 +421,14 @@ impl CrossToml {
             |b| b.zig.as_ref().and_then(|c| c.image.clone()),
             |t| t.zig.as_ref().and_then(|c| c.image.clone()),
         )
+    }
+
+    /// Returns the cargo config behavior.
+    pub fn env_cargo_config(
+        &self,
+        target: &Target,
+    ) -> (Option<CargoConfigBehavior>, Option<CargoConfigBehavior>) {
+        self.get_value(target, |b| b.env.cargo_config, |t| t.env.cargo_config)
     }
 
     /// Returns the list of environment variables to pass through for `build` and `target`
@@ -573,6 +660,22 @@ where
     deserializer.deserialize_any(StringBoolOrStruct(PhantomData))
 }
 
+pub fn opt_merge<I, T: Extend<I> + IntoIterator<Item = I>>(
+    opt1: Option<T>,
+    opt2: Option<T>,
+) -> Option<T> {
+    match (opt1, opt2) {
+        (None, None) => None,
+        (None, Some(opt2)) => Some(opt2),
+        (Some(opt1), None) => Some(opt1),
+        (Some(opt1), Some(opt2)) => {
+            let mut res = opt2;
+            res.extend(opt1);
+            Some(res)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::docker::ImagePlatform;
@@ -590,6 +693,21 @@ mod tests {
         ($x:literal) => {
             $x.parse()?
         };
+    }
+
+    #[test]
+    pub fn test_toml_cargo_config_behavior() -> Result<()> {
+        assert_eq!(CargoConfigBehavior::Normal, toml::from_str("\"default\"")?);
+        assert_eq!(CargoConfigBehavior::Ignore, toml::from_str("\"ignore\"")?);
+        assert_eq!(
+            CargoConfigBehavior::Complete,
+            toml::from_str("\"complete\"")?
+        );
+        assert!(toml::from_str::<CargoConfigBehavior>("\"other\"").is_err());
+        assert!(toml::from_str::<CargoConfigBehavior>("true").is_err());
+        assert!(toml::from_str::<CargoConfigBehavior>("0").is_err());
+
+        Ok(())
     }
 
     #[test]
@@ -612,6 +730,7 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig {
                 env: CrossEnvConfig {
+                    cargo_config: Some(CargoConfigBehavior::Ignore),
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                     passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
                 },
@@ -630,6 +749,7 @@ mod tests {
           pre-build = ["echo 'Hello World!'"]
 
           [build.env]
+          cargo-config = "ignore"
           volumes = ["VOL1_ARG", "VOL2_ARG"]
           passthrough = ["VAR1", "VAR2"]
         "#;
@@ -650,6 +770,7 @@ mod tests {
             },
             CrossTargetConfig {
                 env: CrossEnvConfig {
+                    cargo_config: None,
                     passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                 },
@@ -668,6 +789,7 @@ mod tests {
             },
             CrossTargetConfig {
                 env: CrossEnvConfig {
+                    cargo_config: None,
                     passthrough: None,
                     volumes: None,
                 },
@@ -738,6 +860,7 @@ mod tests {
                 pre_build: Some(PreBuild::Lines(vec![p!("echo 'Hello'")])),
                 runner: None,
                 env: CrossEnvConfig {
+                    cargo_config: None,
                     passthrough: None,
                     volumes: Some(vec![p!("VOL")]),
                 },
@@ -748,6 +871,7 @@ mod tests {
             targets: target_map,
             build: CrossBuildConfig {
                 env: CrossEnvConfig {
+                    cargo_config: Some(CargoConfigBehavior::Complete),
                     volumes: None,
                     passthrough: Some(vec![]),
                 },
@@ -779,6 +903,7 @@ mod tests {
             toolchain = ["aarch64-unknown-linux-gnu"]
 
             [build.env]
+            cargo-config = "complete"
             passthrough = []
 
             [target.aarch64-unknown-linux-gnu]
@@ -822,6 +947,7 @@ mod tests {
             targets: HashMap::new(),
             build: CrossBuildConfig {
                 env: CrossEnvConfig {
+                    cargo_config: None,
                     passthrough: None,
                     volumes: None,
                 },

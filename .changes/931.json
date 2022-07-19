@@ -1,4 +1,12 @@
-{
-    "description": "deny installation of debian packages that conflict with our cross-compiler toolchains.",
-    "type": "fixed"
-}
+[
+    {
+        "description": "add support for cargo aliases.",
+        "type": "added",
+        "issues": [562]
+    },
+    {
+        "description": "allow users to ignore config files in the package.",
+        "type": "added",
+        "issues": [621]
+    }
+]

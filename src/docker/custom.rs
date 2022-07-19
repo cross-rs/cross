@@ -130,9 +130,10 @@ impl<'a> Dockerfile<'a> {
             }
         };
 
+        let config = &options.config.cross;
         if matches!(self, Dockerfile::File { .. }) {
             if let Ok(cross_base_image) =
-                self::get_image_name(&options.config, &options.target, uses_zig)
+                self::get_image_name(&options.config.cross, &options.target, uses_zig)
             {
                 docker_build.args([
                     "--build-arg",
@@ -143,11 +144,11 @@ impl<'a> Dockerfile<'a> {
 
         docker_build.args(["--file".into(), path]);
 
-        if let Some(build_opts) = options.config.build_opts() {
+        if let Some(build_opts) = config.build_opts() {
             docker_build.args(parse_docker_opts(&build_opts)?);
         }
 
-        let has_output = options.config.build_opts().map_or(false, |opts| {
+        let has_output = config.build_opts().map_or(false, |opts| {
             opts.contains("--load") || opts.contains("--output")
         });
         if options.engine.kind.is_docker() && !has_output {

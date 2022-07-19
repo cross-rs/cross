@@ -8,7 +8,7 @@ use std::{
 use cross::{
     cargo, cli, rustc,
     shell::{self, Verbosity},
-    OutputExt, Subcommand,
+    CargoConfig, CargoToml, OutputExt, Subcommand,
 };
 
 pub fn main() -> cross::Result<()> {
@@ -16,10 +16,12 @@ pub fn main() -> cross::Result<()> {
     cross::install_termination_hook()?;
 
     let target_list = rustc::target_list(&mut Verbosity::Quiet.into())?;
-    let args = cli::parse(&target_list)?;
+    let cargo_toml = CargoToml::read()?;
+    let cargo_config = CargoConfig::new(cargo_toml);
+    let args = cli::parse(&target_list, &cargo_config)?;
     let subcommand = args.subcommand;
     let mut msg_info = shell::MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
-    let status = match cross::run(args, target_list, &mut msg_info)? {
+    let status = match cross::run(args, target_list, cargo_config, &mut msg_info)? {
         Some(status) => status,
         None => {
             // if we fallback to the host cargo, use the same invocation that was made to cross

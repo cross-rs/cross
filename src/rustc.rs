@@ -4,6 +4,7 @@ use std::process::Command;
 use rustc_version::{Version, VersionMeta};
 use serde::Deserialize;
 
+use crate::cross_config::CrossConfig;
 use crate::docker::ImagePlatform;
 use crate::errors::*;
 use crate::extensions::{env_program, CommandExt};
@@ -122,7 +123,7 @@ impl QualifiedToolchain {
     pub(crate) fn custom(
         name: &str,
         sysroot: &Path,
-        config: &crate::config::Config,
+        config: &CrossConfig,
         msg_info: &mut MessageInfo,
     ) -> Result<QualifiedToolchain> {
         if let Some(compat) = config.custom_toolchain_compat() {
@@ -188,7 +189,7 @@ impl QualifiedToolchain {
     }
 
     /// Grab the current default toolchain
-    pub fn default(config: &crate::config::Config, msg_info: &mut MessageInfo) -> Result<Self> {
+    pub fn default(config: &CrossConfig, msg_info: &mut MessageInfo) -> Result<Self> {
         let sysroot = sysroot(msg_info)?;
 
         let default_toolchain_name = sysroot
@@ -207,7 +208,7 @@ impl QualifiedToolchain {
     /// Merge a "picked" toolchain, overriding set fields.
     pub fn with_picked(
         self,
-        config: &crate::config::Config,
+        config: &CrossConfig,
         picked: Toolchain,
         msg_info: &mut MessageInfo,
     ) -> Result<Self> {
@@ -241,7 +242,7 @@ impl QualifiedToolchain {
     fn parse(
         sysroot: PathBuf,
         toolchain: &str,
-        config: &crate::config::Config,
+        config: &CrossConfig,
         msg_info: &mut MessageInfo,
     ) -> Result<Self> {
         match toolchain.parse::<Toolchain>() {
@@ -366,7 +367,7 @@ mod tests {
         QualifiedToolchain::custom(
             "bisector-nightly-2022-04-26-x86_64-unknown-linux-gnu",
             "/tmp/cross/sysroot".as_ref(),
-            &crate::config::Config::new(None),
+            &CrossConfig::new(None),
             &mut MessageInfo::create(true, false, None).unwrap(),
         )
         .unwrap();
