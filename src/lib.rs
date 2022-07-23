@@ -501,10 +501,9 @@ pub fn run(
     msg_info: &mut MessageInfo,
 ) -> Result<Option<ExitStatus>> {
     if args.version && args.subcommand.is_none() {
-        let commit_info = include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt"));
         msg_info.print(format_args!(
             concat!("cross ", env!("CARGO_PKG_VERSION"), "{}"),
-            commit_info
+            crate::commit_info()
         ))?;
     }
 
@@ -769,6 +768,10 @@ pub(crate) fn warn_host_version_mismatch(
         }
     }
     Ok(VersionMatch::Same)
+}
+
+fn commit_info() -> &'static str {
+    include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt"))
 }
 
 /// Obtains the [`CrossToml`] from one of the possible locations

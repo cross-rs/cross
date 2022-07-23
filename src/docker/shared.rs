@@ -718,7 +718,7 @@ pub fn get_image_name(config: &Config, target: &Target, uses_zig: bool) -> Resul
         );
     }
 
-    let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
+    let version = if crate::commit_info().is_empty() {
         env!("CARGO_PKG_VERSION")
     } else {
         "main"
@@ -754,7 +754,7 @@ pub(crate) fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Res
         );
     }
 
-    let version = if include_str!(concat!(env!("OUT_DIR"), "/commit-info.txt")).is_empty() {
+    let version = if crate::commit_info().is_empty() {
         env!("CARGO_PKG_VERSION")
     } else {
         "main"
