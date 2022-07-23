@@ -367,7 +367,7 @@ mod tests {
             "bisector-nightly-2022-04-26-x86_64-unknown-linux-gnu",
             "/tmp/cross/sysroot".as_ref(),
             &crate::config::Config::new(None),
-            &mut MessageInfo::create(true, false, None).unwrap(),
+            &mut MessageInfo::create(2, false, None).unwrap(),
         )
         .unwrap();
     }

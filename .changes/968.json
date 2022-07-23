@@ -1,0 +1,4 @@
+{
+    "description": "only print rustup --verbose if `-vv` or `CROSS_VERBOSE=1` is used",
+    "type": "fixed"
+}
