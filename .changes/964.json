@@ -1,0 +1,4 @@
+{
+    "type": "fixed",
+    "description": "don't keep stdin open when running containers."
+}
