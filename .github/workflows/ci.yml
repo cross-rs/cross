@@ -265,17 +265,23 @@ jobs:
             name=${{ steps.prepare-meta.outputs.image }}
           labels: |
             ${{ fromJSON(steps.prepare-meta.outputs.labels) }}
+
       - name: Build Docker image
         id: build-docker-image
         if: steps.prepare-meta.outputs.has-image
         timeout-minutes: 120
-        run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 120
+          max_attempts: 3
+          retry_on: error
+          command: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
+          shell: bash
         env:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}
           LABELS: ${{ steps.docker-meta.outputs.labels }}
           LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
-        shell: bash
       - name: Set Docker image for test
         if: steps.prepare-meta.outputs.has-image
         run: |
