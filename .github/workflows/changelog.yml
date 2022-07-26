@@ -25,8 +25,8 @@ jobs:
         run: |
           set -x
           set -e
-          readarray -t added_modified <<<"$(jq -r '.[]' <<<'${{ steps.files.outputs.added_modified }}')"
-          readarray -t removed <<<"$(jq -r '.[]' <<<'${{ steps.files.outputs.removed }}')"
+          readarray -t added_modified < <(jq -r '.[]' <<<'${{ steps.files.outputs.added_modified }}')
+          readarray -t removed < <(jq -r '.[]' <<<'${{ steps.files.outputs.removed }}')
           added_count=${#added_modified[@]}
           removed_count=${#removed[@]}
           if ${{ !contains(github.event.pull_request.labels.*.name, 'no changelog' ) }}; then
