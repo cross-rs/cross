@@ -21,6 +21,7 @@ For example:
 
 ```toml
 [build.env]
+cargo-config = "complete"
 volumes = ["VOL1_ARG", "VOL2_ARG"]
 passthrough = ["IMPORTANT_ENV_VARIABLES"]
 ```
@@ -74,6 +75,7 @@ This is similar to `build.env`, but allows you to be more specific per target.
 
 ```toml
 [target.x86_64-unknown-linux-gnu.env]
+cargo-config = "ignore"
 volumes = ["VOL1_ARG", "VOL2_ARG"]
 passthrough = ["IMPORTANT_ENV_VARIABLES"]
 ```

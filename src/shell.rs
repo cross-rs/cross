@@ -9,6 +9,9 @@ use std::str::FromStr;
 use crate::errors::Result;
 use owo_colors::{self, OwoColorize};
 
+// the default error exit code for cargo.
+pub const ERROR_CODE: i32 = 101;
+
 // get the prefix for stderr messages
 macro_rules! cross_prefix {
     ($s:literal) => {
@@ -82,9 +85,8 @@ impl Verbosity {
 
     fn create(color_choice: ColorChoice, verbose: bool, quiet: bool) -> Option<Self> {
         match (verbose, quiet) {
-            (true, true) => {
-                MessageInfo::from(color_choice).fatal("cannot set both --verbose and --quiet", 101)
-            }
+            (true, true) => MessageInfo::from(color_choice)
+                .fatal("cannot set both --verbose and --quiet", ERROR_CODE),
             (true, false) => Some(Verbosity::Verbose),
             (false, true) => Some(Verbosity::Quiet),
             (false, false) => None,
@@ -206,7 +208,14 @@ impl MessageInfo {
     pub fn fatal<T: fmt::Display>(&mut self, message: T, code: i32) -> ! {
         self.error(message)
             .expect("could not display fatal message");
-        std::process::exit(code);
+
+        // need to catch panics in unittests, otherwise
+        // want the custom styled error message
+        if cfg!(test) {
+            panic!("");
+        } else {
+            std::process::exit(code);
+        }
     }
 
     /// prints a red 'error' message.

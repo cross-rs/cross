@@ -2,13 +2,14 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 use crate::cargo::Subcommand;
+use crate::cargo_config::CargoConfig;
 use crate::errors::Result;
 use crate::file::{absolute_path, PathExt};
 use crate::rustc::TargetList;
 use crate::shell::{self, MessageInfo};
 use crate::Target;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Args {
     pub all: Vec<String>,
     pub subcommand: Option<Subcommand>,
@@ -150,128 +151,173 @@ fn store_target_dir(_: String) -> Result<String> {
     Ok("/target".to_owned())
 }
 
-pub fn parse(target_list: &TargetList) -> Result<Args> {
-    let mut channel = None;
-    let mut target = None;
-    let mut features = Vec::new();
-    let mut manifest_path: Option<PathBuf> = None;
-    let mut target_dir = None;
-    let mut sc = None;
-    let mut all: Vec<String> = Vec::new();
-    let mut version = false;
-    let mut quiet = false;
-    let mut verbose = false;
-    let mut color = None;
-
-    {
-        let mut args = env::args().skip(1);
-        while let Some(arg) = args.next() {
-            if arg.is_empty() {
-                continue;
+// we have an optional parent to check for unresolvable recursion
+fn parse_subcommand(
+    arg: String,
+    result: &mut Args,
+    target_list: &TargetList,
+    config: &CargoConfig,
+    seen: &mut Vec<String>,
+) -> Result<()> {
+    if seen.iter().any(|x| x == &arg) {
+        let chain = seen.join(" -> ");
+        MessageInfo::default().fatal(
+            format_args!("alias {arg} has unresolvable recursive definition: {chain} -> {arg}"),
+            shell::ERROR_CODE,
+        );
+    }
+    let subcommand = Subcommand::from(arg.as_ref());
+    if subcommand == Subcommand::Other {
+        if let Some(alias) = config.alias(&arg)? {
+            seen.push(arg);
+            let mut iter = alias.iter().cloned();
+            while let Some(subarg) = iter.next() {
+                parse_arg(subarg, result, target_list, config, seen, &mut iter)?;
             }
-            if is_verbose(arg.as_str()) {
-                verbose = true;
-                all.push(arg);
-            } else if matches!(arg.as_str(), "--version" | "-V") {
-                version = true;
-            } else if matches!(arg.as_str(), "--quiet" | "-q") {
-                quiet = true;
-                all.push(arg);
-            } else if let Some(kind) = is_value_arg(&arg, "--color") {
-                color = match kind {
-                    ArgKind::Next => {
-                        match parse_next_arg(arg, &mut all, str_to_owned, identity, &mut args)? {
-                            Some(c) => Some(c),
-                            None => shell::invalid_color(None),
-                        }
-                    }
-                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, str_to_owned, identity)?),
-                };
-            } else if let Some(kind) = is_value_arg(&arg, "--manifest-path") {
-                manifest_path = match kind {
-                    ArgKind::Next => parse_next_arg(
-                        arg,
-                        &mut all,
-                        parse_manifest_path,
-                        store_manifest_path,
-                        &mut args,
-                    )?
-                    .flatten(),
-                    ArgKind::Equal => {
-                        parse_equal_arg(arg, &mut all, parse_manifest_path, store_manifest_path)?
-                    }
-                };
-            } else if let ("+", ch) = arg.split_at(1) {
-                channel = Some(ch.to_owned());
-            } else if let Some(kind) = is_value_arg(&arg, "--target") {
-                let parse_target = |t: &str| Ok(Target::from(t, target_list));
-                target = match kind {
-                    ArgKind::Next => {
-                        parse_next_arg(arg, &mut all, parse_target, identity, &mut args)?
-                    }
-                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, parse_target, identity)?),
-                };
-            } else if let Some(kind) = is_value_arg(&arg, "--features") {
-                match kind {
-                    ArgKind::Next => {
-                        let next =
-                            parse_next_arg(arg, &mut all, str_to_owned, identity, &mut args)?;
-                        if let Some(feature) = next {
-                            features.push(feature);
-                        }
-                    }
-                    ArgKind::Equal => {
-                        features.push(parse_equal_arg(arg, &mut all, str_to_owned, identity)?);
-                    }
-                }
-            } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
-                match kind {
-                    ArgKind::Next => {
-                        target_dir = parse_next_arg(
-                            arg,
-                            &mut all,
-                            parse_target_dir,
-                            store_target_dir,
-                            &mut args,
-                        )?;
-                    }
-                    ArgKind::Equal => {
-                        target_dir = Some(parse_equal_arg(
-                            arg,
-                            &mut all,
-                            parse_target_dir,
-                            store_target_dir,
-                        )?);
-                    }
-                }
-            } else {
-                if (!arg.starts_with('-') || arg == "--list") && sc.is_none() {
-                    sc = Some(Subcommand::from(arg.as_ref()));
-                }
-
-                all.push(arg.clone());
-            }
+            return Ok(());
         }
+        return Ok(());
     }
 
-    Ok(Args {
-        all,
-        subcommand: sc,
-        channel,
-        target,
-        features,
-        target_dir,
-        manifest_path,
-        version,
-        verbose,
-        quiet,
-        color,
-    })
+    // fallthrough
+    result.all.push(arg);
+    result.subcommand = Some(subcommand);
+
+    Ok(())
+}
+
+fn parse_arg(
+    arg: String,
+    result: &mut Args,
+    target_list: &TargetList,
+    config: &CargoConfig,
+    seen: &mut Vec<String>,
+    iter: &mut impl Iterator<Item = String>,
+) -> Result<()> {
+    if arg.is_empty() {
+        return Ok(());
+    }
+    if is_verbose(arg.as_str()) {
+        result.verbose = true;
+        result.all.push(arg);
+    } else if matches!(arg.as_str(), "--version" | "-V") {
+        result.version = true;
+    } else if matches!(arg.as_str(), "--quiet" | "-q") {
+        result.quiet = true;
+        result.all.push(arg);
+    } else if let Some(kind) = is_value_arg(&arg, "--color") {
+        result.color = match kind {
+            ArgKind::Next => {
+                match parse_next_arg(arg, &mut result.all, str_to_owned, identity, iter)? {
+                    Some(c) => Some(c),
+                    None => shell::invalid_color(None),
+                }
+            }
+            ArgKind::Equal => Some(parse_equal_arg(
+                arg,
+                &mut result.all,
+                str_to_owned,
+                identity,
+            )?),
+        };
+    } else if let Some(kind) = is_value_arg(&arg, "--manifest-path") {
+        result.manifest_path = match kind {
+            ArgKind::Next => parse_next_arg(
+                arg,
+                &mut result.all,
+                parse_manifest_path,
+                store_manifest_path,
+                iter,
+            )?
+            .flatten(),
+            ArgKind::Equal => parse_equal_arg(
+                arg,
+                &mut result.all,
+                parse_manifest_path,
+                store_manifest_path,
+            )?,
+        };
+    } else if let ("+", ch) = arg.split_at(1) {
+        result.channel = Some(ch.to_owned());
+    } else if let Some(kind) = is_value_arg(&arg, "--target") {
+        let parse_target = |t: &str| Ok(Target::from(t, target_list));
+        result.target = match kind {
+            ArgKind::Next => parse_next_arg(arg, &mut result.all, parse_target, identity, iter)?,
+            ArgKind::Equal => Some(parse_equal_arg(
+                arg,
+                &mut result.all,
+                parse_target,
+                identity,
+            )?),
+        };
+    } else if let Some(kind) = is_value_arg(&arg, "--features") {
+        match kind {
+            ArgKind::Next => {
+                let next = parse_next_arg(arg, &mut result.all, str_to_owned, identity, iter)?;
+                if let Some(feature) = next {
+                    result.features.push(feature);
+                }
+            }
+            ArgKind::Equal => {
+                result.features.push(parse_equal_arg(
+                    arg,
+                    &mut result.all,
+                    str_to_owned,
+                    identity,
+                )?);
+            }
+        }
+    } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
+        match kind {
+            ArgKind::Next => {
+                result.target_dir = parse_next_arg(
+                    arg,
+                    &mut result.all,
+                    parse_target_dir,
+                    store_target_dir,
+                    iter,
+                )?;
+            }
+            ArgKind::Equal => {
+                result.target_dir = Some(parse_equal_arg(
+                    arg,
+                    &mut result.all,
+                    parse_target_dir,
+                    store_target_dir,
+                )?);
+            }
+        }
+    } else if (!arg.starts_with('-') || arg == "--list") && result.subcommand.is_none() {
+        parse_subcommand(arg, result, target_list, config, seen)?;
+    } else {
+        result.all.push(arg.clone());
+    }
+
+    Ok(())
+}
+
+pub fn parse(target_list: &TargetList, config: &CargoConfig) -> Result<Args> {
+    let mut result = Args::default();
+    let mut args = env::args().skip(1);
+    let mut seen = vec![];
+    while let Some(arg) = args.next() {
+        parse_arg(arg, &mut result, target_list, config, &mut seen, &mut args)?;
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rustc;
+    use crate::shell::Verbosity;
+
+    macro_rules! s {
+        ($s:literal) => {
+            $s.to_owned()
+        };
+    }
 
     #[test]
     fn is_verbose_test() {
@@ -283,5 +329,58 @@ mod tests {
         assert!(is_verbose("--verbose"));
         assert!(is_verbose("-vvvv"));
         assert!(!is_verbose("-version"));
+    }
+
+    #[test]
+    fn test_nested_alias() {
+        let mut args = Args::default();
+        let target_list =
+            rustc::target_list(&mut Verbosity::Quiet.into()).expect("failed to get target list");
+        let config = CargoConfig::new(None);
+
+        parse_subcommand(
+            "g".to_owned(),
+            &mut args,
+            &target_list,
+            &config,
+            &mut vec![s!("x"), s!("y"), s!("z"), s!("a"), s!("e"), s!("f")],
+        )
+        .ok();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_recursive_alias() {
+        let mut args = Args::default();
+        let target_list =
+            rustc::target_list(&mut Verbosity::Quiet.into()).expect("failed to get target list");
+        let config = CargoConfig::new(None);
+
+        parse_subcommand(
+            "recursive".to_owned(),
+            &mut args,
+            &target_list,
+            &config,
+            &mut vec![s!("recursive")],
+        )
+        .ok();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_nested_recursive_alias() {
+        let mut args = Args::default();
+        let target_list =
+            rustc::target_list(&mut Verbosity::Quiet.into()).expect("failed to get target list");
+        let config = CargoConfig::new(None);
+
+        parse_subcommand(
+            "y".to_owned(),
+            &mut args,
+            &target_list,
+            &config,
+            &mut vec![s!("x"), s!("y"), s!("z"), s!("a")],
+        )
+        .ok();
     }
 }

@@ -9,7 +9,10 @@ use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
 use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
+use crate::cargo_config::CARGO_NO_PREFIX_ENVVARS;
 use crate::config::{bool_from_envvar, Config};
+use crate::cross_config::CrossConfig;
+use crate::cross_toml::CargoConfigBehavior;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{self, write_file, PathExt, ToUtf8};
@@ -37,6 +40,7 @@ pub struct DockerOptions {
     pub config: Config,
     pub image: Image,
     pub cargo_variant: CargoVariant,
+    pub cargo_config_behavior: CargoConfigBehavior,
 }
 
 impl DockerOptions {
@@ -46,6 +50,7 @@ impl DockerOptions {
         config: Config,
         image: Image,
         cargo_variant: CargoVariant,
+        cargo_config_behavior: CargoConfigBehavior,
     ) -> DockerOptions {
         DockerOptions {
             engine,
@@ -53,6 +58,7 @@ impl DockerOptions {
             config,
             image,
             cargo_variant,
+            cargo_config_behavior,
         }
     }
 
@@ -69,11 +75,13 @@ impl DockerOptions {
     #[must_use]
     pub fn needs_custom_image(&self) -> bool {
         self.config
+            .cross
             .dockerfile(&self.target)
             .unwrap_or_default()
             .is_some()
             || self
                 .config
+                .cross
                 .pre_build(&self.target)
                 .unwrap_or_default()
                 .is_some()
@@ -85,11 +93,12 @@ impl DockerOptions {
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
         let mut image = self.image.clone();
+        let config = &self.config.cross;
 
-        if let Some(path) = self.config.dockerfile(&self.target)? {
-            let context = self.config.dockerfile_context(&self.target)?;
+        if let Some(path) = config.dockerfile(&self.target)? {
+            let context = config.dockerfile_context(&self.target)?;
 
-            let is_custom_image = self.config.image(&self.target)?.is_some();
+            let is_custom_image = config.image(&self.target)?.is_some();
 
             let build = Dockerfile::File {
                 path: &path,
@@ -106,14 +115,14 @@ impl DockerOptions {
                 .build(
                     self,
                     paths,
-                    self.config
+                    config
                         .dockerfile_build_args(&self.target)?
                         .unwrap_or_default(),
                     msg_info,
                 )
                 .wrap_err("when building dockerfile")?;
         }
-        let pre_build = self.config.pre_build(&self.target)?;
+        let pre_build = config.pre_build(&self.target)?;
 
         if let Some(pre_build) = pre_build {
             match pre_build {
@@ -233,8 +242,16 @@ impl DockerPaths {
         self.workspace_from_cwd().is_ok()
     }
 
+    pub fn cargo_home(&self) -> &Path {
+        &self.directories.cargo
+    }
+
     pub fn mount_cwd(&self) -> &str {
         &self.directories.mount_cwd
+    }
+
+    pub fn mount_root(&self) -> &str {
+        &self.directories.mount_root
     }
 
     pub fn host_root(&self) -> &Path {
@@ -463,16 +480,6 @@ pub(crate) fn cargo_safe_command(cargo_variant: CargoVariant) -> SafeCommand {
 }
 
 fn add_cargo_configuration_envvars(docker: &mut Command) {
-    let non_cargo_prefix = &[
-        "http_proxy",
-        "TERM",
-        "RUSTDOCFLAGS",
-        "RUSTFLAGS",
-        "BROWSER",
-        "HTTPS_PROXY",
-        "HTTP_TIMEOUT",
-        "https_proxy",
-    ];
     let cargo_prefix_skip = &[
         "CARGO_HOME",
         "CARGO_TARGET_DIR",
@@ -483,7 +490,7 @@ fn add_cargo_configuration_envvars(docker: &mut Command) {
         "CARGO_BUILD_RUSTDOC",
     ];
     let is_cargo_passthrough = |key: &str| -> bool {
-        non_cargo_prefix.contains(&key)
+        CARGO_NO_PREFIX_ENVVARS.contains(&key)
             || key.starts_with("CARGO_") && !cargo_prefix_skip.contains(&key)
     };
 
@@ -498,7 +505,7 @@ fn add_cargo_configuration_envvars(docker: &mut Command) {
 
 pub(crate) fn docker_envvars(
     docker: &mut Command,
-    config: &Config,
+    config: &CrossConfig,
     dirs: &Directories,
     target: &Target,
     cargo_variant: CargoVariant,
@@ -559,8 +566,44 @@ pub(crate) fn build_command(dirs: &Directories, cmd: &SafeCommand) -> String {
     )
 }
 
-pub(crate) fn docker_cwd(docker: &mut Command, paths: &DockerPaths) -> Result<()> {
+fn mount_to_ignore_cargo_config(
+    docker: &mut Command,
+    paths: &DockerPaths,
+    cargo_config_behavior: CargoConfigBehavior,
+) -> Result<()> {
+    let check_mount =
+        |cmd: &mut Command, host: &Path, mount: &Path, relpath: &Path| -> Result<()> {
+            let cargo_dir = relpath.join(".cargo");
+            if host.join(&cargo_dir).exists() {
+                // this is fine, since it has to be a POSIX path on the mount.
+                cmd.args(&["-v", &mount.join(&cargo_dir).as_posix_absolute()?]);
+            }
+
+            Ok(())
+        };
+    if let CargoConfigBehavior::Ignore = cargo_config_behavior {
+        let mount_root = Path::new(paths.mount_root());
+        let mount_cwd = Path::new(paths.mount_cwd());
+        check_mount(docker, &paths.cwd, mount_cwd, Path::new(""))?;
+        // CWD isn't guaranteed to be a subdirectory of the mount root.
+        if let Ok(mut relpath) = mount_cwd.strip_prefix(mount_root) {
+            while let Some(parent) = relpath.parent() {
+                check_mount(docker, paths.host_root(), mount_root, parent)?;
+                relpath = parent;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub(crate) fn docker_cwd(
+    docker: &mut Command,
+    paths: &DockerPaths,
+    cargo_config_behavior: CargoConfigBehavior,
+) -> Result<()> {
     docker.args(&["-w", paths.mount_cwd()]);
+    mount_to_ignore_cargo_config(docker, paths, cargo_config_behavior)?;
 
     Ok(())
 }
@@ -574,6 +617,7 @@ pub(crate) fn docker_mount(
 ) -> Result<()> {
     for ref var in options
         .config
+        .cross
         .env_volumes(&options.target)?
         .unwrap_or_default()
     {
@@ -694,7 +738,7 @@ pub(crate) fn docker_seccomp(
 }
 
 /// Simpler version of [get_image]
-pub fn get_image_name(config: &Config, target: &Target, uses_zig: bool) -> Result<String> {
+pub fn get_image_name(config: &CrossConfig, target: &Target, uses_zig: bool) -> Result<String> {
     if let Some(image) = config.image(target)? {
         return Ok(image.name);
     }
@@ -730,7 +774,11 @@ pub fn get_image_name(config: &Config, target: &Target, uses_zig: bool) -> Resul
         .image_name(CROSS_IMAGE, version))
 }
 
-pub(crate) fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Result<PossibleImage> {
+pub(crate) fn get_image(
+    config: &CrossConfig,
+    target: &Target,
+    uses_zig: bool,
+) -> Result<PossibleImage> {
     if let Some(image) = config.image(target)? {
         return Ok(image);
     }

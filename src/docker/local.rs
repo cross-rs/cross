@@ -3,6 +3,7 @@ use std::path::Path;
 use std::process::{Command, ExitStatus};
 
 use super::shared::*;
+use crate::cross_toml::CargoConfigBehavior;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::file::{PathExt, ToUtf8};
@@ -40,7 +41,7 @@ pub(crate) fn run(
         .specify_platform(&options.engine, &mut docker);
     docker_envvars(
         &mut docker,
-        &options.config,
+        &options.config.cross,
         dirs,
         &options.target,
         options.cargo_variant,
@@ -86,7 +87,7 @@ pub(crate) fn run(
             ),
         ])
         .args(&["-v", &format!("{}:/target:z", dirs.target.to_utf8()?)]);
-    docker_cwd(&mut docker, &paths)?;
+    docker_cwd(&mut docker, &paths, options.cargo_config_behavior)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
@@ -99,6 +100,29 @@ pub(crate) fn run(
                 nix_store.as_posix_absolute()?
             ),
         ]);
+    }
+
+    // If we're using all config settings, we need to mount all `.cargo` dirs.
+    // We've already mounted the CWD, so start at the parents.
+    let mut host_cwd = paths.cwd.parent();
+    let mut mount_cwd = Path::new(&paths.directories.mount_cwd).parent();
+    if let CargoConfigBehavior::Complete = options.cargo_config_behavior {
+        while let (Some(host), Some(mount)) = (host_cwd, mount_cwd) {
+            let host_cargo = host.join(".cargo");
+            let mount_cargo = mount.join(".cargo");
+            if host_cargo.exists() {
+                docker.args(&[
+                    "-v",
+                    &format!(
+                        "{}:{}:z",
+                        host_cargo.to_utf8()?,
+                        mount_cargo.as_posix_absolute()?
+                    ),
+                ]);
+            }
+            host_cwd = host.parent();
+            mount_cwd = mount.parent();
+        }
     }
 
     if io::Stdin::is_atty() {

@@ -11,6 +11,7 @@ use super::engine::Engine;
 use super::shared::*;
 use crate::cargo::CargoMetadata;
 use crate::config::bool_from_envvar;
+use crate::cross_toml::CargoConfigBehavior;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::file::{self, PathExt, ToUtf8};
@@ -1053,6 +1054,33 @@ pub(crate) fn run(
         ),
         (&dirs.host_root, mount_root.clone()),
     ];
+
+    // If we're using all config settings, write the combined
+    // config file to a fixed location (to avoid it becoming stale).
+    // SAFETY: safe, single-threaded execution.
+    let config_tempdir = unsafe { temp::TempDir::new()? };
+    let config_temppath = config_tempdir.path();
+    let config_src_dir = config_temppath.join(".cargo");
+    if let CargoConfigBehavior::Complete = options.cargo_config_behavior {
+        let toml_opt = options.config.cargo.to_toml()?;
+        if let Some(toml_str) = toml_opt {
+            fs::create_dir_all(&config_src_dir)?;
+            file::write_file(config_src_dir.join("config.toml"), true)?
+                .write_all(toml_str.as_bytes())?;
+
+            let dst_dir = mount_prefix_path.join(".cargo");
+            copy_volume_files_nocache(
+                engine,
+                &container,
+                &config_src_dir,
+                &dst_dir,
+                false,
+                msg_info,
+            )?;
+            copied.push((&config_src_dir, dst_dir));
+        }
+    }
+
     let mut to_symlink = vec![];
     let target_dir = file::canonicalize(&dirs.target)?;
     let target_dir = if let Ok(relpath) = target_dir.strip_prefix(&dirs.host_root) {
@@ -1176,13 +1204,13 @@ symlink_recurse \"${{prefix}}\"
     docker_user_id(&mut docker, engine.kind);
     docker_envvars(
         &mut docker,
-        &options.config,
+        &options.config.cross,
         dirs,
         target,
         options.cargo_variant,
         msg_info,
     )?;
-    docker_cwd(&mut docker, &paths)?;
+    docker_cwd(&mut docker, &paths, options.cargo_config_behavior)?;
     docker.arg(&container);
     docker.args(&["sh", "-c", &build_command(dirs, &cmd)]);
     bail_container_exited!();
