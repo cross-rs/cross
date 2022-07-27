@@ -64,10 +64,10 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/freebsd"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.gz" -O
+    download_binutils "${binutils}" "gz"
     tar -C "${td}/binutils" --strip-components=1 -xf "binutils-${binutils}.tar.gz"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.gz" -O
+    download_gcc "${gcc}" "gz"
     tar -C "${td}/gcc" --strip-components=1 -xf "gcc-${gcc}.tar.gz"
 
     cd gcc

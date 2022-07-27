@@ -31,10 +31,10 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/solaris"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.xz" -O
+    download_binutils "${binutils}" "xz"
     tar -C "${td}/binutils" --strip-components=1 -xJf "binutils-${binutils}.tar.xz"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.xz" -O
+    download_gcc "${gcc}" "xz"
     tar -C "${td}/gcc" --strip-components=1 -xJf "gcc-${gcc}.tar.xz"
 
     cd gcc

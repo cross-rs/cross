@@ -26,10 +26,10 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/netbsd"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" -O
+    download_binutils "${binutils}" "bz2"
     tar -C "${td}/binutils" --strip-components=1 -xjf "binutils-${binutils}.tar.bz2"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.xz" -O
+    download_gcc "${gcc}" "xz"
     tar -C "${td}/gcc" --strip-components=1 -xJf "gcc-${gcc}.tar.xz"
 
     pushd "${td}"
@@ -52,10 +52,14 @@ main() {
     done
     popd
 
-    curl --retry 3 -sSfL ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-9.2/amd64/binary/sets/base.tar.xz -O
+    local mirrors=(
+        "ftp://ftp.netbsd.org"
+        "https://cdn.NetBSD.org"
+    )
+    download_mirrors "pub/NetBSD/NetBSD-9.2/amd64/binary/sets" "base.tar.xz" "${mirrors[@]}"
     tar -C "${td}/netbsd" -xJf base.tar.xz ./usr/include ./usr/lib ./lib
 
-    curl --retry 3 -sSfL ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-9.2/amd64/binary/sets/comp.tar.xz -O
+    download_mirrors "pub/NetBSD/NetBSD-9.2/amd64/binary/sets" "comp.tar.xz" "${mirrors[@]}"
     tar -C "${td}/netbsd" -xJf comp.tar.xz ./usr/include ./usr/lib
 
     pushd binutils-build

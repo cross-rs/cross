@@ -8,6 +8,10 @@ set -euo pipefail
 
 main() {
     local version=2022.82
+    local mirrors=(
+        "https://matt.ucc.asn.au/dropbear/releases"
+        "https://mirror.dropbear.nl/mirror"
+    )
 
     install_packages \
         autoconf \
@@ -24,7 +28,7 @@ main() {
 
     pushd "${td}"
 
-    curl --retry 3 -sSfL "https://matt.ucc.asn.au/dropbear/releases/dropbear-${version}.tar.bz2" -O
+    download_mirrors "" "dropbear-${version}.tar.bz2" "${mirrors[@]}"
     tar --strip-components=1 -xjf "dropbear-${version}.tar.bz2"
 
     # Remove some unwanted message
