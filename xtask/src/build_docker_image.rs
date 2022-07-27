@@ -169,6 +169,19 @@ pub fn build_docker_image(
         panic!("Refusing to push without tag or branch. Specify a repository and tag with `--repository <repository> --tag <tag>`")
     }
 
+    let progress = if gha || progress == "plain" {
+        "plain"
+    } else {
+        &progress
+    };
+
+    let labels = labels
+        .as_deref()
+        .unwrap_or("")
+        .split('\n')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>();
+
     let mut results = vec![];
     for (platform, (target, dockerfile)) in targets
         .iter()
@@ -224,42 +237,21 @@ pub fn build_docker_image(
             docker_build.args(&["--tag", tag]);
         }
 
-        for label in labels
-            .as_deref()
-            .unwrap_or("")
-            .split('\n')
-            .filter(|s| !s.is_empty())
-        {
+        for label in &labels {
             docker_build.args(&["--label", label]);
         }
 
-        docker_build.args([
-            "--label",
-            &format!(
-                "{}.for-cross-target={}",
-                cross::CROSS_LABEL_DOMAIN,
-                target.name
-            ),
-        ]);
-        docker_build.args([
-            "--label",
-            &format!(
-                "{}.runs-with={}",
-                cross::CROSS_LABEL_DOMAIN,
-                platform.target
-            ),
-        ]);
+        for label in get_default_labels(target, platform) {
+            docker_build.args(&["--label", &label]);
+        }
 
         docker_build.args(&["-f", dockerfile]);
+        docker_build.args(&["--progress", progress]);
 
-        if gha || progress == "plain" {
-            docker_build.args(&["--progress", "plain"]);
-        } else {
-            docker_build.args(&["--progress", &progress]);
-        }
         for arg in &build_arg {
             docker_build.args(&["--build-arg", arg]);
         }
+
         if verbose > 1 {
             docker_build.args(&["--build-arg", "VERBOSE=1"]);
         }
@@ -312,6 +304,22 @@ pub fn build_docker_image(
     Ok(())
 }
 
+fn get_default_labels(target: &crate::ImageTarget, platform: &ImagePlatform) -> Vec<String> {
+    vec![
+        "--label".to_owned(),
+        format!(
+            "{}.for-cross-target={}",
+            cross::CROSS_LABEL_DOMAIN,
+            target.name
+        ),
+        "--label".to_owned(),
+        format!(
+            "{}.runs-with={}",
+            cross::CROSS_LABEL_DOMAIN,
+            platform.target
+        ),
+    ]
+}
 pub fn get_tags(
     target: &crate::ImageTarget,
     repository: &str,
