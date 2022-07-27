@@ -189,6 +189,11 @@ pub fn build_docker_image(
             docker_build.arg("--load");
         }
 
+        docker_build.args(&[
+            "--build-arg",
+            &format!("RUST_TOOLCHAIN={}", platform.target),
+        ]);
+
         let mut tags = vec![];
 
         match (ref_type.as_deref(), ref_name.as_deref()) {
