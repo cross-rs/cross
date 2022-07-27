@@ -157,6 +157,9 @@ impl std::str::FromStr for ImagePlatform {
             value::{Error as SerdeError, StrDeserializer},
             IntoDeserializer,
         };
+        if s.contains(',') {
+            eyre::bail!("invalid platform, found unexpected character `,`");
+        }
         if let Some((platform, toolchain)) = s.split_once('=') {
             let image_toolchain = toolchain.into();
             let (os, arch, variant) = if let Some((os, rest)) = platform.split_once('/') {

@@ -90,6 +90,7 @@ macro_rules! get_msg_info {
 
 pub fn main() -> cross::Result<()> {
     cross::install_panic_hook()?;
+    cross::install_termination_hook()?;
     let cli = Cli::parse();
     match cli.command {
         Commands::TargetInfo(args) => {
