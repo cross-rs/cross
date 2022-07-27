@@ -31,25 +31,23 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/illumos"
 
-    local binutils_file="binutils-${binutils}.tar.xz"
     local binutils_sum="16328a906e55a3c633854beec8e9e255a639b366436470b4f6245eb0d2fde942"
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/${binutils_file}" -O
-    real_sum=$(sha256sum "${binutils_file}" | cut -d ' ' -f 1)
+    download_binutils "${binutils}" "xz"
+    real_sum=$(sha256sum "binutils-${binutils}.tar.xz" | cut -d ' ' -f 1)
     if [[ "${binutils_sum}" != "${real_sum}" ]]; then
         echo "Error: invalid hash for binutils." >&2
         exit 1
     fi
-    tar -C "${td}/binutils" --strip-components=1 -xJf "${binutils_file}"
+    tar -C "${td}/binutils" --strip-components=1 -xJf "binutils-${binutils}.tar.xz"
 
-    local gcc_file="gcc-${gcc}.tar.xz"
     local gcc_sum="e30a6e52d10e1f27ed55104ad233c30bd1e99cfb5ff98ab022dc941edd1b2dd4"
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/${gcc_file}" -O
-    real_sum=$(sha256sum "${gcc_file}" | cut -d ' ' -f 1)
+    download_gcc "${gcc}" "xz"
+    real_sum=$(sha256sum "gcc-${gcc}.tar.xz" | cut -d ' ' -f 1)
     if [[ "${gcc_sum}" != "${real_sum}" ]]; then
         echo "Error: invalid hash for gcc." >&2
         exit 1
     fi
-    tar -C "${td}/gcc" --strip-components=1 -xJf "${gcc_file}"
+    tar -C "${td}/gcc" --strip-components=1 -xJf "gcc-${gcc}.tar.xz"
 
     pushd gcc
     sed -i -e 's/ftp:/https:/g' ./contrib/download_prerequisites

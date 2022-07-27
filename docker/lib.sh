@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2294
+
 purge_list=()
 
 install_packages() {
@@ -42,4 +45,44 @@ if_ubuntu() {
     if grep -q -i ubuntu /etc/os-release; then
         eval "${@}"
     fi
+}
+
+GNU_MIRRORS=(
+    "https://ftp.gnu.org/gnu/"
+    "https://ftpmirror.gnu.org/"
+)
+
+download_mirrors() {
+    local relpath="${1}"
+    shift
+    local filename="${1}"
+    shift
+
+    for mirror in "${@}"; do
+        if curl --retry 3 -sSfL "${mirror}/${relpath}/${filename}" -O; then
+            break
+        fi
+    done
+    if [[ ! -f "${filename}" ]]; then
+        echo "Unable to download ${filename}" >&2
+        exit 1
+    fi
+}
+
+download_binutils() {
+    local mirror
+    local version="${1}"
+    local ext="${2}"
+    local filename="binutils-${version}.tar.${ext}"
+
+    download_mirrors "binutils" "${filename}" "${GNU_MIRRORS[@]}"
+}
+
+download_gcc() {
+    local mirror
+    local version="${1}"
+    local ext="${2}"
+    local filename="gcc-${version}.tar.${ext}"
+
+    download_mirrors "gcc/gcc-${version}" "${filename}" "${GNU_MIRRORS[@]}"
 }

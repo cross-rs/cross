@@ -11,8 +11,7 @@ main() {
     local binutils=2.32 \
           dragonfly=6.0.1_REL \
           gcc=10.3.0 \
-          target=x86_64-unknown-dragonfly \
-          url="https://mirror-master.dragonflybsd.org/iso-images"
+          target=x86_64-unknown-dragonfly
     if [[ $# != "0" ]]; then
         nproc="${1}"
     fi
@@ -33,10 +32,10 @@ main() {
     pushd "${td}"
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/dragonfly"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/binutils/binutils-${binutils}.tar.bz2" -O
+    download_binutils "${binutils}" "bz2"
     tar -C "${td}/binutils" --strip-components=1 -xjf "binutils-${binutils}.tar.bz2"
 
-    curl --retry 3 -sSfL "https://ftp.gnu.org/gnu/gcc/gcc-${gcc}/gcc-${gcc}.tar.gz" -O
+    download_gcc "${gcc}" "gz"
     tar -C "${td}/gcc" --strip-components=1 -xf "gcc-${gcc}.tar.gz"
 
     cd gcc
@@ -50,7 +49,11 @@ main() {
 EOF
     cd ..
 
-    curl --retry 3 -sSfL "${url}/dfly-x86_64-${dragonfly}.iso.bz2" -O
+    local mirrors=(
+        "https://mirror-master.dragonflybsd.org/iso-images"
+        "https://avalon.dragonflybsd.org/iso-images/"
+    )
+    download_mirrors "" "dfly-x86_64-${dragonfly}.iso.bz2" "${mirrors[@]}"
     bzcat "dfly-x86_64-${dragonfly}.iso.bz2" | bsdtar xf - -C "${td}/dragonfly" ./usr/include ./usr/lib ./lib
 
     cd binutils-build
