@@ -165,6 +165,10 @@ pub fn build_docker_image(
         platform
     };
 
+    if push && tag_override.is_none() && ref_name.is_none() {
+        panic!("Refusing to push without tag or branch. Specify a repository and tag with `--repository <repository> --tag <tag>`")
+    }
+
     let mut results = vec![];
     for (platform, (target, dockerfile)) in targets
         .iter()
@@ -189,28 +193,15 @@ pub fn build_docker_image(
             docker_build.arg("--load");
         }
 
-        let mut tags = vec![];
-
-        match (ref_type.as_deref(), ref_name.as_deref()) {
-            (Some(ref_type), Some(ref_name)) => tags.extend(determine_image_name(
-                target,
-                &repository,
-                ref_type,
-                ref_name,
-                is_latest,
-                &version,
-            )?),
-            _ => {
-                if push && tag_override.is_none() {
-                    panic!("Refusing to push without tag or branch. Specify a repository and tag with `--repository <repository> --tag <tag>`")
-                }
-                tags.push(target.image_name(&repository, "local"));
-            }
-        }
-
-        if let Some(ref tag) = tag_override {
-            tags = vec![target.image_name(&repository, tag)];
-        }
+        let tags = get_tags(
+            target,
+            &repository,
+            &version,
+            is_latest,
+            ref_type.as_deref(),
+            ref_name.as_deref(),
+            tag_override.as_deref(),
+        )?;
 
         docker_build.arg("--pull");
         if no_cache {
@@ -319,6 +310,31 @@ pub fn build_docker_image(
             .fold(Err(eyre::eyre!("encountered error(s)")), |_, e| Err(e.1))?;
     }
     Ok(())
+}
+
+pub fn get_tags(
+    target: &crate::ImageTarget,
+    repository: &str,
+    version: &str,
+    is_latest: bool,
+    ref_type: Option<&str>,
+    ref_name: Option<&str>,
+    tag_override: Option<&str>,
+) -> cross::Result<Vec<String>> {
+    if let Some(tag) = tag_override {
+        return Ok(vec![target.image_name(repository, tag)]);
+    }
+
+    let mut tags = vec![];
+    match (ref_type, ref_name) {
+        (Some(ref_type), Some(ref_name)) => tags.extend(determine_image_name(
+            target, repository, ref_type, ref_name, is_latest, version,
+        )?),
+        _ => {
+            tags.push(target.image_name(repository, "local"));
+        }
+    }
+    Ok(tags)
 }
 
 pub fn determine_image_name(
