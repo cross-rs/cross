@@ -149,7 +149,7 @@ jobs:
               ) && github.event.head_commit.message) || ''
             }}
           matrix: |
-            - { target: x86_64-apple-darwin,              os: macos-10.15,                                                                             deploy: true }
+            - { target: x86_64-apple-darwin,              os: macos-12,                                                                               deploy: true }
             - { target: x86_64-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system, deploy: true }
             - { target: x86_64-unknown-linux-musl,        os: ubuntu-latest,                    std: 1, run: 1,                                        deploy: true }
             - { target: x86_64-pc-windows-msvc,           os: windows-2019,                                                                            deploy: true }
