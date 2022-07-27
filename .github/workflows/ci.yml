@@ -167,7 +167,7 @@ jobs:
             - { target: mipsel-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: mips64-unknown-linux-gnuabi64,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: mips64el-unknown-linux-gnuabi64,  os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: mips64-unknown-linux-muslabi64,   os: ubuntu-latest,                    std: 1, run: 1 }
+            - { target: mips64-unknown-linux-muslabi64,   os: ubuntu-latest,  cpp:1, dylib: 1,  std: 1, run: 1, runners: qemu-user }
             - { target: mips64el-unknown-linux-muslabi64, os: ubuntu-latest,                    std: 1, run: 1 }
             - { target: powerpc-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: powerpc64-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
