@@ -1,0 +1,11 @@
+[
+    {
+        "description": "change `mips64-unknown-linux-muslabi64` target to hard-float target.",
+        "type": "fixed",
+        "issues": [906]
+    },
+    {
+        "description": "build static libgcc and link to static libgcc for `mips64-unknown-linux-muslabi64` target.",
+        "type": "fixed"
+    }
+]
