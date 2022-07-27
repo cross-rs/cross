@@ -1,6 +1,6 @@
 [
     {
-        "description": "update Ubuntu images to 20.04 LTS.",
+        "description": "update Ubuntu images to 22.04 LTS.",
         "type": "changed",
         "breaking": true,
         "issues": [417, 517, 556, 616]
