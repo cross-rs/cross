@@ -22,7 +22,7 @@ pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 // note: this is the most common base image for our images
-pub const UBUNTU_BASE: &str = "ubuntu:20.04";
+pub const UBUNTU_BASE: &str = "ubuntu:22.04";
 
 // secured profile based off the docker documentation for denied syscalls:
 // https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile

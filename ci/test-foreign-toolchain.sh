@@ -55,7 +55,7 @@ passthrough = [
 ]
 
 [target.x86_64-unknown-linux-gnu.image]
-name = "ubuntu:20.04"
+name = "ubuntu:22.04"
 toolchain = ["aarch64-unknown-linux-gnu"]
     ' >"${CARGO_TMP_DIR}"/Cross.toml
 
