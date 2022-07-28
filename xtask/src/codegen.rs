@@ -1,6 +1,6 @@
 use clap::Args;
 use eyre::Context;
-use std::fmt::Write;
+use std::{collections::BTreeMap, fmt::Write};
 
 use crate::util::{get_cargo_workspace, get_matrix};
 
@@ -25,11 +25,32 @@ use super::{ImagePlatform, ProvidedImage};
 #[rustfmt::skip]
 pub static PROVIDED_IMAGES: &[ProvidedImage] = &["##,
     );
-
-    for image_target in get_matrix()
+    let matrix = get_matrix()
         .iter()
         .filter(|i| i.to_image_target().is_toolchain_image())
-    {
+        .collect::<Vec<_>>();
+    let mut image_targets: BTreeMap<(String, Option<String>), Vec<String>> = BTreeMap::new();
+
+    for entry in matrix {
+        image_targets
+            .entry((entry.target.clone(), entry.sub.clone()))
+            .and_modify(|e| {
+                e.extend(
+                    entry
+                        .platforms
+                        .clone()
+                        .unwrap_or_else(|| vec!["DEFAULT".to_string()]),
+                )
+            })
+            .or_insert_with(|| {
+                entry
+                    .platforms
+                    .clone()
+                    .unwrap_or_else(|| vec!["DEFAULT".to_string()])
+            });
+    }
+
+    for ((target, sub), platforms) in image_targets {
         write!(
             &mut images,
             r#"
@@ -38,23 +59,19 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &["##,
             platforms: &[{}],
             sub: {}
         }},"#,
-            image_target.target.clone(),
-            if let Some(platforms) = &image_target.platforms {
-                platforms
-                    .iter()
-                    .map(|p| {
-                        format!(
-                            "ImagePlatform::{}",
-                            p.replace('-', "_").to_ascii_uppercase()
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .as_slice()
-                    .join(", ")
-            } else {
-                "ImagePlatform::DEFAULT".to_string()
-            },
-            if let Some(sub) = &image_target.sub {
+            target,
+            platforms
+                .iter()
+                .map(|p| {
+                    format!(
+                        "ImagePlatform::{}",
+                        p.replace('-', "_").to_ascii_uppercase()
+                    )
+                })
+                .collect::<Vec<_>>()
+                .as_slice()
+                .join(", "),
+            if let Some(sub) = sub {
                 format!(r#"Some("{}")"#, sub)
             } else {
                 "None".to_string()
