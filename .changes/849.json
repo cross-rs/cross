@@ -1,0 +1,6 @@
+[
+    {
+        "description": "enable using `buildx bake` and `buildx imagetools` for building cross images with `build-docker-image`",
+        "type": "internal"
+    }
+]
