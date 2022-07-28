@@ -56,9 +56,12 @@ pub struct BuildDockerImage {
         default_value = "auto"
     )]
     pub progress: String,
-    /// Use a bake build
+    /// Use a bake build, specifying multiple platforms makes this implicit
     #[clap(long)]
     pub bake: bool,
+    /// With bake action, append to the manifest instead of overwriting it.
+    #[clap(long)]
+    pub append: bool,
     /// Do not load from cache when building the image.
     #[clap(long)]
     pub no_cache: bool,
@@ -85,6 +88,8 @@ pub struct BuildDockerImage {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct BakeTarget {
+    #[serde(skip, default)]
+    image_target: Option<crate::ImageTarget>,
     #[serde(skip_serializing_if = "<[_]>::is_empty")]
     inherits: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -137,6 +142,7 @@ pub fn build_docker_image(
         no_output,
         progress,
         bake,
+        append,
         no_cache,
         no_fastfail,
         from_ci,
@@ -213,6 +219,9 @@ pub fn build_docker_image(
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>();
     let mut results = vec![];
+
+    let bake = bake || platforms.len() > 1;
+
     if !bake {
         for (platform, (target, dockerfile)) in targets
             .iter()
@@ -230,11 +239,16 @@ pub fn build_docker_image(
             docker_build.args(&["--platform", &platform.docker_platform()]);
 
             if push {
-                docker_build.arg("--push");
-            } else if engine.kind.is_docker() && no_output {
+                if let Some("") = tag_override.as_deref() {
+                    docker_build.args(&["--output", "type=registry,push-by-digest=true"]);
+                } else {
+                    docker_build.args(&["--output", "type=registry"]);
+                }
+                docker_build.args(&["--cache-to", "type=inline"]);
+            } else if no_output {
                 docker_build.args(&["--output", "type=tar,dest=/dev/null"]);
             } else {
-                docker_build.arg("--load");
+                docker_build.args(&["--output", "type=docker"]);
             }
 
             let tags = get_tags(
@@ -260,10 +274,6 @@ pub fn build_docker_image(
                 ]);
             }
 
-            if push {
-                docker_build.args(&["--cache-to", "type=inline"]);
-            }
-
             for tag in &tags {
                 docker_build.args(&["--tag", tag]);
             }
@@ -272,7 +282,7 @@ pub fn build_docker_image(
                 docker_build.args(&["--label", label]);
             }
 
-            for label in get_default_labels(target, std::slice::from_ref(platform)) {
+            for label in get_default_labels(target, platform) {
                 docker_build.args(&["--label", &format!("{}={}", label.0, label.1)]);
             }
 
@@ -324,6 +334,13 @@ pub fn build_docker_image(
             }
         }
     } else {
+        let tag = tag_override.clone();
+        let tag_override = if platforms.len() > 1 || append {
+            Some("".to_owned())
+        } else {
+            tag_override
+        };
+
         // Bake
         let labels = labels
             .into_iter()
@@ -343,29 +360,64 @@ pub fn build_docker_image(
                 Ok((s.0.to_string(), s.1.to_string()))
             })
             .collect::<cross::Result<BTreeMap<_, _>>>()?;
+        let mut defaults = vec![];
         let mut bake_targets = targets
             .iter()
             .map(|(target, dockerfile)| -> cross::Result<_> {
-                let name = target.to_string().replace('.', "-");
+                Ok((
+                    target.to_string().replace('.', "-"),
+                    BakeTarget {
+                        image_target: None,
+                        inherits: vec!["base".to_owned()],
+                        dockerfile: Some(dockerfile.clone()),
+
+                        context: if target.needs_workspace_root_context() {
+                            Some(root.to_utf8()?.to_owned())
+                        } else {
+                            None
+                        },
+                        tags: get_tags(
+                            target,
+                            &repository,
+                            &version,
+                            is_latest,
+                            ref_type.as_deref(),
+                            ref_name.as_deref(),
+                            tag_override.as_deref(),
+                        )?,
+                        labels: labels.clone(),
+                        platforms: vec![],
+                        args: build_args.clone(),
+                        no_cache: None,
+                        cache_from: if !no_cache {
+                            vec![format!(
+                                "type=registry,ref={}",
+                                target.image_name(&repository, "main")
+                            )]
+                        } else {
+                            vec![]
+                        },
+                    },
+                ))
+            })
+            .collect::<cross::Result<BTreeMap<_, _>>>()?;
+        for platform in &platforms {
+            for (target, _dockerfile) in &targets {
+                let name = format!("{target}-{}", platform.docker_platform())
+                    .replace('.', "-")
+                    .replace('/', "-");
                 let target = BakeTarget {
-                    inherits: vec!["base".to_owned()],
+                    image_target: Some(target.clone()),
+                    inherits: vec![target.to_string()],
+                    dockerfile: None,
                     context: if target.needs_workspace_root_context() {
                         Some(root.to_utf8()?.to_owned())
                     } else {
                         None
                     },
-                    dockerfile: Some(dockerfile.clone()),
-                    tags: get_tags(
-                        target,
-                        &repository,
-                        &version,
-                        is_latest,
-                        ref_type.as_deref(),
-                        ref_name.as_deref(),
-                        tag_override.as_deref(),
-                    )?,
-                    labels: get_default_labels(target, &platforms).into_iter().collect(),
-                    platforms: platforms.iter().map(|p| p.docker_platform()).collect(),
+                    tags: vec![],
+                    labels: get_default_labels(target, platform).into_iter().collect(),
+                    platforms: vec![platform.docker_platform()],
                     args: build_args.clone(),
                     no_cache: None,
                     cache_from: if !no_cache {
@@ -377,17 +429,15 @@ pub fn build_docker_image(
                         vec![]
                     },
                 };
-                Ok((name, target))
-            })
-            .collect::<cross::Result<BTreeMap<_, _>>>()?;
-        let defaults = bake_targets
-            .iter()
-            .map(|(t, _)| t.clone())
-            .collect::<Vec<String>>();
+                bake_targets.insert(name.clone(), target);
+                defaults.push(name);
+            }
+        }
 
         bake_targets.insert(
             "base".to_owned(),
             BakeTarget {
+                image_target: None,
                 inherits: vec![],
                 context: Some(".".to_owned()),
                 dockerfile: None,
@@ -411,15 +461,25 @@ pub fn build_docker_image(
         }
 
         if push {
-            docker_bake.arg("--push");
+            if let Some("") = tag_override.as_deref() {
+                docker_bake.args(&["--set", "*.output=type=registry,push-by-digest=true"]);
+            } else {
+                docker_bake.args(&["--set", "*.output=type=registry"]);
+            }
             //docker_bake.args(&["--set", "*.cache-to=type=inline"]);
         } else if no_output {
             docker_bake.args(&["--set", "*.output=type=tar,dest=/dev/null"]);
         } else {
-            docker_bake.arg("--load");
+            // if multi-platform, this will fail.
+            docker_bake.args(&["--set", "*.output=type=docker"]);
         }
 
-        let mut temp = unsafe { cross::temp::TempFile::new()? };
+        if dry_run {
+            docker_bake.arg("--print");
+        }
+
+        let mut temp_build_def = unsafe { cross::temp::TempFile::new()? };
+        let mut temp_metadata = unsafe { cross::temp::TempFile::new()? };
         let content = serde_json::to_string_pretty(&serde_json::json!({
             "group": {
                 "default": {
@@ -428,17 +488,89 @@ pub fn build_docker_image(
             },
             "target": bake_targets,
         }))?;
-        write!(temp.file(), "{}", content).wrap_err("couldn't write to temp file")?;
-        docker_bake.args(&["-f", temp.file().path().to_utf8()?]);
+        write!(temp_build_def.file(), "{}", content).wrap_err("couldn't write to temp file")?;
+        docker_bake.args(&["-f", temp_build_def.file().path().to_utf8()?]);
+        docker_bake.args(&["--metadata-file", temp_metadata.file().path().to_utf8()?]);
         docker_bake.run(msg_info, false)?;
 
+        if dry_run {
+            return Ok(());
+        }
+        let metadata: serde_json::Value =
+            serde_json::from_str(&cross::file::read(temp_metadata.path())?)?;
+
+        let images = if platforms.len() > 1 || append {
+            let mut bake_images: BTreeMap<crate::ImageTarget, Vec<String>> = BTreeMap::new();
+            for (name, target) in bake_targets
+                .iter()
+                .filter_map(|(name, target)| -> Option<_> {
+                    // Only get bake targets with a specific target
+                    Some((name, target.image_target.as_ref()?))
+                })
+            {
+                if let Some(image) = metadata.pointer(&format!("/{name}/containerimage.digest")) {
+                    bake_images.entry(target.clone()).or_default().push(
+                        image
+                            .as_str()
+                            .ok_or_else(|| eyre::eyre!("digest should be a string"))?
+                            .to_owned(),
+                    );
+                }
+            }
+            let mut images = vec![];
+            for (target, digest) in bake_images {
+                let mut docker_itc = docker::command(engine);
+                docker_itc.args(&["buildx", "imagetools", "create"]);
+
+                if append {
+                    docker_itc.arg("--append");
+                }
+
+                if !push || dry_run {
+                    docker_itc.arg("--dry-run");
+                }
+
+                docker_itc.args(
+                    digest
+                        .into_iter()
+                        .map(|digest| format!("{}@{digest}", target.image_name(&repository, ""))),
+                );
+                let tags = get_tags(
+                    &target,
+                    &repository,
+                    &version,
+                    is_latest,
+                    ref_type.as_deref(),
+                    ref_name.as_deref(),
+                    tag.as_deref(),
+                )?;
+                for tag in &tags {
+                    docker_itc.args(&["--tag", tag]);
+                }
+                images.extend(tags);
+
+                docker_itc.run(msg_info, false)?;
+            }
+            images
+        } else if let Some(map) = metadata.as_object() {
+            let mut images = vec![];
+            for (_, val) in map {
+                if let Some(image) = val.pointer("/image.name") {
+                    images.push(
+                        image
+                            .as_str()
+                            .ok_or_else(|| eyre::eyre!("digest should be a string"))?
+                            .to_owned(),
+                    )
+                }
+            }
+            images
+        } else {
+            eyre::bail!("metadata was not an object: {:?}", metadata)
+        };
         if gha {
-            let tags = bake_targets
-                .values()
-                .flat_map(|v| &v.tags)
-                .collect::<Vec<_>>();
-            gha_output("image", tags[0]);
-            gha_output("images", &format!("'{}'", serde_json::to_string(&tags)?));
+            gha_output("image", &images[0]);
+            gha_output("images", &format!("'{}'", serde_json::to_string(&images)?));
         }
     }
     if gha {
@@ -455,7 +587,7 @@ pub fn build_docker_image(
 
 fn get_default_labels(
     target: &crate::ImageTarget,
-    platforms: &[ImagePlatform],
+    platform: &ImagePlatform,
 ) -> Vec<(String, String)> {
     vec![
         (
@@ -464,11 +596,7 @@ fn get_default_labels(
         ),
         (
             format!("{}.runs-with", cross::CROSS_LABEL_DOMAIN),
-            platforms
-                .iter()
-                .map(|p| p.target.to_string())
-                .collect::<Vec<_>>()
-                .join(","),
+            platform.target.to_string(),
         ),
     ]
 }

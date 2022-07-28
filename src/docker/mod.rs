@@ -32,7 +32,9 @@ impl ProvidedImage {
 }
 
 pub fn image_name(target: &str, sub: Option<&str>, repository: &str, tag: &str) -> String {
-    if let Some(sub) = sub {
+    if tag.is_empty() {
+        format!("{repository}/{target}")
+    } else if let Some(sub) = sub {
         format!("{repository}/{target}:{tag}-{sub}")
     } else {
         format!("{repository}/{target}:{tag}")
