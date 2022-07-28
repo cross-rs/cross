@@ -865,6 +865,10 @@ pub(crate) fn run(
 
     let mount_prefix = MOUNT_PREFIX;
 
+    if options.in_docker() {
+        msg_info.warn("remote and docker-in-docker are unlikely to work together when using cross. remote cross uses data volumes, so docker-in-docker should not be required.")?;
+    }
+
     // the logic is broken into the following steps
     // 1. get our unique identifiers and cleanup from a previous run.
     // 2. if not using persistent volumes, create a data volume
