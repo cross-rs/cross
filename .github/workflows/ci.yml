@@ -173,8 +173,8 @@ jobs:
             - { target: powerpc64-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: powerpc64le-unknown-linux-gnu,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: riscv64gc-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-            - { target: s390x-unknown-linux-gnu,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-system }
-            - { target: sparc64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-system }
+            - { target: s390x-unknown-linux-gnu,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+            - { target: sparc64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
             - { target: aarch64-unknown-linux-musl,       os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: arm-unknown-linux-musleabihf,     os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
             - { target: arm-unknown-linux-musleabi,       os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
