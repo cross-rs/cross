@@ -134,6 +134,12 @@ main() {
             kernel="5.*-powerpc64le"
             deps=(libcrypt1:"${arch}")
             ;;
+        riscv64)
+            kernel="5.*-riscv64"
+            debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
+            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+            deps=(libcrypt1:"${arch}")
+            ;;
         s390x)
             arch=s390x
             kernel="5.*-s390x"

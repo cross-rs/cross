@@ -98,6 +98,9 @@ case "${arch}" in
         opt="-append console=ttyPZ0"
         n=1
         ;;
+    riscv64)
+        opt="-machine virt"
+        ;;
     powerpc64|powerpc64le)
         opt="-append console=hvc0 --nodefaults -serial stdio"
         ;;
@@ -140,12 +143,16 @@ esac
     else
         ${QEMU_CMD} >> "${LOG}" 2>&1 &
     fi
+    qemu_pid=$!
 
     # wait for dropbear
     for _ in $(seq 240); do
         if grep -q "Not backgrounding" "${LOG}"; then
             READY=1
             break
+        elif ! (ps -p "${qemu_pid}" >/dev/null 2>&1); then
+            # qemu command failed and exited early
+            exit 1
         fi
         sleep 0.5s
     done
