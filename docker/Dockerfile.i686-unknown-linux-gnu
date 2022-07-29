@@ -11,7 +11,13 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
-    g++-multilib
+    g++-i686-linux-gnu \
+    libc6-dev-i386-cross
+
+COPY deny-debian-packages.sh /
+RUN TARGET_ARCH=i386 /deny-debian-packages.sh \
+    binutils \
+    binutils-i686-linux-gnu
 
 COPY qemu.sh /
 RUN /qemu.sh i386 softmmu
@@ -24,5 +30,11 @@ RUN /linux-image.sh i686
 
 COPY linux-runner /
 
-ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner i686" \
+ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER=i686-linux-gnu-gcc \
+    CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner i686" \
+    CC_i686_unknown_linux_gnu=i686-linux-gnu-gcc \
+    CXX_i686_unknown_linux_gnu=i686-linux-gnu-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_i686_unknown_linux_gnu="--sysroot=/usr/i686-linux-gnu" \
+    QEMU_LD_PREFIX=/usr/i686-linux-gnu \
+    RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/i386-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"
