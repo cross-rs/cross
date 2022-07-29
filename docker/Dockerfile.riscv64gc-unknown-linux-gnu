@@ -4,8 +4,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 COPY common.sh lib.sh /
 RUN /common.sh
 
-# COPY cmake.sh /
-# RUN /cmake.sh
+COPY cmake.sh /
+RUN /cmake.sh
 
 COPY xargo.sh /
 RUN /xargo.sh
@@ -20,7 +20,13 @@ RUN TARGET_ARCH=riscv64 /deny-debian-packages.sh \
     binutils-riscv64-linux-gnu
 
 COPY qemu.sh /
-RUN /qemu.sh riscv64
+RUN /qemu.sh riscv64 softmmu
+
+COPY dropbear.sh /
+RUN /dropbear.sh
+
+COPY linux-image.sh /
+RUN /linux-image.sh riscv64
 
 COPY linux-runner /
 
