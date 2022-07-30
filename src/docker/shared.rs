@@ -530,12 +530,11 @@ pub(crate) fn docker_envvars(
         docker.args(&["-e", &format!("USER={username}")]);
     }
 
-    if let Ok(value) = env::var("QEMU_STRACE") {
-        docker.args(&["-e", &format!("QEMU_STRACE={value}")]);
-    }
-
-    if let Ok(value) = env::var("CROSS_DEBUG") {
-        docker.args(&["-e", &format!("CROSS_DEBUG={value}")]);
+    let extras = ["QEMU_STRACE", "CROSS_DEBUG", "CROSS_NO_LIBGCC_ROUTINES"];
+    for extra in extras {
+        if let Ok(value) = env::var(extra) {
+            docker.args(&["-e", &format!("{extra}={value}")]);
+        }
     }
 
     if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {

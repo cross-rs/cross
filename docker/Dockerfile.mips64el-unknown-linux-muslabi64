@@ -21,9 +21,12 @@ ENV CROSS_MUSL_SYSROOT=/usr/local/mips64el-linux-muslsf
 COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT mips64el-sf
 
+COPY musl-linker.sh /usr/bin/
+
 COPY qemu-runner /
 
-ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_LINKER=mips64el-linux-muslsf-gcc \
+ENV CROSS_TARGET_LINKER=mips64el-linux-muslsf-gcc \
+    CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_LINKER=musl-linker.sh \
     CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_RUNNER="/qemu-runner mips64el" \
     CC_mips64el_unknown_linux_muslabi64=mips64el-linux-muslsf-gcc \
     CXX_mips64el_unknown_linux_muslabi64=mips64el-linux-muslsf-g++ \

@@ -25,9 +25,12 @@ ENV CROSS_MUSL_SYSROOT=/usr/local/arm-linux-musleabihf
 COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT armhf
 
+COPY musl-linker.sh /usr/bin/
+
 COPY qemu-runner /
 
-ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-musleabihf-gcc \
+ENV CROSS_TARGET_LINKER=arm-linux-musleabihf-gcc \
+    CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=musl-linker.sh \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_RUNNER="/qemu-runner arm" \
     CC_arm_unknown_linux_musleabihf=arm-linux-musleabihf-gcc \
     CXX_arm_unknown_linux_musleabihf=arm-linux-musleabihf-g++ \

@@ -20,9 +20,12 @@ ENV CROSS_MUSL_SYSROOT=/usr/local/i586-linux-musl
 COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT i386
 
+COPY musl-linker.sh /usr/bin/
+
 COPY qemu-runner /
 
-ENV CARGO_TARGET_I586_UNKNOWN_LINUX_MUSL_LINKER=i586-linux-musl-gcc \
+ENV CROSS_TARGET_LINKER=i586-linux-musl-gcc \
+    CARGO_TARGET_I586_UNKNOWN_LINUX_MUSL_LINKER=musl-linker.sh \
     CARGO_TARGET_I586_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner i586" \
     CC_i586_unknown_linux_musl=i586-linux-musl-gcc \
     CXX_i586_unknown_linux_musl=i586-linux-musl-g++ \

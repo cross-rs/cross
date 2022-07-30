@@ -25,11 +25,12 @@ RUN mkdir -p $CROSS_MUSL_SYSROOT/usr/lib64
 RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so $CROSS_MUSL_SYSROOT/usr/lib64/libc.so
 RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so.1 $CROSS_MUSL_SYSROOT/usr/lib64/libc.so.1
 
-COPY mips64-linux-muslabi64-gcc.sh /usr/bin/
+COPY musl-linker.sh /usr/bin/
 
 COPY qemu-runner /
 
-ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_LINKER=mips64-linux-muslabi64-gcc.sh \
+ENV CROSS_TARGET_LINKER=mips64-linux-musl-gcc \
+    CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_LINKER=musl-linker.sh \
     CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_RUNNER="/qemu-runner mips64" \
     CC_mips64_unknown_linux_muslabi64=mips64-linux-musl-gcc \
     CXX_mips64_unknown_linux_muslabi64=mips64-linux-musl-g++ \

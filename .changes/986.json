@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "always link to libgcc with musl targets to patch missing rust compiler builtins.",
+    "issues": [367, 906, 985]
+}
