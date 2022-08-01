@@ -294,7 +294,7 @@ impl Directories {
         let xargo = file::canonicalize(&xargo)?;
         let nix_store = match nix_store {
             Some(store) => Some(file::canonicalize(&store)?),
-            None => None,
+            None => Some(PathBuf::from(r"/nix/store")),
         };
 
         let cargo = mount_finder.find_mount_path(cargo);
