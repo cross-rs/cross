@@ -270,7 +270,10 @@ impl Directories {
         let cargo = home::cargo_home()?;
         let xargo =
             env::var_os("XARGO_HOME").map_or_else(|| home_dir.join(".xargo"), PathBuf::from);
-        let nix_store = env::var_os("NIX_STORE").map(PathBuf::from);
+        // NIX_STORE_DIR is an override of NIX_STORE, which is the path in derivations.
+        let nix_store = env::var_os("NIX_STORE_DIR")
+            .or_else(|| env::var_os("NIX_STORE"))
+            .map(PathBuf::from);
         let target = &metadata.target_directory;
 
         // create the directories we are going to mount before we mount them,
@@ -292,9 +295,18 @@ impl Directories {
         // directories after failed canonicalization into a shared directory.
         let cargo = file::canonicalize(&cargo)?;
         let xargo = file::canonicalize(&xargo)?;
+
+        let default_nix_store = PathBuf::from("/nix/store");
         let nix_store = match nix_store {
-            Some(store) => Some(file::canonicalize(&store)?),
-            None => Some(PathBuf::from(r"/nix/store")),
+            Some(store) if store.exists() => {
+                let path = file::canonicalize(&store)?;
+                Some(path)
+            }
+            Some(store) => {
+                eyre::bail!("unable to find provided nix-store directory {store:?}");
+            }
+            None if cfg!(target_os = "linux") && default_nix_store.exists() => Some(default_nix_store),
+            None => None,
         };
 
         let cargo = mount_finder.find_mount_path(cargo);
