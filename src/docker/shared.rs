@@ -305,7 +305,9 @@ impl Directories {
             Some(store) => {
                 eyre::bail!("unable to find provided nix-store directory {store:?}");
             }
-            None if cfg!(target_os = "linux") && default_nix_store.exists() => Some(default_nix_store),
+            None if cfg!(target_os = "linux") && default_nix_store.exists() => {
+                Some(default_nix_store)
+            }
             None => None,
         };
 
