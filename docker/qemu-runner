@@ -5,6 +5,9 @@
 
 set -e
 
+# shellcheck disable=SC1091
+. /base-runner.sh
+
 if [ -n "${CROSS_DEBUG}" ]; then
     set -x
 fi
@@ -14,37 +17,14 @@ arch="${1}"
 shift
 
 if [ "${CROSS_RUNNER}" = "" ]; then
-    if [[ "${arch}" == i?86 ]] || [[ "${arch}" == x86_64 ]]; then
+    if is_native_binary "${arch}"; then
         CROSS_RUNNER=native
     else
         CROSS_RUNNER=qemu-user
     fi
 fi
 
-# select qemu arch
-qarch="${arch}"
-case "${arch}" in
-    armv7)
-        qarch="arm"
-        ;;
-    i?86)
-        qarch="i386"
-        ;;
-    powerpc)
-        qarch="ppc"
-        ;;
-    powerpc64)
-        qarch="ppc64"
-        ;;
-    powerpc64le)
-        if [ "${CROSS_RUNNER}" = "qemu-user" ]; then
-            qarch="ppc64le"
-        else
-            qarch="ppc64"
-        fi
-        ;;
-esac
-
+qarch=$(qemu_arch "${arch}")
 case "${CROSS_RUNNER}" in
     native)
         exec "${@}"

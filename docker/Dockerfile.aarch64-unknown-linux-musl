@@ -22,7 +22,7 @@ RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT aarch64
 
 COPY aarch64-linux-musl-gcc.sh /usr/bin/
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc.sh \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner aarch64" \

@@ -22,7 +22,7 @@ RUN TARGET_ARCH=riscv64 /deny-debian-packages.sh \
 COPY qemu.sh /
 RUN /qemu.sh riscv64
 
-COPY linux-runner /
+COPY linux-runner base-runner.sh /
 
 ENV CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc \
     CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner riscv64" \

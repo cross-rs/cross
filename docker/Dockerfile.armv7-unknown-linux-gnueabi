@@ -17,7 +17,7 @@ RUN apt-get install --assume-yes --no-install-recommends \
 COPY qemu.sh /
 RUN /qemu.sh arm
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
     CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABI_RUNNER="/qemu-runner armv7" \

@@ -28,7 +28,7 @@ RUN /dropbear.sh
 COPY linux-image.sh /
 RUN /linux-image.sh powerpc
 
-COPY linux-runner /
+COPY linux-runner base-runner.sh /
 
 ENV CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
     CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner powerpc" \

@@ -28,7 +28,7 @@ RUN /dropbear.sh
 COPY linux-image.sh /
 RUN /linux-image.sh mips64el
 
-COPY linux-runner /
+COPY linux-runner base-runner.sh /
 
 ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_GNUABI64_LINKER=mips64el-linux-gnuabi64-gcc \
     CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_GNUABI64_RUNNER="/linux-runner mips64el" \

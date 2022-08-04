@@ -22,7 +22,7 @@ ENV CROSS_MUSL_SYSROOT=/usr/local/mipsel-linux-muslsf
 COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT mipsel-sf
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER=mipsel-linux-muslsf-gcc \
     CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner mipsel" \

@@ -22,7 +22,7 @@ RUN /dropbear.sh
 COPY linux-image.sh /
 RUN /linux-image.sh i686
 
-COPY linux-runner /
+COPY linux-runner base-runner.sh /
 
 ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner i686" \
     PKG_CONFIG_PATH="/usr/lib/i386-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"

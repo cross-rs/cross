@@ -17,7 +17,7 @@ RUN apt-get install --assume-yes --no-install-recommends \
 COPY qemu.sh /
 RUN /qemu.sh mips
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
     CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_RUNNER="/qemu-runner mips" \
