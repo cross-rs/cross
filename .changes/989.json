@@ -1,0 +1,5 @@
+{
+    "type": "changed",
+    "description": "add default nix_store value to solve nix-related issues",
+    "issues": [260]
+}
