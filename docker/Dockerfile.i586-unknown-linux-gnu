@@ -22,7 +22,7 @@ RUN TARGET_ARCH=i386 /deny-debian-packages.sh \
 COPY qemu.sh /
 RUN /qemu.sh i386
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_I586_UNKNOWN_LINUX_GNU_LINKER=i686-linux-gnu-gcc \
     CARGO_TARGET_I586_UNKNOWN_LINUX_GNU_RUNNER="/qemu-runner i586" \

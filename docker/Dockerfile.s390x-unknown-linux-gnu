@@ -28,7 +28,7 @@ RUN /dropbear.sh
 COPY linux-image.sh /
 RUN /linux-image.sh s390x
 
-COPY linux-runner /
+COPY linux-runner base-runner.sh /
 
 ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
     CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner s390x" \

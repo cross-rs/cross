@@ -22,7 +22,7 @@ RUN TARGET_ARCH=mips64 /deny-debian-packages.sh \
 COPY qemu.sh /
 RUN /qemu.sh mips64
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_GNUABI64_LINKER=mips64-linux-gnuabi64-gcc \
     CARGO_TARGET_MIPS64_UNKNOWN_LINUX_GNUABI64_RUNNER="/qemu-runner mips64" \

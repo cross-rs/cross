@@ -1,0 +1,4 @@
+{
+    "description": "run non-x86 binaries natively if on a compatible host.",
+    "type": "added"
+}

@@ -28,7 +28,7 @@ RUN /dropbear.sh
 COPY linux-image.sh /
 RUN /linux-image.sh riscv64
 
-COPY linux-runner /
+COPY linux-runner base-runner.sh /
 
 ENV CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc \
     CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner riscv64" \

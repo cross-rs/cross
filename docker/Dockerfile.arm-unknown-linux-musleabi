@@ -24,7 +24,7 @@ ENV CROSS_MUSL_SYSROOT=/usr/local/arm-linux-musleabi
 COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT arm
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABI_LINKER=arm-linux-musleabi-gcc \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABI_RUNNER="/qemu-runner arm" \

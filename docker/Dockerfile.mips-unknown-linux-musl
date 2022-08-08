@@ -22,7 +22,7 @@ ENV CROSS_MUSL_SYSROOT=/usr/local/mips-linux-muslsf
 COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT mips-sf
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_LINKER=mips-linux-muslsf-gcc \
     CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner mips" \

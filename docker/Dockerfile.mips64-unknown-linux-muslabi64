@@ -27,7 +27,7 @@ RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so.1 $CROSS_MUSL_SYSROOT/usr/lib64/li
 
 COPY mips64-linux-muslabi64-gcc.sh /usr/bin/
 
-COPY qemu-runner /
+COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_LINKER=mips64-linux-muslabi64-gcc.sh \
     CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_RUNNER="/qemu-runner mips64" \
