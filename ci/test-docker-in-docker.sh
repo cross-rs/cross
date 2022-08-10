@@ -23,8 +23,8 @@ ci_dir=$(realpath "${ci_dir}")
 . "${ci_dir}"/shared.sh
 
 main() {
-    docker run -v "${PROJECT_HOME}":"${PROJECT_HOME}" -w "${PROJECT_HOME}" \
-        --rm -e TARGET -e RUSTFLAGS -e RUST_TEST_THREADS \
+    docker run --platform linux/amd64 -v "${PROJECT_HOME}":"${PROJECT_HOME}" -w "${PROJECT_HOME}" \
+        --rm -e TARGET -e TARGET_UPPER -e RUSTFLAGS -e RUST_TEST_THREADS \
         -e LLVM_PROFILE_FILE -e CARGO_INCREMENTAL \
         -e "CROSS_TARGET_${TARGET_UPPER//-/_}_IMAGE" \
         -v /var/run/docker.sock:/var/run/docker.sock \
@@ -55,10 +55,14 @@ git clone --depth 1 https://github.com/cross-rs/test-workspace "${td}"
 cd "${td}"
 cross build --target "${TARGET}" --workspace \
     --manifest-path="./workspace/Cargo.toml" --verbose
+eval CROSS_TARGET_${TARGET_UPPER//-/_}_PRE_BUILD="exit" cross build --target "${TARGET}" --workspace \
+    --manifest-path="./workspace/Cargo.toml" --verbose
 cd workspace
 cross build --target "${TARGET}" --workspace --verbose
+eval CROSS_TARGET_${TARGET_UPPER//-/_}_PRE_BUILD="exit" cross build --target "${TARGET}" --workspace --verbose
 cd binary
 cross run --target "${TARGET}" --verbose
+eval CROSS_TARGET_${TARGET_UPPER//-/_}_PRE_BUILD="exit" cross run --target "${TARGET}" --verbose
 '
 }
 
