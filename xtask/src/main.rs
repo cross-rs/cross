@@ -115,7 +115,7 @@ pub fn main() -> cross::Result<()> {
             hooks::test(cli.toolchain.as_deref(), &mut msg_info)?;
         }
         Commands::CiJob(args) => {
-            let metadata = cargo_metadata(&mut Verbosity::Verbose.into())?;
+            let metadata = cargo_metadata(&mut Verbosity::Verbose(2).into())?;
             ci::ci(args, metadata)?;
         }
         Commands::ConfigureCrosstool(args) => {

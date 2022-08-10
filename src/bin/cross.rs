@@ -18,7 +18,11 @@ pub fn main() -> cross::Result<()> {
     let target_list = rustc::target_list(&mut Verbosity::Quiet.into())?;
     let args = cli::parse(&target_list)?;
     let subcommand = args.subcommand;
-    let mut msg_info = shell::MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
+    let mut msg_info = shell::MessageInfo::create(
+        args.verbose + cross::config::bool_from_envvar("CROSS_DEBUG") as u8,
+        args.quiet,
+        args.color.as_deref(),
+    )?;
     let status = match cross::run(args, target_list, &mut msg_info)? {
         Some(status) => status,
         None => {

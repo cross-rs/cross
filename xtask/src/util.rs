@@ -20,7 +20,7 @@ pub fn get_cargo_workspace() -> &'static Path {
         cross::cargo_metadata_with_args(
             Some(manifest_dir.as_ref()),
             None,
-            &mut MessageInfo::create(true, false, None).expect("should not fail"),
+            &mut MessageInfo::create(2, false, None).expect("should not fail"),
         )
         .unwrap()
         .unwrap()
@@ -274,7 +274,7 @@ mod tests {
     fn check_ubuntu_base() -> cross::Result<()> {
         // count all the entries of FROM for our images
         let mut counts = BTreeMap::new();
-        let mut msg_info = Verbosity::Verbose.into();
+        let mut msg_info = Verbosity::Verbose(2).into();
         let dockerfiles = read_dockerfiles(&mut msg_info)?;
         for (path, dockerfile) in dockerfiles {
             let lines: Vec<&str> = dockerfile.lines().collect();

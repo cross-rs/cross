@@ -18,7 +18,7 @@ pub struct Args {
     pub target_dir: Option<PathBuf>,
     pub manifest_path: Option<PathBuf>,
     pub version: bool,
-    pub verbose: bool,
+    pub verbose: u8,
     pub quiet: bool,
     pub color: Option<String>,
 }
@@ -61,16 +61,22 @@ pub fn fmt_subcommands(stdout: &str, msg_info: &mut MessageInfo) -> Result<()> {
     Ok(())
 }
 
-fn is_verbose(arg: &str) -> bool {
+fn is_verbose(arg: &str) -> u8 {
     match arg {
-        "--verbose" => true,
+        "--verbose" => 1,
         // cargo can handle any number of "v"s
         a => {
-            a.starts_with('-')
+            if a.starts_with('-')
                 && a.len() >= 2
                 && a.get(1..)
                     .map(|a| a.chars().all(|x| x == 'v'))
                     .unwrap_or_default()
+            {
+                // string must be of form `-v[v]*` here
+                a.len() as u8 - 1
+            } else {
+                0
+            }
         }
     }
 }
@@ -160,7 +166,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut all: Vec<String> = Vec::new();
     let mut version = false;
     let mut quiet = false;
-    let mut verbose = false;
+    let mut verbose = 0;
     let mut color = None;
 
     {
@@ -169,8 +175,8 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
             if arg.is_empty() {
                 continue;
             }
-            if is_verbose(arg.as_str()) {
-                verbose = true;
+            if let v @ 1.. = is_verbose(arg.as_str()) {
+                verbose += v;
                 all.push(arg);
             } else if matches!(arg.as_str(), "--version" | "-V") {
                 version = true;
@@ -275,13 +281,13 @@ mod tests {
 
     #[test]
     fn is_verbose_test() {
-        assert!(!is_verbose("b"));
-        assert!(!is_verbose("x"));
-        assert!(!is_verbose("-"));
-        assert!(!is_verbose("-V"));
-        assert!(is_verbose("-v"));
-        assert!(is_verbose("--verbose"));
-        assert!(is_verbose("-vvvv"));
-        assert!(!is_verbose("-version"));
+        assert!(is_verbose("b") == 0);
+        assert!(is_verbose("x") == 0);
+        assert!(is_verbose("-") == 0);
+        assert!(is_verbose("-V") == 0);
+        assert!(is_verbose("-v") == 1);
+        assert!(is_verbose("--verbose") == 1);
+        assert!(is_verbose("-vvvv") == 4);
+        assert!(is_verbose("-version") == 0);
     }
 }

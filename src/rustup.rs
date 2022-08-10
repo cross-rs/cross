@@ -39,7 +39,7 @@ fn rustup_command(msg_info: &mut MessageInfo, no_flags: bool) -> Command {
         Verbosity::Quiet => {
             cmd.arg("--quiet");
         }
-        Verbosity::Verbose => {
+        Verbosity::Verbose(2..) => {
             cmd.arg("--verbose");
         }
         _ => (),

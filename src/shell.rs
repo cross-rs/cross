@@ -69,25 +69,33 @@ macro_rules! status {
 pub enum Verbosity {
     Quiet,
     Normal,
-    Verbose,
+    Verbose(u8),
 }
 
 impl Verbosity {
     pub fn verbose(self) -> bool {
         match self {
-            Self::Verbose => true,
+            Self::Verbose(..) => true,
             Self::Normal | Self::Quiet => false,
         }
     }
 
-    fn create(color_choice: ColorChoice, verbose: bool, quiet: bool) -> Option<Self> {
-        match (verbose, quiet) {
-            (true, true) => {
+    #[must_use]
+    pub fn level(&self) -> u8 {
+        match &self {
+            Verbosity::Verbose(v) => *v,
+            _ => 0,
+        }
+    }
+
+    fn create(color_choice: ColorChoice, verbose: impl Into<u8>, quiet: bool) -> Option<Self> {
+        match (verbose.into(), quiet) {
+            (1.., true) => {
                 MessageInfo::from(color_choice).fatal("cannot set both --verbose and --quiet", 101)
             }
-            (true, false) => Some(Verbosity::Verbose),
-            (false, true) => Some(Verbosity::Quiet),
-            (false, false) => None,
+            (v @ 1.., false) => Some(Verbosity::Verbose(v)),
+            (0, true) => Some(Verbosity::Quiet),
+            (0, false) => None,
         }
     }
 }
@@ -143,7 +151,7 @@ impl MessageInfo {
         }
     }
 
-    pub fn create(verbose: bool, quiet: bool, color: Option<&str>) -> Result<MessageInfo> {
+    pub fn create(verbose: impl Into<u8>, quiet: bool, color: Option<&str>) -> Result<MessageInfo> {
         let color_choice = get_color_choice(color)?;
         let verbosity = get_verbosity(color_choice, verbose, quiet)?;
 
@@ -178,7 +186,7 @@ impl MessageInfo {
     }
 
     pub fn as_verbose<T, C: Fn(&mut MessageInfo) -> T>(&mut self, call: C) -> T {
-        self.as_verbosity(call, Verbosity::Verbose)
+        self.as_verbosity(call, Verbosity::Verbose(2))
     }
 
     fn erase_line<S: Stream + Write>(&mut self, stream: &mut S) -> Result<()> {
@@ -397,7 +405,11 @@ fn get_color_choice(color: Option<&str>) -> Result<ColorChoice> {
     })
 }
 
-fn get_verbosity(color_choice: ColorChoice, verbose: bool, quiet: bool) -> Result<Verbosity> {
+fn get_verbosity(
+    color_choice: ColorChoice,
+    verbose: impl Into<u8>,
+    quiet: bool,
+) -> Result<Verbosity> {
     // cargo always checks the value of these variables.
     let env_verbose = cargo_envvar_bool("CARGO_TERM_VERBOSE")?;
     let env_quiet = cargo_envvar_bool("CARGO_TERM_QUIET")?;

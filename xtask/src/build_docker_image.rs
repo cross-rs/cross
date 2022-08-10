@@ -118,7 +118,7 @@ pub fn build_docker_image(
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
     let verbose = match verbose {
-        0 => msg_info.is_verbose() as u8,
+        0 => msg_info.verbosity.level(),
         v => v,
     };
     let metadata = cargo_metadata(msg_info)?;
