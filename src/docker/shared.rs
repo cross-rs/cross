@@ -201,7 +201,8 @@ impl DockerPaths {
         toolchain: QualifiedToolchain,
     ) -> Result<Self> {
         let mount_finder = MountFinder::create(engine)?;
-        let directories = Directories::create(&mount_finder, &metadata, &cwd, toolchain)?;
+        let (directories, metadata) =
+            Directories::assemble(&mount_finder, metadata, &cwd, toolchain)?;
         Ok(Self {
             mount_finder,
             metadata,
@@ -259,12 +260,12 @@ pub struct Directories {
 }
 
 impl Directories {
-    pub fn create(
+    pub fn assemble(
         mount_finder: &MountFinder,
-        metadata: &CargoMetadata,
+        mut metadata: CargoMetadata,
         cwd: &Path,
         mut toolchain: QualifiedToolchain,
-    ) -> Result<Self> {
+    ) -> Result<(Self, CargoMetadata)> {
         let home_dir =
             home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
         let cargo = home::cargo_home()?;
@@ -313,7 +314,7 @@ impl Directories {
 
         let cargo = mount_finder.find_mount_path(cargo);
         let xargo = mount_finder.find_mount_path(xargo);
-        let target = mount_finder.find_mount_path(target);
+        metadata.target_directory = mount_finder.find_mount_path(target);
 
         // root is either workspace_root, or, if we're outside the workspace root, the current directory
         let host_root = mount_finder.find_mount_path(if metadata.workspace_root.starts_with(cwd) {
@@ -332,19 +333,22 @@ impl Directories {
         // canonicalize these once to avoid syscalls
         let sysroot_mount_path = toolchain.get_sysroot().as_posix_absolute()?;
 
-        Ok(Directories {
-            cargo,
-            xargo,
-            target,
-            nix_store,
-            host_root,
-            mount_root,
-            mount_cwd,
-            toolchain,
-            cargo_mount_path,
-            xargo_mount_path,
-            sysroot_mount_path,
-        })
+        Ok((
+            Directories {
+                cargo,
+                xargo,
+                target: metadata.target_directory.clone(),
+                nix_store,
+                host_root,
+                mount_root,
+                mount_cwd,
+                toolchain,
+                cargo_mount_path,
+                xargo_mount_path,
+                sysroot_mount_path,
+            },
+            metadata,
+        ))
     }
 
     pub fn get_sysroot(&self) -> &Path {
@@ -422,14 +426,12 @@ pub fn get_package_info(
     engine: &Engine,
     toolchain: QualifiedToolchain,
     msg_info: &mut MessageInfo,
-) -> Result<(CargoMetadata, Directories)> {
+) -> Result<(Directories, CargoMetadata)> {
     let metadata = cargo_metadata_with_args(None, None, msg_info)?
         .ok_or(eyre::eyre!("unable to get project metadata"))?;
     let mount_finder = MountFinder::create(engine)?;
     let cwd = std::env::current_dir()?;
-    let dirs = Directories::create(&mount_finder, &metadata, &cwd, toolchain)?;
-
-    Ok((metadata, dirs))
+    Directories::assemble(&mount_finder, metadata, &cwd, toolchain)
 }
 
 /// Register binfmt interpreters
@@ -1114,12 +1116,12 @@ mod tests {
         }
 
         fn get_directories(
-            metadata: &CargoMetadata,
+            metadata: CargoMetadata,
             mount_finder: &MountFinder,
-        ) -> Result<Directories> {
+        ) -> Result<(Directories, CargoMetadata)> {
             let cwd = get_cwd()?;
             let toolchain = get_toolchain()?;
-            Directories::create(mount_finder, metadata, &cwd, toolchain)
+            Directories::assemble(mount_finder, metadata, &cwd, toolchain)
         }
 
         #[track_caller]
@@ -1134,7 +1136,7 @@ mod tests {
             let vars = unset_env();
             let mount_finder = MountFinder::new(vec![]);
             let metadata = cargo_metadata(false, &mut MessageInfo::default())?;
-            let directories = get_directories(&metadata, &mount_finder)?;
+            let (directories, metadata) = get_directories(metadata, &mount_finder)?;
             paths_equal(&directories.cargo, &home()?.join(".cargo"))?;
             paths_equal(&directories.xargo, &home()?.join(".xargo"))?;
             paths_equal(&directories.host_root, &metadata.workspace_root)?;
@@ -1179,7 +1181,7 @@ mod tests {
 
             let mount_finder = MountFinder::create(&engine)?;
             let metadata = cargo_metadata(true, &mut msg_info)?;
-            let directories = get_directories(&metadata, &mount_finder)?;
+            let (directories, _) = get_directories(metadata, &mount_finder)?;
             let mount_finder = MountFinder::new(docker_read_mount_paths(&engine)?);
             let mount_path = |p| mount_finder.find_mount_path(p);
 
