@@ -21,15 +21,15 @@ ENV CROSS_MUSL_SYSROOT=/usr/local/mips64-linux-musl
 COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT mips64
 RUN mkdir -p $CROSS_MUSL_SYSROOT/usr/lib64
-# needed for the C/C++ runner
+# needed for the C/C++ runners
 RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so $CROSS_MUSL_SYSROOT/usr/lib64/libc.so
 RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so.1 $CROSS_MUSL_SYSROOT/usr/lib64/libc.so.1
 
-COPY mips64-linux-muslabi64-gcc.sh /usr/bin/
+COPY mips64-linux-musl-gcc.sh /usr/bin/
 
 COPY qemu-runner base-runner.sh /
 
-ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_LINKER=mips64-linux-muslabi64-gcc.sh \
+ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_LINKER=mips64-linux-musl-gcc.sh \
     CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_RUNNER="/qemu-runner mips64" \
     CC_mips64_unknown_linux_muslabi64=mips64-linux-musl-gcc \
     CXX_mips64_unknown_linux_muslabi64=mips64-linux-musl-g++ \

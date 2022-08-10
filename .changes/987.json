@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "link to libgcc for `armv5te-unknown-linux-musleabi` to fix missing `__sync_X_and_fetch` builtins.",
+    "issues": [367]
+}

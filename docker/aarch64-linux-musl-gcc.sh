@@ -14,12 +14,12 @@ main() {
     local minor=
     minor=$(echo "$release" | cut -d '.' -f2)
 
-    if (( minor >= 48 )); then
+    if (( minor >= 48 )) || [[ $# -eq 0 ]]; then
         # no workaround
-        aarch64-linux-musl-gcc "${@}"
+        exec aarch64-linux-musl-gcc "${@}"
     else
         # apply workaround
-        aarch64-linux-musl-gcc "${@}" -lgcc
+        exec aarch64-linux-musl-gcc "${@}" -lgcc -static-libgcc
     fi
 }
 
