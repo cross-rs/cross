@@ -441,7 +441,7 @@ jobs:
         run: |
           jq -C <<< "${needs}"
 
-          # Check if all needs were successfull or skipped.
+          # Check if all needs were successful or skipped.
           "$(jq -r 'all(.result as $result | (["success", "skipped"] | contains([$result])))' <<< "${needs}")"
         env:
           needs: ${{ toJson(needs) }}
