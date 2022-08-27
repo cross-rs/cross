@@ -19,7 +19,9 @@ pub fn main() -> cross::Result<()> {
     let args = cli::parse(&target_list)?;
     let subcommand = args.subcommand;
     let mut msg_info = shell::MessageInfo::create(
-        args.verbose + cross::config::bool_from_envvar("CROSS_DEBUG") as u8,
+        args.verbose
+            + cross::config::bool_from_envvar(&std::env::var("CROSS_DEBUG").unwrap_or_default())
+                as u8,
         args.quiet,
         args.color.as_deref(),
     )?;
