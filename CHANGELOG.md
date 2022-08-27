@@ -135,7 +135,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - #502 - fix ci: bump openssl version in freebsd
 - #489 - Add support for more hosts and simplify/unify host support checks
 - #477 - Fix Docker/Podman links in README
-- #476 - Use Rustlang mirror for Sabotage linux tarbals
+- #476 - Use Rustlang mirror for Sabotage linux tarballs
 - Bump nix dependency to `0.22.1`
 - Bump musl version to 1.1.24.
 

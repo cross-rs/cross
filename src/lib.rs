@@ -199,7 +199,7 @@ impl TargetTriple {
             // having to change cross every time someone comes up with the need for a new host/target
             // combination. It's totally fine to call cross with `--target=$host_triple`, for
             // example to test custom docker images. Cross should not try to recognize if host and
-            // target are equal, it's a user decision and if user want's to bypass cross he can call
+            // target are equal, it's a user decision and if user wants to bypass cross he can call
             // cargo directly or omit the `--target` option.
             _ => target.map_or(false, |t| t.needs_docker()),
         }
