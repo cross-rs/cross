@@ -35,6 +35,17 @@ git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"
 cd "${td}"
 cross run --target "${TARGET}"
 '
+td="$(mkcargotemp -d)"
+git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"
+cd "${td}"
+echo '# Cross.toml
+[target.'${TARGET}']
+pre-build = ["exit 0"]
+' > Cross.toml
+docker run --rm -e TARGET -e CROSS_CONTAINER_IN_CONTAINER=1 -e "CROSS_TARGET_${TARGET_UPPER//-/_}_IMAGE" \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v $PWD:/mount -w /mount \
+        "${CROSS_TARGET_CROSS_IMAGE}" cross build --target "${TARGET}"
 }
 
 main "${@}"

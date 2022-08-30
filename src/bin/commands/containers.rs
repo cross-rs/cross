@@ -401,7 +401,7 @@ pub fn create_persistent_volume(
     if let Some(channel) = channel {
         toolchain = toolchain.with_picked(&config, channel.clone(), msg_info)?;
     };
-    let (metadata, dirs) = docker::get_package_info(engine, toolchain.clone(), msg_info)?;
+    let (dirs, metadata) = docker::get_package_info(engine, toolchain.clone(), msg_info)?;
     let container = docker::remote::unique_container_identifier(&toolchain_host, &metadata, &dirs)?;
     let volume = dirs.toolchain.unique_toolchain_identifier()?;
 
@@ -490,7 +490,7 @@ pub fn remove_persistent_volume(
     if let Some(channel) = channel {
         toolchain = toolchain.with_picked(&config, channel.clone(), msg_info)?;
     };
-    let (_, dirs) = docker::get_package_info(engine, toolchain.clone(), msg_info)?;
+    let (dirs, _) = docker::get_package_info(engine, toolchain.clone(), msg_info)?;
     let volume = dirs.toolchain.unique_toolchain_identifier()?;
 
     if !docker::remote::volume_exists(engine, &volume, msg_info)? {

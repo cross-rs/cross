@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "fixed wrong path used for target when pre-building in container in container mode",
+    "issues": [993]
+}
