@@ -199,6 +199,7 @@ pub enum Architecture {
     Mips64,
     Mips64Le,
     MipsLe,
+    #[serde(alias = "powerpc64")]
     Ppc64,
     Ppc64Le,
     #[serde(alias = "riscv64gc")]
