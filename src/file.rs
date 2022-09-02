@@ -259,8 +259,7 @@ pub fn maybe_canonicalize(path: &Path) -> Cow<'_, OsStr> {
 pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
     let path = path.as_ref();
     create_dir_all(
-        &path
-            .parent()
+        path.parent()
             .ok_or_else(|| eyre::eyre!("could not find parent directory for `{path:?}`"))?,
     )?;
 
@@ -273,7 +272,7 @@ pub fn write_file(path: impl AsRef<Path>, overwrite: bool) -> Result<File> {
         open.create_new(true);
     }
 
-    open.open(&path)
+    open.open(path)
         .wrap_err(format!("couldn't write to file `{path:?}`"))
 }
 

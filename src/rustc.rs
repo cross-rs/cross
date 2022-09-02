@@ -331,7 +331,7 @@ pub fn rustc_command() -> Command {
 
 pub fn target_list(msg_info: &mut MessageInfo) -> Result<TargetList> {
     rustc_command()
-        .args(&["--print", "target-list"])
+        .args(["--print", "target-list"])
         .run_and_get_stdout(msg_info)
         .map(|s| TargetList {
             triples: s.lines().map(|l| l.to_owned()).collect(),
@@ -340,7 +340,7 @@ pub fn target_list(msg_info: &mut MessageInfo) -> Result<TargetList> {
 
 pub fn sysroot(msg_info: &mut MessageInfo) -> Result<PathBuf> {
     let stdout = rustc_command()
-        .args(&["--print", "sysroot"])
+        .args(["--print", "sysroot"])
         .run_and_get_stdout(msg_info)?
         .trim()
         .to_owned();

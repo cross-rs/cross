@@ -39,7 +39,7 @@ fn commit_info() -> String {
 
 fn commit_hash() -> Result<String, Some> {
     let output = Command::new("git")
-        .args(&["rev-parse", "--short", "HEAD"])
+        .args(["rev-parse", "--short", "HEAD"])
         .output()?;
 
     if output.status.success() {
@@ -51,7 +51,7 @@ fn commit_hash() -> Result<String, Some> {
 
 fn commit_date() -> Result<String, Some> {
     let output = Command::new("git")
-        .args(&["log", "-1", "--date=short", "--pretty=format:%cd"])
+        .args(["log", "-1", "--date=short", "--pretty=format:%cd"])
         .output()?;
 
     if output.status.success() {

@@ -397,7 +397,7 @@ fn create_target_dir(path: &Path) -> Result<()> {
     // cargo creates all paths to the target directory, and writes
     // a cache dir tag only if the path doesn't previously exist.
     if !path.exists() {
-        file::create_dir_all(&path)?;
+        file::create_dir_all(path)?;
         fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -450,7 +450,7 @@ pub(crate) fn register(engine: &Engine, target: &Target, msg_info: &mut MessageI
     docker.arg("--privileged");
     docker.arg("--rm");
     docker.arg(UBUNTU_BASE);
-    docker.args(&["sh", "-c", cmd]);
+    docker.args(["sh", "-c", cmd]);
 
     docker.run(msg_info, false).map_err(Into::into)
 }
@@ -507,7 +507,7 @@ fn add_cargo_configuration_envvars(docker: &mut Command) {
     // cargo, but only pass what's actually present.
     for (key, _) in env::vars() {
         if is_cargo_passthrough(&key) {
-            docker.args(&["-e", &key]);
+            docker.args(["-e", &key]);
         }
     }
 }
@@ -525,33 +525,33 @@ pub(crate) fn docker_envvars(
 
         // Only specifying the environment variable name in the "-e"
         // flag forwards the value from the parent shell
-        docker.args(&["-e", var]);
+        docker.args(["-e", var]);
     }
 
     let runner = config.runner(target)?;
     let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
     docker
-        .args(&["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
-        .args(&["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
-        .args(&["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
-        .args(&["-e", "CARGO_TARGET_DIR=/target"])
-        .args(&["-e", &cross_runner]);
+        .args(["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
+        .args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
+        .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
+        .args(["-e", "CARGO_TARGET_DIR=/target"])
+        .args(["-e", &cross_runner]);
     if cargo_variant.uses_zig() {
         // otherwise, zig has a permission error trying to create the cache
-        docker.args(&["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
+        docker.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
     }
     add_cargo_configuration_envvars(docker);
 
     if let Some(username) = id::username().wrap_err("could not get username")? {
-        docker.args(&["-e", &format!("USER={username}")]);
+        docker.args(["-e", &format!("USER={username}")]);
     }
 
     if let Ok(value) = env::var("QEMU_STRACE") {
-        docker.args(&["-e", &format!("QEMU_STRACE={value}")]);
+        docker.args(["-e", &format!("QEMU_STRACE={value}")]);
     }
 
     if let Ok(value) = env::var("CROSS_DEBUG") {
-        docker.args(&["-e", &format!("CROSS_DEBUG={value}")]);
+        docker.args(["-e", &format!("CROSS_DEBUG={value}")]);
     }
 
     if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
@@ -576,7 +576,7 @@ pub(crate) fn build_command(dirs: &Directories, cmd: &SafeCommand) -> String {
 }
 
 pub(crate) fn docker_cwd(docker: &mut Command, paths: &DockerPaths) -> Result<()> {
-    docker.args(&["-w", paths.mount_cwd()]);
+    docker.args(["-w", paths.mount_cwd()]);
 
     Ok(())
 }
@@ -615,7 +615,7 @@ pub(crate) fn docker_mount(
                 .mount_finder
                 .find_path(Path::new(&absolute_path), true)?;
             mount_cb(docker, host_path.as_ref(), mount_path.as_ref())?;
-            docker.args(&["-e", &format!("{}={}", var, mount_path)]);
+            docker.args(["-e", &format!("{}={}", var, mount_path)]);
             store_cb((val, mount_path));
         }
     }
@@ -657,7 +657,7 @@ pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
         })
         .unwrap_or_else(|| engine_type != EngineType::Docker);
     if !is_rootless {
-        docker.args(&["--user", &format!("{}:{}", user_id(), group_id(),)]);
+        docker.args(["--user", &format!("{}:{}", user_id(), group_id(),)]);
     }
 }
 
@@ -668,7 +668,7 @@ pub(crate) fn docker_userns(docker: &mut Command) {
         Some(ns) => Some(ns.to_owned()),
     };
     if let Some(ns) = userns {
-        docker.args(&["--userns", &ns]);
+        docker.args(["--userns", &ns]);
     }
 }
 
@@ -703,7 +703,7 @@ pub(crate) fn docker_seccomp(
             path_string
         };
 
-        docker.args(&["--security-opt", &format!("seccomp={}", seccomp)]);
+        docker.args(["--security-opt", &format!("seccomp={}", seccomp)]);
     }
 
     Ok(())

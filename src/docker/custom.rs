@@ -151,11 +151,11 @@ impl<'a> Dockerfile<'a> {
             opts.contains("--load") || opts.contains("--output")
         });
         if options.engine.kind.is_docker() && !has_output {
-            docker_build.args(&["--output", "type=docker"]);
+            docker_build.args(["--output", "type=docker"]);
         };
 
         if let Some(context) = self.context() {
-            docker_build.arg(&context);
+            docker_build.arg(context);
         } else {
             docker_build.arg(paths.host_root());
         }

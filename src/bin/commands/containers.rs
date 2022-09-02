@@ -322,9 +322,9 @@ fn get_cross_volumes(
     use cross::docker::remote::VOLUME_PREFIX;
     let stdout = docker::subcommand(engine, "volume")
         .arg("list")
-        .args(&["--format", "{{.Name}}"])
+        .args(["--format", "{{.Name}}"])
         // handles simple regex: ^ for start of line.
-        .args(&["--filter", &format!("name=^{VOLUME_PREFIX}")])
+        .args(["--filter", &format!("name=^{VOLUME_PREFIX}")])
         .run_and_get_stdout(msg_info)?;
 
     let mut volumes: Vec<String> = stdout.lines().map(|s| s.to_string()).collect();
@@ -371,7 +371,7 @@ pub fn prune_volumes(
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
     let mut command = docker::subcommand(engine, "volume");
-    command.args(&["prune", "--force"]);
+    command.args(["prune", "--force"]);
     if execute {
         command.run(msg_info, false).map_err(Into::into)
     } else {
@@ -405,7 +405,7 @@ pub fn create_persistent_volume(
     }
 
     docker::subcommand(engine, "volume")
-        .args(&["create", &volume])
+        .args(["create", &volume])
         .run_and_get_status(msg_info, false)?;
 
     // stop the container if it's already running
@@ -422,9 +422,9 @@ pub fn create_persistent_volume(
     // create a dummy running container to copy data over
     let mount_prefix = docker::remote::MOUNT_PREFIX;
     let mut docker = docker::subcommand(engine, "run");
-    docker.args(&["--name", &container]);
+    docker.args(["--name", &container]);
     docker.arg("--rm");
-    docker.args(&["-v", &format!("{}:{}", volume, mount_prefix)]);
+    docker.args(["-v", &format!("{}:{}", volume, mount_prefix)]);
     docker.arg("-d");
     let is_tty = io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty();
     if is_tty {
@@ -437,7 +437,7 @@ pub fn create_persistent_volume(
         // a TTY. this has a few issues though: now, the
         // container no longer responds to signals, so the
         // container will need to be sig-killed.
-        docker.args(&["sh", "-c", "sleep infinity"]);
+        docker.args(["sh", "-c", "sleep infinity"]);
     }
     // store first, since failing to non-existing container is fine
     docker::remote::create_container_deleter(engine.clone(), container.clone());
@@ -501,9 +501,9 @@ fn get_cross_containers(
     use cross::docker::remote::VOLUME_PREFIX;
     let stdout = docker::subcommand(engine, "ps")
         .arg("-a")
-        .args(&["--format", "{{.Names}}: {{.State}}"])
+        .args(["--format", "{{.Names}}: {{.State}}"])
         // handles simple regex: ^ for start of line.
-        .args(&["--filter", &format!("name=^{VOLUME_PREFIX}")])
+        .args(["--filter", &format!("name=^{VOLUME_PREFIX}")])
         .run_and_get_stdout(msg_info)?;
 
     let mut containers: Vec<String> = stdout.lines().map(|s| s.to_string()).collect();

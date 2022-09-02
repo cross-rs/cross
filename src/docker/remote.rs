@@ -160,7 +160,7 @@ fn create_volume_dir(
     // make our parent directory if needed
     subcommand_or_exit(engine, "exec")?
         .arg(container)
-        .args(&[
+        .args([
             "sh",
             "-c",
             &format!("mkdir -p '{}'", dir.as_posix_absolute()?),
@@ -210,7 +210,7 @@ fn container_path_exists(
 ) -> Result<bool> {
     Ok(subcommand_or_exit(engine, "exec")?
         .arg(container)
-        .args(&[
+        .args([
             "bash",
             "-c",
             &format!("[[ -d '{}' ]]", path.as_posix_absolute()?),
@@ -659,7 +659,7 @@ rm \"{PATH}\"
 
     subcommand_or_exit(engine, "exec")?
         .arg(container)
-        .args(&["sh", "-c", &script.join("\n")])
+        .args(["sh", "-c", &script.join("\n")])
         .run_and_get_status(msg_info, true)
 }
 
@@ -812,9 +812,9 @@ pub fn container_state(
     msg_info: &mut MessageInfo,
 ) -> Result<ContainerState> {
     let stdout = command(engine)
-        .args(&["ps", "-a"])
-        .args(&["--filter", &format!("name={container}")])
-        .args(&["--format", "{{.State}}"])
+        .args(["ps", "-a"])
+        .args(["--filter", &format!("name={container}")])
+        .args(["--format", "{{.State}}"])
         .run_and_get_stdout(msg_info)?;
     ContainerState::new(stdout.trim())
 }
@@ -946,13 +946,13 @@ pub(crate) fn run(
         .image
         .platform
         .specify_platform(&options.engine, &mut docker);
-    docker.args(&["--name", &container]);
+    docker.args(["--name", &container]);
     docker.arg("--rm");
     let volume_mount = match volume {
         VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
         VolumeId::Discard => mount_prefix.to_owned(),
     };
-    docker.args(&["-v", &volume_mount]);
+    docker.args(["-v", &volume_mount]);
 
     let mut volumes = vec![];
     docker_mount(
@@ -968,7 +968,7 @@ pub(crate) fn run(
         .wrap_err("when copying seccomp profile")?;
 
     // Prevent `bin` from being mounted inside the Docker container.
-    docker.args(&["-v", &format!("{mount_prefix}/cargo/bin")]);
+    docker.args(["-v", &format!("{mount_prefix}/cargo/bin")]);
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
@@ -999,7 +999,7 @@ pub(crate) fn run(
         // a TTY. this has a few issues though: now, the
         // container no longer responds to signals, so the
         // container will need to be sig-killed.
-        docker.args(&["sh", "-c", "sleep infinity"]);
+        docker.args(["sh", "-c", "sleep infinity"]);
     }
 
     // store first, since failing to non-existing container is fine
@@ -1202,7 +1202,7 @@ symlink_recurse \"${{prefix}}\"
     }
     subcommand_or_exit(engine, "exec")?
         .arg(&container)
-        .args(&["sh", "-c", &symlink.join("\n")])
+        .args(["sh", "-c", &symlink.join("\n")])
         .run_and_get_status(msg_info, false)
         .wrap_err("when creating symlinks to provide consistent host/mount paths")?;
 
@@ -1219,7 +1219,7 @@ symlink_recurse \"${{prefix}}\"
     )?;
     docker_cwd(&mut docker, &paths)?;
     docker.arg(&container);
-    docker.args(&["sh", "-c", &build_command(dirs, &cmd)]);
+    docker.args(["sh", "-c", &build_command(dirs, &cmd)]);
     bail_container_exited!();
     let status = docker
         .run_and_get_status(msg_info, false)
@@ -1236,8 +1236,7 @@ symlink_recurse \"${{prefix}}\"
             .arg("-a")
             .arg(&format!("{container}:{}", target_dir.as_posix_absolute()?))
             .arg(
-                &dirs
-                    .target
+                dirs.target
                     .parent()
                     .expect("target directory should have a parent"),
             )

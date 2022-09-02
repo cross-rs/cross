@@ -132,7 +132,7 @@ pub fn cargo_metadata_with_args(
     if let Some(channel) = args.and_then(|x| x.channel.as_deref()) {
         command.arg(format!("+{channel}"));
     }
-    command.arg("metadata").args(&["--format-version", "1"]);
+    command.arg("metadata").args(["--format-version", "1"]);
     if let Some(cd) = cd {
         command.current_dir(cd);
     }
