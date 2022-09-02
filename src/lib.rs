@@ -556,7 +556,7 @@ r#"Overriding the toolchain in cross is only possible in CLI by specifying a cha
 To override the toolchain mounted in the image, set `target.{}.image.toolchain = "{picked_host}"`"#, target).header("Note:".bright_cyan()));
             }
 
-            default_toolchain.with_picked(&config, picked_toolchain, msg_info)?
+            default_toolchain.with_picked(picked_toolchain)?
         } else {
             default_toolchain
         };

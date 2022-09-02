@@ -205,13 +205,7 @@ impl QualifiedToolchain {
     }
 
     /// Merge a "picked" toolchain, overriding set fields.
-    pub fn with_picked(
-        self,
-        config: &crate::config::Config,
-        picked: Toolchain,
-        msg_info: &mut MessageInfo,
-    ) -> Result<Self> {
-        let toolchain = Self::default(config, msg_info)?;
+    pub fn with_picked(self, picked: Toolchain) -> Result<Self> {
         let date = picked.date.or(self.date);
         let host = picked
             .host
@@ -222,7 +216,7 @@ impl QualifiedToolchain {
             &channel,
             &date,
             &host,
-            &toolchain.sysroot,
+            &self.sysroot,
         ))
     }
 

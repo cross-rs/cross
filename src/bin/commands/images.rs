@@ -377,7 +377,7 @@ pub fn remove_target_images(
     let target_list = msg_info.as_quiet(cross::rustc::target_list)?;
     let mut images = vec![];
     for image in cross_images {
-        let target = dbg!(get_image_target(engine, &image, &target_list, msg_info)?);
+        let target = get_image_target(engine, &image, &target_list, msg_info)?;
         if targets.contains(&target) {
             images.push(image);
         }

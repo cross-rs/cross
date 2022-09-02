@@ -16,11 +16,13 @@ use crate::extensions::CommandExt;
 use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
 use crate::shell::{ColorChoice, MessageInfo, Stream, Verbosity};
-use crate::temp;
-use crate::{Target, TargetTriple};
+use crate::TargetTriple;
+use crate::{temp, OutputExt};
 
 // the mount directory for the data volume.
 pub const MOUNT_PREFIX: &str = "/cross";
+// the prefix used when naming volumes
+pub const VOLUME_PREFIX: &str = "cross-";
 // default timeout to stop a container (in seconds)
 pub const DEFAULT_TIMEOUT: u32 = 2;
 // instant kill in case of a non-graceful exit
@@ -92,16 +94,6 @@ impl ContainerState {
 enum VolumeId {
     Keep(String),
     Discard,
-}
-
-impl VolumeId {
-    fn create(engine: &Engine, toolchain: &str, msg_info: &mut MessageInfo) -> Result<Self> {
-        if volume_exists(engine, toolchain, msg_info)? {
-            Ok(Self::Keep(toolchain.to_owned()))
-        } else {
-            Ok(Self::Discard)
-        }
-    }
 }
 
 // prevent further commands from running if we handled
@@ -754,6 +746,32 @@ pub fn volume_exists(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) 
         .map(|output| output.status.success())
 }
 
+pub fn existing_volumes(
+    engine: &Engine,
+    toolchain: &QualifiedToolchain,
+    msg_info: &mut MessageInfo,
+) -> Result<Vec<String>> {
+    let list = run_and_get_output(
+        engine,
+        &[
+            "volume",
+            "list",
+            "--format",
+            "{{.Name}}",
+            "--filter",
+            &format!("name=^{VOLUME_PREFIX}{}", toolchain),
+        ],
+        msg_info,
+    )?
+    .stdout()?;
+
+    if list.is_empty() {
+        Ok(vec![])
+    } else {
+        Ok(list.split('\n').map(ToOwned::to_owned).collect())
+    }
+}
+
 pub fn container_stop(
     engine: &Engine,
     container: &str,
@@ -818,14 +836,14 @@ impl QualifiedToolchain {
             .to_utf8()?;
         let toolchain_hash = path_hash(self.get_sysroot())?;
         Ok(format!(
-            "cross-{toolchain_name}-{toolchain_hash}-{commit_hash}"
+            "{VOLUME_PREFIX}{toolchain_name}-{toolchain_hash}-{commit_hash}"
         ))
     }
 }
 
 // unique identifier for a given project
 pub fn unique_container_identifier(
-    target: &Target,
+    triple: &TargetTriple,
     metadata: &CargoMetadata,
     dirs: &Directories,
 ) -> Result<String> {
@@ -847,7 +865,6 @@ pub fn unique_container_identifier(
         });
 
     let name = &package.name;
-    let triple = target.triple();
     let toolchain_id = dirs.toolchain.unique_toolchain_identifier()?;
     let project_hash = path_hash(&package.manifest_path)?;
     Ok(format!("{toolchain_id}-{triple}-{name}-{project_hash}"))
@@ -892,8 +909,22 @@ pub(crate) fn run(
     // note that since we use `docker run --rm`, it's very
     // unlikely the container state existed before.
     let toolchain_id = dirs.toolchain.unique_toolchain_identifier()?;
-    let container = unique_container_identifier(target, &paths.metadata, dirs)?;
-    let volume = VolumeId::create(engine, &toolchain_id, msg_info)?;
+    let container = unique_container_identifier(target.target(), &paths.metadata, dirs)?;
+    let volume = {
+        let existing = existing_volumes(engine, &dirs.toolchain, msg_info)?;
+        if existing.iter().any(|v| v == &toolchain_id) {
+            VolumeId::Keep(toolchain_id)
+        } else {
+            let partial = format!("{VOLUME_PREFIX}{}", dirs.toolchain);
+            if existing.iter().any(|v| v.starts_with(&partial)) {
+                msg_info.warn(format_args!(
+                    "a persistent volume does not exists for `{0}`, but there is a volume for a different version.\n > Create a new volume with `cross-util volumes create --toolchain {0}`",
+                    dirs.toolchain
+                ))?;
+            }
+            VolumeId::Discard
+        }
+    };
     let state = container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
         msg_info.warn(format_args!("container {container} was running."))?;
