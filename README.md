@@ -58,6 +58,10 @@ default to `docker`.
 cargo install cross --git https://github.com/cross-rs/cross
 ```
 
+It's also possible to directly download the pre-compiled [release
+binaries](https://github.com/cross-rs/cross/releases) or using
+[cargo-binstall](https://github.com/cargo-bins/cargo-binstall).
+
 ## Usage
 
 `cross` has the exact same CLI as [Cargo](https://github.com/rust-lang/cargo)
@@ -169,7 +173,7 @@ RUN ...
 This action will be added to the used image, so it won't be ran/built every time you use `cross`.
 
 ```toml
-[target.x86_64-unknown-linux-gnu]
+[target.aarch64-unknown-linux-gnu]
 pre-build = ["dpkg --add-architecture arm64 && apt-get update && apt-get install --assume-yes libfoo:arm64"]
 ```
 
