@@ -210,6 +210,8 @@ jobs:
             - { target: thumbv7m-none-eabi,               os: ubuntu-latest,                    std: 1 }
             - { target: cross,                            os: ubuntu-latest }
             - { target: zig,                              os: ubuntu-latest }
+            - { target: aarch64-unknown-linux-gnu, sub: centos, os: ubuntu-latest, cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
+
 
   build:
     name: target (${{ matrix.pretty }},${{ matrix.os }})

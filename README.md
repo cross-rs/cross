@@ -321,6 +321,7 @@ terminate.
 |--------------------------------------|-------:|--------:|:---:|------:|:------:|
 | `aarch64-linux-android` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `aarch64-unknown-linux-gnu`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
+| `aarch64-unknown-linux-gnu:centos` [7] | 2.17   | 4.8.5   |     | 4.2.1 |   ✓    |
 | `aarch64-unknown-linux-musl`         | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `arm-linux-androideabi` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
@@ -391,6 +392,8 @@ terminate.
 [5] Must change `image = "x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
 
 [6] libc = emscripten and GCC = clang
+
+[7] Must change `image = "aarch64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.aarch64-unknown-linux-gnu]` to use the CentOS7-compatible target.
 
 <!--[7] libc = emscripten and GCC = clang. The Docker images for these targets are currently not built automatically
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/98216), you will have to build them yourself for now.-->

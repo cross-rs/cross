@@ -278,4 +278,9 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             platforms: &[ImagePlatform::DEFAULT],
             sub: None
         },
+        ProvidedImage {
+            name: "aarch64-unknown-linux-gnu",
+            platforms: &[ImagePlatform::DEFAULT],
+            sub: Some("centos")
+        },
 ];
