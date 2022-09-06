@@ -11,6 +11,7 @@ The `build` key allows you to set global variables, e.g.:
 xargo = true
 build-std = true
 default-target = "x86_64-unknown-linux-gnu"
+pre-build = ["apt-get update"] # can also be the path to a file to run
 ```
 
 # `build.env`
