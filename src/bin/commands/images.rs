@@ -26,6 +26,9 @@ pub struct ListImages {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
+    /// Output format
+    #[clap(long, default_value = "human")]
+    pub format: OutputFormat,
     /// Only list images for specific target(s). By default, list all targets.
     pub targets: Vec<String>,
 }
@@ -33,6 +36,25 @@ pub struct ListImages {
 impl ListImages {
     pub fn run(self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
         list_images(self, &engine, msg_info)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum OutputFormat {
+    Human,
+    Json,
+}
+
+impl clap::ValueEnum for OutputFormat {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Human, Self::Json]
+    }
+
+    fn to_possible_value<'a>(&self) -> Option<clap::PossibleValue<'a>> {
+        match self {
+            OutputFormat::Human => Some(clap::PossibleValue::new("human")),
+            OutputFormat::Json => Some(clap::PossibleValue::new("json")),
+        }
     }
 }
 
@@ -118,7 +140,7 @@ impl Images {
     }
 }
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, serde::Serialize)]
 struct Image {
     repository: String,
     tag: String,
@@ -258,7 +280,9 @@ fn get_image_target(
 }
 
 pub fn list_images(
-    ListImages { targets, .. }: ListImages,
+    ListImages {
+        targets, format, ..
+    }: ListImages,
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
@@ -281,45 +305,55 @@ pub fn list_images(
     let mut keys: Vec<&str> = map.keys().map(|k| k.as_ref()).collect();
     keys.sort_unstable();
 
-    let print_string =
-        |col1: &str, col2: &str, fill: char, info: &mut MessageInfo| -> cross::Result<()> {
-            let mut row = String::new();
-            row.push('|');
-            row.push(fill);
-            row.push_str(col1);
-            let spaces = max_target_len.max(col1.len()) + 1 - col1.len();
-            for _ in 0..spaces {
-                row.push(fill);
+    match format {
+        OutputFormat::Json => {
+            msg_info.info(format_args!("{}", serde_json::to_string(&map)?))?;
+        }
+        OutputFormat::Human => {
+            let print_string =
+                |col1: &str, col2: &str, fill: char, info: &mut MessageInfo| -> cross::Result<()> {
+                    let mut row = String::new();
+                    row.push('|');
+                    row.push(fill);
+                    row.push_str(col1);
+                    let spaces = max_target_len.max(col1.len()) + 1 - col1.len();
+                    for _ in 0..spaces {
+                        row.push(fill);
+                    }
+                    row.push('|');
+                    row.push(fill);
+                    row.push_str(col2);
+                    let spaces = max_image_len.max(col2.len()) + 1 - col2.len();
+                    for _ in 0..spaces {
+                        row.push(fill);
+                    }
+                    row.push('|');
+                    info.print(row)
+                };
+
+            if targets.len() != 1 {
+                print_string("Targets", "Images", ' ', msg_info)?;
+                print_string("-------", "------", '-', msg_info)?;
             }
-            row.push('|');
-            row.push(fill);
-            row.push_str(col2);
-            let spaces = max_image_len.max(col2.len()) + 1 - col2.len();
-            for _ in 0..spaces {
-                row.push(fill);
-            }
-            row.push('|');
-            info.print(row)
-        };
 
-    if targets.len() != 1 {
-        print_string("Targets", "Images", ' ', msg_info)?;
-        print_string("-------", "------", '-', msg_info)?;
-    }
+            let print_single = |_: &str,
+                                image: &Image,
+                                info: &mut MessageInfo|
+             -> cross::Result<()> { info.print(image) };
+            let print_table =
+                |target: &str, image: &Image, info: &mut MessageInfo| -> cross::Result<()> {
+                    let name = image.name();
+                    print_string(target, &name, ' ', info)
+                };
 
-    let print_single =
-        |_: &str, image: &Image, info: &mut MessageInfo| -> cross::Result<()> { info.print(image) };
-    let print_table = |target: &str, image: &Image, info: &mut MessageInfo| -> cross::Result<()> {
-        let name = image.name();
-        print_string(target, &name, ' ', info)
-    };
-
-    for target in keys {
-        for image in map.get(target).expect("map must have key").iter() {
-            if targets.len() == 1 {
-                print_single(target, image, msg_info)?;
-            } else {
-                print_table(target, image, msg_info)?;
+            for target in keys {
+                for image in map.get(target).expect("map must have key").iter() {
+                    if targets.len() == 1 {
+                        print_single(target, image, msg_info)?;
+                    } else {
+                        print_table(target, image, msg_info)?;
+                    }
+                }
             }
         }
     }
