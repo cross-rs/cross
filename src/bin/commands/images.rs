@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use clap::builder::PossibleValue;
 use clap::{Args, Subcommand};
 use cross::docker::{self, CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX};
 use cross::shell::MessageInfo;
@@ -50,10 +51,10 @@ impl clap::ValueEnum for OutputFormat {
         &[Self::Human, Self::Json]
     }
 
-    fn to_possible_value<'a>(&self) -> Option<clap::PossibleValue<'a>> {
+    fn to_possible_value(&self) -> Option<PossibleValue> {
         match self {
-            OutputFormat::Human => Some(clap::PossibleValue::new("human")),
-            OutputFormat::Json => Some(clap::PossibleValue::new("json")),
+            OutputFormat::Human => Some(PossibleValue::new("human")),
+            OutputFormat::Json => Some(PossibleValue::new("json")),
         }
     }
 }

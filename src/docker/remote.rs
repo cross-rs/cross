@@ -29,6 +29,7 @@ macro_rules! bail_container_exited {
     }};
 }
 
+#[track_caller]
 fn subcommand_or_exit(engine: &Engine, cmd: &str) -> Result<Command> {
     bail_container_exited!();
     Ok(engine.subcommand(cmd))
@@ -42,6 +43,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     // NOTE: `reldir` should be a relative POSIX path to the root directory
     // on windows, this should be something like `mnt/c`. that is, all paths
     // inside the container should not have the mount prefix.
+    #[track_caller]
     fn create_dir(
         &self,
         reldir: &str,
@@ -57,6 +59,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
 
     // copy files for a docker volume, for remote host support
     // NOTE: `reldst` has the same caveats as `reldir` in `create_dir`.
+    #[track_caller]
     fn copy_files(
         &self,
         src: &Path,
@@ -72,6 +75,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     }
 
     // copy files for a docker volume, for remote host support
+    #[track_caller]
     fn copy_files_nocache(
         &self,
         src: &Path,
@@ -92,6 +96,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
 
     // copy files for a docker volume, for remote host support
     // provides a list of files relative to src.
+    #[track_caller]
     fn copy_file_list(
         &self,
         src: &Path,
@@ -116,6 +121,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
 
     // removed files from a docker volume, for remote host support
     // provides a list of files relative to src.
+    #[track_caller]
     fn remove_file_list(
         &self,
         reldst: &str,
@@ -156,6 +162,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             .run_and_get_status(msg_info, true)
     }
 
+    #[track_caller]
     fn container_path_exists(
         &self,
         relpath: &str,
@@ -173,6 +180,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             .success())
     }
 
+    #[track_caller]
     pub fn copy_xargo(&self, mount_prefix: &str, msg_info: &mut MessageInfo) -> Result<()> {
         let dirs = &self.toolchain_dirs;
         let reldst = dirs.xargo_mount_path_relative()?;
@@ -194,6 +202,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         Ok(())
     }
 
+    #[track_caller]
     pub fn copy_cargo(
         &self,
         mount_prefix: &str,
@@ -230,6 +239,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     }
 
     // copy over files needed for all targets in the toolchain that should never change
+    #[track_caller]
     fn copy_rust_base(&self, mount_prefix: &str, msg_info: &mut MessageInfo) -> Result<()> {
         let dirs = &self.toolchain_dirs;
 
@@ -273,6 +283,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         warn_symlinks(had_symlinks, msg_info)
     }
 
+    #[track_caller]
     fn copy_rust_manifest(&self, mount_prefix: &str, msg_info: &mut MessageInfo) -> Result<()> {
         let dirs = &self.toolchain_dirs;
 
@@ -298,6 +309,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     }
 
     // copy over the toolchain for a specific triple
+    #[track_caller]
     fn copy_rust_triple(
         &self,
         target_triple: &TargetTriple,
@@ -335,6 +347,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         Ok(())
     }
 
+    #[track_caller]
     pub fn copy_rust(
         &self,
         target_triple: Option<&TargetTriple>,
@@ -355,6 +368,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         Ok(())
     }
 
+    #[track_caller]
     fn copy_mount(
         &self,
         src: &Path,

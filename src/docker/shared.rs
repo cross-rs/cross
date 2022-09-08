@@ -696,22 +696,26 @@ impl<'a, 'b> DockerVolume<'a, 'b> {
         Self { engine, name }
     }
 
+    #[track_caller]
     pub fn create(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
         self.engine
             .run_and_get_status(&["volume", "create", self.name], msg_info)
     }
 
+    #[track_caller]
     pub fn remove(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
         self.engine
             .run_and_get_status(&["volume", "rm", self.name], msg_info)
     }
 
+    #[track_caller]
     pub fn exists(&self, msg_info: &mut MessageInfo) -> Result<bool> {
         self.engine
             .run_and_get_output(&["volume", "inspect", self.name], msg_info)
             .map(|output| output.status.success())
     }
 
+    #[track_caller]
     pub fn existing(
         engine: &Engine,
         toolchain: &QualifiedToolchain,
@@ -834,6 +838,7 @@ impl Engine {
         command
     }
 
+    #[track_caller]
     pub(crate) fn run_and_get_status(
         &self,
         args: &[&str],
@@ -842,6 +847,7 @@ impl Engine {
         self.command().args(args).run_and_get_status(msg_info, true)
     }
 
+    #[track_caller]
     pub(crate) fn run_and_get_output(
         &self,
         args: &[&str],
