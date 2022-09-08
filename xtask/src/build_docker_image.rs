@@ -160,7 +160,7 @@ pub fn build_docker_image(
         .collect::<cross::Result<Vec<_>>>()?;
 
     let platforms = if platform.is_empty() {
-        vec![ImagePlatform::DEFAULT]
+        crate::util::DEFAULT_PLATFORMS.to_vec()
     } else {
         platform
     };
