@@ -167,8 +167,8 @@ fn get_cross_images(
     local: bool,
 ) -> cross::Result<Vec<Image>> {
     let mut images: BTreeSet<_> = cross::docker::subcommand(engine, "images")
-        .args(&["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
-        .args(&[
+        .args(["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
+        .args([
             "--filter",
             &format!("label={}.for-cross-target", cross::CROSS_LABEL_DOMAIN),
         ])
@@ -178,7 +178,7 @@ fn get_cross_images(
         .collect();
 
     let stdout = cross::docker::subcommand(engine, "images")
-        .args(&["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
+        .args(["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
         .run_and_get_stdout(msg_info)?;
     let ids: Vec<_> = images.iter().map(|i| i.id.to_string()).collect();
     images.extend(
@@ -239,7 +239,7 @@ fn get_image_target(
         }
     }
     let mut command = cross::docker::subcommand(engine, "inspect");
-    command.args(&[
+    command.args([
         "--format",
         &format!(
             r#"{{{{index .Config.Labels "{}.for-cross-target"}}}}"#,
@@ -377,7 +377,7 @@ pub fn remove_target_images(
     let target_list = msg_info.as_quiet(cross::rustc::target_list)?;
     let mut images = vec![];
     for image in cross_images {
-        let target = dbg!(get_image_target(engine, &image, &target_list, msg_info)?);
+        let target = get_image_target(engine, &image, &target_list, msg_info)?;
         if targets.contains(&target) {
             images.push(image);
         }

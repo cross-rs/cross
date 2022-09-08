@@ -16,11 +16,13 @@ use crate::extensions::CommandExt;
 use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
 use crate::shell::{ColorChoice, MessageInfo, Stream, Verbosity};
-use crate::temp;
-use crate::{Target, TargetTriple};
+use crate::TargetTriple;
+use crate::{temp, OutputExt};
 
 // the mount directory for the data volume.
 pub const MOUNT_PREFIX: &str = "/cross";
+// the prefix used when naming volumes
+pub const VOLUME_PREFIX: &str = "cross-";
 // default timeout to stop a container (in seconds)
 pub const DEFAULT_TIMEOUT: u32 = 2;
 // instant kill in case of a non-graceful exit
@@ -94,16 +96,6 @@ enum VolumeId {
     Discard,
 }
 
-impl VolumeId {
-    fn create(engine: &Engine, toolchain: &str, msg_info: &mut MessageInfo) -> Result<Self> {
-        if volume_exists(engine, toolchain, msg_info)? {
-            Ok(Self::Keep(toolchain.to_owned()))
-        } else {
-            Ok(Self::Discard)
-        }
-    }
-}
-
 // prevent further commands from running if we handled
 // a signal earlier, and the volume is exited.
 // this isn't required, but avoids unnecessary
@@ -168,7 +160,7 @@ fn create_volume_dir(
     // make our parent directory if needed
     subcommand_or_exit(engine, "exec")?
         .arg(container)
-        .args(&[
+        .args([
             "sh",
             "-c",
             &format!("mkdir -p '{}'", dir.as_posix_absolute()?),
@@ -218,7 +210,7 @@ fn container_path_exists(
 ) -> Result<bool> {
     Ok(subcommand_or_exit(engine, "exec")?
         .arg(container)
-        .args(&[
+        .args([
             "bash",
             "-c",
             &format!("[[ -d '{}' ]]", path.as_posix_absolute()?),
@@ -667,7 +659,7 @@ rm \"{PATH}\"
 
     subcommand_or_exit(engine, "exec")?
         .arg(container)
-        .args(&["sh", "-c", &script.join("\n")])
+        .args(["sh", "-c", &script.join("\n")])
         .run_and_get_status(msg_info, true)
 }
 
@@ -754,6 +746,32 @@ pub fn volume_exists(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) 
         .map(|output| output.status.success())
 }
 
+pub fn existing_volumes(
+    engine: &Engine,
+    toolchain: &QualifiedToolchain,
+    msg_info: &mut MessageInfo,
+) -> Result<Vec<String>> {
+    let list = run_and_get_output(
+        engine,
+        &[
+            "volume",
+            "list",
+            "--format",
+            "{{.Name}}",
+            "--filter",
+            &format!("name=^{VOLUME_PREFIX}{}", toolchain),
+        ],
+        msg_info,
+    )?
+    .stdout()?;
+
+    if list.is_empty() {
+        Ok(vec![])
+    } else {
+        Ok(list.split('\n').map(ToOwned::to_owned).collect())
+    }
+}
+
 pub fn container_stop(
     engine: &Engine,
     container: &str,
@@ -794,9 +812,9 @@ pub fn container_state(
     msg_info: &mut MessageInfo,
 ) -> Result<ContainerState> {
     let stdout = command(engine)
-        .args(&["ps", "-a"])
-        .args(&["--filter", &format!("name={container}")])
-        .args(&["--format", "{{.State}}"])
+        .args(["ps", "-a"])
+        .args(["--filter", &format!("name={container}")])
+        .args(["--format", "{{.State}}"])
         .run_and_get_stdout(msg_info)?;
     ContainerState::new(stdout.trim())
 }
@@ -818,14 +836,14 @@ impl QualifiedToolchain {
             .to_utf8()?;
         let toolchain_hash = path_hash(self.get_sysroot())?;
         Ok(format!(
-            "cross-{toolchain_name}-{toolchain_hash}-{commit_hash}"
+            "{VOLUME_PREFIX}{toolchain_name}-{toolchain_hash}-{commit_hash}"
         ))
     }
 }
 
 // unique identifier for a given project
 pub fn unique_container_identifier(
-    target: &Target,
+    triple: &TargetTriple,
     metadata: &CargoMetadata,
     dirs: &Directories,
 ) -> Result<String> {
@@ -847,7 +865,6 @@ pub fn unique_container_identifier(
         });
 
     let name = &package.name;
-    let triple = target.triple();
     let toolchain_id = dirs.toolchain.unique_toolchain_identifier()?;
     let project_hash = path_hash(&package.manifest_path)?;
     Ok(format!("{toolchain_id}-{triple}-{name}-{project_hash}"))
@@ -892,8 +909,22 @@ pub(crate) fn run(
     // note that since we use `docker run --rm`, it's very
     // unlikely the container state existed before.
     let toolchain_id = dirs.toolchain.unique_toolchain_identifier()?;
-    let container = unique_container_identifier(target, &paths.metadata, dirs)?;
-    let volume = VolumeId::create(engine, &toolchain_id, msg_info)?;
+    let container = unique_container_identifier(target.target(), &paths.metadata, dirs)?;
+    let volume = {
+        let existing = existing_volumes(engine, &dirs.toolchain, msg_info)?;
+        if existing.iter().any(|v| v == &toolchain_id) {
+            VolumeId::Keep(toolchain_id)
+        } else {
+            let partial = format!("{VOLUME_PREFIX}{}", dirs.toolchain);
+            if existing.iter().any(|v| v.starts_with(&partial)) {
+                msg_info.warn(format_args!(
+                    "a persistent volume does not exists for `{0}`, but there is a volume for a different version.\n > Create a new volume with `cross-util volumes create --toolchain {0}`",
+                    dirs.toolchain
+                ))?;
+            }
+            VolumeId::Discard
+        }
+    };
     let state = container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
         msg_info.warn(format_args!("container {container} was running."))?;
@@ -915,13 +946,13 @@ pub(crate) fn run(
         .image
         .platform
         .specify_platform(&options.engine, &mut docker);
-    docker.args(&["--name", &container]);
+    docker.args(["--name", &container]);
     docker.arg("--rm");
     let volume_mount = match volume {
         VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
         VolumeId::Discard => mount_prefix.to_owned(),
     };
-    docker.args(&["-v", &volume_mount]);
+    docker.args(["-v", &volume_mount]);
 
     let mut volumes = vec![];
     docker_mount(
@@ -937,7 +968,7 @@ pub(crate) fn run(
         .wrap_err("when copying seccomp profile")?;
 
     // Prevent `bin` from being mounted inside the Docker container.
-    docker.args(&["-v", &format!("{mount_prefix}/cargo/bin")]);
+    docker.args(["-v", &format!("{mount_prefix}/cargo/bin")]);
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
@@ -968,7 +999,7 @@ pub(crate) fn run(
         // a TTY. this has a few issues though: now, the
         // container no longer responds to signals, so the
         // container will need to be sig-killed.
-        docker.args(&["sh", "-c", "sleep infinity"]);
+        docker.args(["sh", "-c", "sleep infinity"]);
     }
 
     // store first, since failing to non-existing container is fine
@@ -1171,7 +1202,7 @@ symlink_recurse \"${{prefix}}\"
     }
     subcommand_or_exit(engine, "exec")?
         .arg(&container)
-        .args(&["sh", "-c", &symlink.join("\n")])
+        .args(["sh", "-c", &symlink.join("\n")])
         .run_and_get_status(msg_info, false)
         .wrap_err("when creating symlinks to provide consistent host/mount paths")?;
 
@@ -1188,7 +1219,7 @@ symlink_recurse \"${{prefix}}\"
     )?;
     docker_cwd(&mut docker, &paths)?;
     docker.arg(&container);
-    docker.args(&["sh", "-c", &build_command(dirs, &cmd)]);
+    docker.args(["sh", "-c", &build_command(dirs, &cmd)]);
     bail_container_exited!();
     let status = docker
         .run_and_get_status(msg_info, false)
@@ -1205,8 +1236,7 @@ symlink_recurse \"${{prefix}}\"
             .arg("-a")
             .arg(&format!("{container}:{}", target_dir.as_posix_absolute()?))
             .arg(
-                &dirs
-                    .target
+                dirs.target
                     .parent()
                     .expect("target directory should have a parent"),
             )

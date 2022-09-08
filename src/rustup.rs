@@ -49,7 +49,7 @@ fn rustup_command(msg_info: &mut MessageInfo, no_flags: bool) -> Command {
 
 pub fn active_toolchain(msg_info: &mut MessageInfo) -> Result<String> {
     let out = rustup_command(msg_info, true)
-        .args(&["show", "active-toolchain"])
+        .args(["show", "active-toolchain"])
         .run_and_get_output(msg_info)?;
 
     Ok(out
@@ -62,7 +62,7 @@ pub fn active_toolchain(msg_info: &mut MessageInfo) -> Result<String> {
 
 pub fn installed_toolchains(msg_info: &mut MessageInfo) -> Result<Vec<String>> {
     let out = rustup_command(msg_info, true)
-        .args(&["toolchain", "list"])
+        .args(["toolchain", "list"])
         .run_and_get_stdout(msg_info)?;
 
     Ok(out
@@ -87,7 +87,7 @@ pub fn available_targets(
 ) -> Result<AvailableTargets> {
     let mut cmd = rustup_command(msg_info, true);
 
-    cmd.args(&["target", "list", "--toolchain", toolchain]);
+    cmd.args(["target", "list", "--toolchain", toolchain]);
     let output = cmd
         .run_and_get_output(msg_info)
         .suggestion("is rustup installed?")?;
@@ -150,7 +150,7 @@ fn version(msg_info: &mut MessageInfo) -> Result<Version> {
 pub fn install_toolchain(toolchain: &QualifiedToolchain, msg_info: &mut MessageInfo) -> Result<()> {
     let mut command = rustup_command(msg_info, false);
     let toolchain = toolchain.to_string();
-    command.args(&["toolchain", "add", &toolchain, "--profile", "minimal"]);
+    command.args(["toolchain", "add", &toolchain, "--profile", "minimal"]);
     if version(msg_info)? >= semver::Version::new(1, 25, 0) {
         command.arg("--force-non-host");
     }
@@ -167,7 +167,7 @@ pub fn install(
     let target = target.triple();
     let toolchain = toolchain.to_string();
     rustup_command(msg_info, false)
-        .args(&["target", "add", target, "--toolchain", &toolchain])
+        .args(["target", "add", target, "--toolchain", &toolchain])
         .run(msg_info, false)
         .wrap_err_with(|| format!("couldn't install `std` for {target}"))
 }
@@ -179,7 +179,7 @@ pub fn install_component(
 ) -> Result<()> {
     let toolchain = toolchain.to_string();
     rustup_command(msg_info, false)
-        .args(&["component", "add", component, "--toolchain", &toolchain])
+        .args(["component", "add", component, "--toolchain", &toolchain])
         .run(msg_info, false)
         .wrap_err_with(|| format!("couldn't install the `{component}` component"))
 }
@@ -207,7 +207,7 @@ pub fn check_component<'a>(
     msg_info: &mut MessageInfo,
 ) -> Result<Component<'a>> {
     Ok(Command::new("rustup")
-        .args(&["component", "list", "--toolchain", &toolchain.to_string()])
+        .args(["component", "list", "--toolchain", &toolchain.to_string()])
         .run_and_get_stdout(msg_info)?
         .lines()
         .find_map(|line| {

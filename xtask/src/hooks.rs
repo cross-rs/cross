@@ -41,7 +41,7 @@ pub struct Test {
 
 fn cargo_fmt(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Result<()> {
     cargo(channel)
-        .args(&["fmt", "--", "--check"])
+        .args(["fmt", "--", "--check"])
         .run(msg_info, false)
         .map_err(Into::into)
 }
@@ -50,7 +50,7 @@ fn cargo_clippy(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Res
     cargo(channel)
         .arg("clippy")
         .args(CARGO_FLAGS)
-        .args(&["--", "--deny", "warnings"])
+        .args(["--", "--deny", "warnings"])
         .run(msg_info, false)
         .map_err(Into::into)
 }
@@ -69,7 +69,7 @@ fn splitlines(string: String) -> Vec<String> {
 
 fn staged_files(msg_info: &mut MessageInfo) -> cross::Result<Vec<String>> {
     Command::new("git")
-        .args(&["diff", "--cached", "--name-only", "--diff-filter=ACM"])
+        .args(["diff", "--cached", "--name-only", "--diff-filter=ACM"])
         .run_and_get_stdout(msg_info)
         .map(splitlines)
 }

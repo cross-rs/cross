@@ -38,9 +38,9 @@ enum Commands {
     Clean(commands::Clean),
 }
 
-fn is_toolchain(toolchain: &str) -> cross::Result<String> {
+fn is_toolchain(toolchain: &str) -> cross::Result<Toolchain> {
     if toolchain.starts_with('+') {
-        Ok(toolchain.chars().skip(1).collect())
+        Ok(toolchain.chars().skip(1).collect::<String>().parse()?)
     } else {
         let _ = <CliHidden as CommandFactory>::command().get_matches();
         unreachable!();

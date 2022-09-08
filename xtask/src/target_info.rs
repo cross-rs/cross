@@ -51,17 +51,17 @@ fn image_info(
     let mut command = docker::command(engine);
     command.arg("run");
     command.arg("--rm");
-    command.args(&["-e", &format!("TARGET={}", target.name)]);
+    command.args(["-e", &format!("TARGET={}", target.name)]);
     if msg_info.is_verbose() {
-        command.args(&["-e", "VERBOSE=1"]);
+        command.args(["-e", "VERBOSE=1"]);
     }
     if has_test {
-        command.args(&["-e", "HAS_TEST=1"]);
+        command.args(["-e", "HAS_TEST=1"]);
     } else {
-        command.args(&["-e", "HAS_TEST="]);
+        command.args(["-e", "HAS_TEST="]);
     }
     command.arg(image);
-    command.args(&["bash", "-c", TARGET_INFO_SCRIPT]);
+    command.args(["bash", "-c", TARGET_INFO_SCRIPT]);
     command
         .run(msg_info, msg_info.is_verbose())
         .map_err(Into::into)

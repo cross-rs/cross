@@ -176,15 +176,15 @@ pub fn build_docker_image(
             msg_info.note(format_args!("Build {target} for {}", platform.target))?;
         }
         let mut docker_build = docker::command(engine);
-        docker_build.args(&["buildx", "build"]);
+        docker_build.args(["buildx", "build"]);
         docker_build.current_dir(&docker_root);
 
-        docker_build.args(&["--platform", &platform.docker_platform()]);
+        docker_build.args(["--platform", &platform.docker_platform()]);
 
         if push {
             docker_build.arg("--push");
         } else if engine.kind.is_docker() && no_output {
-            docker_build.args(&["--output", "type=tar,dest=/dev/null"]);
+            docker_build.args(["--output", "type=tar,dest=/dev/null"]);
         } else {
             docker_build.arg("--load");
         }
@@ -216,7 +216,7 @@ pub fn build_docker_image(
         if no_cache {
             docker_build.arg("--no-cache");
         } else {
-            docker_build.args(&[
+            docker_build.args([
                 "--cache-from",
                 &format!(
                     "type=registry,ref={}",
@@ -226,11 +226,11 @@ pub fn build_docker_image(
         }
 
         if push {
-            docker_build.args(&["--cache-to", "type=inline"]);
+            docker_build.args(["--cache-to", "type=inline"]);
         }
 
         for tag in &tags {
-            docker_build.args(&["--tag", tag]);
+            docker_build.args(["--tag", tag]);
         }
 
         for label in labels
@@ -239,7 +239,7 @@ pub fn build_docker_image(
             .split('\n')
             .filter(|s| !s.is_empty())
         {
-            docker_build.args(&["--label", label]);
+            docker_build.args(["--label", label]);
         }
 
         docker_build.args([
@@ -259,18 +259,18 @@ pub fn build_docker_image(
             ),
         ]);
 
-        docker_build.args(&["-f", dockerfile]);
+        docker_build.args(["-f", dockerfile]);
 
         if gha || progress == "plain" {
-            docker_build.args(&["--progress", "plain"]);
+            docker_build.args(["--progress", "plain"]);
         } else {
-            docker_build.args(&["--progress", &progress]);
+            docker_build.args(["--progress", &progress]);
         }
         for arg in &build_arg {
-            docker_build.args(&["--build-arg", arg]);
+            docker_build.args(["--build-arg", arg]);
         }
         if verbose > 1 {
-            docker_build.args(&["--build-arg", "VERBOSE=1"]);
+            docker_build.args(["--build-arg", "VERBOSE=1"]);
         }
 
         if target.needs_workspace_root_context() {

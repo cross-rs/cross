@@ -88,7 +88,7 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
                     eyre::bail!("a version tag was published, but the tag does not match the current version in Cargo.toml");
                 }
                 let search = cargo_command()
-                    .args(&["search", "--limit", "1"])
+                    .args(["search", "--limit", "1"])
                     .arg("cross")
                     .run_and_get_stdout(&mut Verbosity::Verbose(2).into())?;
                 let (cross, rest) = search

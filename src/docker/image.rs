@@ -374,7 +374,7 @@ impl ImagePlatform {
             && Some(&self.os) == engine.os.as_ref()
         {
         } else {
-            cmd.args(&["--platform", &self.docker_platform()]);
+            cmd.args(["--platform", &self.docker_platform()]);
         }
     }
 }

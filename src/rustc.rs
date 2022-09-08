@@ -205,13 +205,7 @@ impl QualifiedToolchain {
     }
 
     /// Merge a "picked" toolchain, overriding set fields.
-    pub fn with_picked(
-        self,
-        config: &crate::config::Config,
-        picked: Toolchain,
-        msg_info: &mut MessageInfo,
-    ) -> Result<Self> {
-        let toolchain = Self::default(config, msg_info)?;
+    pub fn with_picked(self, picked: Toolchain) -> Result<Self> {
         let date = picked.date.or(self.date);
         let host = picked
             .host
@@ -222,7 +216,7 @@ impl QualifiedToolchain {
             &channel,
             &date,
             &host,
-            &toolchain.sysroot,
+            &self.sysroot,
         ))
     }
 
@@ -337,7 +331,7 @@ pub fn rustc_command() -> Command {
 
 pub fn target_list(msg_info: &mut MessageInfo) -> Result<TargetList> {
     rustc_command()
-        .args(&["--print", "target-list"])
+        .args(["--print", "target-list"])
         .run_and_get_stdout(msg_info)
         .map(|s| TargetList {
             triples: s.lines().map(|l| l.to_owned()).collect(),
@@ -346,7 +340,7 @@ pub fn target_list(msg_info: &mut MessageInfo) -> Result<TargetList> {
 
 pub fn sysroot(msg_info: &mut MessageInfo) -> Result<PathBuf> {
     let stdout = rustc_command()
-        .args(&["--print", "sysroot"])
+        .args(["--print", "sysroot"])
         .run_and_get_stdout(msg_info)?
         .trim()
         .to_owned();
