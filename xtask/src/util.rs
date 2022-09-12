@@ -165,17 +165,23 @@ impl std::str::FromStr for ImageTarget {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some((target, sub)) = s.split_once('.') {
-            Ok(ImageTarget {
-                name: target.to_string(),
-                sub: Some(sub.to_string()),
-            })
-        } else {
-            Ok(ImageTarget {
-                name: s.to_string(),
-                sub: None,
-            })
+        // we designate certain targets like `x86_64-unknown-linux-gnu.centos`,
+        // where `centos` is a subtype of `x86_64-unknown-linux-gnu`. however,
+        // LLVM triples can also contain `.` characters, such as with
+        // `thumbv8m.main-none-eabihf`, so we make sure it's only at the end.
+        if let Some((target, sub)) = s.rsplit_once('.') {
+            if sub.chars().all(|x| char::is_ascii_alphabetic(&x)) {
+                return Ok(ImageTarget {
+                    name: target.to_string(),
+                    sub: Some(sub.to_string()),
+                });
+            }
         }
+
+        Ok(ImageTarget {
+            name: s.to_string(),
+            sub: None,
+        })
     }
 }
 
@@ -269,6 +275,40 @@ mod tests {
 
     use cross::shell::Verbosity;
     use std::collections::BTreeMap;
+
+    #[test]
+    fn test_parse_image_target() {
+        assert_eq!(
+            ImageTarget {
+                name: "x86_64-unknown-linux-gnu".to_owned(),
+                sub: None,
+            },
+            "x86_64-unknown-linux-gnu".parse().unwrap()
+        );
+        assert_eq!(
+            ImageTarget {
+                name: "x86_64-unknown-linux-gnu".to_owned(),
+                sub: Some("centos".to_owned()),
+            },
+            "x86_64-unknown-linux-gnu.centos".parse().unwrap()
+        );
+        assert_eq!(
+            ImageTarget {
+                name: "thumbv8m.main-none-eabihf".to_owned(),
+                sub: None,
+            },
+            "thumbv8m.main-none-eabihf".parse().unwrap()
+        );
+        assert_eq!(
+            ImageTarget {
+                name: "thumbv8m.main-unknown-linux-gnueabihf".to_owned(),
+                sub: Some("alpine".to_owned()),
+            },
+            "thumbv8m.main-unknown-linux-gnueabihf.alpine"
+                .parse()
+                .unwrap()
+        );
+    }
 
     #[test]
     fn check_ubuntu_base() -> cross::Result<()> {
