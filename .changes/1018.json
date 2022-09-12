@@ -1,0 +1,4 @@
+{
+    "description": "deny installation of armhf debian packages for the arm-unknown-linux-gnueabihf target.",
+    "type": "fixed"
+}
