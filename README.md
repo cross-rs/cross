@@ -36,6 +36,9 @@ New contributors are welcome! Please join our [Matrix room] and say hi.
 
 ## Dependencies
 
+See our [Getting Started](https://github.com/cross-rs/cross/wiki/Getting-Started) guide
+for detailed installation instructions.
+
 - [rustup](https://rustup.rs/)
 
 - A Linux kernel with [binfmt_misc] support is required for cross testing.
