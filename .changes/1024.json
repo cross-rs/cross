@@ -1,0 +1,5 @@
+{
+    "description": "`rust-std` is no longer downloaded when using `build-std = true`",
+    "type": "fixed",
+    "breaking": false
+}
