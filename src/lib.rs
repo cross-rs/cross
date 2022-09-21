@@ -624,6 +624,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 }
 
                 if !uses_xargo
+                    && !uses_build_std
                     && !available_targets.is_installed(&target)
                     && available_targets.contains(&target)
                 {
