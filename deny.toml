@@ -38,7 +38,8 @@ allow = [
   "0BSD",
   "BSD-2-Clause",
   "BSD-3-Clause",
-  "Unlicense"
+  "Unlicense",
+  "Unicode-DFS-2016",
 ]
 
 [licenses.private]
