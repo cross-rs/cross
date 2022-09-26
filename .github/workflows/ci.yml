@@ -100,118 +100,14 @@ jobs:
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
     steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
       - name: Generate matrix
         id: generate-matrix
-        run: |
-          if [[ -z "${commit_message}" ]]; then
-            bors_args=()
-          else
-            bors_args="$(echo "${commit_message}" | sed -E 's/^Try #[0-9]+:\s+//')"
-            declare -a "bors_args=(${bors_args})"
-          fi
-
-          targets=()
-          index=0
-          while [[ "${bors_args[$index]-}" == --target ]]; do
-            index=$(expr $index + 1)
-            targets+=("${bors_args[$index]}")
-            index=$(expr $index + 1)
-          done
-
-          selects=()
-          for target in "${targets[@]}"; do
-            base=$(echo "${target}" | cut -d '.' -f 1)
-            sub=$(echo "${target}" | cut -d '.' -sf 2)
-            selects+=("select(.target | test(\"${base}\")) and if \"${sub}\" != \"\" then .sub == \"${sub}\" else .sub == null end")
-          done
-          query=$(printf " or %s" "${selects[@]}")
-          query="${query:4}"
-
-          if [[ "${#targets[@]}" != "0" ]]; then
-            echo "Only running targets matching '${targets[@]}'."
-            matrix=$(
-              yq --output-format json <<< "${matrix}" | jq '[.[] | select('"${query}"')]'
-            )
-          else
-            echo 'Running all targets.'
-            matrix="$(yq --output-format json <<< "${matrix}")"
-          fi
-
-          jq -C '[.[] | . += {"pretty": ([.target] + [select(.sub != null).sub]) | join(":")}]' <<< "${matrix}"
-
-          echo "::set-output name=matrix::$(jq -c '[.[] | . += {"pretty": ([.target] + [select(.sub != null).sub]) | join(":")}]' <<< "${matrix}")"
+        run: cargo xtask ci-job target-matrix
         env:
-          commit_message: >
-            ${{
-              ((
-                startsWith(github.event.head_commit.message, 'Try #') &&
-                github.event.head_commit.author.username == 'bors[bot]'
-              ) && github.event.head_commit.message) || ''
-            }}
-          matrix: |
-            - { target: x86_64-apple-darwin,              os: macos-12,                                                                               deploy: true }
-            - { target: x86_64-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system, deploy: true }
-            - { target: x86_64-unknown-linux-musl,        os: ubuntu-latest,                    std: 1, run: 1,                                        deploy: true }
-            - { target: x86_64-pc-windows-msvc,           os: windows-2019,                                                                            deploy: true }
-
-            - { target: x86_64-unknown-linux-gnu, sub: centos, os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
-            - { target: aarch64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: arm-unknown-linux-gnueabi,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: arm-unknown-linux-gnueabihf,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: armv7-unknown-linux-gnueabi,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user }
-            - { target: armv7-unknown-linux-gnueabihf,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: thumbv7neon-unknown-linux-gnueabihf, os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: i586-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: i686-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: native qemu-user qemu-system }
-            - { target: mips-unknown-linux-gnu,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user }
-            - { target: mipsel-unknown-linux-gnu,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: mips64-unknown-linux-gnuabi64,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: mips64el-unknown-linux-gnuabi64,  os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: mips64-unknown-linux-muslabi64,   os: ubuntu-latest,  cpp:1, dylib: 1,  std: 1, run: 1, runners: qemu-user }
-            - { target: mips64el-unknown-linux-muslabi64, os: ubuntu-latest,                    std: 1, run: 1 }
-            - { target: powerpc-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: powerpc64-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: powerpc64le-unknown-linux-gnu,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: riscv64gc-unknown-linux-gnu,      os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: s390x-unknown-linux-gnu,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: sparc64-unknown-linux-gnu,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-            - { target: aarch64-unknown-linux-musl,       os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: arm-unknown-linux-musleabihf,     os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: arm-unknown-linux-musleabi,       os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: armv5te-unknown-linux-gnueabi,    os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: armv5te-unknown-linux-musleabi,   os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: armv7-unknown-linux-musleabi,     os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: armv7-unknown-linux-musleabihf,   os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: i586-unknown-linux-musl,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user }
-            - { target: i686-unknown-linux-musl,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user }
-            - { target: mips-unknown-linux-musl,          os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: mipsel-unknown-linux-musl,        os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, run: 1 }
-            - { target: aarch64-linux-android,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
-            - { target: arm-linux-androideabi,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
-            - { target: armv7-linux-androideabi,          os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
-            - { target: thumbv7neon-linux-androideabi,    os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
-            - { target: i686-linux-android,               os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
-            - { target: x86_64-linux-android,             os: ubuntu-latest,  cpp: 1,           std: 1, run: 1, runners: qemu-user }
-            - { target: x86_64-pc-windows-gnu,            os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-            - { target: i686-pc-windows-gnu,              os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-            # Disabled for now, see https://github.com/rust-lang/rust/issues/98216
-            #-{ target: asmjs-unknown-emscripten,         os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-            - { target: wasm32-unknown-emscripten,        os: ubuntu-latest,  cpp: 1,           std: 1, run: 1 }
-            - { target: x86_64-unknown-dragonfly,         os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1, build-std: 1 }
-            - { target: i686-unknown-freebsd,             os: ubuntu-latest,          dylib: 1, std: 1 }
-            - { target: x86_64-unknown-freebsd,           os: ubuntu-latest,          dylib: 1, std: 1 }
-            - { target: x86_64-unknown-netbsd,            os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-            - { target: sparcv9-sun-solaris,              os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-            - { target: x86_64-sun-solaris,               os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-            - { target: x86_64-unknown-illumos,           os: ubuntu-latest,  cpp: 1, dylib: 1, std: 1 }
-            - { target: thumbv6m-none-eabi,               os: ubuntu-latest,                    std: 1 }
-            - { target: thumbv7em-none-eabi,              os: ubuntu-latest,                    std: 1 }
-            - { target: thumbv7em-none-eabihf,            os: ubuntu-latest,                    std: 1 }
-            - { target: thumbv7m-none-eabi,               os: ubuntu-latest,                    std: 1 }
-            - { target: cross,                            os: ubuntu-latest }
-            - { target: zig,                              os: ubuntu-latest }
-            - { target: aarch64-unknown-linux-gnu, sub: centos, os: ubuntu-latest, cpp: 1, dylib: 1, std: 1, run: 1, runners: qemu-user qemu-system }
-
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_AUTHOR: ${{ github.event.head_commit.author.username }}
 
   build:
     name: target (${{ matrix.pretty }},${{ matrix.os }})

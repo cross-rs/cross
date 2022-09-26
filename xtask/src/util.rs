@@ -6,10 +6,8 @@ use std::process::Command;
 use cross::shell::MessageInfo;
 use cross::{docker, CommandExt, ToUtf8};
 
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use serde::Deserialize;
-
-const WORKFLOW: &str = include_str!("../../.github/workflows/ci.yml");
 
 static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 
@@ -27,46 +25,50 @@ pub fn get_cargo_workspace() -> &'static Path {
         .workspace_root
     })
 }
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Workflow {
-    jobs: Jobs,
-}
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Jobs {
-    #[serde(rename = "generate-matrix")]
-    generate_matrix: GenerateMatrix,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct GenerateMatrix {
-    steps: Vec<Steps>,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Steps {
-    env: Env,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-struct Env {
-    matrix: String,
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-pub struct Matrix {
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+pub struct CiTarget {
+    /// The name of the target. This can either be a target triple, or if the image is "special", the name of the special thing it does.
     pub target: String,
-    pub sub: Option<String>,
     #[serde(default)]
-    pub run: i64,
+    pub special: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sub: Option<String>,
+    /// The runner to use in CI, see https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners
+    ///
+    /// if this is not equal to `ubuntu-latest`, no docker image will be built unless it's been special cased.
     pub os: String,
-    pub platforms: Option<Vec<String>>,
+    /// if `true` test more extensive cargo support, including tests and running binaries
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub run: Option<bool>,
+    /// if `true` publish the generated binaries for cross
+    #[serde(default)]
+    pub deploy: Option<bool>,
+    /// the platform to build this image for, defaults to `["linux/amd64"]`, takes multiple
+    #[serde(skip_serializing_if = "Option::is_none")]
+    platforms: Option<Vec<String>>,
+    /// if `true` signal that this target requires `-Zbuild-std`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_std: Option<bool>,
+    /// test the cpp compiler
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpp: Option<bool>,
+    /// test dylib support, requires `run = true`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dylib: Option<bool>,
+    /// qemu runners that can be used with this target, space separated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runners: Option<String>,
+    /// if `true` test no std support as if std does exists. If `false` build https://github.com/rust-lang/compiler-builtins
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub std: Option<bool>,
 }
 
-impl Matrix {
+impl CiTarget {
     pub fn has_test(&self, target: &str) -> bool {
         // bare-metal targets don't have unittests right now
-        self.run != 0 && !target.contains("-none-")
+        self.run.unwrap_or_default() && !target.contains("-none-")
     }
 
     pub fn to_image_target(&self) -> crate::ImageTarget {
@@ -76,19 +78,40 @@ impl Matrix {
         }
     }
 
-    fn builds_image(&self) -> bool {
+    pub fn builds_image(&self) -> bool {
         self.os == "ubuntu-latest"
+    }
+
+    pub fn platforms(&self) -> &[String] {
+        self.platforms.as_ref().unwrap_or(&DEFAULT_PLATFORMS_STRING)
     }
 }
 
-static MATRIX: OnceCell<Vec<Matrix>> = OnceCell::new();
+/// Default platforms to build images with
+///
+///  if this is changed, make sure to update documentation on [CiTarget::platforms]
+pub static DEFAULT_PLATFORMS: &[cross::docker::ImagePlatform] =
+    &[cross::docker::ImagePlatform::DEFAULT];
 
-pub fn get_matrix() -> &'static Vec<Matrix> {
+pub static DEFAULT_PLATFORMS_STRING: Lazy<Vec<String>> = Lazy::new(|| {
+    DEFAULT_PLATFORMS
+        .iter()
+        .map(|p| p.target.to_string())
+        .collect()
+});
+
+static MATRIX: OnceCell<Vec<CiTarget>> = OnceCell::new();
+
+pub fn get_matrix() -> &'static Vec<CiTarget> {
+    #[derive(Deserialize)]
+    struct Targets {
+        target: Vec<CiTarget>,
+    }
     MATRIX
         .get_or_try_init::<_, eyre::Report>(|| {
-            let workflow: Workflow = serde_yaml::from_str(WORKFLOW)?;
-            let matrix = &workflow.jobs.generate_matrix.steps[0].env.matrix;
-            serde_yaml::from_str(matrix).map_err(Into::into)
+            let targets: Targets =
+                toml::from_slice(&std::fs::read(get_cargo_workspace().join("targets.toml"))?)?;
+            Ok(targets.target)
         })
         .unwrap()
 }
@@ -146,7 +169,13 @@ impl ImageTarget {
 
     /// Determine if this target is a "normal" target for a triplet
     pub fn is_standard_target_image(&self) -> bool {
-        !matches!(self.name.as_ref(), "cross" | "zig") && self.has_ci_image()
+        let matrix = get_matrix();
+
+        !matrix
+            .iter()
+            .filter(|m| m.special)
+            .any(|m| m.target == self.name)
+            && self.has_ci_image()
     }
 
     // this exists solely for zig, since we also want it as a provided target.

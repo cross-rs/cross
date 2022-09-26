@@ -28,33 +28,29 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &["##,
 
     for image_target in get_matrix()
         .iter()
-        .filter(|i| i.to_image_target().is_toolchain_image())
+        .filter(|i| i.builds_image() && i.to_image_target().is_toolchain_image())
     {
         write!(
             &mut images,
             r#"
         ProvidedImage {{
-            name: "{}",
-            platforms: &[{}],
-            sub: {}
+            name: "{name}",
+            platforms: &[{platform}],
+            sub: {sub}
         }},"#,
-            image_target.target.clone(),
-            if let Some(platforms) = &image_target.platforms {
-                platforms
-                    .iter()
-                    .map(|p| {
-                        format!(
-                            "ImagePlatform::{}",
-                            p.replace('-', "_").to_ascii_uppercase()
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .as_slice()
-                    .join(", ")
-            } else {
-                "ImagePlatform::DEFAULT".to_string()
-            },
-            if let Some(sub) = &image_target.sub {
+            name = image_target.target.clone(),
+            platform = &image_target
+                .platforms()
+                .iter()
+                .map(|p| {
+                    format!(
+                        "ImagePlatform::{}",
+                        p.replace('-', "_").to_ascii_uppercase()
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", "),
+            sub = if let Some(sub) = &image_target.sub {
                 format!(r#"Some("{}")"#, sub)
             } else {
                 "None".to_string()

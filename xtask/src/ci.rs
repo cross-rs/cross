@@ -1,3 +1,5 @@
+mod target_matrix;
+
 use crate::util::gha_output;
 use clap::Subcommand;
 use cross::shell::Verbosity;
@@ -23,6 +25,12 @@ pub enum CiJob {
         // main, v0.1.0
         #[clap(long, env = "GITHUB_REF_NAME")]
         ref_name: String,
+    },
+    TargetMatrix {
+        #[clap(long, env = "COMMIT_MESSAGE")]
+        message: String,
+        #[clap(long, env = "COMMIT_AUTHOR")]
+        author: String,
     },
 }
 
@@ -105,6 +113,9 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
                     gha_output("is-latest", "true")
                 }
             }
+        }
+        CiJob::TargetMatrix { message, author } => {
+            target_matrix::run(message, author)?;
         }
     }
     Ok(())
