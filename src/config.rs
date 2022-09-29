@@ -186,6 +186,8 @@ fn split_to_cloned_by_ws(string: &str) -> Vec<String> {
     string.split_whitespace().map(String::from).collect()
 }
 
+/// this takes the value of the environment variable,
+/// so you should call `bool_from_envvar(env::var("FOO"))`
 pub fn bool_from_envvar(envvar: &str) -> bool {
     if let Ok(value) = bool::from_str(envvar) {
         value

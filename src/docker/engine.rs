@@ -108,6 +108,13 @@ impl Engine {
             .map(|s| bool_from_envvar(&s))
             .unwrap_or_default()
     }
+
+    #[must_use]
+    pub fn has_buildkit() -> bool {
+        !env::var("CROSS_CONTAINER_ENGINE_NO_BUILDKIT")
+            .map(|x| bool_from_envvar(&x))
+            .unwrap_or_default()
+    }
 }
 
 // determine if the container engine is docker. this fixes issues with

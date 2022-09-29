@@ -176,7 +176,11 @@ pub fn build_docker_image(
             msg_info.note(format_args!("Build {target} for {}", platform.target))?;
         }
         let mut docker_build = docker::command(engine);
-        docker_build.args(["buildx", "build"]);
+        let has_buildkit = docker::Engine::has_buildkit();
+        match has_buildkit {
+            true => docker_build.args(["buildx", "build"]),
+            false => docker_build.arg("build"),
+        };
         docker_build.current_dir(&docker_root);
 
         docker_build.args(["--platform", &platform.docker_platform()]);
@@ -185,7 +189,7 @@ pub fn build_docker_image(
             docker_build.arg("--push");
         } else if engine.kind.is_docker() && no_output {
             docker_build.args(["--output", "type=tar,dest=/dev/null"]);
-        } else {
+        } else if has_buildkit {
             docker_build.arg("--load");
         }
 

@@ -1,0 +1,4 @@
+{
+    "description": "allow disabling buildkit for container engines lacking buildkit support.",
+    "type": "added"
+}
