@@ -64,7 +64,7 @@ struct TargetMatrixElement<'a> {
 #[derive(Parser, Debug)]
 #[clap(no_binary_name = true)]
 struct TargetMatrixArgs {
-    #[clap(long, short, multiple_values = true)]
+    #[clap(long, short, num_args = 0..)]
     target: Vec<String>,
     #[clap(long, value_parser = BoolishValueParser::new())]
     std: Option<bool>,
@@ -74,7 +74,7 @@ struct TargetMatrixArgs {
     dylib: Option<bool>,
     #[clap(long, value_parser = BoolishValueParser::new())]
     run: Option<bool>,
-    #[clap(long, short, multiple_values = true)]
+    #[clap(long, short, num_args = 0..)]
     runners: Vec<String>,
     #[clap(long)]
     none: bool,
