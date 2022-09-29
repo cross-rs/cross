@@ -71,8 +71,11 @@ impl<'a> Dockerfile<'a> {
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
         let uses_zig = options.cargo_variant.uses_zig();
-        let mut docker_build = docker::subcommand(&options.engine, "buildx");
-        docker_build.arg("build");
+        let mut docker_build = docker::command(&options.engine);
+        match docker::Engine::has_buildkit() {
+            true => docker_build.args(["buildx", "build"]),
+            false => docker_build.arg("build"),
+        };
         docker_build.env("DOCKER_SCAN_SUGGEST", "false");
         self.runs_with()
             .specify_platform(&options.engine, &mut docker_build);
