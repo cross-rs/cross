@@ -846,7 +846,7 @@ fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDet
         .and_then(|v| v.as_str())
         .ok_or_else(|| eyre::eyre!("no driver name found"))?;
 
-    if driver_name == "overlay2" {
+    if driver_name.to_lowercase().contains("overlay") {
         let path = info
             .pointer("/0/GraphDriver/Data/MergedDir")
             .and_then(|v| v.as_str())

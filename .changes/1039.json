@@ -1,0 +1,4 @@
+{
+    "description": "support overlay and fuse-overlayfs storage drivers",
+    "type": "added"
+}
