@@ -187,8 +187,10 @@ pub fn build_docker_image(
 
         if push {
             docker_build.arg("--push");
-        } else if engine.kind.is_docker() && no_output {
+        } else if engine.kind.supports_output_flag() && no_output {
             docker_build.args(["--output", "type=tar,dest=/dev/null"]);
+        } else if no_output {
+            msg_info.fatal("cannot specify `--no-output` with engine that does not support the `--output` flag", 1);
         } else if has_buildkit {
             docker_build.arg("--load");
         }
@@ -216,10 +218,12 @@ pub fn build_docker_image(
             tags = vec![target.image_name(&repository, tag)];
         }
 
-        docker_build.arg("--pull");
+        if engine.kind.supports_pull_flag() {
+            docker_build.arg("--pull");
+        }
         if no_cache {
             docker_build.arg("--no-cache");
-        } else {
+        } else if engine.kind.supports_cache_from_type() {
             docker_build.args([
                 "--cache-from",
                 &format!(
@@ -227,6 +231,8 @@ pub fn build_docker_image(
                     target.image_name(&repository, "main")
                 ),
             ]);
+        } else {
+            docker_build.args(["--cache-from", &format!("{repository}/{}", target.name)]);
         }
 
         if push {

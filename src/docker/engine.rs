@@ -17,20 +17,44 @@ pub enum EngineType {
     Docker,
     Podman,
     PodmanRemote,
+    Nerdctl,
     Other,
 }
 
 impl EngineType {
     /// Returns `true` if the engine type is [`Podman`](Self::Podman) or [`PodmanRemote`](Self::PodmanRemote).
     #[must_use]
-    pub fn is_podman(&self) -> bool {
+    pub const fn is_podman(&self) -> bool {
         matches!(self, Self::Podman | Self::PodmanRemote)
     }
 
     /// Returns `true` if the engine type is [`Docker`](EngineType::Docker).
     #[must_use]
-    pub fn is_docker(&self) -> bool {
+    pub const fn is_docker(&self) -> bool {
         matches!(self, Self::Docker)
+    }
+
+    /// Returns `true` if the build command supports the `--output` flag.
+    #[must_use]
+    pub const fn supports_output_flag(&self) -> bool {
+        !matches!(self, Self::Other)
+    }
+
+    /// Returns `true` if the build command supports the `--pull` flag.
+    #[must_use]
+    pub const fn supports_pull_flag(&self) -> bool {
+        !matches!(self, Self::Nerdctl | Self::Other)
+    }
+
+    /// Returns `true` if the build command supports the `--cache-from type=` key.
+    ///
+    /// Some container engines, especially podman, do not support the `type`
+    /// key of `--cache-from` during the image build steps. They also do
+    /// not support any tags for the `--cache-from` steps either. See:
+    /// https://docs.podman.io/en/latest/markdown/podman-build.1.html#cache-from
+    #[must_use]
+    pub const fn supports_cache_from_type(&self) -> bool {
+        matches!(self, Self::Docker | Self::Nerdctl)
     }
 }
 
@@ -132,6 +156,8 @@ fn get_engine_info(
         EngineType::PodmanRemote
     } else if stdout_help.contains("podman") {
         EngineType::Podman
+    } else if stdout_help.contains("nerdctl") {
+        EngineType::Nerdctl
     } else if stdout_help.contains("docker") && !stdout_help.contains("emulate") {
         EngineType::Docker
     } else {
