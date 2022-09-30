@@ -13,6 +13,8 @@ RUN /xargo.sh
 COPY qemu.sh /
 RUN /qemu.sh mips
 
+# this is a soft-float target for the mips32r2 architecture
+# https://github.com/rust-lang/rust/blob/75d3027fb5ce1af6712e4503c9574802212101bd/compiler/rustc_target/src/spec/mips_unknown_linux_musl.rs#L7
 COPY musl.sh /
 RUN /musl.sh \
     TARGET=mips-linux-muslsf \
