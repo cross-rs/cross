@@ -1,0 +1,5 @@
+{
+    "description": "fix --cache-from using podman.",
+    "type": "fixed",
+    "issues": [1031]
+}
