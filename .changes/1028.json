@@ -26,10 +26,6 @@
         "breaking": true
     },
     {
-        "description": "document whether MIPS musl targets are hard or soft float.",
-        "type": "internal"
-    },
-    {
         "description": "convert mips-unknown-linux-musl and mipsel-unknown-linux-musl to use the mips32r2 architecture, identical to the rust targets.",
         "type": "changed",
         "breaking": true
