@@ -232,6 +232,13 @@ pub fn build_docker_image(
                 ),
             ]);
         } else {
+            // we can't use `image_name` since podman doesn't support tags
+            // with `--cache-from`. podman only supports an image format
+            // of registry/repo although it does when pulling images. this
+            // affects building from cache with target+subs images since we
+            // can't use caches from registry. this is only an issue if
+            // building with podman without a local cache, which never
+            // happens in practice.
             docker_build.args(["--cache-from", &format!("{repository}/{}", target.name)]);
         }
 
