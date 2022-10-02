@@ -574,7 +574,7 @@ pub(crate) fn docker_envvars(
 
     let (major, minor, patch) = match options.rustc_version.as_ref() {
         Some(version) => (version.major, version.minor, version.patch),
-        // no toolchain version available, always provide older
+        // no toolchain version available, always provide the oldest
         // compiler available. this isn't a major issue because
         // linking will libgcc will not include symbols found in
         // the builtins.
