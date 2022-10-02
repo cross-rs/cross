@@ -576,7 +576,7 @@ pub(crate) fn docker_envvars(
         Some(version) => (version.major, version.minor, version.patch),
         // no toolchain version available, always provide the oldest
         // compiler available. this isn't a major issue because
-        // linking will libgcc will not include symbols found in
+        // linking with libgcc will not include symbols found in
         // the builtins.
         None => (1, 0, 0),
     };
