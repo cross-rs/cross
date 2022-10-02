@@ -87,6 +87,21 @@ unsafe fn termination_handler() {
     //
     // on windows, a non-reentrant static mutex is used, so it is
     // definitely not thread safe, but this should not matter.
+    //
+    // NOTE: there is one major function that is not async-signal safe here:
+    // memory allocation and deallocation, which is not async-signal safe.
+    // this should only be run once without deadlocking since any
+    // atomics are guaranteed to be lock-free. we cannot easily avoid
+    // allocation/deallocation, since we would need static global muts
+    // for basically everything. `Command::arg` and `Command::new` will
+    // internally allocate, and freeing it will deallocate any arguments
+    // it was provided. even if we used a static global `Command`, the
+    // `io::Result` requires a `Box` or `io::Error`, which would allocate.
+    // the alternative would be to use `posix_spawnp` or `CreateProcess`
+    // directly, which are async-signal safe and thread-safe, respectively,
+    // however, we'd need to store the engine path and the argument list as
+    // a global CString and `Vec<CString>`, respectively. this atomic guard
+    // makes this safe regardless.
     remote::CONTAINER = None;
 
     // EOWNERDEAD, seems to be the same on linux, macos, and bash on windows.
