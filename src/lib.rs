@@ -595,17 +595,19 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 }
             };
 
-            if let Some((rustc_version, channel, rustc_commit)) = toolchain.rustc_version()? {
+            let mut rustc_version = None;
+            if let Some((version, channel, commit)) = toolchain.rustc_version()? {
                 if toolchain.date.is_none() {
                     warn_host_version_mismatch(
                         &host_version_meta,
                         &toolchain,
-                        &rustc_version,
-                        &rustc_commit,
+                        &version,
+                        &commit,
                         msg_info,
                     )?;
                 }
                 is_nightly = channel == Channel::Nightly;
+                rustc_version = Some(version);
             }
 
             let uses_build_std = config.build_std(&target).unwrap_or(false);
@@ -711,6 +713,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                     config,
                     image,
                     cargo_variant,
+                    rustc_version,
                 );
                 let status = docker::run(options, paths, &filtered_args, msg_info)
                     .wrap_err("could not run container")?;

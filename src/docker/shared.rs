@@ -18,6 +18,8 @@ use crate::rustc::QualifiedToolchain;
 use crate::shell::{MessageInfo, Verbosity};
 use crate::{CargoVariant, Target};
 
+use rustc_version::Version as RustcVersion;
+
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
@@ -37,6 +39,8 @@ pub struct DockerOptions {
     pub config: Config,
     pub image: Image,
     pub cargo_variant: CargoVariant,
+    // not all toolchains will provide this
+    pub rustc_version: Option<RustcVersion>,
 }
 
 impl DockerOptions {
@@ -46,6 +50,7 @@ impl DockerOptions {
         config: Config,
         image: Image,
         cargo_variant: CargoVariant,
+        rustc_version: Option<RustcVersion>,
     ) -> DockerOptions {
         DockerOptions {
             engine,
@@ -53,6 +58,7 @@ impl DockerOptions {
             config,
             image,
             cargo_variant,
+            rustc_version,
         }
     }
 
@@ -514,13 +520,15 @@ fn add_cargo_configuration_envvars(docker: &mut Command) {
 
 pub(crate) fn docker_envvars(
     docker: &mut Command,
-    config: &Config,
+    options: &DockerOptions,
     dirs: &Directories,
-    target: &Target,
-    cargo_variant: CargoVariant,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
-    for ref var in config.env_passthrough(target)?.unwrap_or_default() {
+    for ref var in options
+        .config
+        .env_passthrough(&options.target)?
+        .unwrap_or_default()
+    {
         validate_env_var(var)?;
 
         // Only specifying the environment variable name in the "-e"
@@ -528,7 +536,7 @@ pub(crate) fn docker_envvars(
         docker.args(["-e", var]);
     }
 
-    let runner = config.runner(target)?;
+    let runner = options.config.runner(&options.target)?;
     let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
     docker
         .args(["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
@@ -536,7 +544,7 @@ pub(crate) fn docker_envvars(
         .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
         .args(["-e", "CARGO_TARGET_DIR=/target"])
         .args(["-e", &cross_runner]);
-    if cargo_variant.uses_zig() {
+    if options.cargo_variant.uses_zig() {
         // otherwise, zig has a permission error trying to create the cache
         docker.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
     }
@@ -563,6 +571,18 @@ pub(crate) fn docker_envvars(
         // FIXME: remove this when we deprecate DOCKER_OPTS.
         docker.args(&parse_docker_opts(&value)?);
     };
+
+    let (major, minor, patch) = match options.rustc_version.as_ref() {
+        Some(version) => (version.major, version.minor, version.patch),
+        // no toolchain version available, always provide older
+        // compiler available. this isn't a major issue because
+        // linking will libgcc will not include symbols found in
+        // the builtins.
+        None => (1, 0, 0),
+    };
+    docker.args(["-e", &format!("CROSS_RUSTC_MAJOR_VERSION={}", major)]);
+    docker.args(["-e", &format!("CROSS_RUSTC_MINOR_VERSION={}", minor)]);
+    docker.args(["-e", &format!("CROSS_RUSTC_PATCH_VERSION={}", patch)]);
 
     Ok(())
 }

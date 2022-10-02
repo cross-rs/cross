@@ -1209,14 +1209,7 @@ symlink_recurse \"${{prefix}}\"
     // 6. execute our cargo command inside the container
     let mut docker = subcommand(engine, "exec");
     docker_user_id(&mut docker, engine.kind);
-    docker_envvars(
-        &mut docker,
-        &options.config,
-        dirs,
-        target,
-        options.cargo_variant,
-        msg_info,
-    )?;
+    docker_envvars(&mut docker, &options, dirs, msg_info)?;
     docker_cwd(&mut docker, &paths)?;
     docker.arg(&container);
     docker.args(["sh", "-c", &build_command(dirs, &cmd)]);

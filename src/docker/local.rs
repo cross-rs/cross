@@ -38,14 +38,7 @@ pub(crate) fn run(
         .image
         .platform
         .specify_platform(&options.engine, &mut docker);
-    docker_envvars(
-        &mut docker,
-        &options.config,
-        dirs,
-        &options.target,
-        options.cargo_variant,
-        msg_info,
-    )?;
+    docker_envvars(&mut docker, &options, dirs, msg_info)?;
 
     docker_mount(
         &mut docker,
