@@ -1,0 +1,33 @@
+[
+    {
+        "description": "link to libgcc for armv5te-unknown-linux-musleabi.",
+        "type": "fixed"
+    },
+    {
+        "description": "add C++ support for FreeBSD targets.",
+        "type": "added"
+    },
+    {
+        "description": "test dynamic library support for Android targets in CI.",
+        "type": "internal"
+    },
+    {
+        "description": "test partial C++ support for mips64el-unknown-linux-muslabi64 in CI.",
+        "type": "internal"
+    },
+    {
+        "description": "convert mips64el-unknown-linux-muslabi64 to a hard-float toolchain to match the rust target.",
+        "type": "changed",
+        "breaking": true
+    },
+    {
+        "description": "convert mips64el-unknown-linux-muslabi64 to use the mips64r2 architecture, identical to the rust target.",
+        "type": "changed",
+        "breaking": true
+    },
+    {
+        "description": "convert mips-unknown-linux-musl and mipsel-unknown-linux-musl to use the mips32r2 architecture, identical to the rust targets.",
+        "type": "changed",
+        "breaking": true
+    }
+]

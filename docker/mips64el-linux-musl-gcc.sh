@@ -11,9 +11,9 @@ set -euo pipefail
 
 main() {
     if (( CROSS_RUSTC_MINOR_VERSION >= 65 )) || [[ $# -eq 0 ]]; then
-        exec mips64-linux-musl-gcc "${@}"
+        exec mips64el-linux-musl-gcc "${@}"
     else
-        exec mips64-linux-musl-gcc "${@}" -lgcc -static-libgcc
+        exec mips64el-linux-musl-gcc "${@}" -lgcc -static-libgcc
     fi
 }
 

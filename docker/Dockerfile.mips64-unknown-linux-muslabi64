@@ -12,6 +12,8 @@ RUN /xargo.sh
 COPY qemu.sh /
 RUN /qemu.sh mips64
 
+# this is a hard-float target for the mips64r2 architecture
+# https://github.com/rust-lang/rust/blob/75d3027fb5ce1af6712e4503c9574802212101bd/compiler/rustc_target/src/spec/mips64_unknown_linux_muslabi64.rs#L7
 COPY musl.sh /
 RUN /musl.sh \
     TARGET=mips64-linux-musl \

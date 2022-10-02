@@ -8,13 +8,7 @@ set -x
 set -euo pipefail
 
 main() {
-    local release=
-    release=$(rustc -Vv | grep '^release:' | cut -d ':' -f2)
-    # NOTE we assume `major` is always "1"
-    local minor=
-    minor=$(echo "$release" | cut -d '.' -f2)
-
-    if (( minor >= 48 )) || [[ $# -eq 0 ]]; then
+    if (( CROSS_RUSTC_MINOR_VERSION >= 48 )) || [[ $# -eq 0 ]]; then
         # no workaround
         exec aarch64-linux-musl-gcc "${@}"
     else
