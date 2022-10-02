@@ -29,17 +29,15 @@ runs:
       shell: bash
 
     - name: Build with all features
-      uses: actions-rs/cargo@v1
-      with:
-        command: install
-        args: >
+      run:
+        cargo install
           --locked
           --path .
           --target ${{ inputs.target }}
           --all-features
           --root ${{ steps.metadata.outputs.out-dir }}
           --bins
-        use-cross: true
+      shell: ${{ contains(runner.os, 'windows') && 'pwsh' || 'bash' }}
       env:
         RUSTFLAGS: "" # Make sure to unset RUSTFLAGS
 

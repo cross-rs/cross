@@ -36,10 +36,7 @@ jobs:
           components: rustfmt
 
       - name: Run rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
+        run: cargo fmt -- --check
 
   clippy:
     runs-on: ${{ matrix.os }}
@@ -58,11 +55,7 @@ jobs:
           toolchain: 1.58.1 # MSRV, Minimally Supported Rust Version. Make sure to update README.md
 
       - name: Run clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --locked --all-targets --all-features --workspace -- -D warnings
-
+        run: cargo clippy --locked --all-targets --all-features --workspace -- -D warnings
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -80,10 +73,7 @@ jobs:
           name: test-${{matrix.os}}
 
       - name: Run unit tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --locked --all-targets --workspace --all-features
+        run: cargo test --locked --all-targets --workspace --all-features
         timeout-minutes: 10
   check:
     runs-on: ubuntu-latest
@@ -94,7 +84,6 @@ jobs:
       - uses: ./.github/actions/setup-rust
       - run: cargo xtask ci-job check
         id: check
-        shell: bash
   generate-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -199,7 +188,6 @@ jobs:
         if: matrix.deploy
         with:
           target: ${{ matrix.target }}
-          image: ${{ steps.build-docker-image.outputs.image }}
 
       - name: Test Zig Image
         if: steps.prepare-meta.outputs.has-image && steps.prepare-meta.outputs.test-variant == 'zig'

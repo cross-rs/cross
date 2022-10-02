@@ -28,10 +28,8 @@ runs:
 
     - name: Log into crates.io
       if: github.event_name != 'pull_request'
-      uses: actions-rs/cargo@v1
-      with:
-        command: login
-        args: -- ${{ inputs.cargo-registry-token }}
+      run: cargo login -- ${{ inputs.cargo-registry-token }}
+      shell: bash
 
     - run: gh release delete --yes Unreleased || exit 0
       if: >
@@ -57,7 +55,5 @@ runs:
           ${{ steps.download-artifacts.outputs.download-path }}/cross-*/*
 
     - name: Publish crate
-      uses: actions-rs/cargo@v1
-      with:
-        command: publish
-        args: ${{ !startsWith(github.ref, 'refs/tags/v') && '--dry-run' || '' }}
+      run: cargo publish ${{ !startsWith(github.ref, 'refs/tags/v') && '--dry-run' || '' }}
+      shell: bash
