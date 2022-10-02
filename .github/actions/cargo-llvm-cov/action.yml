@@ -38,12 +38,11 @@ runs:
           if which cygpath; then
             pwd="$(cygpath -w "$(pwd)")"
           fi
-          # No pwd needed here, we're in the root
           export LLVM_PROFILE_FILE="${pwd}/target/cross-%m.profraw"
           export CARGO_LLVM_COV_TARGET_DIR="${pwd}/target"
           mkdir coverage
           echo $(ls target)
-          cargo llvm-cov --no-run --remap-path-prefix --lcov --output-path "coverage/lcov.${name}.info" -vv || ( echo "::error title=Coverage merge failed::" && exit 0 )
+          cargo llvm-cov report --remap-path-prefix --lcov --output-path "coverage/lcov.${name}.info" -vv || ( echo "::error title=Coverage merge failed::" && exit 0 )
           rm target/*.profraw
           npm install @actions/artifact
           npm install glob
