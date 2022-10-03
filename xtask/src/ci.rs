@@ -1,3 +1,4 @@
+mod release;
 mod target_matrix;
 
 use crate::util::gha_output;
@@ -32,6 +33,7 @@ pub enum CiJob {
         #[clap(long, env = "COMMIT_AUTHOR")]
         author: String,
     },
+    Release(release::Release),
 }
 
 pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
@@ -116,6 +118,9 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
         }
         CiJob::TargetMatrix { message, author } => {
             target_matrix::run(message, author)?;
+        }
+        CiJob::Release(r) => {
+            r.run(&mut cross::shell::Verbosity::Verbose(1).into())?;
         }
     }
     Ok(())
