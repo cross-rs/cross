@@ -1,0 +1,5 @@
+{
+    "type": "changed",
+    "description": "stop parsing arguments to `cross run` after `--`",
+    "issues": [1048]
+}

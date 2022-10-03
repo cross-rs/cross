@@ -175,7 +175,10 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
             if arg.is_empty() {
                 continue;
             }
-            if let v @ 1.. = is_verbose(arg.as_str()) {
+            if matches!(arg.as_str(), "--") {
+                all.push(arg);
+                all.extend(args.by_ref());
+            } else if let v @ 1.. = is_verbose(arg.as_str()) {
                 verbose += v;
                 all.push(arg);
             } else if matches!(arg.as_str(), "--version" | "-V") {
