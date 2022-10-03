@@ -9,8 +9,14 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. /rustc_info.sh
+
 main() {
-    if (( CROSS_RUSTC_MINOR_VERSION >= 65 )) || [[ $# -eq 0 ]]; then
+    local minor
+    minor=$(rustc_minor_version)
+
+    if (( minor >= 65 )) || [[ $# -eq 0 ]]; then
         exec mips64el-linux-musl-gcc "${@}"
     else
         exec mips64el-linux-musl-gcc "${@}" -lgcc -static-libgcc
