@@ -27,7 +27,8 @@ runs:
         echo "::set-output name=out-dir::${out_dir}"
         echo "::set-output name=artifacts-dir::${artifacts_dir}"
       shell: bash
-
+    - run: rm -rf .git
+      shell: bash
     - name: Build with all features
       uses: actions-rs/cargo@v1
       with:
