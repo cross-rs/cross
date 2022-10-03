@@ -61,7 +61,7 @@ lto = true
 
 [dev-dependencies]
 regex = "1"
-once_cell = "1"
+once_cell = "1.15"
 ignore = "0.4"
 
 [package.metadata.release]

@@ -6,8 +6,11 @@ use cross::{docker, rustc::Toolchain};
 
 mod commands;
 
+const APP_NAME: &str = "cross-util";
+static VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), cross::commit_info!());
+
 #[derive(Parser, Debug)]
-#[clap(version, about, long_about = None)]
+#[clap(about, long_about = None, name = APP_NAME, version = VERSION)]
 struct Cli {
     /// Toolchain name/version to use (such as stable or 1.59.0).
     #[clap(value_parser = is_toolchain)]
