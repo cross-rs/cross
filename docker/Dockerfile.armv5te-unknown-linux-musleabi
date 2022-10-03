@@ -27,6 +27,7 @@ RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT arm
 COPY qemu-runner base-runner.sh /
 
 COPY arm-linux-musleabi-gcc.sh /usr/bin/
+COPY rustc_info.sh /
 
 ENV CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_MUSLEABI_LINKER=arm-linux-musleabi-gcc.sh \
     CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_MUSLEABI_RUNNER="/qemu-runner arm" \

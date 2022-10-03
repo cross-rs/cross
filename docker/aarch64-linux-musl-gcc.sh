@@ -7,8 +7,14 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. /rustc_info.sh
+
 main() {
-    if (( CROSS_RUSTC_MINOR_VERSION >= 48 )) || [[ $# -eq 0 ]]; then
+    local minor
+    minor=$(rustc_minor_version)
+
+    if (( minor >= 48 )) || [[ $# -eq 0 ]]; then
         # no workaround
         exec aarch64-linux-musl-gcc "${@}"
     else

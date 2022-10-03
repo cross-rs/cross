@@ -21,6 +21,7 @@ COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT aarch64
 
 COPY aarch64-linux-musl-gcc.sh /usr/bin/
+COPY rustc_info.sh /
 
 COPY qemu-runner base-runner.sh /
 

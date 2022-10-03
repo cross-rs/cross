@@ -28,6 +28,7 @@ RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so $CROSS_MUSL_SYSROOT/usr/lib64/libc
 RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so.1 $CROSS_MUSL_SYSROOT/usr/lib64/libc.so.1
 
 COPY mips64el-linux-musl-gcc.sh /usr/bin/
+COPY rustc_info.sh /
 
 COPY qemu-runner base-runner.sh /
 
