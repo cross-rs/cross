@@ -1,0 +1,5 @@
+{
+    "description": "add automatic tagging of new releases.",
+    "issues": [1050],
+    "type": "internal"
+}
