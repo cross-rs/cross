@@ -1,0 +1,6 @@
+[
+    {
+        "description": "bump MSRV to 1.60",
+        "type": "internal"
+    }
+]

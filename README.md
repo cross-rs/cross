@@ -431,7 +431,7 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 
 ## Minimum Supported Rust Version (MSRV)
 
-This crate is guaranteed to compile on stable Rust 1.58.1 and up. It *might*
+This crate is guaranteed to compile on stable Rust 1.60.0 and up. It *might*
 compile with older versions but that may change in any new patch release.
 
 Some cross-compilation targets require a later Rust version, and using Xargo
