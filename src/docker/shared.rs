@@ -218,7 +218,7 @@ impl DockerPaths {
     }
 
     pub fn get_sysroot(&self) -> &Path {
-        self.directories.get_sysroot()
+        self.directories.toolchain_directories().get_sysroot()
     }
 
     pub fn workspace_root(&self) -> &Path {
@@ -241,11 +241,11 @@ impl DockerPaths {
     }
 
     pub fn mount_cwd(&self) -> &str {
-        self.directories.mount_cwd()
+        self.directories.package_directories().mount_cwd()
     }
 
     pub fn host_root(&self) -> &Path {
-        self.directories.host_root()
+        self.directories.package_directories().host_root()
     }
 }
 
@@ -442,6 +442,22 @@ impl PackageDirectories {
             metadata,
         ))
     }
+
+    pub fn target(&self) -> &Path {
+        &self.target
+    }
+
+    pub fn host_root(&self) -> &Path {
+        &self.host_root
+    }
+
+    pub fn mount_root(&self) -> &str {
+        &self.mount_root
+    }
+
+    pub fn mount_cwd(&self) -> &str {
+        &self.mount_cwd
+    }
 }
 
 #[derive(Debug)]
@@ -470,96 +486,16 @@ impl Directories {
     pub fn package_directories(&self) -> &PackageDirectories {
         &self.package
     }
-
-    pub fn unique_toolchain_identifier(&self) -> Result<String> {
-        self.toolchain.unique_toolchain_identifier()
-    }
-
-    pub fn unique_container_identifier(&self, triple: &TargetTriple) -> Result<String> {
-        self.toolchain.unique_container_identifier(triple)
-    }
-
-    pub fn toolchain(&self) -> &QualifiedToolchain {
-        self.toolchain.toolchain()
-    }
-
-    pub fn get_sysroot(&self) -> &Path {
-        self.toolchain.get_sysroot()
-    }
-
-    pub fn host_target(&self) -> &TargetTriple {
-        self.toolchain.host_target()
-    }
-
-    pub fn cargo(&self) -> &Path {
-        self.toolchain.cargo()
-    }
-
-    pub fn cargo_host_path(&self) -> Result<&str> {
-        self.toolchain.cargo_host_path()
-    }
-
-    pub fn cargo_mount_path(&self) -> &str {
-        self.toolchain.cargo_mount_path()
-    }
-
-    pub fn xargo(&self) -> &Path {
-        self.toolchain.xargo()
-    }
-
-    pub fn xargo_host_path(&self) -> Result<&str> {
-        self.toolchain.xargo_host_path()
-    }
-
-    pub fn xargo_mount_path(&self) -> &str {
-        self.toolchain.xargo_mount_path()
-    }
-
-    pub fn sysroot_mount_path(&self) -> &str {
-        self.toolchain.sysroot_mount_path()
-    }
-
-    pub fn nix_store(&self) -> Option<&Path> {
-        self.toolchain.nix_store()
-    }
-
-    pub fn cargo_mount_path_relative(&self) -> Result<String> {
-        self.toolchain.cargo_mount_path_relative()
-    }
-
-    pub fn xargo_mount_path_relative(&self) -> Result<String> {
-        self.toolchain.xargo_mount_path_relative()
-    }
-
-    pub fn sysroot_mount_path_relative(&self) -> Result<String> {
-        self.toolchain.sysroot_mount_path_relative()
-    }
-
-    pub fn target(&self) -> &Path {
-        &self.package.target
-    }
-
-    pub fn host_root(&self) -> &Path {
-        &self.package.host_root
-    }
-
-    pub fn mount_root(&self) -> &str {
-        &self.package.mount_root
-    }
-
-    pub fn mount_cwd(&self) -> &str {
-        &self.package.mount_cwd
-    }
 }
 
-const EPOCH: time::SystemTime = time::SystemTime::UNIX_EPOCH;
-
 pub(crate) fn time_to_millis(timestamp: &time::SystemTime) -> Result<u64> {
-    Ok(timestamp.duration_since(EPOCH)?.as_millis() as u64)
+    Ok(timestamp
+        .duration_since(time::SystemTime::UNIX_EPOCH)?
+        .as_millis() as u64)
 }
 
 pub(crate) fn time_from_millis(millis: u64) -> time::SystemTime {
-    EPOCH + time::Duration::from_millis(millis)
+    time::SystemTime::UNIX_EPOCH + time::Duration::from_millis(millis)
 }
 
 pub(crate) fn now_as_millis() -> Result<u64> {
@@ -692,7 +628,7 @@ fn add_cargo_configuration_envvars(docker: &mut Command) {
 pub(crate) fn docker_envvars(
     docker: &mut Command,
     options: &DockerOptions,
-    dirs: &Directories,
+    dirs: &ToolchainDirectories,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
     for ref var in options
@@ -758,7 +694,7 @@ pub(crate) fn docker_envvars(
     Ok(())
 }
 
-pub(crate) fn build_command(dirs: &Directories, cmd: &SafeCommand) -> String {
+pub(crate) fn build_command(dirs: &ToolchainDirectories, cmd: &SafeCommand) -> String {
     format!(
         "PATH=\"$PATH\":\"{}/bin\" {:?}",
         dirs.sysroot_mount_path(),

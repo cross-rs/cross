@@ -26,7 +26,8 @@ pub(crate) fn run(
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     let engine = &options.engine;
-    let dirs = &paths.directories;
+    let toolchain_dirs = paths.directories.toolchain_directories();
+    let package_dirs = paths.directories.package_directories();
 
     let mut cmd = cargo_safe_command(options.cargo_variant);
     cmd.args(args);
@@ -38,7 +39,7 @@ pub(crate) fn run(
         .image
         .platform
         .specify_platform(&options.engine, &mut docker);
-    docker_envvars(&mut docker, &options, dirs, msg_info)?;
+    docker_envvars(&mut docker, &options, toolchain_dirs, msg_info)?;
 
     docker_mount(
         &mut docker,
@@ -57,33 +58,48 @@ pub(crate) fn run(
     docker
         .args([
             "-v",
-            &format!("{}:{}:z", dirs.xargo_host_path()?, dirs.xargo_mount_path()),
+            &format!(
+                "{}:{}:z",
+                toolchain_dirs.xargo_host_path()?,
+                toolchain_dirs.xargo_mount_path()
+            ),
         ])
         .args([
             "-v",
-            &format!("{}:{}:z", dirs.cargo_host_path()?, dirs.cargo_mount_path()),
+            &format!(
+                "{}:{}:z",
+                toolchain_dirs.cargo_host_path()?,
+                toolchain_dirs.cargo_mount_path()
+            ),
         ])
         // Prevent `bin` from being mounted inside the Docker container.
-        .args(["-v", &format!("{}/bin", dirs.cargo_mount_path())]);
+        .args(["-v", &format!("{}/bin", toolchain_dirs.cargo_mount_path())]);
     docker.args([
         "-v",
-        &format!("{}:{}:z", dirs.host_root().to_utf8()?, dirs.mount_root()),
+        &format!(
+            "{}:{}:z",
+            package_dirs.host_root().to_utf8()?,
+            package_dirs.mount_root()
+        ),
     ]);
     docker
         .args([
             "-v",
             &format!(
                 "{}:{}:z,ro",
-                dirs.get_sysroot().to_utf8()?,
-                dirs.sysroot_mount_path()
+                toolchain_dirs.get_sysroot().to_utf8()?,
+                toolchain_dirs.sysroot_mount_path()
             ),
         ])
-        .args(["-v", &format!("{}:/target:z", dirs.target().to_utf8()?)]);
+        .args([
+            "-v",
+            &format!("{}:/target:z", package_dirs.target().to_utf8()?),
+        ]);
     docker_cwd(&mut docker, &paths)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
-    if let Some(nix_store) = dirs.nix_store() {
+    if let Some(nix_store) = toolchain_dirs.nix_store() {
         docker.args([
             "-v",
             &format!(
@@ -106,7 +122,7 @@ pub(crate) fn run(
 
     docker
         .arg(&image_name)
-        .args(["sh", "-c", &build_command(dirs, &cmd)])
+        .args(["sh", "-c", &build_command(toolchain_dirs, &cmd)])
         .run_and_get_status(msg_info, false)
         .map_err(Into::into)
 }

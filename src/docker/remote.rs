@@ -853,7 +853,8 @@ pub(crate) fn run(
 ) -> Result<ExitStatus> {
     let engine = &options.engine;
     let target = &options.target;
-    let dirs = &paths.directories;
+    let toolchain_dirs = paths.directories.toolchain_directories();
+    let package_dirs = paths.directories.package_directories();
 
     let mount_prefix = MOUNT_PREFIX;
 
@@ -883,18 +884,18 @@ pub(crate) fn run(
     // this can happen if we didn't gracefully exit before
     // note that since we use `docker run --rm`, it's very
     // unlikely the container state existed before.
-    let toolchain_id = dirs.unique_toolchain_identifier()?;
-    let container = dirs.unique_container_identifier(target.target())?;
+    let toolchain_id = toolchain_dirs.unique_toolchain_identifier()?;
+    let container = toolchain_dirs.unique_container_identifier(target.target())?;
     let volume = {
-        let existing = existing_volumes(engine, dirs.toolchain(), msg_info)?;
+        let existing = existing_volumes(engine, toolchain_dirs.toolchain(), msg_info)?;
         if existing.iter().any(|v| v == &toolchain_id) {
             VolumeId::Keep(toolchain_id)
         } else {
-            let partial = format!("{VOLUME_PREFIX}{}", dirs.toolchain());
+            let partial = format!("{VOLUME_PREFIX}{}", toolchain_dirs.toolchain());
             if existing.iter().any(|v| v.starts_with(&partial)) {
                 msg_info.warn(format_args!(
                     "a persistent volume does not exists for `{0}`, but there is a volume for a different version.\n > Create a new volume with `cross-util volumes create --toolchain {0}`",
-                    dirs.toolchain()
+                    toolchain_dirs.toolchain()
                 ))?;
             }
             VolumeId::Discard
@@ -947,7 +948,7 @@ pub(crate) fn run(
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
-    if let Some(nix_store) = dirs.nix_store() {
+    if let Some(nix_store) = toolchain_dirs.nix_store() {
         let nix_string = nix_store.to_utf8()?;
         volumes.push((nix_string.to_owned(), nix_string.to_owned()));
     }
@@ -993,14 +994,19 @@ pub(crate) fn run(
         }
     };
     let mount_prefix_path = mount_prefix.as_ref();
-    let rustdirs = dirs.toolchain_directories();
     if let VolumeId::Discard = volume {
-        copy_volume_container_xargo(engine, &container, rustdirs, mount_prefix_path, msg_info)
-            .wrap_err("when copying xargo")?;
+        copy_volume_container_xargo(
+            engine,
+            &container,
+            toolchain_dirs,
+            mount_prefix_path,
+            msg_info,
+        )
+        .wrap_err("when copying xargo")?;
         copy_volume_container_cargo(
             engine,
             &container,
-            rustdirs,
+            toolchain_dirs,
             mount_prefix_path,
             false,
             msg_info,
@@ -1009,7 +1015,7 @@ pub(crate) fn run(
         copy_volume_container_rust(
             engine,
             &container,
-            rustdirs,
+            toolchain_dirs,
             Some(target.target()),
             mount_prefix_path,
             msg_info,
@@ -1020,7 +1026,7 @@ pub(crate) fn run(
         copy_volume_container_rust_triple(
             engine,
             &container,
-            rustdirs,
+            toolchain_dirs,
             target.target(),
             mount_prefix_path,
             true,
@@ -1029,7 +1035,7 @@ pub(crate) fn run(
         .wrap_err("when copying rust target files")?;
     }
     // cannot panic: absolute unix path, must have root
-    let rel_mount_root = dirs
+    let rel_mount_root = package_dirs
         .mount_root()
         .strip_prefix('/')
         .expect("mount root should be absolute");
@@ -1048,44 +1054,44 @@ pub(crate) fn run(
     copy_volume_container_project(
         engine,
         &container,
-        dirs.host_root(),
+        package_dirs.host_root(),
         &mount_root,
         &volume,
         copy_cache,
         msg_info,
     )
     .wrap_err("when copying project")?;
-    let sysroot = dirs.get_sysroot().to_owned();
+    let sysroot = toolchain_dirs.get_sysroot().to_owned();
     let mut copied = vec![
         (
-            dirs.xargo(),
-            mount_prefix_path.join(&dirs.xargo_mount_path_relative()?),
+            toolchain_dirs.xargo(),
+            mount_prefix_path.join(&toolchain_dirs.xargo_mount_path_relative()?),
         ),
         (
-            dirs.cargo(),
-            mount_prefix_path.join(&dirs.cargo_mount_path_relative()?),
+            toolchain_dirs.cargo(),
+            mount_prefix_path.join(&toolchain_dirs.cargo_mount_path_relative()?),
         ),
         (
             &sysroot,
-            mount_prefix_path.join(&dirs.sysroot_mount_path_relative()?),
+            mount_prefix_path.join(&toolchain_dirs.sysroot_mount_path_relative()?),
         ),
-        (dirs.host_root(), mount_root.clone()),
+        (package_dirs.host_root(), mount_root.clone()),
     ];
     let mut to_symlink = vec![];
-    let target_dir = file::canonicalize(dirs.target())?;
-    let target_dir = if let Ok(relpath) = target_dir.strip_prefix(dirs.host_root()) {
+    let target_dir = file::canonicalize(package_dirs.target())?;
+    let target_dir = if let Ok(relpath) = target_dir.strip_prefix(package_dirs.host_root()) {
         mount_root.join(relpath)
     } else {
         // outside project, need to copy the target data over
         // only do if we're copying over cached files.
         let target_dir = mount_prefix_path.join("target");
         if copy_cache {
-            copy(dirs.target(), &target_dir, msg_info)?;
+            copy(package_dirs.target(), &target_dir, msg_info)?;
         } else {
             create_volume_dir(engine, &container, &target_dir, msg_info)?;
         }
 
-        copied.push((dirs.target(), target_dir.clone()));
+        copied.push((package_dirs.target(), target_dir.clone()));
         target_dir
     };
     for (src, dst) in &volumes {
@@ -1192,10 +1198,10 @@ symlink_recurse \"${{prefix}}\"
     // 6. execute our cargo command inside the container
     let mut docker = subcommand(engine, "exec");
     docker_user_id(&mut docker, engine.kind);
-    docker_envvars(&mut docker, &options, dirs, msg_info)?;
+    docker_envvars(&mut docker, &options, toolchain_dirs, msg_info)?;
     docker_cwd(&mut docker, &paths)?;
     docker.arg(&container);
-    docker.args(["sh", "-c", &build_command(dirs, &cmd)]);
+    docker.args(["sh", "-c", &build_command(toolchain_dirs, &cmd)]);
     bail_container_exited!();
     let status = docker
         .run_and_get_status(msg_info, false)
@@ -1212,7 +1218,8 @@ symlink_recurse \"${{prefix}}\"
             .arg("-a")
             .arg(&format!("{container}:{}", target_dir.as_posix_absolute()?))
             .arg(
-                dirs.target()
+                package_dirs
+                    .target()
                     .parent()
                     .expect("target directory should have a parent"),
             )
