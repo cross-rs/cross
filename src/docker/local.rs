@@ -57,17 +57,17 @@ pub(crate) fn run(
     docker
         .args([
             "-v",
-            &format!("{}:{}:z", dirs.xargo.to_utf8()?, dirs.xargo_mount_path()),
+            &format!("{}:{}:z", dirs.xargo_host_path()?, dirs.xargo_mount_path()),
         ])
         .args([
             "-v",
-            &format!("{}:{}:z", dirs.cargo.to_utf8()?, dirs.cargo_mount_path()),
+            &format!("{}:{}:z", dirs.cargo_host_path()?, dirs.cargo_mount_path()),
         ])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(["-v", &format!("{}/bin", dirs.cargo_mount_path())]);
     docker.args([
         "-v",
-        &format!("{}:{}:z", dirs.host_root.to_utf8()?, dirs.mount_root),
+        &format!("{}:{}:z", dirs.host_root().to_utf8()?, dirs.mount_root()),
     ]);
     docker
         .args([
@@ -78,12 +78,12 @@ pub(crate) fn run(
                 dirs.sysroot_mount_path()
             ),
         ])
-        .args(["-v", &format!("{}:/target:z", dirs.target.to_utf8()?)]);
+        .args(["-v", &format!("{}:/target:z", dirs.target().to_utf8()?)]);
     docker_cwd(&mut docker, &paths)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
-    if let Some(ref nix_store) = dirs.nix_store {
+    if let Some(nix_store) = dirs.nix_store() {
         docker.args([
             "-v",
             &format!(

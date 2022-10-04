@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::{env, fs};
+use std::{env, fs, time};
 
 use super::custom::{Dockerfile, PreBuild};
 use super::engine::*;
@@ -16,7 +16,7 @@ use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{MessageInfo, Verbosity};
-use crate::{CargoVariant, Target};
+use crate::{CargoVariant, Target, TargetTriple};
 
 use rustc_version::Version as RustcVersion;
 
@@ -241,37 +241,27 @@ impl DockerPaths {
     }
 
     pub fn mount_cwd(&self) -> &str {
-        &self.directories.mount_cwd
+        self.directories.mount_cwd()
     }
 
     pub fn host_root(&self) -> &Path {
-        &self.directories.host_root
+        self.directories.host_root()
     }
 }
 
 #[derive(Debug)]
-pub struct Directories {
-    pub cargo: PathBuf,
-    pub xargo: PathBuf,
-    pub target: PathBuf,
-    pub nix_store: Option<PathBuf>,
-    pub host_root: PathBuf,
-    // both mount fields are WSL paths on windows: they already are POSIX paths
-    pub mount_root: String,
-    pub mount_cwd: String,
-    pub toolchain: QualifiedToolchain,
-    pub cargo_mount_path: String,
-    pub xargo_mount_path: String,
-    pub sysroot_mount_path: String,
+pub struct ToolchainDirectories {
+    cargo: PathBuf,
+    xargo: PathBuf,
+    nix_store: Option<PathBuf>,
+    toolchain: QualifiedToolchain,
+    cargo_mount_path: String,
+    xargo_mount_path: String,
+    sysroot_mount_path: String,
 }
 
-impl Directories {
-    pub fn assemble(
-        mount_finder: &MountFinder,
-        mut metadata: CargoMetadata,
-        cwd: &Path,
-        mut toolchain: QualifiedToolchain,
-    ) -> Result<(Self, CargoMetadata)> {
+impl ToolchainDirectories {
+    pub fn assemble(mount_finder: &MountFinder, mut toolchain: QualifiedToolchain) -> Result<Self> {
         let home_dir =
             home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
         let cargo = home::cargo_home()?;
@@ -281,7 +271,6 @@ impl Directories {
         let nix_store = env::var_os("NIX_STORE_DIR")
             .or_else(|| env::var_os("NIX_STORE"))
             .map(PathBuf::from);
-        let target = &metadata.target_directory;
 
         // create the directories we are going to mount before we mount them,
         // otherwise `docker` will create them but they will be owned by `root`
@@ -292,7 +281,6 @@ impl Directories {
         if let Some(ref nix_store) = nix_store {
             file::create_dir_all(nix_store)?;
         }
-        create_target_dir(target)?;
 
         // get our mount paths prior to canonicalizing them
         let cargo_mount_path = cargo.as_posix_absolute()?;
@@ -320,49 +308,61 @@ impl Directories {
 
         let cargo = mount_finder.find_mount_path(cargo);
         let xargo = mount_finder.find_mount_path(xargo);
-        metadata.target_directory = mount_finder.find_mount_path(target);
-
-        // root is either workspace_root, or, if we're outside the workspace root, the current directory
-        let host_root = mount_finder.find_mount_path(if metadata.workspace_root.starts_with(cwd) {
-            cwd
-        } else {
-            &metadata.workspace_root
-        });
-
-        // on Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
-        // NOTE: on unix, host root has already found the mount path
-        let mount_root = host_root.as_posix_absolute()?;
-        let mount_cwd = mount_finder.find_path(cwd, false)?;
 
         toolchain.set_sysroot(|p| mount_finder.find_mount_path(p));
 
         // canonicalize these once to avoid syscalls
         let sysroot_mount_path = toolchain.get_sysroot().as_posix_absolute()?;
 
-        Ok((
-            Directories {
-                cargo,
-                xargo,
-                target: metadata.target_directory.clone(),
-                nix_store,
-                host_root,
-                mount_root,
-                mount_cwd,
-                toolchain,
-                cargo_mount_path,
-                xargo_mount_path,
-                sysroot_mount_path,
-            },
-            metadata,
-        ))
+        Ok(ToolchainDirectories {
+            cargo,
+            xargo,
+            nix_store,
+            toolchain,
+            cargo_mount_path,
+            xargo_mount_path,
+            sysroot_mount_path,
+        })
+    }
+
+    pub fn unique_toolchain_identifier(&self) -> Result<String> {
+        self.toolchain.unique_toolchain_identifier()
+    }
+
+    pub fn unique_container_identifier(&self, triple: &TargetTriple) -> Result<String> {
+        self.toolchain.unique_container_identifier(triple)
+    }
+
+    pub fn toolchain(&self) -> &QualifiedToolchain {
+        &self.toolchain
     }
 
     pub fn get_sysroot(&self) -> &Path {
         self.toolchain.get_sysroot()
     }
 
+    pub fn host_target(&self) -> &TargetTriple {
+        &self.toolchain.host().target
+    }
+
+    pub fn cargo(&self) -> &Path {
+        &self.cargo
+    }
+
+    pub fn cargo_host_path(&self) -> Result<&str> {
+        self.cargo.to_utf8()
+    }
+
     pub fn cargo_mount_path(&self) -> &str {
         &self.cargo_mount_path
+    }
+
+    pub fn xargo(&self) -> &Path {
+        &self.xargo
+    }
+
+    pub fn xargo_host_path(&self) -> Result<&str> {
+        self.xargo.to_utf8()
     }
 
     pub fn xargo_mount_path(&self) -> &str {
@@ -371,6 +371,10 @@ impl Directories {
 
     pub fn sysroot_mount_path(&self) -> &str {
         &self.sysroot_mount_path
+    }
+
+    pub fn nix_store(&self) -> Option<&Path> {
+        self.nix_store.as_deref()
     }
 
     pub fn cargo_mount_path_relative(&self) -> Result<String> {
@@ -393,6 +397,173 @@ impl Directories {
             .map(ToOwned::to_owned)
             .ok_or_else(|| eyre::eyre!("sysroot directory must be relative to root"))
     }
+}
+
+#[derive(Debug)]
+pub struct PackageDirectories {
+    target: PathBuf,
+    host_root: PathBuf,
+    // both mount fields are WSL paths on windows: they already are POSIX paths
+    mount_root: String,
+    mount_cwd: String,
+}
+
+impl PackageDirectories {
+    pub fn assemble(
+        mount_finder: &MountFinder,
+        mut metadata: CargoMetadata,
+        cwd: &Path,
+    ) -> Result<(Self, CargoMetadata)> {
+        let target = &metadata.target_directory;
+        // see ToolchainDirectories::assemble for creating directories
+        create_target_dir(target)?;
+
+        metadata.target_directory = mount_finder.find_mount_path(target);
+
+        // root is either workspace_root, or, if we're outside the workspace root, the current directory
+        let host_root = mount_finder.find_mount_path(if metadata.workspace_root.starts_with(cwd) {
+            cwd
+        } else {
+            &metadata.workspace_root
+        });
+
+        // on Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
+        // NOTE: on unix, host root has already found the mount path
+        let mount_root = host_root.as_posix_absolute()?;
+        let mount_cwd = mount_finder.find_path(cwd, false)?;
+
+        Ok((
+            PackageDirectories {
+                target: metadata.target_directory.clone(),
+                host_root,
+                mount_root,
+                mount_cwd,
+            },
+            metadata,
+        ))
+    }
+}
+
+#[derive(Debug)]
+pub struct Directories {
+    toolchain: ToolchainDirectories,
+    package: PackageDirectories,
+}
+
+impl Directories {
+    pub fn assemble(
+        mount_finder: &MountFinder,
+        metadata: CargoMetadata,
+        cwd: &Path,
+        toolchain: QualifiedToolchain,
+    ) -> Result<(Self, CargoMetadata)> {
+        let (package, metadata) = PackageDirectories::assemble(mount_finder, metadata, cwd)?;
+        let toolchain = ToolchainDirectories::assemble(mount_finder, toolchain)?;
+
+        Ok((Directories { toolchain, package }, metadata))
+    }
+
+    pub fn toolchain_directories(&self) -> &ToolchainDirectories {
+        &self.toolchain
+    }
+
+    pub fn package_directories(&self) -> &PackageDirectories {
+        &self.package
+    }
+
+    pub fn unique_toolchain_identifier(&self) -> Result<String> {
+        self.toolchain.unique_toolchain_identifier()
+    }
+
+    pub fn unique_container_identifier(&self, triple: &TargetTriple) -> Result<String> {
+        self.toolchain.unique_container_identifier(triple)
+    }
+
+    pub fn toolchain(&self) -> &QualifiedToolchain {
+        self.toolchain.toolchain()
+    }
+
+    pub fn get_sysroot(&self) -> &Path {
+        self.toolchain.get_sysroot()
+    }
+
+    pub fn host_target(&self) -> &TargetTriple {
+        self.toolchain.host_target()
+    }
+
+    pub fn cargo(&self) -> &Path {
+        self.toolchain.cargo()
+    }
+
+    pub fn cargo_host_path(&self) -> Result<&str> {
+        self.toolchain.cargo_host_path()
+    }
+
+    pub fn cargo_mount_path(&self) -> &str {
+        self.toolchain.cargo_mount_path()
+    }
+
+    pub fn xargo(&self) -> &Path {
+        self.toolchain.xargo()
+    }
+
+    pub fn xargo_host_path(&self) -> Result<&str> {
+        self.toolchain.xargo_host_path()
+    }
+
+    pub fn xargo_mount_path(&self) -> &str {
+        self.toolchain.xargo_mount_path()
+    }
+
+    pub fn sysroot_mount_path(&self) -> &str {
+        self.toolchain.sysroot_mount_path()
+    }
+
+    pub fn nix_store(&self) -> Option<&Path> {
+        self.toolchain.nix_store()
+    }
+
+    pub fn cargo_mount_path_relative(&self) -> Result<String> {
+        self.toolchain.cargo_mount_path_relative()
+    }
+
+    pub fn xargo_mount_path_relative(&self) -> Result<String> {
+        self.toolchain.xargo_mount_path_relative()
+    }
+
+    pub fn sysroot_mount_path_relative(&self) -> Result<String> {
+        self.toolchain.sysroot_mount_path_relative()
+    }
+
+    pub fn target(&self) -> &Path {
+        &self.package.target
+    }
+
+    pub fn host_root(&self) -> &Path {
+        &self.package.host_root
+    }
+
+    pub fn mount_root(&self) -> &str {
+        &self.package.mount_root
+    }
+
+    pub fn mount_cwd(&self) -> &str {
+        &self.package.mount_cwd
+    }
+}
+
+const EPOCH: time::SystemTime = time::SystemTime::UNIX_EPOCH;
+
+pub(crate) fn time_to_millis(timestamp: &time::SystemTime) -> Result<u64> {
+    Ok(timestamp.duration_since(EPOCH)?.as_millis() as u64)
+}
+
+pub(crate) fn time_from_millis(millis: u64) -> time::SystemTime {
+    EPOCH + time::Duration::from_millis(millis)
+}
+
+pub(crate) fn now_as_millis() -> Result<u64> {
+    time_to_millis(&time::SystemTime::now())
 }
 
 const CACHEDIR_TAG: &str = "Signature: 8a477f597d28d172789f06886806bc55
@@ -1157,14 +1328,14 @@ mod tests {
             let mount_finder = MountFinder::new(vec![]);
             let metadata = cargo_metadata(false, &mut MessageInfo::default())?;
             let (directories, metadata) = get_directories(metadata, &mount_finder)?;
-            paths_equal(&directories.cargo, &home()?.join(".cargo"))?;
-            paths_equal(&directories.xargo, &home()?.join(".xargo"))?;
-            paths_equal(&directories.host_root, &metadata.workspace_root)?;
+            paths_equal(directories.cargo(), &home()?.join(".cargo"))?;
+            paths_equal(directories.xargo(), &home()?.join(".xargo"))?;
+            paths_equal(directories.host_root(), &metadata.workspace_root)?;
             assert_eq!(
-                &directories.mount_root,
+                directories.mount_root(),
                 &metadata.workspace_root.as_posix_absolute()?
             );
-            assert_eq!(&directories.mount_cwd, &get_cwd()?.as_posix_absolute()?);
+            assert_eq!(directories.mount_cwd(), &get_cwd()?.as_posix_absolute()?);
 
             reset_env(vars);
             Ok(())
@@ -1205,15 +1376,15 @@ mod tests {
             let mount_finder = MountFinder::new(docker_read_mount_paths(&engine)?);
             let mount_path = |p| mount_finder.find_mount_path(p);
 
-            paths_equal(&directories.cargo, &mount_path(home()?.join(".cargo")))?;
-            paths_equal(&directories.xargo, &mount_path(home()?.join(".xargo")))?;
-            paths_equal(&directories.host_root, &mount_path(get_cwd()?))?;
+            paths_equal(directories.cargo(), &mount_path(home()?.join(".cargo")))?;
+            paths_equal(directories.xargo(), &mount_path(home()?.join(".xargo")))?;
+            paths_equal(directories.host_root(), &mount_path(get_cwd()?))?;
             assert_eq!(
-                &directories.mount_root,
+                directories.mount_root(),
                 &mount_path(get_cwd()?).as_posix_absolute()?
             );
             assert_eq!(
-                &directories.mount_cwd,
+                directories.mount_cwd(),
                 &mount_path(get_cwd()?).as_posix_absolute()?
             );
 

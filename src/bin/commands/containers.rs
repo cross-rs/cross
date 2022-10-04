@@ -395,10 +395,10 @@ pub fn create_persistent_volume(
     if let Some(channel) = channel {
         toolchain.channel = channel.channel.clone();
     };
-    let (dirs, metadata) = docker::get_package_info(engine, toolchain.clone(), msg_info)?;
-    let container =
-        docker::remote::unique_container_identifier(&toolchain.host().target, &metadata, &dirs)?;
-    let volume = dirs.toolchain.unique_toolchain_identifier()?;
+    let mount_finder = docker::MountFinder::create(engine)?;
+    let dirs = docker::ToolchainDirectories::assemble(&mount_finder, toolchain.clone())?;
+    let container = dirs.unique_container_identifier(&toolchain.host().target)?;
+    let volume = dirs.unique_toolchain_identifier()?;
 
     if docker::remote::volume_exists(engine, &volume, msg_info)? {
         eyre::bail!("Error: volume {volume} already exists.");
@@ -482,8 +482,9 @@ pub fn remove_persistent_volume(
     if let Some(channel) = channel {
         toolchain.channel = channel.channel.clone();
     };
-    let (dirs, _) = docker::get_package_info(engine, toolchain, msg_info)?;
-    let volume = dirs.toolchain.unique_toolchain_identifier()?;
+    let mount_finder = docker::MountFinder::create(engine)?;
+    let dirs = docker::ToolchainDirectories::assemble(&mount_finder, toolchain)?;
+    let volume = dirs.unique_toolchain_identifier()?;
 
     if !docker::remote::volume_exists(engine, &volume, msg_info)? {
         eyre::bail!("Error: volume {volume} does not exist.");

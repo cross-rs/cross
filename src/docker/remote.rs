@@ -9,7 +9,6 @@ use eyre::Context;
 
 use super::engine::Engine;
 use super::shared::*;
-use crate::cargo::CargoMetadata;
 use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
@@ -241,19 +240,19 @@ fn copy_volume_files_nocache(
 pub fn copy_volume_container_xargo(
     engine: &Engine,
     container: &str,
-    dirs: &Directories,
+    dirs: &ToolchainDirectories,
     mount_prefix: &Path,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
     let dst = mount_prefix.join(&dirs.xargo_mount_path_relative()?);
-    if dirs.xargo.exists() {
+    if dirs.xargo().exists() {
         create_volume_dir(
             engine,
             container,
             dst.parent().expect("destination should have a parent"),
             msg_info,
         )?;
-        copy_volume_files(engine, container, &dirs.xargo, &dst, msg_info)?;
+        copy_volume_files(engine, container, dirs.xargo(), &dst, msg_info)?;
     }
 
     Ok(())
@@ -262,7 +261,7 @@ pub fn copy_volume_container_xargo(
 pub fn copy_volume_container_cargo(
     engine: &Engine,
     container: &str,
-    dirs: &Directories,
+    dirs: &ToolchainDirectories,
     mount_prefix: &Path,
     copy_registry: bool,
     msg_info: &mut MessageInfo,
@@ -273,12 +272,12 @@ pub fn copy_volume_container_cargo(
         .unwrap_or(copy_registry);
 
     if copy_registry {
-        copy_volume_files(engine, container, &dirs.cargo, &dst, msg_info)?;
+        copy_volume_files(engine, container, dirs.cargo(), &dst, msg_info)?;
     } else {
         // can copy a limit subset of files: the rest is present.
         create_volume_dir(engine, container, &dst, msg_info)?;
-        for entry in fs::read_dir(&dirs.cargo)
-            .wrap_err_with(|| format!("when reading directory {:?}", dirs.cargo))?
+        for entry in fs::read_dir(dirs.cargo())
+            .wrap_err_with(|| format!("when reading directory {:?}", dirs.cargo()))?
         {
             let file = entry?;
             let basename = file
@@ -366,7 +365,7 @@ fn warn_symlinks(had_symlinks: bool, msg_info: &mut MessageInfo) -> Result<()> {
 fn copy_volume_container_rust_base(
     engine: &Engine,
     container: &str,
-    dirs: &Directories,
+    dirs: &ToolchainDirectories,
     mount_prefix: &Path,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
@@ -413,7 +412,7 @@ fn copy_volume_container_rust_base(
 fn copy_volume_container_rust_manifest(
     engine: &Engine,
     container: &str,
-    dirs: &Directories,
+    dirs: &ToolchainDirectories,
     mount_prefix: &Path,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
@@ -442,7 +441,7 @@ fn copy_volume_container_rust_manifest(
 pub fn copy_volume_container_rust_triple(
     engine: &Engine,
     container: &str,
-    dirs: &Directories,
+    dirs: &ToolchainDirectories,
     target_triple: &TargetTriple,
     mount_prefix: &Path,
     skip_exists: bool,
@@ -479,7 +478,7 @@ pub fn copy_volume_container_rust_triple(
 pub fn copy_volume_container_rust(
     engine: &Engine,
     container: &str,
-    dirs: &Directories,
+    dirs: &ToolchainDirectories,
     target_triple: Option<&TargetTriple>,
     mount_prefix: &Path,
     msg_info: &mut MessageInfo,
@@ -490,13 +489,13 @@ pub fn copy_volume_container_rust(
         engine,
         container,
         dirs,
-        &dirs.toolchain.host().target,
+        dirs.host_target(),
         mount_prefix,
         false,
         msg_info,
     )?;
     if let Some(target_triple) = target_triple {
-        if target_triple.triple() != dirs.toolchain.host().target.triple() {
+        if target_triple.triple() != dirs.host_target().triple() {
             copy_volume_container_rust_triple(
                 engine,
                 container,
@@ -515,7 +514,6 @@ pub fn copy_volume_container_rust(
 type FingerprintMap = BTreeMap<String, time::SystemTime>;
 
 fn parse_project_fingerprint(path: &Path) -> Result<FingerprintMap> {
-    let epoch = time::SystemTime::UNIX_EPOCH;
     let file = fs::OpenOptions::new().read(true).open(path)?;
     let reader = io::BufReader::new(file);
     let mut result = BTreeMap::new();
@@ -524,7 +522,7 @@ fn parse_project_fingerprint(path: &Path) -> Result<FingerprintMap> {
         let (timestamp, relpath) = line
             .split_once('\t')
             .ok_or_else(|| eyre::eyre!("unable to parse fingerprint line '{line}'"))?;
-        let modified = epoch + time::Duration::from_millis(timestamp.parse::<u64>()?);
+        let modified = time_from_millis(timestamp.parse::<u64>()?);
         result.insert(relpath.to_owned(), modified);
     }
 
@@ -532,14 +530,13 @@ fn parse_project_fingerprint(path: &Path) -> Result<FingerprintMap> {
 }
 
 fn write_project_fingerprint(path: &Path, fingerprint: &FingerprintMap) -> Result<()> {
-    let epoch = time::SystemTime::UNIX_EPOCH;
     let mut file = fs::OpenOptions::new()
         .write(true)
         .truncate(true)
         .create(true)
         .open(path)?;
     for (relpath, modified) in fingerprint {
-        let timestamp = modified.duration_since(epoch)?.as_millis() as u64;
+        let timestamp = time_to_millis(modified)?;
         writeln!(file, "{timestamp}\t{relpath}")?;
     }
 
@@ -552,7 +549,6 @@ fn read_dir_fingerprint(
     map: &mut FingerprintMap,
     copy_cache: bool,
 ) -> Result<()> {
-    let epoch = time::SystemTime::UNIX_EPOCH;
     for entry in fs::read_dir(path)? {
         let file = entry?;
         let file_type = file.file_type()?;
@@ -565,8 +561,7 @@ fn read_dir_fingerprint(
             // we're mounting to the same location, so this should fine
             // we need to round the modified date to millis.
             let modified = file.metadata()?.modified()?;
-            let millis = modified.duration_since(epoch)?.as_millis() as u64;
-            let rounded = epoch + time::Duration::from_millis(millis);
+            let rounded = time_from_millis(time_to_millis(&modified)?);
             let relpath = file.path().strip_prefix(home)?.as_posix_relative()?;
             map.insert(relpath, rounded);
         }
@@ -839,35 +834,15 @@ impl QualifiedToolchain {
             "{VOLUME_PREFIX}{toolchain_name}-{toolchain_hash}-{commit_hash}"
         ))
     }
-}
 
-// unique identifier for a given project
-pub fn unique_container_identifier(
-    triple: &TargetTriple,
-    metadata: &CargoMetadata,
-    dirs: &Directories,
-) -> Result<String> {
-    let workspace_root = &metadata.workspace_root;
-    let package = metadata
-        .packages
-        .iter()
-        .find(|p| {
-            p.manifest_path
-                .parent()
-                .expect("manifest path should have a parent directory")
-                == workspace_root
-        })
-        .unwrap_or_else(|| {
-            metadata
-                .packages
-                .get(0)
-                .expect("should have at least 1 package")
-        });
-
-    let name = &package.name;
-    let toolchain_id = dirs.toolchain.unique_toolchain_identifier()?;
-    let project_hash = path_hash(&package.manifest_path)?;
-    Ok(format!("{toolchain_id}-{triple}-{name}-{project_hash}"))
+    // unique identifier for a given container. allows the ID to
+    // be generated outside a rust package and run multiple times.
+    pub fn unique_container_identifier(&self, triple: &TargetTriple) -> Result<String> {
+        let toolchain_id = self.unique_toolchain_identifier()?;
+        let cwd_path = path_hash(&env::current_dir()?)?;
+        let system_time = now_as_millis()?;
+        Ok(format!("{toolchain_id}-{triple}-{cwd_path}-{system_time}"))
+    }
 }
 
 pub(crate) fn run(
@@ -908,18 +883,18 @@ pub(crate) fn run(
     // this can happen if we didn't gracefully exit before
     // note that since we use `docker run --rm`, it's very
     // unlikely the container state existed before.
-    let toolchain_id = dirs.toolchain.unique_toolchain_identifier()?;
-    let container = unique_container_identifier(target.target(), &paths.metadata, dirs)?;
+    let toolchain_id = dirs.unique_toolchain_identifier()?;
+    let container = dirs.unique_container_identifier(target.target())?;
     let volume = {
-        let existing = existing_volumes(engine, &dirs.toolchain, msg_info)?;
+        let existing = existing_volumes(engine, dirs.toolchain(), msg_info)?;
         if existing.iter().any(|v| v == &toolchain_id) {
             VolumeId::Keep(toolchain_id)
         } else {
-            let partial = format!("{VOLUME_PREFIX}{}", dirs.toolchain);
+            let partial = format!("{VOLUME_PREFIX}{}", dirs.toolchain());
             if existing.iter().any(|v| v.starts_with(&partial)) {
                 msg_info.warn(format_args!(
                     "a persistent volume does not exists for `{0}`, but there is a volume for a different version.\n > Create a new volume with `cross-util volumes create --toolchain {0}`",
-                    dirs.toolchain
+                    dirs.toolchain()
                 ))?;
             }
             VolumeId::Discard
@@ -972,7 +947,7 @@ pub(crate) fn run(
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
-    if let Some(ref nix_store) = dirs.nix_store {
+    if let Some(nix_store) = dirs.nix_store() {
         let nix_string = nix_store.to_utf8()?;
         volumes.push((nix_string.to_owned(), nix_string.to_owned()));
     }
@@ -1018,15 +993,23 @@ pub(crate) fn run(
         }
     };
     let mount_prefix_path = mount_prefix.as_ref();
+    let rustdirs = dirs.toolchain_directories();
     if let VolumeId::Discard = volume {
-        copy_volume_container_xargo(engine, &container, dirs, mount_prefix_path, msg_info)
+        copy_volume_container_xargo(engine, &container, rustdirs, mount_prefix_path, msg_info)
             .wrap_err("when copying xargo")?;
-        copy_volume_container_cargo(engine, &container, dirs, mount_prefix_path, false, msg_info)
-            .wrap_err("when copying cargo")?;
+        copy_volume_container_cargo(
+            engine,
+            &container,
+            rustdirs,
+            mount_prefix_path,
+            false,
+            msg_info,
+        )
+        .wrap_err("when copying cargo")?;
         copy_volume_container_rust(
             engine,
             &container,
-            dirs,
+            rustdirs,
             Some(target.target()),
             mount_prefix_path,
             msg_info,
@@ -1037,7 +1020,7 @@ pub(crate) fn run(
         copy_volume_container_rust_triple(
             engine,
             &container,
-            dirs,
+            rustdirs,
             target.target(),
             mount_prefix_path,
             true,
@@ -1047,7 +1030,7 @@ pub(crate) fn run(
     }
     // cannot panic: absolute unix path, must have root
     let rel_mount_root = dirs
-        .mount_root
+        .mount_root()
         .strip_prefix('/')
         .expect("mount root should be absolute");
     let mount_root = mount_prefix_path.join(rel_mount_root);
@@ -1065,7 +1048,7 @@ pub(crate) fn run(
     copy_volume_container_project(
         engine,
         &container,
-        &dirs.host_root,
+        dirs.host_root(),
         &mount_root,
         &volume,
         copy_cache,
@@ -1075,34 +1058,34 @@ pub(crate) fn run(
     let sysroot = dirs.get_sysroot().to_owned();
     let mut copied = vec![
         (
-            &dirs.xargo,
+            dirs.xargo(),
             mount_prefix_path.join(&dirs.xargo_mount_path_relative()?),
         ),
         (
-            &dirs.cargo,
+            dirs.cargo(),
             mount_prefix_path.join(&dirs.cargo_mount_path_relative()?),
         ),
         (
             &sysroot,
             mount_prefix_path.join(&dirs.sysroot_mount_path_relative()?),
         ),
-        (&dirs.host_root, mount_root.clone()),
+        (dirs.host_root(), mount_root.clone()),
     ];
     let mut to_symlink = vec![];
-    let target_dir = file::canonicalize(&dirs.target)?;
-    let target_dir = if let Ok(relpath) = target_dir.strip_prefix(&dirs.host_root) {
+    let target_dir = file::canonicalize(dirs.target())?;
+    let target_dir = if let Ok(relpath) = target_dir.strip_prefix(dirs.host_root()) {
         mount_root.join(relpath)
     } else {
         // outside project, need to copy the target data over
         // only do if we're copying over cached files.
         let target_dir = mount_prefix_path.join("target");
         if copy_cache {
-            copy(&dirs.target, &target_dir, msg_info)?;
+            copy(dirs.target(), &target_dir, msg_info)?;
         } else {
             create_volume_dir(engine, &container, &target_dir, msg_info)?;
         }
 
-        copied.push((&dirs.target, target_dir.clone()));
+        copied.push((dirs.target(), target_dir.clone()));
         target_dir
     };
     for (src, dst) in &volumes {
@@ -1229,7 +1212,7 @@ symlink_recurse \"${{prefix}}\"
             .arg("-a")
             .arg(&format!("{container}:{}", target_dir.as_posix_absolute()?))
             .arg(
-                dirs.target
+                dirs.target()
                     .parent()
                     .expect("target directory should have a parent"),
             )
