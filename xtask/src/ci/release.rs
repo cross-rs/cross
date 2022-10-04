@@ -1,3 +1,65 @@
+// TODO: More details/ensure accuracy
+//!
+//! # The `publish` job + `build`
+//!
+//! The `publish` job is triggered in five cases.
+//! All of these need the event to be a push (since the `build` job is a need for `publish`,
+//! and that need is gated on `if: github.event_name == 'push'`
+//!
+//! 1. on the default_branch, or `main` in our case
+//! 2. on the `staging` branch
+//! 3. on the `try` branch
+//! 4. on branches matching `v*.*.*`
+//! 5. on tags matching `v*.*.*`
+//!
+//! ## In `default_branch`/`main`
+//!
+//! In the case of `main`, the workflow does the following.
+//!
+//! 1. `build` builds and publishes images for these targets with the tag `main` and `edge`. It also assembles binaries for artifacting
+//! 2. If all ok, the `publish` job triggers
+//! 3. this calls `cargo xtask ci-job release` which
+//!    1. inspects the package version
+//!    2. if the version does not exist as a tag, create a new tag for that version and push it.
+//!       this tag will trigger the `CI` workflow again, but with `ref_type == "tag"`
+//!       if the version does exist, exit quietly.
+//! 4. `publish` now calls `cargo-publish` which creates a new release with draft tag `Unreleased`, attaches binaries from step 1, and does a `cargo publish --dry-run`, this tag uses the standard github token for workflows, and should not be able to trigger any other workflows.
+//!
+//! ## In `staging` / `try` branch
+//!
+//! In `staging` or `try`, we need to make sure that nothing goes out.
+//! This includes tags, releases and `cargo publish`
+//!
+//! 1. `build` builds (but does not publish) images for these targets with the tag `try`/`staging`. It also assembles binaries for artifacting
+//! 2. If all ok, the `publish` job triggers
+//! 4. this calls `cargo xtask ci-job release` which
+//!    1. inspects the package version
+//!    2. if the version does not exist as a tag, "dry-run" creating the tag and push it.
+//!       if the version does exist, exit quietly.
+//! 5. `publish` now calls `cargo-publish` which does a `cargo publish --dry-run`
+//!
+//! ## On branches matching `v*.*.*`
+//!
+//! 1. `build` builds (but does not publish) images for these targets with the tag `vx.y.z` and `edge`. It also assembles binaries for artifacting
+//! 2. If all ok, the `publish` job triggers
+//! 3. this calls `cargo xtask ci-job release` which
+//!    1. inspects the package version
+//!    2. since the `ref_type == "branch"`, if the version does not exist as a tag,
+//!       create a new tag for that version and push it.
+//!       this tag will trigger the `CI` workflow again, but with `ref_type == "tag"`
+//!       if the version does exist, exit quietly.
+//! 4. `publish` now calls `cargo-publish` which does nothing
+//!
+//! ## On tags matching `v*.*.*`
+//!
+//! In this case, we need to make sure that the created release does not trigger a workflow.
+//!
+//! 1. `build` builds and publishes images for these targets with the tag `vx.y.z`. It also assembles binaries for artifacting
+//! 2. If all ok, the `publish` job triggers
+//! 4. this calls `cargo xtask ci-job release` which
+//!    1. inspects the package version
+//!    2. since the `ref_type == "tag"`, the program exits quietly.
+//! 5. `publish` now calls `cargo-publish` which creates a new release with tag `vx.y.z`, attaches binaries from step 1, and does a `cargo publish`, this release tag uses the standard github token for workflows, and should not be able to trigger any other workflows.
 use clap::Args;
 use cross::{shell::MessageInfo, CommandExt};
 
