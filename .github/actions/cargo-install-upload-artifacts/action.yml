@@ -27,7 +27,7 @@ runs:
         echo "::set-output name=out-dir::${out_dir}"
         echo "::set-output name=artifacts-dir::${artifacts_dir}"
       shell: bash
-    - run: rm -rf .git
+    - run: mv .git .git.bak
       shell: bash
     - name: Build with all features
       run:
@@ -82,3 +82,5 @@ runs:
         name: ${{ steps.archive.outputs.name }}
         path: ${{ steps.archive.outputs.path }}
         if-no-files-found: error
+    - run: mv .git.bak .git
+      shell: bash
