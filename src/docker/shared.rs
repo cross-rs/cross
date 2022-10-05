@@ -1264,14 +1264,16 @@ mod tests {
             let mount_finder = MountFinder::new(vec![]);
             let metadata = cargo_metadata(false, &mut MessageInfo::default())?;
             let (directories, metadata) = get_directories(metadata, &mount_finder)?;
-            paths_equal(directories.cargo(), &home()?.join(".cargo"))?;
-            paths_equal(directories.xargo(), &home()?.join(".xargo"))?;
-            paths_equal(directories.host_root(), &metadata.workspace_root)?;
+            let toolchain_dirs = directories.toolchain_directories();
+            let package_dirs = directories.package_directories();
+            paths_equal(toolchain_dirs.cargo(), &home()?.join(".cargo"))?;
+            paths_equal(toolchain_dirs.xargo(), &home()?.join(".xargo"))?;
+            paths_equal(package_dirs.host_root(), &metadata.workspace_root)?;
             assert_eq!(
-                directories.mount_root(),
+                package_dirs.mount_root(),
                 &metadata.workspace_root.as_posix_absolute()?
             );
-            assert_eq!(directories.mount_cwd(), &get_cwd()?.as_posix_absolute()?);
+            assert_eq!(package_dirs.mount_cwd(), &get_cwd()?.as_posix_absolute()?);
 
             reset_env(vars);
             Ok(())
@@ -1309,18 +1311,20 @@ mod tests {
             let mount_finder = MountFinder::create(&engine)?;
             let metadata = cargo_metadata(true, &mut msg_info)?;
             let (directories, _) = get_directories(metadata, &mount_finder)?;
+            let toolchain_dirs = directories.toolchain_directories();
+            let package_dirs = directories.package_directories();
             let mount_finder = MountFinder::new(docker_read_mount_paths(&engine)?);
             let mount_path = |p| mount_finder.find_mount_path(p);
 
-            paths_equal(directories.cargo(), &mount_path(home()?.join(".cargo")))?;
-            paths_equal(directories.xargo(), &mount_path(home()?.join(".xargo")))?;
-            paths_equal(directories.host_root(), &mount_path(get_cwd()?))?;
+            paths_equal(toolchain_dirs.cargo(), &mount_path(home()?.join(".cargo")))?;
+            paths_equal(toolchain_dirs.xargo(), &mount_path(home()?.join(".xargo")))?;
+            paths_equal(package_dirs.host_root(), &mount_path(get_cwd()?))?;
             assert_eq!(
-                directories.mount_root(),
+                package_dirs.mount_root(),
                 &mount_path(get_cwd()?).as_posix_absolute()?
             );
             assert_eq!(
-                directories.mount_cwd(),
+                package_dirs.mount_cwd(),
                 &mount_path(get_cwd()?).as_posix_absolute()?
             );
 
