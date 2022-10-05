@@ -69,6 +69,8 @@ pub struct Engine {
 }
 
 impl Engine {
+    pub const CROSS_CONTAINER_ENGINE_NO_BUILDKIT_ENV: &'static str =
+        "CROSS_CONTAINER_ENGINE_NO_BUILDKIT";
     pub fn new(
         in_docker: Option<bool>,
         is_remote: Option<bool>,
@@ -135,7 +137,7 @@ impl Engine {
 
     #[must_use]
     pub fn has_buildkit() -> bool {
-        !env::var("CROSS_CONTAINER_ENGINE_NO_BUILDKIT")
+        !env::var(Self::CROSS_CONTAINER_ENGINE_NO_BUILDKIT_ENV)
             .map(|x| bool_from_envvar(&x))
             .unwrap_or_default()
     }

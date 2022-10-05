@@ -276,7 +276,7 @@ pub fn list_images(
             map.get_mut(&target).expect("map must have key").push(image);
         }
     }
-    let mut keys: Vec<&str> = map.iter().map(|(k, _)| k.as_ref()).collect();
+    let mut keys: Vec<&str> = map.keys().map(|k| k.as_ref()).collect();
     keys.sort_unstable();
 
     let print_string =
