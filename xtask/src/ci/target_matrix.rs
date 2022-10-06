@@ -32,7 +32,9 @@ pub(crate) fn run(message: String, author: String) -> Result<(), color_eyre::Rep
             std: target.std.map(|b| b as u8),
         })
         .collect::<Vec<_>>();
-    gha_output("matrix", &serde_json::to_string(&matrix)?);
+    let json = serde_json::to_string(&matrix)?;
+    gha_print(&json);
+    gha_output("matrix", &json);
     Ok(())
 }
 
