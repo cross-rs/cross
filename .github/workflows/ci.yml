@@ -91,6 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup-rust
+
       - name: Generate matrix
         id: generate-matrix
         run: cargo xtask ci-job target-matrix
@@ -102,7 +103,7 @@ jobs:
     name: target (${{ matrix.pretty }},${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: [shellcheck, test, generate-matrix, check]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && needs.generate-matrix.outputs.matrix != '{}' && needs.generate-matrix.outputs.matrix != '[]' && needs.generate-matrix.outputs.matrix != ''
     strategy:
       fail-fast: false
       matrix:
