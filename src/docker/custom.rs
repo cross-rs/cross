@@ -163,7 +163,32 @@ impl<'a> Dockerfile<'a> {
             docker_build.arg(paths.host_root());
         }
 
-        docker_build.run(msg_info, true)?;
+        let mut res = docker_build.run(msg_info, true).with_warning(|| {
+            format!(
+                "call to {} failed",
+                options
+                    .engine
+                    .path
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .map_or_else(|| "container engine", |s| s)
+            )
+        });
+
+        // FIXME: Inspect the error message, while still inheriting stdout on verbose mode to
+        // conditionally apply this suggestion and note. This could then inspect if a help string is emitted,
+        // if the daemon is not running, etc.
+        if docker::Engine::has_buildkit() {
+            res = res
+                .suggestion("is `buildx` available for the container engine?")
+                .with_note(|| {
+                    format!(
+                        "disable the `buildkit` dependency optionally with `{}=1`",
+                        docker::Engine::CROSS_CONTAINER_ENGINE_NO_BUILDKIT_ENV
+                    )
+                });
+        }
+        res?;
         Ok(image_name)
     }
 
