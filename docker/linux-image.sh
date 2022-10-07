@@ -171,12 +171,14 @@ main() {
         sharutils \
         gnupg
 
-    # amd64 has conflicting versions of the packages installed, so
+    # conflicting versions of some packages will be installed already for the host platform,
     # we need to remove the system installs later. since apt relies
     # on these packages, we need to download them and reinstall
     # using dpkg later, since we cannot redownload via apt.
+    local dpkg_arch
+    dpkg_arch=$(dpkg --print-architecture)
     local libgcc_packages=("${libgcc}:${arch}" "libstdc++6:${arch}")
-    if [[ "${arch}" == "amd64" ]]; then
+    if [[ "${arch}" == "${dpkg_arch}" ]]; then
         local libgcc_root=/qemu/libgcc
         mkdir -p "${libgcc_root}"
         pushd "${libgcc_root}"
@@ -186,6 +188,7 @@ main() {
 
     # Download packages
     mv /etc/apt/sources.list /etc/apt/sources.list.bak
+    mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak
     echo -e "${debsource}" > /etc/apt/sources.list
 
     # Old ubuntu does not support --add-architecture, so we directly change multiarch file
@@ -240,10 +243,10 @@ main() {
         ncurses-base"${ncurses}" \
         "zlib1g:${arch}"
 
-    if [[ "${arch}" != "amd64" ]]; then
+    if [[ "${arch}" != "${dpkg_arch}" ]]; then
         apt-get -d --no-install-recommends download "${libgcc_packages[@]}"
     else
-        # amd64 has conflicting versions of the packages installed
+        # host arch has conflicting versions of the packages installed
         # this prevents us from downloading them, so we need to
         # simply grab the last version from the debian sources.
         # we're search for a paragraph with:
@@ -380,7 +383,7 @@ EOF
     find . | cpio --create --format='newc' --quiet | gzip > ../initrd.gz
     cd -
 
-    if [[ "${arch}" == "amd64" ]]; then
+    if [[ "${arch}" == "${dpkg_arch}" ]]; then
         # need to reinstall these packages, since basic utilities rely on them.
         pushd "${libgcc_root}"
         dpkg -i --force-depends "${libgcc_root}"/*.deb
@@ -391,15 +394,16 @@ EOF
     # Clean up
     rm -rf "/qemu/${root}" "/qemu/${arch}"
     mv -f /etc/apt/sources.list.bak /etc/apt/sources.list
+    mv -f /etc/apt/sources.list.d.bak /etc/apt/sources.list.d
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch.bak ]; then
         mv /etc/dpkg/dpkg.cfg.d/multiarch.bak /etc/dpkg/dpkg.cfg.d/multiarch
     fi
-    # can fail if arch is used (amd64 and/or i386)
+    # can fail if arch is used (image arch, such as amd64 and/or i386)
     dpkg --remove-architecture "${arch}" || true
     apt-get update
 
     # need to reinstall the removed libgcc packages, which are required for apt
-    if [[ "${arch}" == "amd64" ]]; then
+    if [[ "${arch}" == "${dpkg_arch}" ]]; then
         apt-get install --no-install-recommends --assume-yes "${packages[@]}"
     fi
 

@@ -188,6 +188,20 @@ impl ImageTarget {
     pub fn needs_workspace_root_context(&self) -> bool {
         self.name == "cross"
     }
+
+    pub fn is_armv6(&self) -> bool {
+        matches!(
+            self.name.as_str(),
+            "arm-unknown-linux-gnueabi" | "arm-unknown-linux-musleabi"
+        )
+    }
+
+    pub fn is_armv7(&self) -> bool {
+        matches!(
+            self.name.as_str(),
+            "armv7-unknown-linux-gnueabihf" | "armv7-unknown-linux-musleabihf"
+        )
+    }
 }
 
 impl std::str::FromStr for ImageTarget {

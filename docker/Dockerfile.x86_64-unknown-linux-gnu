@@ -10,6 +10,15 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    g++-x86-64-linux-gnu \
+    libc6-dev-amd64-cross
+
+COPY deny-debian-packages.sh /
+RUN TARGET_ARCH=amd64 /deny-debian-packages.sh \
+    binutils \
+    binutils-x86-64-linux-gnu
+
 COPY qemu.sh /
 RUN /qemu.sh x86_64 softmmu
 
@@ -21,4 +30,11 @@ RUN /linux-image.sh x86_64
 
 COPY linux-runner base-runner.sh /
 
-ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner x86_64"
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc \
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner x86_64" \
+    CC_x86_64_unknown_linux_gnu=x86_64-linux-gnu-gcc \
+    CXX_x86_64_unknown_linux_gnu=x86_64-linux-gnu-g++ \
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_linux_gnu="--sysroot=/usr/x86_64-linux-gnu" \
+    QEMU_LD_PREFIX=/usr/x86_64-linux-gnu \
+    RUST_TEST_THREADS=1 \
+    PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"

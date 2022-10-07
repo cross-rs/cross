@@ -1,0 +1,4 @@
+{
+    "type": "internal",
+    "description": "use generic dockerfiles for when the toolchain and image platfom match."
+}
