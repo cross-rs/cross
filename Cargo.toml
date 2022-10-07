@@ -27,7 +27,7 @@ members = ["xtask"]
 
 [dependencies]
 atty = "0.2"
-clap = { version = "3.2.22", features = ["derive", "unstable-v4"] }
+clap = { version = "4.0", features = ["derive"] }
 color-eyre = { version = "0.6.2", default-features = false, features = ["track-caller"] }
 eyre = "0.6"
 thiserror = "1"
