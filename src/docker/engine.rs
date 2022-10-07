@@ -71,6 +71,7 @@ pub struct Engine {
 impl Engine {
     pub const CROSS_CONTAINER_ENGINE_NO_BUILDKIT_ENV: &'static str =
         "CROSS_CONTAINER_ENGINE_NO_BUILDKIT";
+    pub const CROSS_CONTAINER_ENGINE_NO_PULL_ENV: &'static str = "CROSS_CONTAINER_ENGINE_NO_PULL";
     pub fn new(
         in_docker: Option<bool>,
         is_remote: Option<bool>,
@@ -138,6 +139,15 @@ impl Engine {
     #[must_use]
     pub fn has_buildkit() -> bool {
         !env::var(Self::CROSS_CONTAINER_ENGINE_NO_BUILDKIT_ENV)
+            .map(|x| bool_from_envvar(&x))
+            .unwrap_or_default()
+    }
+
+    // if any of the base images do not exist in the registry, even
+    // if they exist locally, attempting to pull will fail
+    #[must_use]
+    pub fn should_pull() -> bool {
+        !env::var(Self::CROSS_CONTAINER_ENGINE_NO_PULL_ENV)
             .map(|x| bool_from_envvar(&x))
             .unwrap_or_default()
     }

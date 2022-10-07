@@ -284,15 +284,13 @@ jobs:
         id: build-docker-image
         if: steps.prepare-meta.outputs.has-image
         timeout-minutes: 120
-        # TODO(ahuszagh) Remove this multiline and docker images
-        run: |
-          docker images
-          cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
+        run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
         env:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}
           LABELS: ${{ steps.docker-meta.outputs.labels }}
           LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
+          CROSS_CONTAINER_ENGINE_NO_PULL: true
         shell: bash
 
       - name: Set Docker image for test
