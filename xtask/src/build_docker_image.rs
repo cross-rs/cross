@@ -13,6 +13,9 @@ pub struct BuildDockerImage {
     pub ref_type: Option<String>,
     #[clap(long, hide = true, env = "GITHUB_REF_NAME")]
     ref_name: Option<String>,
+    /// Pass extra flags to the build
+    #[clap(long, env = "CROSS_BUILD_OPTS")]
+    build_opts: Option<String>,
     #[clap(action, long = "latest", hide = true, env = "LATEST")]
     is_latest: bool,
     /// Specify a tag to use instead of the derived one, eg `local`
@@ -96,6 +99,7 @@ pub fn build_docker_image(
     BuildDockerImage {
         ref_type,
         ref_name,
+        build_opts,
         is_latest,
         tag: tag_override,
         repository,
@@ -288,6 +292,10 @@ pub fn build_docker_image(
         }
         if verbose > 1 {
             docker_build.args(["--build-arg", "VERBOSE=1"]);
+        }
+
+        if let Some(opts) = &build_opts {
+            docker_build.args(docker::parse_docker_opts(opts)?);
         }
 
         if target.needs_workspace_root_context() {
