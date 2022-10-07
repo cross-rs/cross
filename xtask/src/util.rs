@@ -302,9 +302,6 @@ pub fn read_dockerfiles(msg_info: &mut MessageInfo) -> cross::Result<Vec<(PathBu
 mod tests {
     use super::*;
 
-    use cross::shell::Verbosity;
-    use std::collections::BTreeMap;
-
     #[test]
     fn test_parse_image_target() {
         assert_eq!(
@@ -341,38 +338,28 @@ mod tests {
 
     #[test]
     fn check_ubuntu_base() -> cross::Result<()> {
-        // count all the entries of FROM for our images
-        let mut counts = BTreeMap::new();
+        use cross::shell::Verbosity;
         let mut msg_info = Verbosity::Verbose(2).into();
-        let dockerfiles = read_dockerfiles(&mut msg_info)?;
-        for (path, dockerfile) in dockerfiles {
-            let lines: Vec<&str> = dockerfile.lines().collect();
-            let index = lines
-                .iter()
-                .map(|x| x.trim())
-                .position(|x| x.to_lowercase().starts_with("from"))
-                .ok_or_else(|| eyre::eyre!("unable to find FROM instruction for {:?}", path))?;
-            let tag = lines[index]
-                .split_whitespace()
-                .nth(1)
-                .ok_or_else(|| eyre::eyre!("invalid FROM instruction, got {}", lines[index]))?;
-            if let Some(value) = counts.get_mut(tag) {
-                *value += 1;
-            } else {
-                counts.insert(tag.to_string(), 1);
-            }
-        }
 
-        // Now, get the most common and ensure our base is correct.
-        let actual_base = cross::docker::UBUNTU_BASE;
-        let max_base = counts
+        let root = project_dir(&mut msg_info)?;
+        let docker = root.join("docker");
+        let path = docker.join("Dockerfile.base.ubuntu");
+
+        let dockerfile = fs::read_to_string(&path)?;
+        let lines: Vec<&str> = dockerfile.lines().collect();
+        let index = lines
             .iter()
-            .max_by(|x, y| x.1.cmp(y.1))
-            .map(|(k, _)| k)
-            .ok_or_else(|| eyre::eyre!("have no dockerfiles"))?;
+            .map(|x| x.trim())
+            .position(|x| x.to_lowercase().starts_with("from"))
+            .ok_or_else(|| eyre::eyre!("unable to find FROM instruction for {:?}", path))?;
+        let dockerfile_base = lines[index]
+            .split_whitespace()
+            .nth(1)
+            .ok_or_else(|| eyre::eyre!("invalid FROM instruction, got {}", lines[index]))?;
 
-        if actual_base != max_base {
-            eyre::bail!("most common base image is {max_base} but source code has {actual_base}")
+        let actual_base = cross::docker::UBUNTU_BASE;
+        if actual_base != dockerfile_base {
+            eyre::bail!("base image is {dockerfile_base} but source code has {actual_base}")
         } else {
             Ok(())
         }

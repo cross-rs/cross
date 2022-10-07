@@ -218,7 +218,7 @@ pub fn build_docker_image(
             tags = vec![target.image_name(&repository, tag)];
         }
 
-        if engine.kind.supports_pull_flag() {
+        if docker::Engine::should_pull() && engine.kind.supports_pull_flag() {
             docker_build.arg("--pull");
         }
         if no_cache {
