@@ -1,14 +1,5 @@
-FROM ubuntu:20.04
+FROM ghcr.io/cross-rs/base:main-ubuntu
 ARG DEBIAN_FRONTEND=noninteractive
-
-COPY common.sh lib.sh /
-RUN /common.sh
-
-COPY cmake.sh /
-RUN /cmake.sh
-
-COPY xargo.sh /
-RUN /xargo.sh
 
 COPY qemu.sh /
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \

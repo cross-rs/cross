@@ -75,6 +75,7 @@ jobs:
       - name: Run unit tests
         run: cargo test --locked --all-targets --workspace --all-features
         timeout-minutes: 10
+
   check:
     runs-on: ubuntu-latest
     outputs:
@@ -84,6 +85,7 @@ jobs:
       - uses: ./.github/actions/setup-rust
       - run: cargo xtask ci-job check
         id: check
+
   generate-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -99,10 +101,109 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           COMMIT_AUTHOR: ${{ github.event.head_commit.author.username }}
 
+  build-base:
+    name: ${{ matrix.image }} (${{ matrix.sub }})
+    runs-on: ubuntu-latest
+    needs: [shellcheck, test, check]
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - base
+        sub:
+          - ubuntu
+          - centos
+          - emscripten
+    outputs:
+      coverage-artifact: ${{ steps.cov.outputs.artifact-name }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: Set up Docker Buildx
+        if: runner.os == 'Linux'
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build xtask
+        run: cargo build -p xtask
+
+      - name: Prepare Meta
+        id: prepare-meta
+        timeout-minutes: 60
+        run: cargo xtask ci-job prepare-meta "${IMAGE}.${SUB}"
+        env:
+          IMAGE: ${{ matrix.image }}
+          SUB: ${{ matrix.sub }}
+        shell: bash
+
+      - name: LLVM instrument coverage
+        uses: ./.github/actions/cargo-llvm-cov
+        with:
+          name: cross-${{matrix.image}}-${{matrix.sub}}
+
+      - name: Install cross
+        if: matrix.deploy
+        run: cargo install --path . --force --debug
+
+      - name: Docker Meta
+        id: docker-meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            name=${{ steps.prepare-meta.outputs.image }}
+          labels: |
+            ${{ fromJSON(steps.prepare-meta.outputs.labels) }}
+
+      # always use the main branch, since we need it for the base image
+      - name: Build Docker image
+        id: build-docker-image
+        timeout-minutes: 60
+        run: cargo xtask build-docker-image -v --tag main "${IMAGE}.${SUB}"
+        env:
+          IMAGE: ${{ matrix.image }}
+          SUB: ${{ matrix.sub }}
+          LABELS: ${{ steps.docker-meta.outputs.labels }}
+          LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
+        shell: bash
+
+      - name: Save Docker Image
+        id: save-docker-image
+        run: docker save "ghcr.io/cross-rs/${IMAGE}:main-${SUB}" -o "${IMAGE}-main-${SUB}.tar"
+        env:
+          IMAGE: ${{ matrix.image }}
+          SUB: ${{ matrix.sub }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.image }}-${{ matrix.sub }}-image-tarball
+          path: ${{ matrix.image }}-main-${{ matrix.sub }}.tar
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image to GitHub Container Registry
+        if: >
+          (
+            github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+            startsWith(github.ref, 'refs/tags/v')
+          )
+        run: cargo xtask build-docker-image -v "${IMAGE}.${SUB}"
+        env:
+          IMAGE: ${{ matrix.image }}
+          SUB: ${{ matrix.sub }}
+          LABELS: ${{ steps.docker-meta.outputs.labels }}
+          LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
+        shell: bash
+
   build:
     name: target (${{ matrix.pretty }},${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: [shellcheck, test, generate-matrix, check]
+    needs: [shellcheck, test, generate-matrix, check, build-base]
     if: github.event_name == 'push' && needs.generate-matrix.outputs.matrix != '{}' && needs.generate-matrix.outputs.matrix != '[]' && needs.generate-matrix.outputs.matrix != ''
     strategy:
       fail-fast: false
@@ -114,7 +215,6 @@ jobs:
       coverage-artifact: ${{ steps.cov.outputs.artifact-name }}
     steps:
       - uses: actions/checkout@v3
-
       - uses: ./.github/actions/setup-rust
 
       - name: Set up Docker Buildx
@@ -153,17 +253,48 @@ jobs:
             name=${{ steps.prepare-meta.outputs.image }}
           labels: |
             ${{ fromJSON(steps.prepare-meta.outputs.labels) }}
+
+      - name: Set env Base Image
+        if: steps.prepare-meta.outputs.has-image
+        run: |
+          if [[ "${SUB}" == "centos" ]]; then
+              echo "BASE=centos" >> "${GITHUB_ENV}"
+          elif [[ "${TARGET}" == *emscripten ]]; then
+              echo "BASE=emscripten" >> "${GITHUB_ENV}"
+          else
+              echo "BASE=ubuntu" >> "${GITHUB_ENV}"
+          fi
+        env:
+          TARGET: ${{ matrix.target }}
+          SUB: ${{ matrix.sub }}
+
+      - uses: actions/download-artifact@v3
+        if: steps.prepare-meta.outputs.has-image
+        with:
+          name: base-${{ env.BASE }}-image-tarball
+
+      - name: Load Base Image
+        id: load-docker-image
+        if: steps.prepare-meta.outputs.has-image
+        run: docker load --input "base-main-${BASE}.tar"
+        env:
+          SUB: ${{ matrix.sub }}
+
       - name: Build Docker image
         id: build-docker-image
         if: steps.prepare-meta.outputs.has-image
         timeout-minutes: 120
-        run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
+        # TODO(ahuszagh) Remove this multiline and docker images
+        run: |
+          docker images
+          cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}"
         env:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}
           LABELS: ${{ steps.docker-meta.outputs.labels }}
           LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
         shell: bash
+
       - name: Set Docker image for test
         if: steps.prepare-meta.outputs.has-image
         run: |
@@ -173,6 +304,7 @@ jobs:
           TARGET: ${{ matrix.target }}
           IMAGE: ${{ steps.build-docker-image.outputs.image }}
         shell: bash
+
       - name: Test Image
         if: steps.prepare-meta.outputs.has-image && steps.prepare-meta.outputs.test-variant == 'default'
         run: ./ci/test.sh
@@ -185,6 +317,7 @@ jobs:
           RUN: ${{ matrix.run }}
           RUNNERS: ${{ matrix.runners }}
         shell: bash
+
       - uses: ./.github/actions/cargo-install-upload-artifacts
         if: matrix.deploy
         with:
@@ -210,6 +343,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Push image to GitHub Container Registry
         if: >
           steps.prepare-meta.outputs.has-image && (
@@ -275,15 +409,18 @@ jobs:
         uses: ./.github/actions/cargo-llvm-cov
         with:
           name: integration-bisect
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
         with:
           platforms: arm64
+
       - name: Set up docker buildx
         uses: docker/setup-buildx-action@v2
         id: buildx
         with:
           install: true
+
       - name: Run Foreign toolchain test
         run: ./ci/test-foreign-toolchain.sh
         shell: bash
@@ -321,7 +458,6 @@ jobs:
       coverage-artifact: ${{ steps.cov.outputs.artifact-name }}
     steps:
       - uses: actions/checkout@v3
-
       - uses: ./.github/actions/setup-rust
 
       - name: Install Podman
@@ -348,7 +484,7 @@ jobs:
         shell: bash
 
   publish:
-    needs: [build, check, fmt, clippy, cargo-deny]
+    needs: [build-base, build, check, fmt, clippy, cargo-deny]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -359,7 +495,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker, foreign, podman]
+    needs: [shellcheck, fmt, clippy, test, generate-matrix, build-base, build, publish, check, remote, bisect, docker-in-docker, foreign, podman]
     if: always()
     runs-on: ubuntu-latest
     steps:

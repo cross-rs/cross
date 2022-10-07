@@ -6,16 +6,7 @@ COPY lib.sh /
 COPY linux-image.sh /
 RUN /linux-image.sh aarch64
 
-FROM centos:7
-
-COPY common.sh lib.sh /
-RUN /common.sh
-
-COPY cmake.sh /
-RUN /cmake.sh
-
-COPY xargo.sh /
-RUN /xargo.sh
+FROM ghcr.io/cross-rs/base:main-centos
 
 COPY qemu.sh /
 RUN /qemu.sh aarch64 softmmu

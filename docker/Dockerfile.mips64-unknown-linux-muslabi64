@@ -1,13 +1,5 @@
-FROM ubuntu:20.04
-
-COPY common.sh lib.sh /
-RUN /common.sh
-
-COPY cmake.sh /
-RUN /cmake.sh
-
-COPY xargo.sh /
-RUN /xargo.sh
+FROM ghcr.io/cross-rs/base:main-ubuntu
+ARG DEBIAN_FRONTEND=noninteractive
 
 COPY qemu.sh /
 RUN /qemu.sh mips64
