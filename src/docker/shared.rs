@@ -568,11 +568,29 @@ pub(crate) fn register(engine: &Engine, target: &Target, msg_info: &mut MessageI
     docker.run(msg_info, false).map_err(Into::into)
 }
 
-fn validate_env_var(var: &str) -> Result<(&str, Option<&str>)> {
+fn validate_env_var<'a>(
+    var: &'a str,
+    warned: &mut bool,
+    var_type: &'static str,
+    var_syntax: &'static str,
+    msg_info: &mut MessageInfo,
+) -> Result<(&'a str, Option<&'a str>)> {
     let (key, value) = match var.split_once('=') {
         Some((key, value)) => (key, Some(value)),
         _ => (var, None),
     };
+
+    if value.is_none()
+        && !*warned
+        && !var
+            .chars()
+            .all(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '_' ))
+    {
+        msg_info.warn(format_args!(
+            "got {var_type} of \"{var}\" which is not a valid environment variable name. the proper syntax is {var_syntax}"
+        ))?;
+        *warned = true;
+    }
 
     if key == "CROSS_RUNNER" {
         eyre::bail!(
@@ -631,12 +649,19 @@ pub(crate) fn docker_envvars(
     dirs: &ToolchainDirectories,
     msg_info: &mut MessageInfo,
 ) -> Result<()> {
+    let mut warned = false;
     for ref var in options
         .config
         .env_passthrough(&options.target)?
         .unwrap_or_default()
     {
-        validate_env_var(var)?;
+        validate_env_var(
+            var,
+            &mut warned,
+            "environment variable",
+            "`passthrough = [\"ENVVAR=value\"]`",
+            msg_info,
+        )?;
 
         // Only specifying the environment variable name in the "-e"
         // flag forwards the value from the parent shell
@@ -714,13 +739,21 @@ pub(crate) fn docker_mount(
     paths: &DockerPaths,
     mount_cb: impl Fn(&mut Command, &Path, &Path) -> Result<()>,
     mut store_cb: impl FnMut((String, String)),
+    msg_info: &mut MessageInfo,
 ) -> Result<()> {
+    let mut warned = false;
     for ref var in options
         .config
         .env_volumes(&options.target)?
         .unwrap_or_default()
     {
-        let (var, value) = validate_env_var(var)?;
+        let (var, value) = validate_env_var(
+            var,
+            &mut warned,
+            "volume",
+            "`volumes = [\"ENVVAR=/path/to/directory\"]`",
+            msg_info,
+        )?;
         let value = match value {
             Some(v) => Ok(v.to_owned()),
             None => env::var(var),
