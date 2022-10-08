@@ -47,6 +47,7 @@ pub(crate) fn run(
         &paths,
         |docker, host, absolute| mount(docker, host, absolute, ""),
         |_| {},
+        msg_info,
     )?;
 
     docker.arg("--rm");

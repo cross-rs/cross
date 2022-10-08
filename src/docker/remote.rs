@@ -937,6 +937,7 @@ pub(crate) fn run(
         &paths,
         |_, _, _| Ok(()),
         |(src, dst)| volumes.push((src, dst)),
+        msg_info,
     )
     .wrap_err("could not determine mount points")?;
 
