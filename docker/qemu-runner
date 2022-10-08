@@ -16,7 +16,7 @@ fi
 arch="${1}"
 shift
 
-if [ "${CROSS_RUNNER}" = "" ]; then
+if [[ -z "${CROSS_RUNNER}" ]]; then
     if is_native_binary "${arch}"; then
         CROSS_RUNNER=native
     else

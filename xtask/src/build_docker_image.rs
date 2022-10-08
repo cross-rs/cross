@@ -1,7 +1,10 @@
 use std::fmt::Write;
 use std::path::Path;
 
-use crate::util::{cargo_metadata, gha_error, gha_output, gha_print};
+use crate::util::{
+    cargo_metadata, get_matrix, gha_error, gha_output, gha_print, DEFAULT_PLATFORMS,
+};
+use crate::ImageTarget;
 use clap::Args;
 use cross::docker::ImagePlatform;
 use cross::shell::MessageInfo;
@@ -75,14 +78,14 @@ pub struct BuildDockerImage {
     pub platform: Vec<ImagePlatform>,
     /// Targets to build for
     #[clap()]
-    pub targets: Vec<crate::ImageTarget>,
+    pub targets: Vec<ImageTarget>,
 }
 
 fn locate_dockerfile(
-    target: crate::ImageTarget,
+    target: ImageTarget,
     docker_root: &Path,
     cross_toolchain_root: &Path,
-) -> cross::Result<(crate::ImageTarget, String)> {
+) -> cross::Result<(ImageTarget, String)> {
     let dockerfile_name = format!("Dockerfile.{target}");
     let dockerfile_root = if cross_toolchain_root.join(&dockerfile_name).exists() {
         &cross_toolchain_root
@@ -133,7 +136,7 @@ pub fn build_docker_image(
         .clone();
     if targets.is_empty() {
         if from_ci {
-            targets = crate::util::get_matrix()
+            targets = get_matrix()
                 .iter()
                 .filter(|m| m.os.starts_with("ubuntu"))
                 .map(|m| m.to_image_target())
@@ -164,7 +167,7 @@ pub fn build_docker_image(
         .collect::<cross::Result<Vec<_>>>()?;
 
     let platforms = if platform.is_empty() {
-        crate::util::DEFAULT_PLATFORMS.to_vec()
+        DEFAULT_PLATFORMS.to_vec()
     } else {
         platform
     };
@@ -187,7 +190,28 @@ pub fn build_docker_image(
         };
         docker_build.current_dir(&docker_root);
 
-        docker_build.args(["--platform", &platform.docker_platform()]);
+        let docker_platform = platform.docker_platform();
+        let mut dockerfile = dockerfile.clone();
+        docker_build.args(["--platform", &docker_platform]);
+        let uppercase_triple = target.name.to_ascii_uppercase().replace('-', "_");
+        docker_build.args([
+            "--build-arg",
+            &format!("CROSS_TARGET_TRIPLE={}", uppercase_triple),
+        ]);
+        // add our platform, and determine if we need to use a native docker image
+        if has_native_image(docker_platform.as_str(), target, msg_info)? {
+            let dockerfile_name = match target.sub.as_deref() {
+                Some(sub) => format!("Dockerfile.native.{sub}"),
+                None => "Dockerfile.native".to_owned(),
+            };
+            let dockerfile_path = docker_root.join(&dockerfile_name);
+            if !dockerfile_path.exists() {
+                eyre::bail!(
+                    "unable to find native dockerfile named {dockerfile_name} for target {target}."
+                );
+            }
+            dockerfile = dockerfile_path.to_utf8()?.to_string();
+        }
 
         if push {
             docker_build.arg("--push");
@@ -280,7 +304,7 @@ pub fn build_docker_image(
             ),
         ]);
 
-        docker_build.args(["-f", dockerfile]);
+        docker_build.args(["-f", &dockerfile]);
 
         if gha || progress == "plain" {
             docker_build.args(["--progress", "plain"]);
@@ -346,8 +370,42 @@ pub fn build_docker_image(
     Ok(())
 }
 
+fn has_native_image(
+    platform: &str,
+    target: &ImageTarget,
+    msg_info: &mut MessageInfo,
+) -> cross::Result<bool> {
+    let note_host_target_detection = |msg_info: &mut MessageInfo| -> cross::Result<()> {
+        msg_info.note("using the rust target triple to determine the host triple to determine if the docker platform is native. this may fail if cross-compiling xtask.")
+    };
+
+    Ok(match target.sub.as_deref() {
+        // FIXME: add additional subs for new Linux distros, such as alpine.
+        None | Some("centos") => match (platform, target.name.as_str()) {
+            ("linux/386", "i686-unknown-linux-gnu")
+            | ("linux/amd64", "x86_64-unknown-linux-gnu")
+            | ("linux/arm64" | "linux/arm64/v8", "aarch64-unknown-linux-gnu")
+            | ("linux/ppc64le", "powerpc64le-unknown-linux-gnu")
+            | ("linux/riscv64", "riscv64gc-unknown-linux-gnu")
+            | ("linux/s390x", "s390x-unknown-linux-gnu") => true,
+            ("linux/arm/v6", "arm-unknown-linux-gnueabi") if target.is_armv6() => {
+                note_host_target_detection(msg_info)?;
+                true
+            }
+            ("linux/arm" | "linux/arm/v7", "armv7-unknown-linux-gnueabihf")
+                if target.is_armv7() =>
+            {
+                note_host_target_detection(msg_info)?;
+                true
+            }
+            _ => false,
+        },
+        Some(_) => false,
+    })
+}
+
 pub fn determine_image_name(
-    target: &crate::ImageTarget,
+    target: &ImageTarget,
     repository: &str,
     ref_type: &str,
     ref_name: &str,
@@ -385,7 +443,7 @@ pub fn determine_image_name(
 }
 
 pub fn job_summary(
-    results: &[Result<crate::ImageTarget, (crate::ImageTarget, eyre::ErrReport)>],
+    results: &[Result<ImageTarget, (ImageTarget, eyre::ErrReport)>],
 ) -> cross::Result<String> {
     let mut summary = "# SUMMARY\n\n".to_string();
     let success: Vec<_> = results.iter().filter_map(|r| r.as_ref().ok()).collect();

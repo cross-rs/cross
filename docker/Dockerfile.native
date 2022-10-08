@@ -1,0 +1,31 @@
+# This dockerfile is used when the target matches the images platform in `build-docker-image`
+FROM ubuntu:20.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG CROSS_TARGET_TRIPLE
+
+COPY qemu.sh native-qemu.sh /
+RUN /native-qemu.sh
+
+COPY dropbear.sh /
+RUN /dropbear.sh
+
+COPY linux-image.sh native-linux-image.sh /
+RUN /native-linux-image.sh
+
+COPY linux-runner native-linux-runner base-runner.sh /
+
+ENV CROSS_TARGETARCH=$TARGETARCH
+ENV CROSS_TARGETVARIANT=$TARGETVARIANT
+ENV CARGO_TARGET_${CROSS_TARGET_TRIPLE}_RUNNER="/native-linux-runner"

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+# shellcheck disable=SC1091
+. /lib.sh
+
+main() {
+    local arch
+    arch=$(docker_to_linux_arch "${CROSS_TARGETARCH}" "${CROSS_TARGETVARIANT}")
+
+    if [[ -z "${CROSS_RUNNER}" ]]; then
+        export CROSS_RUNNER=native
+    fi
+
+    exec /linux-runner "${arch}" "${@}"
+}
+
+main "${@}"
