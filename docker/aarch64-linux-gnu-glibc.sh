@@ -3,6 +3,9 @@
 set -x
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. lib.sh
+
 unpack_rpm() {
     local package="${1}"
     curl --retry 3 "http://mirror.centos.org/altarch/7/os/aarch64/Packages/${package}" -O
@@ -35,6 +38,7 @@ cp_gcc_archive() {
 }
 
 main() {
+    set_centos_ulimit
     yum install -y epel-release
     yum install -y gcc-aarch64-linux-gnu gcc-c++-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils gcc-c++ glibc-devel
     yum clean all

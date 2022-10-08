@@ -54,6 +54,7 @@ build_static_libattr() {
 
     pushd "${td}"
 
+    set_centos_ulimit
     yum install -y gettext
 
     curl --retry 3 -sSfL "https://download.savannah.nongnu.org/releases/attr/attr-${version}.src.tar.gz" -O
