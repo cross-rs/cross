@@ -36,13 +36,20 @@ main() {
     # Don't depend on the mirrors of sabotage linux that musl-cross-make uses.
     local linux_headers_site=https://ci-mirrors.rust-lang.org/rustc/sabotage-linux-tarballs
 
+    # alpine GCC is built with `--enable-default-pie`, so we want to
+    # ensure we use that. we want support for shared runtimes except for
+    # libstdc++, however, the only way to do that is to simply remove
+    # the shared libraries later. on alpine, binaries use static-pie
+    # linked, so our behavior has maximum portability, and is consistent
+    # with popular musl distros.
     hide_output make install "-j$(nproc)" \
         GCC_VER=9.2.0 \
         MUSL_VER=1.1.24 \
         BINUTILS_VER=2.33.1 \
         DL_CMD='curl --retry 3 -sSfL -C - -o' \
-        LINUX_HEADERS_SITE=$linux_headers_site \
+        LINUX_HEADERS_SITE="${linux_headers_site}" \
         OUTPUT=/usr/local/ \
+        "GCC_CONFIG += --enable-default-pie" \
         "${@}"
 
     purge_packages

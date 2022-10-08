@@ -182,6 +182,21 @@ main() {
 
         rm -rf "${td}"
     fi
+
+    # special tests for a shared C runtime, since we disable the shared c++ runtime
+    # https://github.com/cross-rs/cross/issues/902
+    if [[ "${TARGET}" == *-linux-musl* ]]; then
+        td=$(mkcargotemp -d)
+
+        pushd "${td}"
+        cargo init --bin --name hello .
+        retry cargo fetch
+        RUSTFLAGS="-C target-feature=-crt-static" \
+            "${CROSS[@]}" build --target "${TARGET}" ${CROSS_FLAGS}
+        popd
+
+        rm -rf "${td}"
+    fi
 }
 
 cross_run() {

@@ -22,8 +22,11 @@ deploy = true
 [[target]]
 target = "x86_64-unknown-linux-musl"
 os = "ubuntu-latest"
+cpp = true
+dylib = true
 std = true
 run = true
+runners = "native qemu-user"
 deploy = true
 
 [[target]]
