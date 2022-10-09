@@ -549,6 +549,19 @@ impl Container {
         unsafe { CONTAINER.exists() }
     }
 
+    // when the `docker run` command finished.
+    // the container has already exited, so no cleanup required.
+    pub fn exit(&mut self) {
+        self.exists.store(false, Ordering::SeqCst);
+    }
+
+    pub fn exit_static() {
+        // SAFETY: an atomic store.
+        unsafe {
+            CONTAINER.exit();
+        }
+    }
+
     // when the `docker exec` command finished.
     pub fn finish(&mut self, is_tty: bool, msg_info: &mut MessageInfo) {
         // relax the no-timeout and lack of output

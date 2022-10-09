@@ -104,7 +104,8 @@ unsafe fn termination_handler() {
     // makes this safe regardless.
     docker::CONTAINER.terminate();
 
-    // EOWNERDEAD, seems to be the same on linux, macos, and bash on windows.
+    // all termination exit codes are 128 + signal code. the exit code is
+    // 130 for Ctrl+C or SIGINT (signal code 2) for linux, macos, and windows.
     std::process::exit(130);
 }
 
