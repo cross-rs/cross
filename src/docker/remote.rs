@@ -71,7 +71,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         let temppath = tempdir.path();
         let had_symlinks = copy_dir(src, temppath, copy_symlinks, 0, |e, _| is_cachedir(e))?;
         warn_symlinks(had_symlinks, msg_info)?;
-        self.copy_files(temppath, dst, msg_info)
+        self.copy_files(&temppath.join("."), dst, msg_info)
     }
 
     // copy files for a docker volume, for remote host support
@@ -567,7 +567,7 @@ impl QualifiedToolchain {
             .file_name()
             .expect("should be able to get toolchain name")
             .to_utf8()?;
-        let toolchain_hash = path_hash(self.get_sysroot(), 5)?;
+        let toolchain_hash = path_hash(self.get_sysroot(), PATH_HASH_SHORT)?;
         Ok(format!(
             "{VOLUME_PREFIX}{toolchain_name}-{toolchain_hash}-{commit_hash}"
         ))
@@ -577,7 +577,7 @@ impl QualifiedToolchain {
     // be generated outside a rust package and run multiple times.
     pub fn unique_container_identifier(&self, triple: &TargetTriple) -> Result<String> {
         let toolchain_id = self.unique_toolchain_identifier()?;
-        let cwd_path = path_hash(&env::current_dir()?, 5)?;
+        let cwd_path = path_hash(&env::current_dir()?, PATH_HASH_SHORT)?;
         let system_time = now_as_millis()?;
         Ok(format!("{toolchain_id}-{triple}-{cwd_path}-{system_time}"))
     }
@@ -585,7 +585,7 @@ impl QualifiedToolchain {
     // unique identifier for a given mounted volume
     pub fn unique_mount_identifier(&self, path: &Path) -> Result<String> {
         let toolchain_id = self.unique_toolchain_identifier()?;
-        let mount_hash = path_hash(path, 10)?;
+        let mount_hash = path_hash(path, PATH_HASH_UNIQUE)?;
         Ok(format!("{toolchain_id}-{mount_hash}"))
     }
 }

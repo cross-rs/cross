@@ -1443,6 +1443,13 @@ impl MountFinder {
     }
 }
 
+/// Short hash for identifiers with minimal risk of collision.
+pub const PATH_HASH_SHORT: usize = 5;
+
+/// Longer hash to minimize risk of random collisions
+/// Collision chance is ~10^-6
+pub const PATH_HASH_UNIQUE: usize = 10;
+
 fn path_digest(path: &Path) -> Result<const_sha1::Digest> {
     let buffer = const_sha1::ConstBuffer::from_slice(path.to_utf8()?.as_bytes());
     Ok(const_sha1::sha1(&buffer))

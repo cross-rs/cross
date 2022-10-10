@@ -205,7 +205,7 @@ impl<'a> Dockerfile<'a> {
                 "{}{package_name}:{target_triple}-{path_hash}{custom}",
                 CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX,
                 package_name = docker_package_name(metadata),
-                path_hash = path_hash(&metadata.workspace_root, 5)?,
+                path_hash = path_hash(&metadata.workspace_root, docker::PATH_HASH_SHORT)?,
                 custom = if matches!(self, Self::File { .. }) {
                     ""
                 } else {
