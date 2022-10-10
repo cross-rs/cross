@@ -342,7 +342,10 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             VolumeId::Keep(_) => {
                 let parent = temp::dir()?;
                 file::create_dir_all(&parent)?;
-                let fingerprint = parent.join(self.container);
+
+                let toolchain = &self.toolchain_dirs.toolchain();
+                let filename = toolchain.unique_mount_identifier(src)?;
+                let fingerprint = parent.join(filename);
                 let current = Fingerprint::read_dir(src, copy_cache)?;
                 // need to check if the container path exists, otherwise we might
                 // have stale data: the persistent volume was deleted & recreated.
@@ -561,7 +564,7 @@ impl QualifiedToolchain {
             .file_name()
             .expect("should be able to get toolchain name")
             .to_utf8()?;
-        let toolchain_hash = path_hash(self.get_sysroot())?;
+        let toolchain_hash = path_hash(self.get_sysroot(), 5)?;
         Ok(format!(
             "{VOLUME_PREFIX}{toolchain_name}-{toolchain_hash}-{commit_hash}"
         ))
@@ -571,9 +574,16 @@ impl QualifiedToolchain {
     // be generated outside a rust package and run multiple times.
     pub fn unique_container_identifier(&self, triple: &TargetTriple) -> Result<String> {
         let toolchain_id = self.unique_toolchain_identifier()?;
-        let cwd_path = path_hash(&env::current_dir()?)?;
+        let cwd_path = path_hash(&env::current_dir()?, 5)?;
         let system_time = now_as_millis()?;
         Ok(format!("{toolchain_id}-{triple}-{cwd_path}-{system_time}"))
+    }
+
+    // unique identifier for a given mounted volume
+    pub fn unique_mount_identifier(&self, path: &Path) -> Result<String> {
+        let toolchain_id = self.unique_toolchain_identifier()?;
+        let mount_hash = path_hash(path, 10)?;
+        Ok(format!("{toolchain_id}-{mount_hash}"))
     }
 }
 

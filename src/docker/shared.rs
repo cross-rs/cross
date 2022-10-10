@@ -1417,11 +1417,11 @@ fn path_digest(path: &Path) -> Result<const_sha1::Digest> {
     Ok(const_sha1::sha1(&buffer))
 }
 
-pub fn path_hash(path: &Path) -> Result<String> {
+pub fn path_hash(path: &Path, count: usize) -> Result<String> {
     Ok(path_digest(path)?
         .to_string()
-        .get(..5)
-        .expect("sha1 is expected to be at least 5 characters long")
+        .get(..count)
+        .unwrap_or_else(|| panic!("sha1 is expected to be at least {count} characters long"))
         .to_owned())
 }
 
