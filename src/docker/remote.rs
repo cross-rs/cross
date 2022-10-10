@@ -92,7 +92,9 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             file::create_dir_all(dst_path.parent().expect("must have parent"))?;
             fs::copy(&src_path, &dst_path)?;
         }
-        self.copy_files(temppath, dst, msg_info)
+        // if copying from a src directory to dst directory with docker, to
+        // copy the contents from `src` into `dst`, `src` must end with `/.`
+        self.copy_files(&temppath.join("."), dst, msg_info)
     }
 
     // removed files from a docker volume, for remote host support
@@ -351,15 +353,17 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
                 // have stale data: the persistent volume was deleted & recreated.
                 if fingerprint.exists() && self.container_path_exists(dst, msg_info)? {
                     let previous = Fingerprint::read_file(&fingerprint)?;
-                    let (changed, removed) = previous.difference(&current);
-                    current.write_file(&fingerprint)?;
+                    let (to_copy, to_remove) = previous.difference(&current);
+                    if !to_copy.is_empty() {
+                        self.copy_file_list(src, dst, &to_copy, msg_info)?;
+                    }
+                    if !to_remove.is_empty() {
+                        self.remove_file_list(dst, &to_remove, msg_info)?;
+                    }
 
-                    if !changed.is_empty() {
-                        self.copy_file_list(src, dst, &changed, msg_info)?;
-                    }
-                    if !removed.is_empty() {
-                        self.remove_file_list(dst, &removed, msg_info)?;
-                    }
+                    // write fingerprint afterwards, in case any failure so we
+                    // ensure any changes will be made on subsequent runs
+                    current.write_file(&fingerprint)?;
                 } else {
                     current.write_file(&fingerprint)?;
                     copy_all(msg_info)?;
@@ -530,22 +534,21 @@ impl Fingerprint {
         Ok(result)
     }
 
-    // gets difference between previous and current
+    // returns to_copy (added + modified) and to_remove (removed).
     fn difference<'a, 'b>(&'a self, current: &'b Fingerprint) -> (Vec<&'b str>, Vec<&'a str>) {
-        // this can be added or updated
-        let changed: Vec<&str> = current
+        let to_copy: Vec<&str> = current
             .map
             .iter()
             .filter(|(k, v1)| self.map.get(*k).map_or(true, |v2| v1 != &v2))
             .map(|(k, _)| k.as_str())
             .collect();
-        let removed: Vec<&str> = self
+        let to_remove: Vec<&str> = self
             .map
             .iter()
             .filter(|(k, _)| !current.map.contains_key(*k))
             .map(|(k, _)| k.as_str())
             .collect();
-        (changed, removed)
+        (to_copy, to_remove)
     }
 }
 
