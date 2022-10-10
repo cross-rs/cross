@@ -443,29 +443,10 @@ pub fn create_persistent_volume(
     docker::Container::create(engine.clone(), container.clone())?;
     docker.run_and_get_status(msg_info, false)?;
 
-    docker::remote::copy_volume_container_xargo(
-        engine,
-        &container,
-        &dirs,
-        mount_prefix.as_ref(),
-        msg_info,
-    )?;
-    docker::remote::copy_volume_container_cargo(
-        engine,
-        &container,
-        &dirs,
-        mount_prefix.as_ref(),
-        copy_registry,
-        msg_info,
-    )?;
-    docker::remote::copy_volume_container_rust(
-        engine,
-        &container,
-        &dirs,
-        None,
-        mount_prefix.as_ref(),
-        msg_info,
-    )?;
+    let data_volume = docker::remote::DataVolume::new(engine, &container, &dirs);
+    data_volume.copy_xargo(mount_prefix.as_ref(), msg_info)?;
+    data_volume.copy_cargo(mount_prefix.as_ref(), copy_registry, msg_info)?;
+    data_volume.copy_rust(None, mount_prefix.as_ref(), msg_info)?;
 
     docker::Container::finish_static(is_tty, msg_info);
 
