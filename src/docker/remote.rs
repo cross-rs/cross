@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 use std::io::{self, BufRead, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus, Output};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::process::{Command, ExitStatus};
 use std::{env, fs, time};
 
 use eyre::Context;
@@ -14,80 +13,9 @@ use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
-use crate::shell::{ColorChoice, MessageInfo, Stream, Verbosity};
+use crate::shell::{MessageInfo, Stream};
+use crate::temp;
 use crate::TargetTriple;
-use crate::{temp, OutputExt};
-
-// the mount directory for the data volume.
-pub const MOUNT_PREFIX: &str = "/cross";
-// the prefix used when naming volumes
-pub const VOLUME_PREFIX: &str = "cross-";
-// default timeout to stop a container (in seconds)
-pub const DEFAULT_TIMEOUT: u32 = 2;
-// instant kill in case of a non-graceful exit
-pub const NO_TIMEOUT: u32 = 0;
-
-// we need to specify drops for the containers, but we
-// also need to ensure the drops are called on a
-// termination handler. we use an atomic bool to ensure
-// that the drop only gets called once, even if we have
-// the signal handle invoked multiple times or it fails.
-pub(crate) static mut CONTAINER: Option<DeleteContainer> = None;
-pub(crate) static mut CONTAINER_EXISTS: AtomicBool = AtomicBool::new(false);
-
-// it's unlikely that we ever need to erase a line in the destructors,
-// and it's better than keep global state everywhere, or keeping a ref
-// cell which could have already deleted a line
-pub(crate) struct DeleteContainer(Engine, String, u32, ColorChoice, Verbosity);
-
-impl Drop for DeleteContainer {
-    fn drop(&mut self) {
-        // SAFETY: safe, since guarded by a thread-safe atomic swap.
-        unsafe {
-            if CONTAINER_EXISTS.swap(false, Ordering::SeqCst) {
-                let mut msg_info = MessageInfo::new(self.3, self.4);
-                container_stop(&self.0, &self.1, self.2, &mut msg_info).ok();
-                container_rm(&self.0, &self.1, &mut msg_info).ok();
-            }
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum ContainerState {
-    Created,
-    Running,
-    Paused,
-    Restarting,
-    Dead,
-    Exited,
-    DoesNotExist,
-}
-
-impl ContainerState {
-    pub fn new(state: &str) -> Result<Self> {
-        match state {
-            "created" => Ok(ContainerState::Created),
-            "running" => Ok(ContainerState::Running),
-            "paused" => Ok(ContainerState::Paused),
-            "restarting" => Ok(ContainerState::Restarting),
-            "dead" => Ok(ContainerState::Dead),
-            "exited" => Ok(ContainerState::Exited),
-            "" => Ok(ContainerState::DoesNotExist),
-            _ => eyre::bail!("unknown container state: got {state}"),
-        }
-    }
-
-    #[must_use]
-    pub fn is_stopped(&self) -> bool {
-        matches!(self, Self::Exited | Self::DoesNotExist)
-    }
-
-    #[must_use]
-    pub fn exists(&self) -> bool {
-        !matches!(self, Self::DoesNotExist)
-    }
-}
 
 #[derive(Debug, Clone)]
 enum VolumeId {
@@ -101,48 +29,10 @@ enum VolumeId {
 // commands while the container is cleaning up.
 macro_rules! bail_container_exited {
     () => {{
-        if !container_exists() {
+        if !Container::exists_static() {
             eyre::bail!("container already exited due to signal");
         }
     }};
-}
-
-pub fn create_container_deleter(engine: Engine, container: String) {
-    // SAFETY: safe, since single-threaded execution.
-    unsafe {
-        CONTAINER_EXISTS.store(true, Ordering::Relaxed);
-        CONTAINER = Some(DeleteContainer(
-            engine,
-            container,
-            NO_TIMEOUT,
-            ColorChoice::Never,
-            Verbosity::Quiet,
-        ));
-    }
-}
-
-pub fn drop_container(is_tty: bool, msg_info: &mut MessageInfo) {
-    // SAFETY: safe, since single-threaded execution.
-    unsafe {
-        // relax the no-timeout and lack of output
-        if let Some(container) = &mut CONTAINER {
-            if is_tty {
-                container.2 = DEFAULT_TIMEOUT;
-            }
-            container.3 = msg_info.color_choice;
-            container.4 = msg_info.verbosity;
-        }
-        CONTAINER = None;
-    }
-}
-
-fn container_exists() -> bool {
-    // SAFETY: safe, not mutating an atomic bool
-    // this can be more relaxed: just used to ensure
-    // that we don't make unnecessary calls, which are
-    // safe even if executed, after we've signaled a
-    // drop to our container.
-    unsafe { CONTAINER_EXISTS.load(Ordering::Relaxed) }
 }
 
 fn subcommand_or_exit(engine: &Engine, cmd: &str) -> Result<Command> {
@@ -706,114 +596,6 @@ fn copy_volume_container_project(
     Ok(())
 }
 
-fn run_and_get_status(
-    engine: &Engine,
-    args: &[&str],
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    command(engine)
-        .args(args)
-        .run_and_get_status(msg_info, true)
-}
-
-fn run_and_get_output(
-    engine: &Engine,
-    args: &[&str],
-    msg_info: &mut MessageInfo,
-) -> Result<Output> {
-    command(engine).args(args).run_and_get_output(msg_info)
-}
-
-pub fn volume_create(
-    engine: &Engine,
-    volume: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_status(engine, &["volume", "create", volume], msg_info)
-}
-
-pub fn volume_rm(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
-    run_and_get_status(engine, &["volume", "rm", volume], msg_info)
-}
-
-pub fn volume_exists(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<bool> {
-    run_and_get_output(engine, &["volume", "inspect", volume], msg_info)
-        .map(|output| output.status.success())
-}
-
-pub fn existing_volumes(
-    engine: &Engine,
-    toolchain: &QualifiedToolchain,
-    msg_info: &mut MessageInfo,
-) -> Result<Vec<String>> {
-    let list = run_and_get_output(
-        engine,
-        &[
-            "volume",
-            "list",
-            "--format",
-            "{{.Name}}",
-            "--filter",
-            &format!("name=^{VOLUME_PREFIX}{}", toolchain),
-        ],
-        msg_info,
-    )?
-    .stdout()?;
-
-    if list.is_empty() {
-        Ok(vec![])
-    } else {
-        Ok(list.split('\n').map(ToOwned::to_owned).collect())
-    }
-}
-
-pub fn container_stop(
-    engine: &Engine,
-    container: &str,
-    timeout: u32,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_status(
-        engine,
-        &["stop", container, "--time", &timeout.to_string()],
-        msg_info,
-    )
-}
-
-pub fn container_stop_default(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    // we want a faster timeout, since this might happen in signal
-    // handler. our containers normally clean up pretty fast, it's
-    // only without a pseudo-tty that they don't.
-    container_stop(engine, container, DEFAULT_TIMEOUT, msg_info)
-}
-
-// if stop succeeds without a timeout, this can have a spurious error
-// that is, if the container no longer exists. just silence this.
-pub fn container_rm(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_output(engine, &["rm", container], msg_info).map(|output| output.status)
-}
-
-pub fn container_state(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ContainerState> {
-    let stdout = command(engine)
-        .args(["ps", "-a"])
-        .args(["--filter", &format!("name={container}")])
-        .args(["--format", "{{.State}}"])
-        .run_and_get_stdout(msg_info)?;
-    ContainerState::new(stdout.trim())
-}
-
 impl QualifiedToolchain {
     pub fn unique_toolchain_identifier(&self) -> Result<String> {
         // try to get the commit hash for the currently toolchain, if possible
@@ -980,7 +762,7 @@ pub(crate) fn run(
     }
 
     // store first, since failing to non-existing container is fine
-    create_container_deleter(engine.clone(), container.clone());
+    Container::create(engine.clone(), container.clone())?;
     docker.run_and_get_status(msg_info, true)?;
 
     // 4. copy all mounted volumes over
@@ -1228,7 +1010,7 @@ symlink_recurse \"${{prefix}}\"
             .map_err::<eyre::ErrReport, _>(Into::into)?;
     }
 
-    drop_container(is_tty, msg_info);
+    Container::finish_static(is_tty, msg_info);
 
     status
 }

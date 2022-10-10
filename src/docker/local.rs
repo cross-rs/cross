@@ -1,6 +1,7 @@
 use std::io;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
+use std::sync::atomic::Ordering;
 
 use super::shared::*;
 use crate::errors::Result;
@@ -50,6 +51,8 @@ pub(crate) fn run(
         msg_info,
     )?;
 
+    let container = toolchain_dirs.unique_container_identifier(options.target.target())?;
+    docker.args(["--name", &container]);
     docker.arg("--rm");
 
     docker_seccomp(&mut docker, engine.kind, &options.target, &paths.metadata)
@@ -121,9 +124,22 @@ pub(crate) fn run(
             .wrap_err("when building custom image")?;
     }
 
-    docker
+    Container::create(engine.clone(), container)?;
+    let status = docker
         .arg(&image_name)
         .args(["sh", "-c", &build_command(toolchain_dirs, &cmd)])
         .run_and_get_status(msg_info, false)
-        .map_err(Into::into)
+        .map_err(Into::into);
+
+    // `cargo` generally returns 0 or 101 on completion, but isn't guaranteed
+    // to. `ExitStatus::code()` may be None if a signal caused the process to
+    // terminate or it may be a known interrupt return status (130, 137, 143).
+    // simpler: just test if the program termination handler was called.
+    // SAFETY: an atomic load.
+    let is_terminated = unsafe { crate::errors::TERMINATED.load(Ordering::SeqCst) };
+    if !is_terminated {
+        Container::exit_static();
+    }
+
+    status
 }

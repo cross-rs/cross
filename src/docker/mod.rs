@@ -1,4 +1,4 @@
-pub mod custom;
+pub(crate) mod custom;
 mod engine;
 mod image;
 mod local;

@@ -319,7 +319,7 @@ fn get_cross_volumes(
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<Vec<String>> {
-    use cross::docker::remote::VOLUME_PREFIX;
+    use cross::docker::VOLUME_PREFIX;
     let stdout = docker::subcommand(engine, "volume")
         .arg("list")
         .args(["--format", "{{.Name}}"])
@@ -400,7 +400,7 @@ pub fn create_persistent_volume(
     let container = dirs.unique_container_identifier(&toolchain.host().target)?;
     let volume = dirs.unique_toolchain_identifier()?;
 
-    if docker::remote::volume_exists(engine, &volume, msg_info)? {
+    if docker::volume_exists(engine, &volume, msg_info)? {
         eyre::bail!("Error: volume {volume} already exists.");
     }
 
@@ -409,18 +409,18 @@ pub fn create_persistent_volume(
         .run_and_get_status(msg_info, false)?;
 
     // stop the container if it's already running
-    let state = docker::remote::container_state(engine, &container, msg_info)?;
+    let state = docker::container_state(engine, &container, msg_info)?;
     if !state.is_stopped() {
         msg_info.warn(format_args!("container {container} was running."))?;
-        docker::remote::container_stop_default(engine, &container, msg_info)?;
+        docker::container_stop_default(engine, &container, msg_info)?;
     }
     if state.exists() {
         msg_info.warn(format_args!("container {container} was exited."))?;
-        docker::remote::container_rm(engine, &container, msg_info)?;
+        docker::container_rm(engine, &container, msg_info)?;
     }
 
     // create a dummy running container to copy data over
-    let mount_prefix = docker::remote::MOUNT_PREFIX;
+    let mount_prefix = docker::MOUNT_PREFIX;
     let mut docker = docker::subcommand(engine, "run");
     docker.args(["--name", &container]);
     docker.arg("--rm");
@@ -440,7 +440,7 @@ pub fn create_persistent_volume(
         docker.args(["sh", "-c", "sleep infinity"]);
     }
     // store first, since failing to non-existing container is fine
-    docker::remote::create_container_deleter(engine.clone(), container.clone());
+    docker::Container::create(engine.clone(), container.clone())?;
     docker.run_and_get_status(msg_info, false)?;
 
     docker::remote::copy_volume_container_xargo(
@@ -467,7 +467,7 @@ pub fn create_persistent_volume(
         msg_info,
     )?;
 
-    docker::remote::drop_container(is_tty, msg_info);
+    docker::Container::finish_static(is_tty, msg_info);
 
     Ok(())
 }
@@ -486,11 +486,11 @@ pub fn remove_persistent_volume(
     let dirs = docker::ToolchainDirectories::assemble(&mount_finder, toolchain)?;
     let volume = dirs.unique_toolchain_identifier()?;
 
-    if !docker::remote::volume_exists(engine, &volume, msg_info)? {
+    if !docker::volume_exists(engine, &volume, msg_info)? {
         eyre::bail!("Error: volume {volume} does not exist.");
     }
 
-    docker::remote::volume_rm(engine, &volume, msg_info)?;
+    docker::volume_rm(engine, &volume, msg_info)?;
 
     Ok(())
 }
@@ -499,7 +499,7 @@ fn get_cross_containers(
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<Vec<String>> {
-    use cross::docker::remote::VOLUME_PREFIX;
+    use cross::docker::VOLUME_PREFIX;
     let stdout = docker::subcommand(engine, "ps")
         .arg("-a")
         .args(["--format", "{{.Names}}: {{.State}}"])
@@ -533,7 +533,7 @@ pub fn remove_all_containers(
         // cannot fail, formatted as {{.Names}}: {{.State}}
         let (name, state) = container.split_once(':').unwrap();
         let name = name.trim();
-        let state = docker::remote::ContainerState::new(state.trim())?;
+        let state = docker::ContainerState::new(state.trim())?;
         if state.is_stopped() {
             stopped.push(name);
         } else {
