@@ -343,13 +343,13 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
                 let parent = temp::dir()?;
                 file::create_dir_all(&parent)?;
                 let fingerprint = parent.join(self.container);
-                let current = get_project_fingerprint(src, copy_cache)?;
+                let current = Fingerprint::read_dir(src, copy_cache)?;
                 // need to check if the container path exists, otherwise we might
                 // have stale data: the persistent volume was deleted & recreated.
                 if fingerprint.exists() && self.container_path_exists(dst, msg_info)? {
-                    let previous = parse_project_fingerprint(&fingerprint)?;
-                    let (changed, removed) = get_fingerprint_difference(&previous, &current);
-                    write_project_fingerprint(&fingerprint, &current)?;
+                    let previous = Fingerprint::read_file(&fingerprint)?;
+                    let (changed, removed) = previous.difference(&current);
+                    current.write_file(&fingerprint)?;
 
                     if !changed.is_empty() {
                         self.copy_file_list(src, dst, &changed, msg_info)?;
@@ -358,7 +358,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
                         self.remove_file_list(dst, &removed, msg_info)?;
                     }
                 } else {
-                    write_project_fingerprint(&fingerprint, &current)?;
+                    current.write_file(&fingerprint)?;
                     copy_all(msg_info)?;
                 }
             }
@@ -457,87 +457,93 @@ fn warn_symlinks(had_symlinks: bool, msg_info: &mut MessageInfo) -> Result<()> {
     }
 }
 
-type FingerprintMap = BTreeMap<String, time::SystemTime>;
-
-fn parse_project_fingerprint(path: &Path) -> Result<FingerprintMap> {
-    let file = fs::OpenOptions::new().read(true).open(path)?;
-    let reader = io::BufReader::new(file);
-    let mut result = BTreeMap::new();
-    for line in reader.lines() {
-        let line = line?;
-        let (timestamp, relpath) = line
-            .split_once('\t')
-            .ok_or_else(|| eyre::eyre!("unable to parse fingerprint line '{line}'"))?;
-        let modified = time_from_millis(timestamp.parse::<u64>()?);
-        result.insert(relpath.to_owned(), modified);
-    }
-
-    Ok(result)
+#[derive(Debug)]
+struct Fingerprint {
+    map: BTreeMap<String, time::SystemTime>,
 }
 
-fn write_project_fingerprint(path: &Path, fingerprint: &FingerprintMap) -> Result<()> {
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(path)?;
-    for (relpath, modified) in fingerprint {
-        let timestamp = time_to_millis(modified)?;
-        writeln!(file, "{timestamp}\t{relpath}")?;
-    }
-
-    Ok(())
-}
-
-fn read_dir_fingerprint(
-    home: &Path,
-    path: &Path,
-    map: &mut FingerprintMap,
-    copy_cache: bool,
-) -> Result<()> {
-    for entry in fs::read_dir(path)? {
-        let file = entry?;
-        let file_type = file.file_type()?;
-        // only parse known files types: 0 or 1 of these tests can pass.
-        if file_type.is_dir() {
-            if copy_cache || !is_cachedir(&file) {
-                read_dir_fingerprint(home, &path.join(file.file_name()), map, copy_cache)?;
-            }
-        } else if file_type.is_file() || file_type.is_symlink() {
-            // we're mounting to the same location, so this should fine
-            // we need to round the modified date to millis.
-            let modified = file.metadata()?.modified()?;
-            let rounded = time_from_millis(time_to_millis(&modified)?);
-            let relpath = file.path().strip_prefix(home)?.as_posix_relative()?;
-            map.insert(relpath, rounded);
+impl Fingerprint {
+    fn new() -> Self {
+        Self {
+            map: BTreeMap::new(),
         }
     }
 
-    Ok(())
-}
+    fn read_file(path: &Path) -> Result<Self> {
+        let file = fs::OpenOptions::new().read(true).open(path)?;
+        let reader = io::BufReader::new(file);
+        let mut map = BTreeMap::new();
+        for line in reader.lines() {
+            let line = line?;
+            let (timestamp, relpath) = line
+                .split_once('\t')
+                .ok_or_else(|| eyre::eyre!("unable to parse fingerprint line '{line}'"))?;
+            let modified = time_from_millis(timestamp.parse::<u64>()?);
+            map.insert(relpath.to_owned(), modified);
+        }
 
-fn get_project_fingerprint(home: &Path, copy_cache: bool) -> Result<FingerprintMap> {
-    let mut result = BTreeMap::new();
-    read_dir_fingerprint(home, home, &mut result, copy_cache)?;
-    Ok(result)
-}
+        Ok(Self { map })
+    }
 
-fn get_fingerprint_difference<'a, 'b>(
-    previous: &'a FingerprintMap,
-    current: &'b FingerprintMap,
-) -> (Vec<&'b str>, Vec<&'a str>) {
-    // this can be added or updated
-    let changed: Vec<&str> = current
-        .iter()
-        .filter(|(k, v1)| previous.get(*k).map_or(true, |v2| v1 != &v2))
-        .map(|(k, _)| k.as_str())
-        .collect();
-    let removed: Vec<&str> = previous
-        .iter()
-        .filter(|(k, _)| !current.contains_key(*k))
-        .map(|(k, _)| k.as_str())
-        .collect();
-    (changed, removed)
+    fn write_file(&self, path: &Path) -> Result<()> {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(path)?;
+        for (relpath, modified) in &self.map {
+            let timestamp = time_to_millis(modified)?;
+            writeln!(file, "{timestamp}\t{relpath}")?;
+        }
+
+        Ok(())
+    }
+
+    fn _read_dir(&mut self, home: &Path, path: &Path, copy_cache: bool) -> Result<()> {
+        for entry in fs::read_dir(path)? {
+            let file = entry?;
+            let file_type = file.file_type()?;
+            // only parse known files types: 0 or 1 of these tests can pass.
+            if file_type.is_dir() {
+                if copy_cache || !is_cachedir(&file) {
+                    self._read_dir(home, &path.join(file.file_name()), copy_cache)?;
+                }
+            } else if file_type.is_file() || file_type.is_symlink() {
+                // we're mounting to the same location, so this should fine
+                // we need to round the modified date to millis.
+                let modified = file.metadata()?.modified()?;
+                let rounded = time_from_millis(time_to_millis(&modified)?);
+                let relpath = file.path().strip_prefix(home)?.as_posix_relative()?;
+                self.map.insert(relpath, rounded);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn read_dir(home: &Path, copy_cache: bool) -> Result<Fingerprint> {
+        let mut result = Fingerprint::new();
+        result._read_dir(home, home, copy_cache)?;
+        Ok(result)
+    }
+
+    // gets difference between previous and current
+    fn difference<'a, 'b>(&'a self, current: &'b Fingerprint) -> (Vec<&'b str>, Vec<&'a str>) {
+        // this can be added or updated
+        let changed: Vec<&str> = current
+            .map
+            .iter()
+            .filter(|(k, v1)| self.map.get(*k).map_or(true, |v2| v1 != &v2))
+            .map(|(k, _)| k.as_str())
+            .collect();
+        let removed: Vec<&str> = self
+            .map
+            .iter()
+            .filter(|(k, _)| !current.map.contains_key(*k))
+            .map(|(k, _)| k.as_str())
+            .collect();
+        (changed, removed)
+    }
 }
 
 impl QualifiedToolchain {
