@@ -7,7 +7,7 @@ use crate::shell::MessageInfo;
 use crate::{errors::*, file, CommandExt, ToUtf8};
 use crate::{CargoMetadata, TargetTriple};
 
-use super::{get_image_name, parse_docker_opts, path_hash, ImagePlatform};
+use super::{get_image_name, path_hash, Engine, ImagePlatform};
 
 pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "localhost/cross-rs/cross-custom-";
 
@@ -71,7 +71,7 @@ impl<'a> Dockerfile<'a> {
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
         let uses_zig = options.cargo_variant.uses_zig();
-        let mut docker_build = docker::command(&options.engine);
+        let mut docker_build = options.engine.command();
         match docker::Engine::has_buildkit() {
             true => docker_build.args(["buildx", "build"]),
             false => docker_build.arg("build"),
@@ -147,7 +147,7 @@ impl<'a> Dockerfile<'a> {
         docker_build.args(["--file".into(), path]);
 
         if let Some(build_opts) = options.config.build_opts() {
-            docker_build.args(parse_docker_opts(&build_opts)?);
+            docker_build.args(Engine::parse_opts(&build_opts)?);
         }
 
         let has_output = options.config.build_opts().map_or(false, |opts| {

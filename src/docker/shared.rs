@@ -9,7 +9,7 @@ use super::engine::*;
 use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
-use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
+use crate::cargo::CargoMetadata;
 use crate::config::{bool_from_envvar, Config};
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
@@ -26,12 +26,6 @@ pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:20.04";
-
-// secured profile based off the docker documentation for denied syscalls:
-// https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
-// note that we've allow listed `clone` and `clone3`, which is necessary
-// to fork the process, and which podman allows by default.
-pub(crate) const SECCOMP: &str = include_str!("seccomp.json");
 
 #[derive(Debug)]
 pub struct DockerOptions {
@@ -702,15 +696,18 @@ impl<'a, 'b> DockerVolume<'a, 'b> {
     }
 
     pub fn create(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
-        run_and_get_status(self.engine, &["volume", "create", self.name], msg_info)
+        self.engine
+            .run_and_get_status(&["volume", "create", self.name], msg_info)
     }
 
     pub fn remove(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
-        run_and_get_status(self.engine, &["volume", "rm", self.name], msg_info)
+        self.engine
+            .run_and_get_status(&["volume", "rm", self.name], msg_info)
     }
 
     pub fn exists(&self, msg_info: &mut MessageInfo) -> Result<bool> {
-        run_and_get_output(self.engine, &["volume", "inspect", self.name], msg_info)
+        self.engine
+            .run_and_get_output(&["volume", "inspect", self.name], msg_info)
             .map(|output| output.status.success())
     }
 
@@ -719,19 +716,19 @@ impl<'a, 'b> DockerVolume<'a, 'b> {
         toolchain: &QualifiedToolchain,
         msg_info: &mut MessageInfo,
     ) -> Result<Vec<String>> {
-        let list = run_and_get_output(
-            engine,
-            &[
-                "volume",
-                "list",
-                "--format",
-                "{{.Name}}",
-                "--filter",
-                &format!("name=^{VOLUME_PREFIX}{}", toolchain),
-            ],
-            msg_info,
-        )?
-        .stdout()?;
+        let list = engine
+            .run_and_get_output(
+                &[
+                    "volume",
+                    "list",
+                    "--format",
+                    "{{.Name}}",
+                    "--filter",
+                    &format!("name=^{VOLUME_PREFIX}{}", toolchain),
+                ],
+                msg_info,
+            )?
+            .stdout()?;
 
         if list.is_empty() {
             Ok(vec![])
@@ -753,8 +750,7 @@ impl<'a, 'b> DockerContainer<'a, 'b> {
     }
 
     pub fn stop(&self, timeout: u32, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
-        run_and_get_status(
-            self.engine,
+        self.engine.run_and_get_status(
             &["stop", self.name, "--time", &timeout.to_string()],
             msg_info,
         )
@@ -772,35 +768,21 @@ impl<'a, 'b> DockerContainer<'a, 'b> {
     /// the container was killed, we need to cleanup the exited container.
     /// just silence any warnings.
     pub fn remove(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
-        run_and_get_output(self.engine, &["rm", self.name], msg_info).map(|output| output.status)
+        self.engine
+            .run_and_get_output(&["rm", self.name], msg_info)
+            .map(|output| output.status)
     }
 
     pub fn state(&self, msg_info: &mut MessageInfo) -> Result<ContainerState> {
-        let stdout = command(self.engine)
+        let stdout = self
+            .engine
+            .command()
             .args(["ps", "-a"])
             .args(["--filter", &format!("name={}", self.name)])
             .args(["--format", "{{.State}}"])
             .run_and_get_stdout(msg_info)?;
         ContainerState::new(stdout.trim())
     }
-}
-
-pub(crate) fn run_and_get_status(
-    engine: &Engine,
-    args: &[&str],
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    command(engine)
-        .args(args)
-        .run_and_get_status(msg_info, true)
-}
-
-pub(crate) fn run_and_get_output(
-    engine: &Engine,
-    args: &[&str],
-    msg_info: &mut MessageInfo,
-) -> Result<Output> {
-    command(engine).args(args).run_and_get_output(msg_info)
 }
 
 pub(crate) fn time_to_millis(timestamp: &time::SystemTime) -> Result<u64> {
@@ -835,52 +817,67 @@ fn create_target_dir(path: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn command(engine: &Engine) -> Command {
-    let mut command = Command::new(&engine.path);
-    if engine.needs_remote() {
-        // if we're using podman and not podman-remote, need `--remote`.
-        command.arg("--remote");
+impl Engine {
+    pub fn command(&self) -> Command {
+        let mut command = Command::new(&self.path);
+        if self.needs_remote() {
+            // if we're using podman and not podman-remote, need `--remote`.
+            command.arg("--remote");
+        }
+        command
     }
-    command
-}
 
-pub fn subcommand(engine: &Engine, cmd: &str) -> Command {
-    let mut command = command(engine);
-    command.arg(cmd);
-    command
-}
+    pub fn subcommand(&self, cmd: &str) -> Command {
+        let mut command = self.command();
+        command.arg(cmd);
+        command
+    }
 
-pub fn get_package_info(
-    engine: &Engine,
-    toolchain: QualifiedToolchain,
-    msg_info: &mut MessageInfo,
-) -> Result<(Directories, CargoMetadata)> {
-    let metadata = cargo_metadata_with_args(None, None, msg_info)?
-        .ok_or(eyre::eyre!("unable to get project metadata"))?;
-    let mount_finder = MountFinder::create(engine)?;
-    let cwd = std::env::current_dir()?;
-    Directories::assemble(&mount_finder, metadata, &cwd, toolchain)
-}
+    pub(crate) fn run_and_get_status(
+        &self,
+        args: &[&str],
+        msg_info: &mut MessageInfo,
+    ) -> Result<ExitStatus> {
+        self.command().args(args).run_and_get_status(msg_info, true)
+    }
 
-/// Register binfmt interpreters
-pub(crate) fn register(engine: &Engine, target: &Target, msg_info: &mut MessageInfo) -> Result<()> {
-    let cmd = if target.is_windows() {
-        // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
-        "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
-            echo ':wine:M::MZ::/usr/bin/run-detectors:' > /proc/sys/fs/binfmt_misc/register"
-    } else {
-        "apt-get update && apt-get install --no-install-recommends --assume-yes \
-            binfmt-support qemu-user-static"
-    };
+    pub(crate) fn run_and_get_output(
+        &self,
+        args: &[&str],
+        msg_info: &mut MessageInfo,
+    ) -> Result<Output> {
+        self.command().args(args).run_and_get_output(msg_info)
+    }
 
-    let mut docker = subcommand(engine, "run");
-    docker_userns(&mut docker);
-    docker.arg("--privileged");
-    docker.arg("--rm");
-    docker.arg(UBUNTU_BASE);
-    docker.args(["sh", "-c", cmd]);
+    pub fn parse_opts(value: &str) -> Result<Vec<String>> {
+        shell_words::split(value)
+            .wrap_err_with(|| format!("could not parse docker opts of {}", value))
+    }
 
-    docker.run(msg_info, false).map_err(Into::into)
+    /// Register binfmt interpreters
+    pub(crate) fn register_binfmt(
+        &self,
+        target: &Target,
+        msg_info: &mut MessageInfo,
+    ) -> Result<()> {
+        let cmd = if target.is_windows() {
+            // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
+            "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
+                echo ':wine:M::MZ::/usr/bin/run-detectors:' > /proc/sys/fs/binfmt_misc/register"
+        } else {
+            "apt-get update && apt-get install --no-install-recommends --assume-yes \
+                binfmt-support qemu-user-static"
+        };
+
+        let mut docker = self.subcommand("run");
+        docker_userns(&mut docker);
+        docker.arg("--privileged");
+        docker.arg("--rm");
+        docker.arg(UBUNTU_BASE);
+        docker.args(["sh", "-c", cmd]);
+
+        docker.run(msg_info, false).map_err(Into::into)
+    }
 }
 
 fn validate_env_var<'a>(
@@ -916,12 +913,10 @@ fn validate_env_var<'a>(
     Ok((key, value))
 }
 
-pub fn parse_docker_opts(value: &str) -> Result<Vec<String>> {
-    shell_words::split(value).wrap_err_with(|| format!("could not parse docker opts of {}", value))
-}
-
-pub(crate) fn cargo_safe_command(cargo_variant: CargoVariant) -> SafeCommand {
-    SafeCommand::new(cargo_variant.to_str())
+impl CargoVariant {
+    pub(crate) fn safe_command(self) -> SafeCommand {
+        SafeCommand::new(self.to_str())
+    }
 }
 
 fn add_cargo_configuration_envvars(docker: &mut Command) {
@@ -1013,10 +1008,10 @@ pub(crate) fn docker_envvars(
         if env::var("DOCKER_OPTS").is_ok() {
             msg_info.warn("using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.")?;
         }
-        docker.args(&parse_docker_opts(&value)?);
+        docker.args(&Engine::parse_opts(&value)?);
     } else if let Ok(value) = env::var("DOCKER_OPTS") {
         // FIXME: remove this when we deprecate DOCKER_OPTS.
-        docker.args(&parse_docker_opts(&value)?);
+        docker.args(&Engine::parse_opts(&value)?);
     };
 
     let (major, minor, patch) = match options.rustc_version.as_ref() {
@@ -1154,6 +1149,12 @@ pub(crate) fn docker_seccomp(
     target: &Target,
     metadata: &CargoMetadata,
 ) -> Result<()> {
+    // secured profile based off the docker documentation for denied syscalls:
+    // https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
+    // note that we've allow listed `clone` and `clone3`, which is necessary
+    // to fork the process, and which podman allows by default.
+    const SECCOMP: &str = include_str!("seccomp.json");
+
     // docker uses seccomp now on all installations
     if target.needs_docker_seccomp() {
         let seccomp = if engine_type.is_docker() && cfg!(target_os = "windows") {
@@ -1298,7 +1299,7 @@ fn docker_read_mount_paths(engine: &Engine) -> Result<Vec<MountDetail>> {
     let hostname = env::var("HOSTNAME").wrap_err("HOSTNAME environment variable not found")?;
 
     let mut docker: Command = {
-        let mut command = subcommand(engine, "inspect");
+        let mut command = engine.subcommand("inspect");
         command.arg(hostname);
         command
     };
@@ -1647,7 +1648,8 @@ mod tests {
                 return Ok(());
             }
             let hostname = hostname.unwrap();
-            let output = subcommand(&engine, "inspect")
+            let output = engine
+                .subcommand("inspect")
                 .arg(hostname)
                 .run_and_get_output(&mut msg_info)?;
             if !output.status.success() {

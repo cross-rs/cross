@@ -166,7 +166,8 @@ fn get_cross_images(
     msg_info: &mut MessageInfo,
     local: bool,
 ) -> cross::Result<Vec<Image>> {
-    let mut images: BTreeSet<_> = cross::docker::subcommand(engine, "images")
+    let mut images: BTreeSet<_> = engine
+        .subcommand("images")
         .args(["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
         .args([
             "--filter",
@@ -177,7 +178,8 @@ fn get_cross_images(
         .map(parse_image)
         .collect();
 
-    let stdout = cross::docker::subcommand(engine, "images")
+    let stdout = engine
+        .subcommand("images")
         .args(["--format", "{{.Repository}}:{{.Tag}} {{.ID}}"])
         .run_and_get_stdout(msg_info)?;
     let ids: Vec<_> = images.iter().map(|i| i.id.to_string()).collect();
@@ -238,7 +240,7 @@ fn get_image_target(
             return Ok(target);
         }
     }
-    let mut command = cross::docker::subcommand(engine, "inspect");
+    let mut command = engine.subcommand("inspect");
     command.args([
         "--format",
         &format!(
@@ -332,7 +334,7 @@ fn remove_images(
     force: bool,
     execute: bool,
 ) -> cross::Result<()> {
-    let mut command = docker::subcommand(engine, "rmi");
+    let mut command = engine.subcommand("rmi");
     if force {
         command.arg("--force");
     }

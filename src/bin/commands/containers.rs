@@ -320,7 +320,8 @@ fn get_cross_volumes(
     msg_info: &mut MessageInfo,
 ) -> cross::Result<Vec<String>> {
     use cross::docker::VOLUME_PREFIX;
-    let stdout = docker::subcommand(engine, "volume")
+    let stdout = engine
+        .subcommand("volume")
         .arg("list")
         .args(["--format", "{{.Name}}"])
         // handles simple regex: ^ for start of line.
@@ -348,7 +349,7 @@ pub fn remove_all_volumes(
 ) -> cross::Result<()> {
     let volumes = get_cross_volumes(engine, msg_info)?;
 
-    let mut command = docker::subcommand(engine, "volume");
+    let mut command = engine.subcommand("volume");
     command.arg("rm");
     if force {
         command.arg("--force");
@@ -370,7 +371,7 @@ pub fn prune_volumes(
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let mut command = docker::subcommand(engine, "volume");
+    let mut command = engine.subcommand("volume");
     command.args(["prune", "--force"]);
     if execute {
         command.run(msg_info, false).map_err(Into::into)
@@ -421,7 +422,7 @@ pub fn create_persistent_volume(
 
     // create a dummy running container to copy data over
     let mount_prefix = docker::MOUNT_PREFIX;
-    let mut docker = docker::subcommand(engine, "run");
+    let mut docker = engine.subcommand("run");
     docker.args(["--name", &container_id]);
     docker.arg("--rm");
     docker.args(["-v", &format!("{}:{}", volume_id, mount_prefix)]);
@@ -482,7 +483,8 @@ fn get_cross_containers(
     msg_info: &mut MessageInfo,
 ) -> cross::Result<Vec<String>> {
     use cross::docker::VOLUME_PREFIX;
-    let stdout = docker::subcommand(engine, "ps")
+    let stdout = engine
+        .subcommand("ps")
         .arg("-a")
         .args(["--format", "{{.Names}}: {{.State}}"])
         // handles simple regex: ^ for start of line.
@@ -525,13 +527,13 @@ pub fn remove_all_containers(
 
     let mut commands = vec![];
     if !running.is_empty() {
-        let mut stop = docker::subcommand(engine, "stop");
+        let mut stop = engine.subcommand("stop");
         stop.args(&running);
         commands.push(stop);
     }
 
     if !(stopped.is_empty() && running.is_empty()) {
-        let mut rm = docker::subcommand(engine, "rm");
+        let mut rm = engine.subcommand("rm");
         if force {
             rm.arg("--force");
         }

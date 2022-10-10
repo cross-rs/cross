@@ -31,7 +31,7 @@ macro_rules! bail_container_exited {
 
 fn subcommand_or_exit(engine: &Engine, cmd: &str) -> Result<Command> {
     bail_container_exited!();
-    Ok(subcommand(engine, cmd))
+    Ok(engine.subcommand(cmd))
 }
 
 impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
@@ -663,7 +663,7 @@ pub(crate) fn run(
     // if we're using a discarded volume.
 
     // 3. create our start container command here
-    let mut docker = subcommand(engine, "run");
+    let mut docker = engine.subcommand("run");
     docker_userns(&mut docker);
     options
         .image
@@ -853,7 +853,7 @@ pub(crate) fn run(
         final_args.push("--target-dir".to_owned());
         final_args.push(target_dir_string);
     }
-    let mut cmd = cargo_safe_command(options.cargo_variant);
+    let mut cmd = options.cargo_variant.safe_command();
     cmd.args(final_args);
 
     // 5. create symlinks for copied data
@@ -901,7 +901,7 @@ symlink_recurse \"${{prefix}}\"
         .wrap_err("when creating symlinks to provide consistent host/mount paths")?;
 
     // 6. execute our cargo command inside the container
-    let mut docker = subcommand(engine, "exec");
+    let mut docker = engine.subcommand("exec");
     docker_user_id(&mut docker, engine.kind);
     docker_envvars(&mut docker, &options, toolchain_dirs, msg_info)?;
     docker_cwd(&mut docker, &paths)?;

@@ -30,10 +30,10 @@ pub(crate) fn run(
     let toolchain_dirs = paths.directories.toolchain_directories();
     let package_dirs = paths.directories.package_directories();
 
-    let mut cmd = cargo_safe_command(options.cargo_variant);
+    let mut cmd = options.cargo_variant.safe_command();
     cmd.args(args);
 
-    let mut docker = subcommand(engine, "run");
+    let mut docker = engine.subcommand("run");
     docker_userns(&mut docker);
 
     options
