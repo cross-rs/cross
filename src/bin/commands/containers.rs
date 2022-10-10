@@ -441,7 +441,7 @@ pub fn create_persistent_volume(
     }
     // store first, since failing to non-existing container is fine
     docker::ChildContainer::create(engine.clone(), container_id.clone())?;
-    docker.run_and_get_status(msg_info, false)?;
+    docker.run_and_get_status(msg_info, true)?;
 
     let data_volume = docker::ContainerDataVolume::new(engine, &container_id, &dirs);
     data_volume.copy_xargo(mount_prefix.as_ref(), msg_info)?;
