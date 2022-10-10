@@ -51,8 +51,8 @@ pub(crate) fn run(
         msg_info,
     )?;
 
-    let container = toolchain_dirs.unique_container_identifier(options.target.target())?;
-    docker.args(["--name", &container]);
+    let container_id = toolchain_dirs.unique_container_identifier(options.target.target())?;
+    docker.args(["--name", &container_id]);
     docker.arg("--rm");
 
     docker_seccomp(&mut docker, engine.kind, &options.target, &paths.metadata)
@@ -124,7 +124,7 @@ pub(crate) fn run(
             .wrap_err("when building custom image")?;
     }
 
-    Container::create(engine.clone(), container)?;
+    ChildContainer::create(engine.clone(), container_id)?;
     let status = docker
         .arg(&image_name)
         .args(["sh", "-c", &build_command(toolchain_dirs, &cmd)])
@@ -138,7 +138,7 @@ pub(crate) fn run(
     // SAFETY: an atomic load.
     let is_terminated = unsafe { crate::errors::TERMINATED.load(Ordering::SeqCst) };
     if !is_terminated {
-        Container::exit_static();
+        ChildContainer::exit_static();
     }
 
     status

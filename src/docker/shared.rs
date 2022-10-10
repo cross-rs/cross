@@ -489,129 +489,6 @@ impl Directories {
     }
 }
 
-// the mount directory for the data volume.
-pub const MOUNT_PREFIX: &str = "/cross";
-// the prefix used when naming volumes
-pub const VOLUME_PREFIX: &str = "cross-";
-// default timeout to stop a container (in seconds)
-pub const DEFAULT_TIMEOUT: u32 = 2;
-// instant kill in case of a non-graceful exit
-pub const NO_TIMEOUT: u32 = 0;
-
-pub(crate) static mut CONTAINER: Container = Container::new();
-
-// we need to specify drops for the containers, but we
-// also need to ensure the drops are called on a
-// termination handler. we use an atomic bool to ensure
-// that the drop only gets called once, even if we have
-// the signal handle invoked multiple times or it fails.
-#[allow(missing_debug_implementations)]
-pub struct Container {
-    deleter: Option<DeleteContainer>,
-    exists: AtomicBool,
-}
-
-impl Container {
-    pub const fn new() -> Container {
-        Container {
-            deleter: None,
-            exists: AtomicBool::new(false),
-        }
-    }
-
-    pub fn create(engine: Engine, name: String) -> Result<()> {
-        // SAFETY: guarded by an atomic swap
-        unsafe {
-            if !CONTAINER.exists.swap(true, Ordering::SeqCst) {
-                CONTAINER.deleter = Some(DeleteContainer {
-                    engine,
-                    name,
-                    timeout: NO_TIMEOUT,
-                    color_choice: ColorChoice::Never,
-                    verbosity: Verbosity::Quiet,
-                });
-                Ok(())
-            } else {
-                eyre::bail!("attempted to create already existing container.");
-            }
-        }
-    }
-
-    // the static functions have been placed by the internal functions to
-    // verify the internal functions are wrapped in atomic load/stores.
-
-    pub fn exists(&self) -> bool {
-        self.exists.load(Ordering::SeqCst)
-    }
-
-    pub fn exists_static() -> bool {
-        // SAFETY: an atomic load.
-        unsafe { CONTAINER.exists() }
-    }
-
-    // when the `docker run` command finished.
-    // the container has already exited, so no cleanup required.
-    pub fn exit(&mut self) {
-        self.exists.store(false, Ordering::SeqCst);
-    }
-
-    pub fn exit_static() {
-        // SAFETY: an atomic store.
-        unsafe {
-            CONTAINER.exit();
-        }
-    }
-
-    // when the `docker exec` command finished.
-    pub fn finish(&mut self, is_tty: bool, msg_info: &mut MessageInfo) {
-        // relax the no-timeout and lack of output
-        // ensure we have atomic ordering
-        if self.exists() {
-            let deleter = self.deleter.as_mut().unwrap();
-            if is_tty {
-                deleter.timeout = DEFAULT_TIMEOUT;
-            }
-            deleter.color_choice = msg_info.color_choice;
-            deleter.verbosity = msg_info.verbosity;
-        }
-
-        self.terminate();
-    }
-
-    pub fn finish_static(is_tty: bool, msg_info: &mut MessageInfo) {
-        // SAFETY: internally guarded by an atomic load.
-        unsafe {
-            CONTAINER.finish(is_tty, msg_info);
-        }
-    }
-
-    // terminate the container early. leaves the struct in a valid
-    // state, so it's async safe, but so the container will not
-    // be stopped again.
-    pub fn terminate(&mut self) {
-        if self.exists.swap(false, Ordering::SeqCst) {
-            let deleter = self.deleter.as_mut().unwrap();
-            let mut msg_info = MessageInfo::new(deleter.color_choice, deleter.verbosity);
-            container_stop(
-                &deleter.engine,
-                &deleter.name,
-                deleter.timeout,
-                &mut msg_info,
-            )
-            .ok();
-            container_rm(&deleter.engine, &deleter.name, &mut msg_info).ok();
-
-            self.deleter = None;
-        }
-    }
-}
-
-impl Drop for Container {
-    fn drop(&mut self) {
-        self.terminate();
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum ContainerState {
     Created,
@@ -648,15 +525,264 @@ impl ContainerState {
     }
 }
 
+// the mount directory for the data volume.
+pub const MOUNT_PREFIX: &str = "/cross";
+// the prefix used when naming volumes
+pub const VOLUME_PREFIX: &str = "cross-";
+// default timeout to stop a container (in seconds)
+pub const DEFAULT_TIMEOUT: u32 = 2;
+// instant kill in case of a non-graceful exit
+pub const NO_TIMEOUT: u32 = 0;
+
+pub(crate) static mut CHILD_CONTAINER: ChildContainer = ChildContainer::new();
+
 // the lack of [MessageInfo] is because it'd require a mutable reference,
 // since we don't need the functionality behind the [MessageInfo], we can just store the basic
 // MessageInfo configurations.
-pub(crate) struct DeleteContainer {
+pub(crate) struct ChildContainerInfo {
     engine: Engine,
     name: String,
     timeout: u32,
     color_choice: ColorChoice,
     verbosity: Verbosity,
+}
+
+// we need to specify drops for the containers, but we
+// also need to ensure the drops are called on a
+// termination handler. we use an atomic bool to ensure
+// that the drop only gets called once, even if we have
+// the signal handle invoked multiple times or it fails.
+#[allow(missing_debug_implementations)]
+pub struct ChildContainer {
+    info: Option<ChildContainerInfo>,
+    exists: AtomicBool,
+}
+
+impl ChildContainer {
+    pub const fn new() -> ChildContainer {
+        ChildContainer {
+            info: None,
+            exists: AtomicBool::new(false),
+        }
+    }
+
+    pub fn create(engine: Engine, name: String) -> Result<()> {
+        // SAFETY: guarded by an atomic swap
+        unsafe {
+            if !CHILD_CONTAINER.exists.swap(true, Ordering::SeqCst) {
+                CHILD_CONTAINER.info = Some(ChildContainerInfo {
+                    engine,
+                    name,
+                    timeout: NO_TIMEOUT,
+                    color_choice: ColorChoice::Never,
+                    verbosity: Verbosity::Quiet,
+                });
+                Ok(())
+            } else {
+                eyre::bail!("attempted to create already existing container.");
+            }
+        }
+    }
+
+    // the static functions have been placed by the internal functions to
+    // verify the internal functions are wrapped in atomic load/stores.
+
+    pub fn exists(&self) -> bool {
+        self.exists.load(Ordering::SeqCst)
+    }
+
+    pub fn exists_static() -> bool {
+        // SAFETY: an atomic load.
+        unsafe { CHILD_CONTAINER.exists() }
+    }
+
+    // when the `docker run` command finished.
+    // the container has already exited, so no cleanup required.
+    pub fn exit(&mut self) {
+        self.exists.store(false, Ordering::SeqCst);
+    }
+
+    pub fn exit_static() {
+        // SAFETY: an atomic store.
+        unsafe {
+            CHILD_CONTAINER.exit();
+        }
+    }
+
+    // when the `docker exec` command finished.
+    pub fn finish(&mut self, is_tty: bool, msg_info: &mut MessageInfo) {
+        // relax the no-timeout and lack of output
+        // ensure we have atomic ordering
+        if self.exists() {
+            let info = self.info.as_mut().unwrap();
+            if is_tty {
+                info.timeout = DEFAULT_TIMEOUT;
+            }
+            info.color_choice = msg_info.color_choice;
+            info.verbosity = msg_info.verbosity;
+        }
+
+        self.terminate();
+    }
+
+    pub fn finish_static(is_tty: bool, msg_info: &mut MessageInfo) {
+        // SAFETY: internally guarded by an atomic load.
+        unsafe {
+            CHILD_CONTAINER.finish(is_tty, msg_info);
+        }
+    }
+
+    // terminate the container early. leaves the struct in a valid
+    // state, so it's async safe, but so the container will not
+    // be stopped again.
+    pub fn terminate(&mut self) {
+        if self.exists.swap(false, Ordering::SeqCst) {
+            let info = self.info.as_mut().unwrap();
+            let mut msg_info = MessageInfo::new(info.color_choice, info.verbosity);
+            let container = DockerContainer::new(&info.engine, &info.name);
+            container.stop(info.timeout, &mut msg_info).ok();
+            container.remove(&mut msg_info).ok();
+
+            self.info = None;
+        }
+    }
+}
+
+impl Drop for ChildContainer {
+    fn drop(&mut self) {
+        self.terminate();
+    }
+}
+
+#[derive(Debug)]
+pub struct ContainerDataVolume<'a, 'b, 'c> {
+    pub(crate) engine: &'a Engine,
+    pub(crate) container: &'b str,
+    pub(crate) toolchain_dirs: &'c ToolchainDirectories,
+}
+
+impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
+    pub const fn new(
+        engine: &'a Engine,
+        container: &'b str,
+        toolchain_dirs: &'c ToolchainDirectories,
+    ) -> Self {
+        Self {
+            engine,
+            container,
+            toolchain_dirs,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum VolumeId {
+    Keep(String),
+    Discard,
+}
+
+impl VolumeId {
+    pub fn bind_mount(&self, mount_prefix: &str) -> String {
+        match self {
+            VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
+            VolumeId::Discard => mount_prefix.to_owned(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DockerVolume<'a, 'b> {
+    pub(crate) engine: &'a Engine,
+    pub(crate) name: &'b str,
+}
+
+impl<'a, 'b> DockerVolume<'a, 'b> {
+    pub const fn new(engine: &'a Engine, name: &'b str) -> Self {
+        Self { engine, name }
+    }
+
+    pub fn create(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        run_and_get_status(self.engine, &["volume", "create", self.name], msg_info)
+    }
+
+    pub fn remove(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        run_and_get_status(self.engine, &["volume", "rm", self.name], msg_info)
+    }
+
+    pub fn exists(&self, msg_info: &mut MessageInfo) -> Result<bool> {
+        run_and_get_output(self.engine, &["volume", "inspect", self.name], msg_info)
+            .map(|output| output.status.success())
+    }
+
+    pub fn existing(
+        engine: &Engine,
+        toolchain: &QualifiedToolchain,
+        msg_info: &mut MessageInfo,
+    ) -> Result<Vec<String>> {
+        let list = run_and_get_output(
+            engine,
+            &[
+                "volume",
+                "list",
+                "--format",
+                "{{.Name}}",
+                "--filter",
+                &format!("name=^{VOLUME_PREFIX}{}", toolchain),
+            ],
+            msg_info,
+        )?
+        .stdout()?;
+
+        if list.is_empty() {
+            Ok(vec![])
+        } else {
+            Ok(list.split('\n').map(ToOwned::to_owned).collect())
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DockerContainer<'a, 'b> {
+    pub(crate) engine: &'a Engine,
+    pub(crate) name: &'b str,
+}
+
+impl<'a, 'b> DockerContainer<'a, 'b> {
+    pub const fn new(engine: &'a Engine, name: &'b str) -> Self {
+        Self { engine, name }
+    }
+
+    pub fn stop(&self, timeout: u32, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        run_and_get_status(
+            self.engine,
+            &["stop", self.name, "--time", &timeout.to_string()],
+            msg_info,
+        )
+    }
+
+    pub fn stop_default(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        // we want a faster timeout, since this might happen in signal
+        // handler. our containers normally clean up pretty fast, it's
+        // only without a pseudo-tty that they don't.
+        self.stop(DEFAULT_TIMEOUT, msg_info)
+    }
+
+    /// if stopping a container succeeds without a timeout, this command
+    /// can fail because the container no longer exists. however, if
+    /// the container was killed, we need to cleanup the exited container.
+    /// just silence any warnings.
+    pub fn remove(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        run_and_get_output(self.engine, &["rm", self.name], msg_info).map(|output| output.status)
+    }
+
+    pub fn state(&self, msg_info: &mut MessageInfo) -> Result<ContainerState> {
+        let stdout = command(self.engine)
+            .args(["ps", "-a"])
+            .args(["--filter", &format!("name={}", self.name)])
+            .args(["--format", "{{.State}}"])
+            .run_and_get_stdout(msg_info)?;
+        ContainerState::new(stdout.trim())
+    }
 }
 
 pub(crate) fn run_and_get_status(
@@ -675,98 +801,6 @@ pub(crate) fn run_and_get_output(
     msg_info: &mut MessageInfo,
 ) -> Result<Output> {
     command(engine).args(args).run_and_get_output(msg_info)
-}
-
-pub fn container_stop(
-    engine: &Engine,
-    container: &str,
-    timeout: u32,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_status(
-        engine,
-        &["stop", container, "--time", &timeout.to_string()],
-        msg_info,
-    )
-}
-
-pub fn container_stop_default(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    // we want a faster timeout, since this might happen in signal
-    // handler. our containers normally clean up pretty fast, it's
-    // only without a pseudo-tty that they don't.
-    container_stop(engine, container, DEFAULT_TIMEOUT, msg_info)
-}
-
-/// if stopping a container succeeds without a timeout, this command
-/// can fail because the container no longer exists. however, if
-/// the container was killed, we need to cleanup the exited container.
-/// just silence any warnings.
-pub fn container_rm(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_output(engine, &["rm", container], msg_info).map(|output| output.status)
-}
-
-pub fn volume_create(
-    engine: &Engine,
-    volume: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_status(engine, &["volume", "create", volume], msg_info)
-}
-
-pub fn volume_rm(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
-    run_and_get_status(engine, &["volume", "rm", volume], msg_info)
-}
-
-pub fn volume_exists(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<bool> {
-    run_and_get_output(engine, &["volume", "inspect", volume], msg_info)
-        .map(|output| output.status.success())
-}
-
-pub fn existing_volumes(
-    engine: &Engine,
-    toolchain: &QualifiedToolchain,
-    msg_info: &mut MessageInfo,
-) -> Result<Vec<String>> {
-    let list = run_and_get_output(
-        engine,
-        &[
-            "volume",
-            "list",
-            "--format",
-            "{{.Name}}",
-            "--filter",
-            &format!("name=^{VOLUME_PREFIX}{}", toolchain),
-        ],
-        msg_info,
-    )?
-    .stdout()?;
-
-    if list.is_empty() {
-        Ok(vec![])
-    } else {
-        Ok(list.split('\n').map(ToOwned::to_owned).collect())
-    }
-}
-
-pub fn container_state(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ContainerState> {
-    let stdout = command(engine)
-        .args(["ps", "-a"])
-        .args(["--filter", &format!("name={container}")])
-        .args(["--format", "{{.State}}"])
-        .run_and_get_stdout(msg_info)?;
-    ContainerState::new(stdout.trim())
 }
 
 pub(crate) fn time_to_millis(timestamp: &time::SystemTime) -> Result<u64> {

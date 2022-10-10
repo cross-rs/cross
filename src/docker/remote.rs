@@ -17,19 +17,13 @@ use crate::shell::{MessageInfo, Stream};
 use crate::temp;
 use crate::TargetTriple;
 
-#[derive(Debug, Clone)]
-enum VolumeId {
-    Keep(String),
-    Discard,
-}
-
 // prevent further commands from running if we handled
 // a signal earlier, and the volume is exited.
 // this isn't required, but avoids unnecessary
 // commands while the container is cleaning up.
 macro_rules! bail_container_exited {
     () => {{
-        if !Container::exists_static() {
+        if !ChildContainer::exists_static() {
             eyre::bail!("container already exited due to signal");
         }
     }};
@@ -40,26 +34,7 @@ fn subcommand_or_exit(engine: &Engine, cmd: &str) -> Result<Command> {
     Ok(subcommand(engine, cmd))
 }
 
-#[derive(Debug)]
-pub struct DataVolume<'a, 'b, 'c> {
-    engine: &'a Engine,
-    container: &'b str,
-    toolchain_dirs: &'c ToolchainDirectories,
-}
-
-impl<'a, 'b, 'c> DataVolume<'a, 'b, 'c> {
-    pub const fn new(
-        engine: &'a Engine,
-        container: &'b str,
-        toolchain_dirs: &'c ToolchainDirectories,
-    ) -> Self {
-        Self {
-            engine,
-            container,
-            toolchain_dirs,
-        }
-    }
-
+impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     fn create_dir(&self, dir: &Path, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
         // make our parent directory if needed
         subcommand_or_exit(self.engine, "exec")?
@@ -636,9 +611,9 @@ pub(crate) fn run(
     // note that since we use `docker run --rm`, it's very
     // unlikely the container state existed before.
     let toolchain_id = toolchain_dirs.unique_toolchain_identifier()?;
-    let container = toolchain_dirs.unique_container_identifier(target.target())?;
+    let container_id = toolchain_dirs.unique_container_identifier(target.target())?;
     let volume = {
-        let existing = existing_volumes(engine, toolchain_dirs.toolchain(), msg_info)?;
+        let existing = DockerVolume::existing(engine, toolchain_dirs.toolchain(), msg_info)?;
         if existing.iter().any(|v| v == &toolchain_id) {
             VolumeId::Keep(toolchain_id)
         } else {
@@ -652,14 +627,16 @@ pub(crate) fn run(
             VolumeId::Discard
         }
     };
-    let state = container_state(engine, &container, msg_info)?;
+
+    let container = DockerContainer::new(engine, &container_id);
+    let state = container.state(msg_info)?;
     if !state.is_stopped() {
-        msg_info.warn(format_args!("container {container} was running."))?;
-        container_stop_default(engine, &container, msg_info)?;
+        msg_info.warn(format_args!("container {container_id} was running."))?;
+        container.stop_default(msg_info)?;
     }
     if state.exists() {
-        msg_info.warn(format_args!("container {container} was exited."))?;
-        container_rm(engine, &container, msg_info)?;
+        msg_info.warn(format_args!("container {container_id} was exited."))?;
+        container.remove(msg_info)?;
     }
 
     // 2. create our volume to copy all our data over to
@@ -673,13 +650,9 @@ pub(crate) fn run(
         .image
         .platform
         .specify_platform(&options.engine, &mut docker);
-    docker.args(["--name", &container]);
+    docker.args(["--name", &container_id]);
     docker.arg("--rm");
-    let volume_mount = match volume {
-        VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
-        VolumeId::Discard => mount_prefix.to_owned(),
-    };
-    docker.args(["-v", &volume_mount]);
+    docker.args(["-v", &volume.bind_mount(mount_prefix)]);
 
     let mut volumes = vec![];
     docker_mount(
@@ -731,11 +704,11 @@ pub(crate) fn run(
     }
 
     // store first, since failing to non-existing container is fine
-    Container::create(engine.clone(), container.clone())?;
+    ChildContainer::create(engine.clone(), container_id.clone())?;
     docker.run_and_get_status(msg_info, true)?;
 
     // 4. copy all mounted volumes over
-    let data_volume = DataVolume::new(engine, &container, toolchain_dirs);
+    let data_volume = ContainerDataVolume::new(engine, &container_id, toolchain_dirs);
     let copy_cache = env::var("CROSS_REMOTE_COPY_CACHE")
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
@@ -903,7 +876,7 @@ symlink_recurse \"${{prefix}}\"
         ));
     }
     subcommand_or_exit(engine, "exec")?
-        .arg(&container)
+        .arg(&container_id)
         .args(["sh", "-c", &symlink.join("\n")])
         .run_and_get_status(msg_info, false)
         .wrap_err("when creating symlinks to provide consistent host/mount paths")?;
@@ -913,7 +886,7 @@ symlink_recurse \"${{prefix}}\"
     docker_user_id(&mut docker, engine.kind);
     docker_envvars(&mut docker, &options, toolchain_dirs, msg_info)?;
     docker_cwd(&mut docker, &paths)?;
-    docker.arg(&container);
+    docker.arg(&container_id);
     docker.args(["sh", "-c", &build_command(toolchain_dirs, &cmd)]);
     bail_container_exited!();
     let status = docker
@@ -929,7 +902,10 @@ symlink_recurse \"${{prefix}}\"
     if !skip_artifacts && data_volume.container_path_exists(&target_dir, msg_info)? {
         subcommand_or_exit(engine, "cp")?
             .arg("-a")
-            .arg(&format!("{container}:{}", target_dir.as_posix_absolute()?))
+            .arg(&format!(
+                "{container_id}:{}",
+                target_dir.as_posix_absolute()?
+            ))
             .arg(
                 package_dirs
                     .target()
@@ -940,7 +916,7 @@ symlink_recurse \"${{prefix}}\"
             .map_err::<eyre::ErrReport, _>(Into::into)?;
     }
 
-    Container::finish_static(is_tty, msg_info);
+    ChildContainer::finish_static(is_tty, msg_info);
 
     status
 }
