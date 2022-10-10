@@ -664,27 +664,28 @@ pub(crate) fn run(
 
     // 3. create our start container command here
     let mut docker = engine.subcommand("run");
-    docker_userns(&mut docker);
+    docker.add_userns();
     options
         .image
         .platform
         .specify_platform(&options.engine, &mut docker);
     docker.args(["--name", &container_id]);
     docker.arg("--rm");
-    docker.args(["-v", &volume.bind_mount(mount_prefix)]);
+    docker.args(["-v", &volume.mount(mount_prefix)]);
 
     let mut volumes = vec![];
-    docker_mount(
-        &mut docker,
-        &options,
-        &paths,
-        |_, _, _| Ok(()),
-        |(src, dst)| volumes.push((src, dst)),
-        msg_info,
-    )
-    .wrap_err("could not determine mount points")?;
+    docker
+        .add_mounts(
+            &options,
+            &paths,
+            |_, _, _| Ok(()),
+            |(src, dst)| volumes.push((src, dst)),
+            msg_info,
+        )
+        .wrap_err("could not determine mount points")?;
 
-    docker_seccomp(&mut docker, engine.kind, target, &paths.metadata)
+    docker
+        .add_seccomp(engine.kind, target, &paths.metadata)
         .wrap_err("when copying seccomp profile")?;
 
     // Prevent `bin` from being mounted inside the Docker container.
@@ -902,11 +903,11 @@ symlink_recurse \"${{prefix}}\"
 
     // 6. execute our cargo command inside the container
     let mut docker = engine.subcommand("exec");
-    docker_user_id(&mut docker, engine.kind);
-    docker_envvars(&mut docker, &options, toolchain_dirs, msg_info)?;
-    docker_cwd(&mut docker, &paths)?;
+    docker.add_user_id(engine.kind);
+    docker.add_envvars(&options, toolchain_dirs, msg_info)?;
+    docker.add_cwd(&paths)?;
     docker.arg(&container_id);
-    docker.args(["sh", "-c", &build_command(toolchain_dirs, &cmd)]);
+    docker.add_build_command(toolchain_dirs, &cmd);
     bail_container_exited!();
     let status = docker
         .run_and_get_status(msg_info, false)

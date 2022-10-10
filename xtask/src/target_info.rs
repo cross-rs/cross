@@ -48,7 +48,7 @@ fn image_info(
         pull_image(engine, image, msg_info)?;
     }
 
-    let mut command = docker::command(engine);
+    let mut command = engine.command();
     command.arg("run");
     command.arg("--rm");
     command.args(["-e", &format!("TARGET={}", target.name)]);

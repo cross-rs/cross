@@ -182,7 +182,7 @@ pub fn build_docker_image(
         } else {
             msg_info.note(format_args!("Build {target} for {}", platform.target))?;
         }
-        let mut docker_build = docker::command(engine);
+        let mut docker_build = engine.command();
         let has_buildkit = docker::Engine::has_buildkit();
         match has_buildkit {
             true => docker_build.args(["buildx", "build"]),
@@ -319,7 +319,7 @@ pub fn build_docker_image(
         }
 
         if let Some(opts) = &build_opts {
-            docker_build.args(docker::parse_docker_opts(opts)?);
+            docker_build.args(docker::Engine::parse_opts(opts)?);
         }
 
         if target.needs_workspace_root_context() {

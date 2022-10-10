@@ -676,7 +676,7 @@ pub enum VolumeId {
 }
 
 impl VolumeId {
-    pub fn bind_mount(&self, mount_prefix: &str) -> String {
+    pub fn mount(&self, mount_prefix: &str) -> String {
         match self {
             VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
             VolumeId::Discard => mount_prefix.to_owned(),
@@ -870,7 +870,7 @@ impl Engine {
         };
 
         let mut docker = self.subcommand("run");
-        docker_userns(&mut docker);
+        docker.add_userns();
         docker.arg("--privileged");
         docker.arg("--rm");
         docker.arg(UBUNTU_BASE);
@@ -919,192 +919,292 @@ impl CargoVariant {
     }
 }
 
-fn add_cargo_configuration_envvars(docker: &mut Command) {
-    let non_cargo_prefix = &[
-        "http_proxy",
-        "TERM",
-        "RUSTDOCFLAGS",
-        "RUSTFLAGS",
-        "BROWSER",
-        "HTTPS_PROXY",
-        "HTTP_TIMEOUT",
-        "https_proxy",
-    ];
-    let cargo_prefix_skip = &[
-        "CARGO_HOME",
-        "CARGO_TARGET_DIR",
-        "CARGO_BUILD_TARGET_DIR",
-        "CARGO_BUILD_RUSTC",
-        "CARGO_BUILD_RUSTC_WRAPPER",
-        "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
-        "CARGO_BUILD_RUSTDOC",
-    ];
-    let is_cargo_passthrough = |key: &str| -> bool {
-        non_cargo_prefix.contains(&key)
-            || key.starts_with("CARGO_") && !cargo_prefix_skip.contains(&key)
-    };
-
-    // also need to accept any additional flags used to configure
-    // cargo, but only pass what's actually present.
-    for (key, _) in env::vars() {
-        if is_cargo_passthrough(&key) {
-            docker.args(["-e", &key]);
-        }
-    }
+pub(crate) trait DockerCommandExt {
+    fn add_cargo_configuration_envvars(&mut self);
+    fn add_envvars(
+        &mut self,
+        options: &DockerOptions,
+        dirs: &ToolchainDirectories,
+        msg_info: &mut MessageInfo,
+    ) -> Result<()>;
+    fn add_cwd(&mut self, paths: &DockerPaths) -> Result<()>;
+    fn add_build_command(&mut self, dirs: &ToolchainDirectories, cmd: &SafeCommand) -> &mut Self;
+    fn add_user_id(&mut self, engine_type: EngineType);
+    fn add_userns(&mut self);
+    fn add_seccomp(
+        &mut self,
+        engine_type: EngineType,
+        target: &Target,
+        metadata: &CargoMetadata,
+    ) -> Result<()>;
+    fn add_mounts(
+        &mut self,
+        options: &DockerOptions,
+        paths: &DockerPaths,
+        mount_cb: impl Fn(&mut Command, &Path, &Path) -> Result<()>,
+        store_cb: impl FnMut((String, String)),
+        msg_info: &mut MessageInfo,
+    ) -> Result<()>;
 }
 
-pub(crate) fn docker_envvars(
-    docker: &mut Command,
-    options: &DockerOptions,
-    dirs: &ToolchainDirectories,
-    msg_info: &mut MessageInfo,
-) -> Result<()> {
-    let mut warned = false;
-    for ref var in options
-        .config
-        .env_passthrough(&options.target)?
-        .unwrap_or_default()
-    {
-        validate_env_var(
-            var,
-            &mut warned,
-            "environment variable",
-            "`passthrough = [\"ENVVAR=value\"]`",
-            msg_info,
-        )?;
-
-        // Only specifying the environment variable name in the "-e"
-        // flag forwards the value from the parent shell
-        docker.args(["-e", var]);
-    }
-
-    let runner = options.config.runner(&options.target)?;
-    let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
-    docker
-        .args(["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
-        .args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
-        .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
-        .args(["-e", "CARGO_TARGET_DIR=/target"])
-        .args(["-e", &cross_runner]);
-    if options.cargo_variant.uses_zig() {
-        // otherwise, zig has a permission error trying to create the cache
-        docker.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
-    }
-    add_cargo_configuration_envvars(docker);
-
-    if let Some(username) = id::username().wrap_err("could not get username")? {
-        docker.args(["-e", &format!("USER={username}")]);
-    }
-
-    if let Ok(value) = env::var("QEMU_STRACE") {
-        docker.args(["-e", &format!("QEMU_STRACE={value}")]);
-    }
-
-    if let Ok(value) = env::var("CROSS_DEBUG") {
-        docker.args(["-e", &format!("CROSS_DEBUG={value}")]);
-    }
-
-    if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
-        if env::var("DOCKER_OPTS").is_ok() {
-            msg_info.warn("using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.")?;
-        }
-        docker.args(&Engine::parse_opts(&value)?);
-    } else if let Ok(value) = env::var("DOCKER_OPTS") {
-        // FIXME: remove this when we deprecate DOCKER_OPTS.
-        docker.args(&Engine::parse_opts(&value)?);
-    };
-
-    let (major, minor, patch) = match options.rustc_version.as_ref() {
-        Some(version) => (version.major, version.minor, version.patch),
-        // no toolchain version available, always provide the oldest
-        // compiler available. this isn't a major issue because
-        // linking with libgcc will not include symbols found in
-        // the builtins.
-        None => (1, 0, 0),
-    };
-    docker.args(["-e", &format!("CROSS_RUSTC_MAJOR_VERSION={}", major)]);
-    docker.args(["-e", &format!("CROSS_RUSTC_MINOR_VERSION={}", minor)]);
-    docker.args(["-e", &format!("CROSS_RUSTC_PATCH_VERSION={}", patch)]);
-
-    Ok(())
-}
-
-pub(crate) fn build_command(dirs: &ToolchainDirectories, cmd: &SafeCommand) -> String {
-    format!(
-        "PATH=\"$PATH\":\"{}/bin\" {:?}",
-        dirs.sysroot_mount_path(),
-        cmd
-    )
-}
-
-pub(crate) fn docker_cwd(docker: &mut Command, paths: &DockerPaths) -> Result<()> {
-    docker.args(["-w", paths.mount_cwd()]);
-
-    Ok(())
-}
-
-pub(crate) fn docker_mount(
-    docker: &mut Command,
-    options: &DockerOptions,
-    paths: &DockerPaths,
-    mount_cb: impl Fn(&mut Command, &Path, &Path) -> Result<()>,
-    mut store_cb: impl FnMut((String, String)),
-    msg_info: &mut MessageInfo,
-) -> Result<()> {
-    let mut warned = false;
-    for ref var in options
-        .config
-        .env_volumes(&options.target)?
-        .unwrap_or_default()
-    {
-        let (var, value) = validate_env_var(
-            var,
-            &mut warned,
-            "volume",
-            "`volumes = [\"ENVVAR=/path/to/directory\"]`",
-            msg_info,
-        )?;
-        let value = match value {
-            Some(v) => Ok(v.to_owned()),
-            None => env::var(var),
+impl DockerCommandExt for Command {
+    fn add_cargo_configuration_envvars(&mut self) {
+        let non_cargo_prefix = &[
+            "http_proxy",
+            "TERM",
+            "RUSTDOCFLAGS",
+            "RUSTFLAGS",
+            "BROWSER",
+            "HTTPS_PROXY",
+            "HTTP_TIMEOUT",
+            "https_proxy",
+        ];
+        let cargo_prefix_skip = &[
+            "CARGO_HOME",
+            "CARGO_TARGET_DIR",
+            "CARGO_BUILD_TARGET_DIR",
+            "CARGO_BUILD_RUSTC",
+            "CARGO_BUILD_RUSTC_WRAPPER",
+            "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
+            "CARGO_BUILD_RUSTDOC",
+        ];
+        let is_cargo_passthrough = |key: &str| -> bool {
+            non_cargo_prefix.contains(&key)
+                || key.starts_with("CARGO_") && !cargo_prefix_skip.contains(&key)
         };
 
-        // NOTE: we use canonical paths on the host, since it's unambiguous.
-        // however, for the mounted paths, we use the same path as was
-        // provided. this avoids canonicalizing symlinks which then causes
-        // the mounted path to differ from the path expected on the host.
-        // for example, if `/tmp` is a symlink to `/private/tmp`, canonicalizing
-        // it would lead to us mounting `/tmp/process` to `/private/tmp/process`,
-        // which would cause any code relying on `/tmp/process` to break.
+        // also need to accept any additional flags used to configure
+        // cargo, but only pass what's actually present.
+        for (key, _) in env::vars() {
+            if is_cargo_passthrough(&key) {
+                self.args(["-e", &key]);
+            }
+        }
+    }
 
-        if let Ok(val) = value {
-            let canonical_path = file::canonicalize(&val)?;
+    fn add_envvars(
+        &mut self,
+        options: &DockerOptions,
+        dirs: &ToolchainDirectories,
+        msg_info: &mut MessageInfo,
+    ) -> Result<()> {
+        let mut warned = false;
+        for ref var in options
+            .config
+            .env_passthrough(&options.target)?
+            .unwrap_or_default()
+        {
+            validate_env_var(
+                var,
+                &mut warned,
+                "environment variable",
+                "`passthrough = [\"ENVVAR=value\"]`",
+                msg_info,
+            )?;
+
+            // Only specifying the environment variable name in the "-e"
+            // flag forwards the value from the parent shell
+            self.args(["-e", var]);
+        }
+
+        let runner = options.config.runner(&options.target)?;
+        let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
+        self.args(["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
+            .args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
+            .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
+            .args(["-e", "CARGO_TARGET_DIR=/target"])
+            .args(["-e", &cross_runner]);
+        if options.cargo_variant.uses_zig() {
+            // otherwise, zig has a permission error trying to create the cache
+            self.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
+        }
+        self.add_cargo_configuration_envvars();
+
+        if let Some(username) = id::username().wrap_err("could not get username")? {
+            self.args(["-e", &format!("USER={username}")]);
+        }
+
+        if let Ok(value) = env::var("QEMU_STRACE") {
+            self.args(["-e", &format!("QEMU_STRACE={value}")]);
+        }
+
+        if let Ok(value) = env::var("CROSS_DEBUG") {
+            self.args(["-e", &format!("CROSS_DEBUG={value}")]);
+        }
+
+        if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
+            if env::var("DOCKER_OPTS").is_ok() {
+                msg_info.warn("using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.")?;
+            }
+            self.args(&Engine::parse_opts(&value)?);
+        } else if let Ok(value) = env::var("DOCKER_OPTS") {
+            // FIXME: remove this when we deprecate DOCKER_OPTS.
+            self.args(&Engine::parse_opts(&value)?);
+        };
+
+        let (major, minor, patch) = match options.rustc_version.as_ref() {
+            Some(version) => (version.major, version.minor, version.patch),
+            // no toolchain version available, always provide the oldest
+            // compiler available. this isn't a major issue because
+            // linking with libgcc will not include symbols found in
+            // the builtins.
+            None => (1, 0, 0),
+        };
+        self.args(["-e", &format!("CROSS_RUSTC_MAJOR_VERSION={}", major)]);
+        self.args(["-e", &format!("CROSS_RUSTC_MINOR_VERSION={}", minor)]);
+        self.args(["-e", &format!("CROSS_RUSTC_PATCH_VERSION={}", patch)]);
+
+        Ok(())
+    }
+
+    fn add_cwd(&mut self, paths: &DockerPaths) -> Result<()> {
+        self.args(["-w", paths.mount_cwd()]);
+
+        Ok(())
+    }
+
+    fn add_build_command(&mut self, dirs: &ToolchainDirectories, cmd: &SafeCommand) -> &mut Self {
+        let build_command = format!(
+            "PATH=\"$PATH\":\"{}/bin\" {:?}",
+            dirs.sysroot_mount_path(),
+            cmd
+        );
+        self.args(["sh", "-c", &build_command])
+    }
+
+    fn add_user_id(&mut self, engine_type: EngineType) {
+        // by default, docker runs as root so we need to specify the user
+        // so the resulting file permissions are for the current user.
+        // since we can have rootless docker, we provide an override.
+        let is_rootless = env::var("CROSS_ROOTLESS_CONTAINER_ENGINE")
+            .ok()
+            .and_then(|s| match s.as_ref() {
+                "auto" => None,
+                b => Some(bool_from_envvar(b)),
+            })
+            .unwrap_or_else(|| engine_type != EngineType::Docker);
+        if !is_rootless {
+            self.args(["--user", &format!("{}:{}", user_id(), group_id(),)]);
+        }
+    }
+
+    fn add_userns(&mut self) {
+        let userns = match env::var("CROSS_CONTAINER_USER_NAMESPACE").ok().as_deref() {
+            Some("none") => None,
+            None | Some("auto") => Some("host".to_owned()),
+            Some(ns) => Some(ns.to_owned()),
+        };
+        if let Some(ns) = userns {
+            self.args(["--userns", &ns]);
+        }
+    }
+
+    #[allow(unused_mut, clippy::let_and_return)]
+    fn add_seccomp(
+        &mut self,
+        engine_type: EngineType,
+        target: &Target,
+        metadata: &CargoMetadata,
+    ) -> Result<()> {
+        // secured profile based off the docker documentation for denied syscalls:
+        // https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
+        // note that we've allow listed `clone` and `clone3`, which is necessary
+        // to fork the process, and which podman allows by default.
+        const SECCOMP: &str = include_str!("seccomp.json");
+
+        // docker uses seccomp now on all installations
+        if target.needs_docker_seccomp() {
+            let seccomp = if engine_type.is_docker() && cfg!(target_os = "windows") {
+                // docker on windows fails due to a bug in reading the profile
+                // https://github.com/docker/for-win/issues/12760
+                "unconfined".to_owned()
+            } else {
+                #[allow(unused_mut)] // target_os = "windows"
+                let mut path = metadata
+                    .target_directory
+                    .join(target.triple())
+                    .join("seccomp.json");
+                if !path.exists() {
+                    write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
+                }
+                let mut path_string = path.to_utf8()?.to_owned();
+                #[cfg(target_os = "windows")]
+                if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
+                    // podman weirdly expects a WSL path here, and fails otherwise
+                    path_string = path.as_posix_absolute()?;
+                }
+                path_string
+            };
+
+            self.args(["--security-opt", &format!("seccomp={}", seccomp)]);
+        }
+
+        Ok(())
+    }
+
+    fn add_mounts(
+        &mut self,
+        options: &DockerOptions,
+        paths: &DockerPaths,
+        mount_cb: impl Fn(&mut Command, &Path, &Path) -> Result<()>,
+        mut store_cb: impl FnMut((String, String)),
+        msg_info: &mut MessageInfo,
+    ) -> Result<()> {
+        let mut warned = false;
+        for ref var in options
+            .config
+            .env_volumes(&options.target)?
+            .unwrap_or_default()
+        {
+            let (var, value) = validate_env_var(
+                var,
+                &mut warned,
+                "volume",
+                "`volumes = [\"ENVVAR=/path/to/directory\"]`",
+                msg_info,
+            )?;
+            let value = match value {
+                Some(v) => Ok(v.to_owned()),
+                None => env::var(var),
+            };
+
+            // NOTE: we use canonical paths on the host, since it's unambiguous.
+            // however, for the mounted paths, we use the same path as was
+            // provided. this avoids canonicalizing symlinks which then causes
+            // the mounted path to differ from the path expected on the host.
+            // for example, if `/tmp` is a symlink to `/private/tmp`, canonicalizing
+            // it would lead to us mounting `/tmp/process` to `/private/tmp/process`,
+            // which would cause any code relying on `/tmp/process` to break.
+
+            if let Ok(val) = value {
+                let canonical_path = file::canonicalize(&val)?;
+                let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
+                let absolute_path = Path::new(&val).as_posix_absolute()?;
+                let mount_path = paths
+                    .mount_finder
+                    .find_path(Path::new(&absolute_path), true)?;
+                mount_cb(self, host_path.as_ref(), mount_path.as_ref())?;
+                self.args(["-e", &format!("{}={}", var, mount_path)]);
+                store_cb((val, mount_path));
+            }
+        }
+
+        for path in paths.workspace_dependencies() {
+            // NOTE: we use canonical paths here since cargo metadata
+            // always canonicalizes paths, so these should be relative
+            // to the mounted project directory.
+            let canonical_path = file::canonicalize(path)?;
             let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
-            let absolute_path = Path::new(&val).as_posix_absolute()?;
+            let absolute_path = Path::new(path).as_posix_absolute()?;
             let mount_path = paths
                 .mount_finder
                 .find_path(Path::new(&absolute_path), true)?;
-            mount_cb(docker, host_path.as_ref(), mount_path.as_ref())?;
-            docker.args(["-e", &format!("{}={}", var, mount_path)]);
-            store_cb((val, mount_path));
+            mount_cb(self, host_path.as_ref(), mount_path.as_ref())?;
+            store_cb((path.to_utf8()?.to_owned(), mount_path));
         }
-    }
 
-    for path in paths.workspace_dependencies() {
-        // NOTE: we use canonical paths here since cargo metadata
-        // always canonicalizes paths, so these should be relative
-        // to the mounted project directory.
-        let canonical_path = file::canonicalize(path)?;
-        let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
-        let absolute_path = Path::new(path).as_posix_absolute()?;
-        let mount_path = paths
-            .mount_finder
-            .find_path(Path::new(&absolute_path), true)?;
-        mount_cb(docker, host_path.as_ref(), mount_path.as_ref())?;
-        store_cb((path.to_utf8()?.to_owned(), mount_path));
+        Ok(())
     }
-
-    Ok(())
 }
 
 pub(crate) fn user_id() -> String {
@@ -1113,76 +1213,6 @@ pub(crate) fn user_id() -> String {
 
 pub(crate) fn group_id() -> String {
     env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string())
-}
-
-pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
-    // by default, docker runs as root so we need to specify the user
-    // so the resulting file permissions are for the current user.
-    // since we can have rootless docker, we provide an override.
-    let is_rootless = env::var("CROSS_ROOTLESS_CONTAINER_ENGINE")
-        .ok()
-        .and_then(|s| match s.as_ref() {
-            "auto" => None,
-            b => Some(bool_from_envvar(b)),
-        })
-        .unwrap_or_else(|| engine_type != EngineType::Docker);
-    if !is_rootless {
-        docker.args(["--user", &format!("{}:{}", user_id(), group_id(),)]);
-    }
-}
-
-pub(crate) fn docker_userns(docker: &mut Command) {
-    let userns = match env::var("CROSS_CONTAINER_USER_NAMESPACE").ok().as_deref() {
-        Some("none") => None,
-        None | Some("auto") => Some("host".to_owned()),
-        Some(ns) => Some(ns.to_owned()),
-    };
-    if let Some(ns) = userns {
-        docker.args(["--userns", &ns]);
-    }
-}
-
-#[allow(unused_mut, clippy::let_and_return)]
-pub(crate) fn docker_seccomp(
-    docker: &mut Command,
-    engine_type: EngineType,
-    target: &Target,
-    metadata: &CargoMetadata,
-) -> Result<()> {
-    // secured profile based off the docker documentation for denied syscalls:
-    // https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
-    // note that we've allow listed `clone` and `clone3`, which is necessary
-    // to fork the process, and which podman allows by default.
-    const SECCOMP: &str = include_str!("seccomp.json");
-
-    // docker uses seccomp now on all installations
-    if target.needs_docker_seccomp() {
-        let seccomp = if engine_type.is_docker() && cfg!(target_os = "windows") {
-            // docker on windows fails due to a bug in reading the profile
-            // https://github.com/docker/for-win/issues/12760
-            "unconfined".to_owned()
-        } else {
-            #[allow(unused_mut)] // target_os = "windows"
-            let mut path = metadata
-                .target_directory
-                .join(target.triple())
-                .join("seccomp.json");
-            if !path.exists() {
-                write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
-            }
-            let mut path_string = path.to_utf8()?.to_owned();
-            #[cfg(target_os = "windows")]
-            if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
-                // podman weirdly expects a WSL path here, and fails otherwise
-                path_string = path.as_posix_absolute()?;
-            }
-            path_string
-        };
-
-        docker.args(["--security-opt", &format!("seccomp={}", seccomp)]);
-    }
-
-    Ok(())
 }
 
 /// Simpler version of [get_image]
@@ -1445,7 +1475,7 @@ mod tests {
 
         let test = |engine, expected| {
             let mut cmd = Command::new("engine");
-            docker_user_id(&mut cmd, engine);
+            cmd.add_user_id(engine);
             assert_eq!(expected, &format!("{cmd:?}"));
         };
         test(EngineType::Docker, &rootful);
@@ -1489,7 +1519,7 @@ mod tests {
 
         let test = |expected| {
             let mut cmd = Command::new("engine");
-            docker_userns(&mut cmd);
+            cmd.add_userns();
             assert_eq!(expected, &format!("{cmd:?}"));
         };
         test(&host);
