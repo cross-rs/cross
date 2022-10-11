@@ -920,7 +920,7 @@ impl CargoVariant {
 }
 
 pub(crate) trait DockerCommandExt {
-    fn add_cargo_configuration_envvars(&mut self);
+    fn add_configuration_envvars(&mut self);
     fn add_envvars(
         &mut self,
         options: &DockerOptions,
@@ -948,8 +948,8 @@ pub(crate) trait DockerCommandExt {
 }
 
 impl DockerCommandExt for Command {
-    fn add_cargo_configuration_envvars(&mut self) {
-        let non_cargo_prefix = &[
+    fn add_configuration_envvars(&mut self) {
+        let other = &[
             "http_proxy",
             "TERM",
             "RUSTDOCFLAGS",
@@ -958,6 +958,7 @@ impl DockerCommandExt for Command {
             "HTTPS_PROXY",
             "HTTP_TIMEOUT",
             "https_proxy",
+            "QEMU_STRACE",
         ];
         let cargo_prefix_skip = &[
             "CARGO_HOME",
@@ -968,15 +969,22 @@ impl DockerCommandExt for Command {
             "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
             "CARGO_BUILD_RUSTDOC",
         ];
-        let is_cargo_passthrough = |key: &str| -> bool {
-            non_cargo_prefix.contains(&key)
+        let cross_prefix_skip = &[
+            "CROSS_RUNNER",
+            "CROSS_RUSTC_MAJOR_VERSION",
+            "CROSS_RUSTC_MINOR_VERSION",
+            "CROSS_RUSTC_PATCH_VERSION",
+        ];
+        let is_passthrough = |key: &str| -> bool {
+            other.contains(&key)
                 || key.starts_with("CARGO_") && !cargo_prefix_skip.contains(&key)
+                || key.starts_with("CROSS_") && !cross_prefix_skip.contains(&key)
         };
 
         // also need to accept any additional flags used to configure
-        // cargo, but only pass what's actually present.
+        // cargo or cross, but only pass what's actually present.
         for (key, _) in env::vars() {
-            if is_cargo_passthrough(&key) {
+            if is_passthrough(&key) {
                 self.args(["-e", &key]);
             }
         }
@@ -1018,18 +1026,10 @@ impl DockerCommandExt for Command {
             // otherwise, zig has a permission error trying to create the cache
             self.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
         }
-        self.add_cargo_configuration_envvars();
+        self.add_configuration_envvars();
 
         if let Some(username) = id::username().wrap_err("could not get username")? {
             self.args(["-e", &format!("USER={username}")]);
-        }
-
-        if let Ok(value) = env::var("QEMU_STRACE") {
-            self.args(["-e", &format!("QEMU_STRACE={value}")]);
-        }
-
-        if let Ok(value) = env::var("CROSS_DEBUG") {
-            self.args(["-e", &format!("CROSS_DEBUG={value}")]);
         }
 
         if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
