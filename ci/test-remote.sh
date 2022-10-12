@@ -45,7 +45,9 @@ cross_test_cpp() {
 
     pushd "${td}"
     retry cargo fetch
-    "${CROSS}" run --target "${TARGET}"
+    "${CROSS}" run --target "${TARGET}" | grep "Hello, world!"
+    sed -i 's/Hello, world/Hello, test/g' hellopp.cc
+    "${CROSS}" run --target "${TARGET}" | grep "Hello, test!"
     popd
 
     rm -rf "${td}"
