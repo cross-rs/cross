@@ -9,7 +9,7 @@ use super::engine::*;
 use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
-use crate::cargo::{cargo_metadata_with_args, CargoMetadata};
+use crate::cargo::CargoMetadata;
 use crate::config::{bool_from_envvar, Config};
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
@@ -26,12 +26,6 @@ pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:20.04";
-
-// secured profile based off the docker documentation for denied syscalls:
-// https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
-// note that we've allow listed `clone` and `clone3`, which is necessary
-// to fork the process, and which podman allows by default.
-pub(crate) const SECCOMP: &str = include_str!("seccomp.json");
 
 #[derive(Debug)]
 pub struct DockerOptions {
@@ -489,129 +483,6 @@ impl Directories {
     }
 }
 
-// the mount directory for the data volume.
-pub const MOUNT_PREFIX: &str = "/cross";
-// the prefix used when naming volumes
-pub const VOLUME_PREFIX: &str = "cross-";
-// default timeout to stop a container (in seconds)
-pub const DEFAULT_TIMEOUT: u32 = 2;
-// instant kill in case of a non-graceful exit
-pub const NO_TIMEOUT: u32 = 0;
-
-pub(crate) static mut CONTAINER: Container = Container::new();
-
-// we need to specify drops for the containers, but we
-// also need to ensure the drops are called on a
-// termination handler. we use an atomic bool to ensure
-// that the drop only gets called once, even if we have
-// the signal handle invoked multiple times or it fails.
-#[allow(missing_debug_implementations)]
-pub struct Container {
-    deleter: Option<DeleteContainer>,
-    exists: AtomicBool,
-}
-
-impl Container {
-    pub const fn new() -> Container {
-        Container {
-            deleter: None,
-            exists: AtomicBool::new(false),
-        }
-    }
-
-    pub fn create(engine: Engine, name: String) -> Result<()> {
-        // SAFETY: guarded by an atomic swap
-        unsafe {
-            if !CONTAINER.exists.swap(true, Ordering::SeqCst) {
-                CONTAINER.deleter = Some(DeleteContainer {
-                    engine,
-                    name,
-                    timeout: NO_TIMEOUT,
-                    color_choice: ColorChoice::Never,
-                    verbosity: Verbosity::Quiet,
-                });
-                Ok(())
-            } else {
-                eyre::bail!("attempted to create already existing container.");
-            }
-        }
-    }
-
-    // the static functions have been placed by the internal functions to
-    // verify the internal functions are wrapped in atomic load/stores.
-
-    pub fn exists(&self) -> bool {
-        self.exists.load(Ordering::SeqCst)
-    }
-
-    pub fn exists_static() -> bool {
-        // SAFETY: an atomic load.
-        unsafe { CONTAINER.exists() }
-    }
-
-    // when the `docker run` command finished.
-    // the container has already exited, so no cleanup required.
-    pub fn exit(&mut self) {
-        self.exists.store(false, Ordering::SeqCst);
-    }
-
-    pub fn exit_static() {
-        // SAFETY: an atomic store.
-        unsafe {
-            CONTAINER.exit();
-        }
-    }
-
-    // when the `docker exec` command finished.
-    pub fn finish(&mut self, is_tty: bool, msg_info: &mut MessageInfo) {
-        // relax the no-timeout and lack of output
-        // ensure we have atomic ordering
-        if self.exists() {
-            let deleter = self.deleter.as_mut().unwrap();
-            if is_tty {
-                deleter.timeout = DEFAULT_TIMEOUT;
-            }
-            deleter.color_choice = msg_info.color_choice;
-            deleter.verbosity = msg_info.verbosity;
-        }
-
-        self.terminate();
-    }
-
-    pub fn finish_static(is_tty: bool, msg_info: &mut MessageInfo) {
-        // SAFETY: internally guarded by an atomic load.
-        unsafe {
-            CONTAINER.finish(is_tty, msg_info);
-        }
-    }
-
-    // terminate the container early. leaves the struct in a valid
-    // state, so it's async safe, but so the container will not
-    // be stopped again.
-    pub fn terminate(&mut self) {
-        if self.exists.swap(false, Ordering::SeqCst) {
-            let deleter = self.deleter.as_mut().unwrap();
-            let mut msg_info = MessageInfo::new(deleter.color_choice, deleter.verbosity);
-            container_stop(
-                &deleter.engine,
-                &deleter.name,
-                deleter.timeout,
-                &mut msg_info,
-            )
-            .ok();
-            container_rm(&deleter.engine, &deleter.name, &mut msg_info).ok();
-
-            self.deleter = None;
-        }
-    }
-}
-
-impl Drop for Container {
-    fn drop(&mut self) {
-        self.terminate();
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum ContainerState {
     Created,
@@ -648,10 +519,21 @@ impl ContainerState {
     }
 }
 
+// the mount directory for the data volume.
+pub const MOUNT_PREFIX: &str = "/cross";
+// the prefix used when naming volumes
+pub const VOLUME_PREFIX: &str = "cross-";
+// default timeout to stop a container (in seconds)
+pub const DEFAULT_TIMEOUT: u32 = 2;
+// instant kill in case of a non-graceful exit
+pub const NO_TIMEOUT: u32 = 0;
+
+pub(crate) static mut CHILD_CONTAINER: ChildContainer = ChildContainer::new();
+
 // the lack of [MessageInfo] is because it'd require a mutable reference,
 // since we don't need the functionality behind the [MessageInfo], we can just store the basic
 // MessageInfo configurations.
-pub(crate) struct DeleteContainer {
+pub(crate) struct ChildContainerInfo {
     engine: Engine,
     name: String,
     timeout: u32,
@@ -659,114 +541,248 @@ pub(crate) struct DeleteContainer {
     verbosity: Verbosity,
 }
 
-pub(crate) fn run_and_get_status(
-    engine: &Engine,
-    args: &[&str],
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    command(engine)
-        .args(args)
-        .run_and_get_status(msg_info, true)
+// we need to specify drops for the containers, but we
+// also need to ensure the drops are called on a
+// termination handler. we use an atomic bool to ensure
+// that the drop only gets called once, even if we have
+// the signal handle invoked multiple times or it fails.
+#[allow(missing_debug_implementations)]
+pub struct ChildContainer {
+    info: Option<ChildContainerInfo>,
+    exists: AtomicBool,
 }
 
-pub(crate) fn run_and_get_output(
-    engine: &Engine,
-    args: &[&str],
-    msg_info: &mut MessageInfo,
-) -> Result<Output> {
-    command(engine).args(args).run_and_get_output(msg_info)
-}
+impl ChildContainer {
+    pub const fn new() -> ChildContainer {
+        ChildContainer {
+            info: None,
+            exists: AtomicBool::new(false),
+        }
+    }
 
-pub fn container_stop(
-    engine: &Engine,
-    container: &str,
-    timeout: u32,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_status(
-        engine,
-        &["stop", container, "--time", &timeout.to_string()],
-        msg_info,
-    )
-}
+    pub fn create(engine: Engine, name: String) -> Result<()> {
+        // SAFETY: guarded by an atomic swap
+        unsafe {
+            if !CHILD_CONTAINER.exists.swap(true, Ordering::SeqCst) {
+                CHILD_CONTAINER.info = Some(ChildContainerInfo {
+                    engine,
+                    name,
+                    timeout: NO_TIMEOUT,
+                    color_choice: ColorChoice::Never,
+                    verbosity: Verbosity::Quiet,
+                });
+                Ok(())
+            } else {
+                eyre::bail!("attempted to create already existing container.");
+            }
+        }
+    }
 
-pub fn container_stop_default(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    // we want a faster timeout, since this might happen in signal
-    // handler. our containers normally clean up pretty fast, it's
-    // only without a pseudo-tty that they don't.
-    container_stop(engine, container, DEFAULT_TIMEOUT, msg_info)
-}
+    // the static functions have been placed by the internal functions to
+    // verify the internal functions are wrapped in atomic load/stores.
 
-/// if stopping a container succeeds without a timeout, this command
-/// can fail because the container no longer exists. however, if
-/// the container was killed, we need to cleanup the exited container.
-/// just silence any warnings.
-pub fn container_rm(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_output(engine, &["rm", container], msg_info).map(|output| output.status)
-}
+    pub fn exists(&self) -> bool {
+        self.exists.load(Ordering::SeqCst)
+    }
 
-pub fn volume_create(
-    engine: &Engine,
-    volume: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
-    run_and_get_status(engine, &["volume", "create", volume], msg_info)
-}
+    pub fn exists_static() -> bool {
+        // SAFETY: an atomic load.
+        unsafe { CHILD_CONTAINER.exists() }
+    }
 
-pub fn volume_rm(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
-    run_and_get_status(engine, &["volume", "rm", volume], msg_info)
-}
+    // when the `docker run` command finished.
+    // the container has already exited, so no cleanup required.
+    pub fn exit(&mut self) {
+        self.exists.store(false, Ordering::SeqCst);
+    }
 
-pub fn volume_exists(engine: &Engine, volume: &str, msg_info: &mut MessageInfo) -> Result<bool> {
-    run_and_get_output(engine, &["volume", "inspect", volume], msg_info)
-        .map(|output| output.status.success())
-}
+    pub fn exit_static() {
+        // SAFETY: an atomic store.
+        unsafe {
+            CHILD_CONTAINER.exit();
+        }
+    }
 
-pub fn existing_volumes(
-    engine: &Engine,
-    toolchain: &QualifiedToolchain,
-    msg_info: &mut MessageInfo,
-) -> Result<Vec<String>> {
-    let list = run_and_get_output(
-        engine,
-        &[
-            "volume",
-            "list",
-            "--format",
-            "{{.Name}}",
-            "--filter",
-            &format!("name=^{VOLUME_PREFIX}{}", toolchain),
-        ],
-        msg_info,
-    )?
-    .stdout()?;
+    // when the `docker exec` command finished.
+    pub fn finish(&mut self, is_tty: bool, msg_info: &mut MessageInfo) {
+        // relax the no-timeout and lack of output
+        // ensure we have atomic ordering
+        if self.exists() {
+            let info = self.info.as_mut().unwrap();
+            if is_tty {
+                info.timeout = DEFAULT_TIMEOUT;
+            }
+            info.color_choice = msg_info.color_choice;
+            info.verbosity = msg_info.verbosity;
+        }
 
-    if list.is_empty() {
-        Ok(vec![])
-    } else {
-        Ok(list.split('\n').map(ToOwned::to_owned).collect())
+        self.terminate();
+    }
+
+    pub fn finish_static(is_tty: bool, msg_info: &mut MessageInfo) {
+        // SAFETY: internally guarded by an atomic load.
+        unsafe {
+            CHILD_CONTAINER.finish(is_tty, msg_info);
+        }
+    }
+
+    // terminate the container early. leaves the struct in a valid
+    // state, so it's async safe, but so the container will not
+    // be stopped again.
+    pub fn terminate(&mut self) {
+        if self.exists.swap(false, Ordering::SeqCst) {
+            let info = self.info.as_mut().unwrap();
+            let mut msg_info = MessageInfo::new(info.color_choice, info.verbosity);
+            let container = DockerContainer::new(&info.engine, &info.name);
+            container.stop(info.timeout, &mut msg_info).ok();
+            container.remove(&mut msg_info).ok();
+
+            self.info = None;
+        }
     }
 }
 
-pub fn container_state(
-    engine: &Engine,
-    container: &str,
-    msg_info: &mut MessageInfo,
-) -> Result<ContainerState> {
-    let stdout = command(engine)
-        .args(["ps", "-a"])
-        .args(["--filter", &format!("name={container}")])
-        .args(["--format", "{{.State}}"])
-        .run_and_get_stdout(msg_info)?;
-    ContainerState::new(stdout.trim())
+impl Drop for ChildContainer {
+    fn drop(&mut self) {
+        self.terminate();
+    }
+}
+
+#[derive(Debug)]
+pub struct ContainerDataVolume<'a, 'b, 'c> {
+    pub(crate) engine: &'a Engine,
+    pub(crate) container: &'b str,
+    pub(crate) toolchain_dirs: &'c ToolchainDirectories,
+}
+
+impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
+    pub const fn new(
+        engine: &'a Engine,
+        container: &'b str,
+        toolchain_dirs: &'c ToolchainDirectories,
+    ) -> Self {
+        Self {
+            engine,
+            container,
+            toolchain_dirs,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum VolumeId {
+    Keep(String),
+    Discard,
+}
+
+impl VolumeId {
+    pub fn mount(&self, mount_prefix: &str) -> String {
+        match self {
+            VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
+            VolumeId::Discard => mount_prefix.to_owned(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DockerVolume<'a, 'b> {
+    pub(crate) engine: &'a Engine,
+    pub(crate) name: &'b str,
+}
+
+impl<'a, 'b> DockerVolume<'a, 'b> {
+    pub const fn new(engine: &'a Engine, name: &'b str) -> Self {
+        Self { engine, name }
+    }
+
+    pub fn create(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        self.engine
+            .run_and_get_status(&["volume", "create", self.name], msg_info)
+    }
+
+    pub fn remove(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        self.engine
+            .run_and_get_status(&["volume", "rm", self.name], msg_info)
+    }
+
+    pub fn exists(&self, msg_info: &mut MessageInfo) -> Result<bool> {
+        self.engine
+            .run_and_get_output(&["volume", "inspect", self.name], msg_info)
+            .map(|output| output.status.success())
+    }
+
+    pub fn existing(
+        engine: &Engine,
+        toolchain: &QualifiedToolchain,
+        msg_info: &mut MessageInfo,
+    ) -> Result<Vec<String>> {
+        let list = engine
+            .run_and_get_output(
+                &[
+                    "volume",
+                    "list",
+                    "--format",
+                    "{{.Name}}",
+                    "--filter",
+                    &format!("name=^{VOLUME_PREFIX}{}", toolchain),
+                ],
+                msg_info,
+            )?
+            .stdout()?;
+
+        if list.is_empty() {
+            Ok(vec![])
+        } else {
+            Ok(list.split('\n').map(ToOwned::to_owned).collect())
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DockerContainer<'a, 'b> {
+    pub(crate) engine: &'a Engine,
+    pub(crate) name: &'b str,
+}
+
+impl<'a, 'b> DockerContainer<'a, 'b> {
+    pub const fn new(engine: &'a Engine, name: &'b str) -> Self {
+        Self { engine, name }
+    }
+
+    pub fn stop(&self, timeout: u32, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        self.engine.run_and_get_status(
+            &["stop", self.name, "--time", &timeout.to_string()],
+            msg_info,
+        )
+    }
+
+    pub fn stop_default(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        // we want a faster timeout, since this might happen in signal
+        // handler. our containers normally clean up pretty fast, it's
+        // only without a pseudo-tty that they don't.
+        self.stop(DEFAULT_TIMEOUT, msg_info)
+    }
+
+    /// if stopping a container succeeds without a timeout, this command
+    /// can fail because the container no longer exists. however, if
+    /// the container was killed, we need to cleanup the exited container.
+    /// just silence any warnings.
+    pub fn remove(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+        self.engine
+            .run_and_get_output(&["rm", self.name], msg_info)
+            .map(|output| output.status)
+    }
+
+    pub fn state(&self, msg_info: &mut MessageInfo) -> Result<ContainerState> {
+        let stdout = self
+            .engine
+            .command()
+            .args(["ps", "-a"])
+            .args(["--filter", &format!("name={}", self.name)])
+            .args(["--format", "{{.State}}"])
+            .run_and_get_stdout(msg_info)?;
+        ContainerState::new(stdout.trim())
+    }
 }
 
 pub(crate) fn time_to_millis(timestamp: &time::SystemTime) -> Result<u64> {
@@ -801,52 +817,67 @@ fn create_target_dir(path: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn command(engine: &Engine) -> Command {
-    let mut command = Command::new(&engine.path);
-    if engine.needs_remote() {
-        // if we're using podman and not podman-remote, need `--remote`.
-        command.arg("--remote");
+impl Engine {
+    pub fn command(&self) -> Command {
+        let mut command = Command::new(&self.path);
+        if self.needs_remote() {
+            // if we're using podman and not podman-remote, need `--remote`.
+            command.arg("--remote");
+        }
+        command
     }
-    command
-}
 
-pub fn subcommand(engine: &Engine, cmd: &str) -> Command {
-    let mut command = command(engine);
-    command.arg(cmd);
-    command
-}
+    pub fn subcommand(&self, cmd: &str) -> Command {
+        let mut command = self.command();
+        command.arg(cmd);
+        command
+    }
 
-pub fn get_package_info(
-    engine: &Engine,
-    toolchain: QualifiedToolchain,
-    msg_info: &mut MessageInfo,
-) -> Result<(Directories, CargoMetadata)> {
-    let metadata = cargo_metadata_with_args(None, None, msg_info)?
-        .ok_or(eyre::eyre!("unable to get project metadata"))?;
-    let mount_finder = MountFinder::create(engine)?;
-    let cwd = std::env::current_dir()?;
-    Directories::assemble(&mount_finder, metadata, &cwd, toolchain)
-}
+    pub(crate) fn run_and_get_status(
+        &self,
+        args: &[&str],
+        msg_info: &mut MessageInfo,
+    ) -> Result<ExitStatus> {
+        self.command().args(args).run_and_get_status(msg_info, true)
+    }
 
-/// Register binfmt interpreters
-pub(crate) fn register(engine: &Engine, target: &Target, msg_info: &mut MessageInfo) -> Result<()> {
-    let cmd = if target.is_windows() {
-        // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
-        "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
-            echo ':wine:M::MZ::/usr/bin/run-detectors:' > /proc/sys/fs/binfmt_misc/register"
-    } else {
-        "apt-get update && apt-get install --no-install-recommends --assume-yes \
-            binfmt-support qemu-user-static"
-    };
+    pub(crate) fn run_and_get_output(
+        &self,
+        args: &[&str],
+        msg_info: &mut MessageInfo,
+    ) -> Result<Output> {
+        self.command().args(args).run_and_get_output(msg_info)
+    }
 
-    let mut docker = subcommand(engine, "run");
-    docker_userns(&mut docker);
-    docker.arg("--privileged");
-    docker.arg("--rm");
-    docker.arg(UBUNTU_BASE);
-    docker.args(["sh", "-c", cmd]);
+    pub fn parse_opts(value: &str) -> Result<Vec<String>> {
+        shell_words::split(value)
+            .wrap_err_with(|| format!("could not parse docker opts of {}", value))
+    }
 
-    docker.run(msg_info, false).map_err(Into::into)
+    /// Register binfmt interpreters
+    pub(crate) fn register_binfmt(
+        &self,
+        target: &Target,
+        msg_info: &mut MessageInfo,
+    ) -> Result<()> {
+        let cmd = if target.is_windows() {
+            // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
+            "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
+                echo ':wine:M::MZ::/usr/bin/run-detectors:' > /proc/sys/fs/binfmt_misc/register"
+        } else {
+            "apt-get update && apt-get install --no-install-recommends --assume-yes \
+                binfmt-support qemu-user-static"
+        };
+
+        let mut docker = self.subcommand("run");
+        docker.add_userns();
+        docker.arg("--privileged");
+        docker.arg("--rm");
+        docker.arg(UBUNTU_BASE);
+        docker.args(["sh", "-c", cmd]);
+
+        docker.run(msg_info, false).map_err(Into::into)
+    }
 }
 
 fn validate_env_var<'a>(
@@ -882,200 +913,298 @@ fn validate_env_var<'a>(
     Ok((key, value))
 }
 
-pub fn parse_docker_opts(value: &str) -> Result<Vec<String>> {
-    shell_words::split(value).wrap_err_with(|| format!("could not parse docker opts of {}", value))
-}
-
-pub(crate) fn cargo_safe_command(cargo_variant: CargoVariant) -> SafeCommand {
-    SafeCommand::new(cargo_variant.to_str())
-}
-
-fn add_cargo_configuration_envvars(docker: &mut Command) {
-    let non_cargo_prefix = &[
-        "http_proxy",
-        "TERM",
-        "RUSTDOCFLAGS",
-        "RUSTFLAGS",
-        "BROWSER",
-        "HTTPS_PROXY",
-        "HTTP_TIMEOUT",
-        "https_proxy",
-    ];
-    let cargo_prefix_skip = &[
-        "CARGO_HOME",
-        "CARGO_TARGET_DIR",
-        "CARGO_BUILD_TARGET_DIR",
-        "CARGO_BUILD_RUSTC",
-        "CARGO_BUILD_RUSTC_WRAPPER",
-        "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
-        "CARGO_BUILD_RUSTDOC",
-    ];
-    let is_cargo_passthrough = |key: &str| -> bool {
-        non_cargo_prefix.contains(&key)
-            || key.starts_with("CARGO_") && !cargo_prefix_skip.contains(&key)
-    };
-
-    // also need to accept any additional flags used to configure
-    // cargo, but only pass what's actually present.
-    for (key, _) in env::vars() {
-        if is_cargo_passthrough(&key) {
-            docker.args(["-e", &key]);
-        }
+impl CargoVariant {
+    pub(crate) fn safe_command(self) -> SafeCommand {
+        SafeCommand::new(self.to_str())
     }
 }
 
-pub(crate) fn docker_envvars(
-    docker: &mut Command,
-    options: &DockerOptions,
-    dirs: &ToolchainDirectories,
-    msg_info: &mut MessageInfo,
-) -> Result<()> {
-    let mut warned = false;
-    for ref var in options
-        .config
-        .env_passthrough(&options.target)?
-        .unwrap_or_default()
-    {
-        validate_env_var(
-            var,
-            &mut warned,
-            "environment variable",
-            "`passthrough = [\"ENVVAR=value\"]`",
-            msg_info,
-        )?;
-
-        // Only specifying the environment variable name in the "-e"
-        // flag forwards the value from the parent shell
-        docker.args(["-e", var]);
-    }
-
-    let runner = options.config.runner(&options.target)?;
-    let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
-    docker
-        .args(["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
-        .args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
-        .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
-        .args(["-e", "CARGO_TARGET_DIR=/target"])
-        .args(["-e", &cross_runner]);
-    if options.cargo_variant.uses_zig() {
-        // otherwise, zig has a permission error trying to create the cache
-        docker.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
-    }
-    add_cargo_configuration_envvars(docker);
-
-    if let Some(username) = id::username().wrap_err("could not get username")? {
-        docker.args(["-e", &format!("USER={username}")]);
-    }
-
-    if let Ok(value) = env::var("QEMU_STRACE") {
-        docker.args(["-e", &format!("QEMU_STRACE={value}")]);
-    }
-
-    if let Ok(value) = env::var("CROSS_DEBUG") {
-        docker.args(["-e", &format!("CROSS_DEBUG={value}")]);
-    }
-
-    if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
-        if env::var("DOCKER_OPTS").is_ok() {
-            msg_info.warn("using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.")?;
-        }
-        docker.args(&parse_docker_opts(&value)?);
-    } else if let Ok(value) = env::var("DOCKER_OPTS") {
-        // FIXME: remove this when we deprecate DOCKER_OPTS.
-        docker.args(&parse_docker_opts(&value)?);
-    };
-
-    let (major, minor, patch) = match options.rustc_version.as_ref() {
-        Some(version) => (version.major, version.minor, version.patch),
-        // no toolchain version available, always provide the oldest
-        // compiler available. this isn't a major issue because
-        // linking with libgcc will not include symbols found in
-        // the builtins.
-        None => (1, 0, 0),
-    };
-    docker.args(["-e", &format!("CROSS_RUSTC_MAJOR_VERSION={}", major)]);
-    docker.args(["-e", &format!("CROSS_RUSTC_MINOR_VERSION={}", minor)]);
-    docker.args(["-e", &format!("CROSS_RUSTC_PATCH_VERSION={}", patch)]);
-
-    Ok(())
+pub(crate) trait DockerCommandExt {
+    fn add_cargo_configuration_envvars(&mut self);
+    fn add_envvars(
+        &mut self,
+        options: &DockerOptions,
+        dirs: &ToolchainDirectories,
+        msg_info: &mut MessageInfo,
+    ) -> Result<()>;
+    fn add_cwd(&mut self, paths: &DockerPaths) -> Result<()>;
+    fn add_build_command(&mut self, dirs: &ToolchainDirectories, cmd: &SafeCommand) -> &mut Self;
+    fn add_user_id(&mut self, engine_type: EngineType);
+    fn add_userns(&mut self);
+    fn add_seccomp(
+        &mut self,
+        engine_type: EngineType,
+        target: &Target,
+        metadata: &CargoMetadata,
+    ) -> Result<()>;
+    fn add_mounts(
+        &mut self,
+        options: &DockerOptions,
+        paths: &DockerPaths,
+        mount_cb: impl Fn(&mut Command, &Path, &Path) -> Result<()>,
+        store_cb: impl FnMut((String, String)),
+        msg_info: &mut MessageInfo,
+    ) -> Result<()>;
 }
 
-pub(crate) fn build_command(dirs: &ToolchainDirectories, cmd: &SafeCommand) -> String {
-    format!(
-        "PATH=\"$PATH\":\"{}/bin\" {:?}",
-        dirs.sysroot_mount_path(),
-        cmd
-    )
-}
-
-pub(crate) fn docker_cwd(docker: &mut Command, paths: &DockerPaths) -> Result<()> {
-    docker.args(["-w", paths.mount_cwd()]);
-
-    Ok(())
-}
-
-pub(crate) fn docker_mount(
-    docker: &mut Command,
-    options: &DockerOptions,
-    paths: &DockerPaths,
-    mount_cb: impl Fn(&mut Command, &Path, &Path) -> Result<()>,
-    mut store_cb: impl FnMut((String, String)),
-    msg_info: &mut MessageInfo,
-) -> Result<()> {
-    let mut warned = false;
-    for ref var in options
-        .config
-        .env_volumes(&options.target)?
-        .unwrap_or_default()
-    {
-        let (var, value) = validate_env_var(
-            var,
-            &mut warned,
-            "volume",
-            "`volumes = [\"ENVVAR=/path/to/directory\"]`",
-            msg_info,
-        )?;
-        let value = match value {
-            Some(v) => Ok(v.to_owned()),
-            None => env::var(var),
+impl DockerCommandExt for Command {
+    fn add_cargo_configuration_envvars(&mut self) {
+        let non_cargo_prefix = &[
+            "http_proxy",
+            "TERM",
+            "RUSTDOCFLAGS",
+            "RUSTFLAGS",
+            "BROWSER",
+            "HTTPS_PROXY",
+            "HTTP_TIMEOUT",
+            "https_proxy",
+        ];
+        let cargo_prefix_skip = &[
+            "CARGO_HOME",
+            "CARGO_TARGET_DIR",
+            "CARGO_BUILD_TARGET_DIR",
+            "CARGO_BUILD_RUSTC",
+            "CARGO_BUILD_RUSTC_WRAPPER",
+            "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
+            "CARGO_BUILD_RUSTDOC",
+        ];
+        let is_cargo_passthrough = |key: &str| -> bool {
+            non_cargo_prefix.contains(&key)
+                || key.starts_with("CARGO_") && !cargo_prefix_skip.contains(&key)
         };
 
-        // NOTE: we use canonical paths on the host, since it's unambiguous.
-        // however, for the mounted paths, we use the same path as was
-        // provided. this avoids canonicalizing symlinks which then causes
-        // the mounted path to differ from the path expected on the host.
-        // for example, if `/tmp` is a symlink to `/private/tmp`, canonicalizing
-        // it would lead to us mounting `/tmp/process` to `/private/tmp/process`,
-        // which would cause any code relying on `/tmp/process` to break.
+        // also need to accept any additional flags used to configure
+        // cargo, but only pass what's actually present.
+        for (key, _) in env::vars() {
+            if is_cargo_passthrough(&key) {
+                self.args(["-e", &key]);
+            }
+        }
+    }
 
-        if let Ok(val) = value {
-            let canonical_path = file::canonicalize(&val)?;
+    fn add_envvars(
+        &mut self,
+        options: &DockerOptions,
+        dirs: &ToolchainDirectories,
+        msg_info: &mut MessageInfo,
+    ) -> Result<()> {
+        let mut warned = false;
+        for ref var in options
+            .config
+            .env_passthrough(&options.target)?
+            .unwrap_or_default()
+        {
+            validate_env_var(
+                var,
+                &mut warned,
+                "environment variable",
+                "`passthrough = [\"ENVVAR=value\"]`",
+                msg_info,
+            )?;
+
+            // Only specifying the environment variable name in the "-e"
+            // flag forwards the value from the parent shell
+            self.args(["-e", var]);
+        }
+
+        let runner = options.config.runner(&options.target)?;
+        let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
+        self.args(["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
+            .args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
+            .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
+            .args(["-e", "CARGO_TARGET_DIR=/target"])
+            .args(["-e", &cross_runner]);
+        if options.cargo_variant.uses_zig() {
+            // otherwise, zig has a permission error trying to create the cache
+            self.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
+        }
+        self.add_cargo_configuration_envvars();
+
+        if let Some(username) = id::username().wrap_err("could not get username")? {
+            self.args(["-e", &format!("USER={username}")]);
+        }
+
+        if let Ok(value) = env::var("QEMU_STRACE") {
+            self.args(["-e", &format!("QEMU_STRACE={value}")]);
+        }
+
+        if let Ok(value) = env::var("CROSS_DEBUG") {
+            self.args(["-e", &format!("CROSS_DEBUG={value}")]);
+        }
+
+        if let Ok(value) = env::var("CROSS_CONTAINER_OPTS") {
+            if env::var("DOCKER_OPTS").is_ok() {
+                msg_info.warn("using both `CROSS_CONTAINER_OPTS` and `DOCKER_OPTS`.")?;
+            }
+            self.args(&Engine::parse_opts(&value)?);
+        } else if let Ok(value) = env::var("DOCKER_OPTS") {
+            // FIXME: remove this when we deprecate DOCKER_OPTS.
+            self.args(&Engine::parse_opts(&value)?);
+        };
+
+        let (major, minor, patch) = match options.rustc_version.as_ref() {
+            Some(version) => (version.major, version.minor, version.patch),
+            // no toolchain version available, always provide the oldest
+            // compiler available. this isn't a major issue because
+            // linking with libgcc will not include symbols found in
+            // the builtins.
+            None => (1, 0, 0),
+        };
+        self.args(["-e", &format!("CROSS_RUSTC_MAJOR_VERSION={}", major)]);
+        self.args(["-e", &format!("CROSS_RUSTC_MINOR_VERSION={}", minor)]);
+        self.args(["-e", &format!("CROSS_RUSTC_PATCH_VERSION={}", patch)]);
+
+        Ok(())
+    }
+
+    fn add_cwd(&mut self, paths: &DockerPaths) -> Result<()> {
+        self.args(["-w", paths.mount_cwd()]);
+
+        Ok(())
+    }
+
+    fn add_build_command(&mut self, dirs: &ToolchainDirectories, cmd: &SafeCommand) -> &mut Self {
+        let build_command = format!(
+            "PATH=\"$PATH\":\"{}/bin\" {:?}",
+            dirs.sysroot_mount_path(),
+            cmd
+        );
+        self.args(["sh", "-c", &build_command])
+    }
+
+    fn add_user_id(&mut self, engine_type: EngineType) {
+        // by default, docker runs as root so we need to specify the user
+        // so the resulting file permissions are for the current user.
+        // since we can have rootless docker, we provide an override.
+        let is_rootless = env::var("CROSS_ROOTLESS_CONTAINER_ENGINE")
+            .ok()
+            .and_then(|s| match s.as_ref() {
+                "auto" => None,
+                b => Some(bool_from_envvar(b)),
+            })
+            .unwrap_or_else(|| engine_type != EngineType::Docker);
+        if !is_rootless {
+            self.args(["--user", &format!("{}:{}", user_id(), group_id(),)]);
+        }
+    }
+
+    fn add_userns(&mut self) {
+        let userns = match env::var("CROSS_CONTAINER_USER_NAMESPACE").ok().as_deref() {
+            Some("none") => None,
+            None | Some("auto") => Some("host".to_owned()),
+            Some(ns) => Some(ns.to_owned()),
+        };
+        if let Some(ns) = userns {
+            self.args(["--userns", &ns]);
+        }
+    }
+
+    #[allow(unused_mut, clippy::let_and_return)]
+    fn add_seccomp(
+        &mut self,
+        engine_type: EngineType,
+        target: &Target,
+        metadata: &CargoMetadata,
+    ) -> Result<()> {
+        // secured profile based off the docker documentation for denied syscalls:
+        // https://docs.docker.com/engine/security/seccomp/#significant-syscalls-blocked-by-the-default-profile
+        // note that we've allow listed `clone` and `clone3`, which is necessary
+        // to fork the process, and which podman allows by default.
+        const SECCOMP: &str = include_str!("seccomp.json");
+
+        // docker uses seccomp now on all installations
+        if target.needs_docker_seccomp() {
+            let seccomp = if engine_type.is_docker() && cfg!(target_os = "windows") {
+                // docker on windows fails due to a bug in reading the profile
+                // https://github.com/docker/for-win/issues/12760
+                "unconfined".to_owned()
+            } else {
+                #[allow(unused_mut)] // target_os = "windows"
+                let mut path = metadata
+                    .target_directory
+                    .join(target.triple())
+                    .join("seccomp.json");
+                if !path.exists() {
+                    write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
+                }
+                let mut path_string = path.to_utf8()?.to_owned();
+                #[cfg(target_os = "windows")]
+                if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
+                    // podman weirdly expects a WSL path here, and fails otherwise
+                    path_string = path.as_posix_absolute()?;
+                }
+                path_string
+            };
+
+            self.args(["--security-opt", &format!("seccomp={}", seccomp)]);
+        }
+
+        Ok(())
+    }
+
+    fn add_mounts(
+        &mut self,
+        options: &DockerOptions,
+        paths: &DockerPaths,
+        mount_cb: impl Fn(&mut Command, &Path, &Path) -> Result<()>,
+        mut store_cb: impl FnMut((String, String)),
+        msg_info: &mut MessageInfo,
+    ) -> Result<()> {
+        let mut warned = false;
+        for ref var in options
+            .config
+            .env_volumes(&options.target)?
+            .unwrap_or_default()
+        {
+            let (var, value) = validate_env_var(
+                var,
+                &mut warned,
+                "volume",
+                "`volumes = [\"ENVVAR=/path/to/directory\"]`",
+                msg_info,
+            )?;
+            let value = match value {
+                Some(v) => Ok(v.to_owned()),
+                None => env::var(var),
+            };
+
+            // NOTE: we use canonical paths on the host, since it's unambiguous.
+            // however, for the mounted paths, we use the same path as was
+            // provided. this avoids canonicalizing symlinks which then causes
+            // the mounted path to differ from the path expected on the host.
+            // for example, if `/tmp` is a symlink to `/private/tmp`, canonicalizing
+            // it would lead to us mounting `/tmp/process` to `/private/tmp/process`,
+            // which would cause any code relying on `/tmp/process` to break.
+
+            if let Ok(val) = value {
+                let canonical_path = file::canonicalize(&val)?;
+                let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
+                let absolute_path = Path::new(&val).as_posix_absolute()?;
+                let mount_path = paths
+                    .mount_finder
+                    .find_path(Path::new(&absolute_path), true)?;
+                mount_cb(self, host_path.as_ref(), mount_path.as_ref())?;
+                self.args(["-e", &format!("{}={}", var, mount_path)]);
+                store_cb((val, mount_path));
+            }
+        }
+
+        for path in paths.workspace_dependencies() {
+            // NOTE: we use canonical paths here since cargo metadata
+            // always canonicalizes paths, so these should be relative
+            // to the mounted project directory.
+            let canonical_path = file::canonicalize(path)?;
             let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
-            let absolute_path = Path::new(&val).as_posix_absolute()?;
+            let absolute_path = Path::new(path).as_posix_absolute()?;
             let mount_path = paths
                 .mount_finder
                 .find_path(Path::new(&absolute_path), true)?;
-            mount_cb(docker, host_path.as_ref(), mount_path.as_ref())?;
-            docker.args(["-e", &format!("{}={}", var, mount_path)]);
-            store_cb((val, mount_path));
+            mount_cb(self, host_path.as_ref(), mount_path.as_ref())?;
+            store_cb((path.to_utf8()?.to_owned(), mount_path));
         }
-    }
 
-    for path in paths.workspace_dependencies() {
-        // NOTE: we use canonical paths here since cargo metadata
-        // always canonicalizes paths, so these should be relative
-        // to the mounted project directory.
-        let canonical_path = file::canonicalize(path)?;
-        let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
-        let absolute_path = Path::new(path).as_posix_absolute()?;
-        let mount_path = paths
-            .mount_finder
-            .find_path(Path::new(&absolute_path), true)?;
-        mount_cb(docker, host_path.as_ref(), mount_path.as_ref())?;
-        store_cb((path.to_utf8()?.to_owned(), mount_path));
+        Ok(())
     }
-
-    Ok(())
 }
 
 pub(crate) fn user_id() -> String {
@@ -1084,70 +1213,6 @@ pub(crate) fn user_id() -> String {
 
 pub(crate) fn group_id() -> String {
     env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string())
-}
-
-pub(crate) fn docker_user_id(docker: &mut Command, engine_type: EngineType) {
-    // by default, docker runs as root so we need to specify the user
-    // so the resulting file permissions are for the current user.
-    // since we can have rootless docker, we provide an override.
-    let is_rootless = env::var("CROSS_ROOTLESS_CONTAINER_ENGINE")
-        .ok()
-        .and_then(|s| match s.as_ref() {
-            "auto" => None,
-            b => Some(bool_from_envvar(b)),
-        })
-        .unwrap_or_else(|| engine_type != EngineType::Docker);
-    if !is_rootless {
-        docker.args(["--user", &format!("{}:{}", user_id(), group_id(),)]);
-    }
-}
-
-pub(crate) fn docker_userns(docker: &mut Command) {
-    let userns = match env::var("CROSS_CONTAINER_USER_NAMESPACE").ok().as_deref() {
-        Some("none") => None,
-        None | Some("auto") => Some("host".to_owned()),
-        Some(ns) => Some(ns.to_owned()),
-    };
-    if let Some(ns) = userns {
-        docker.args(["--userns", &ns]);
-    }
-}
-
-#[allow(unused_mut, clippy::let_and_return)]
-pub(crate) fn docker_seccomp(
-    docker: &mut Command,
-    engine_type: EngineType,
-    target: &Target,
-    metadata: &CargoMetadata,
-) -> Result<()> {
-    // docker uses seccomp now on all installations
-    if target.needs_docker_seccomp() {
-        let seccomp = if engine_type.is_docker() && cfg!(target_os = "windows") {
-            // docker on windows fails due to a bug in reading the profile
-            // https://github.com/docker/for-win/issues/12760
-            "unconfined".to_owned()
-        } else {
-            #[allow(unused_mut)] // target_os = "windows"
-            let mut path = metadata
-                .target_directory
-                .join(target.triple())
-                .join("seccomp.json");
-            if !path.exists() {
-                write_file(&path, false)?.write_all(SECCOMP.as_bytes())?;
-            }
-            let mut path_string = path.to_utf8()?.to_owned();
-            #[cfg(target_os = "windows")]
-            if matches!(engine_type, EngineType::Podman | EngineType::PodmanRemote) {
-                // podman weirdly expects a WSL path here, and fails otherwise
-                path_string = path.as_posix_absolute()?;
-            }
-            path_string
-        };
-
-        docker.args(["--security-opt", &format!("seccomp={}", seccomp)]);
-    }
-
-    Ok(())
 }
 
 /// Simpler version of [get_image]
@@ -1264,7 +1329,7 @@ fn docker_read_mount_paths(engine: &Engine) -> Result<Vec<MountDetail>> {
     let hostname = env::var("HOSTNAME").wrap_err("HOSTNAME environment variable not found")?;
 
     let mut docker: Command = {
-        let mut command = subcommand(engine, "inspect");
+        let mut command = engine.subcommand("inspect");
         command.arg(hostname);
         command
     };
@@ -1378,16 +1443,23 @@ impl MountFinder {
     }
 }
 
+/// Short hash for identifiers with minimal risk of collision.
+pub const PATH_HASH_SHORT: usize = 5;
+
+/// Longer hash to minimize risk of random collisions
+/// Collision chance is ~10^-6
+pub const PATH_HASH_UNIQUE: usize = 10;
+
 fn path_digest(path: &Path) -> Result<const_sha1::Digest> {
     let buffer = const_sha1::ConstBuffer::from_slice(path.to_utf8()?.as_bytes());
     Ok(const_sha1::sha1(&buffer))
 }
 
-pub fn path_hash(path: &Path) -> Result<String> {
+pub fn path_hash(path: &Path, count: usize) -> Result<String> {
     Ok(path_digest(path)?
         .to_string()
-        .get(..5)
-        .expect("sha1 is expected to be at least 5 characters long")
+        .get(..count)
+        .unwrap_or_else(|| panic!("sha1 is expected to be at least {count} characters long"))
         .to_owned())
 }
 
@@ -1410,7 +1482,7 @@ mod tests {
 
         let test = |engine, expected| {
             let mut cmd = Command::new("engine");
-            docker_user_id(&mut cmd, engine);
+            cmd.add_user_id(engine);
             assert_eq!(expected, &format!("{cmd:?}"));
         };
         test(EngineType::Docker, &rootful);
@@ -1454,7 +1526,7 @@ mod tests {
 
         let test = |expected| {
             let mut cmd = Command::new("engine");
-            docker_userns(&mut cmd);
+            cmd.add_userns();
             assert_eq!(expected, &format!("{cmd:?}"));
         };
         test(&host);
@@ -1613,7 +1685,8 @@ mod tests {
                 return Ok(());
             }
             let hostname = hostname.unwrap();
-            let output = subcommand(&engine, "inspect")
+            let output = engine
+                .subcommand("inspect")
                 .arg(hostname)
                 .run_and_get_output(&mut msg_info)?;
             if !output.status.success() {

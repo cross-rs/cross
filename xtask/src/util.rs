@@ -133,7 +133,7 @@ pub fn pull_image(
     image: &str,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let mut command = docker::subcommand(engine, "pull");
+    let mut command = engine.subcommand("pull");
     command.arg(image);
     let out = command.run_and_get_output(msg_info)?;
     command.status_result(msg_info, out.status, Some(&out))?;

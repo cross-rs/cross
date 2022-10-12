@@ -30,20 +30,19 @@ pub(crate) fn run(
     let toolchain_dirs = paths.directories.toolchain_directories();
     let package_dirs = paths.directories.package_directories();
 
-    let mut cmd = cargo_safe_command(options.cargo_variant);
+    let mut cmd = options.cargo_variant.safe_command();
     cmd.args(args);
 
-    let mut docker = subcommand(engine, "run");
-    docker_userns(&mut docker);
+    let mut docker = engine.subcommand("run");
+    docker.add_userns();
 
     options
         .image
         .platform
         .specify_platform(&options.engine, &mut docker);
-    docker_envvars(&mut docker, &options, toolchain_dirs, msg_info)?;
+    docker.add_envvars(&options, toolchain_dirs, msg_info)?;
 
-    docker_mount(
-        &mut docker,
+    docker.add_mounts(
         &options,
         &paths,
         |docker, host, absolute| mount(docker, host, absolute, ""),
@@ -51,13 +50,14 @@ pub(crate) fn run(
         msg_info,
     )?;
 
-    let container = toolchain_dirs.unique_container_identifier(options.target.target())?;
-    docker.args(["--name", &container]);
+    let container_id = toolchain_dirs.unique_container_identifier(options.target.target())?;
+    docker.args(["--name", &container_id]);
     docker.arg("--rm");
 
-    docker_seccomp(&mut docker, engine.kind, &options.target, &paths.metadata)
+    docker
+        .add_seccomp(engine.kind, &options.target, &paths.metadata)
         .wrap_err("when copying seccomp profile")?;
-    docker_user_id(&mut docker, engine.kind);
+    docker.add_user_id(engine.kind);
 
     docker
         .args([
@@ -99,7 +99,7 @@ pub(crate) fn run(
             "-v",
             &format!("{}:/target:z", package_dirs.target().to_utf8()?),
         ]);
-    docker_cwd(&mut docker, &paths)?;
+    docker.add_cwd(&paths)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix
     // Store to the running container so it can load the needed binaries.
@@ -124,10 +124,10 @@ pub(crate) fn run(
             .wrap_err("when building custom image")?;
     }
 
-    Container::create(engine.clone(), container)?;
+    ChildContainer::create(engine.clone(), container_id)?;
     let status = docker
         .arg(&image_name)
-        .args(["sh", "-c", &build_command(toolchain_dirs, &cmd)])
+        .add_build_command(toolchain_dirs, &cmd)
         .run_and_get_status(msg_info, false)
         .map_err(Into::into);
 
@@ -138,7 +138,7 @@ pub(crate) fn run(
     // SAFETY: an atomic load.
     let is_terminated = unsafe { crate::errors::TERMINATED.load(Ordering::SeqCst) };
     if !is_terminated {
-        Container::exit_static();
+        ChildContainer::exit_static();
     }
 
     status

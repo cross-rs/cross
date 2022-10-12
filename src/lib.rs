@@ -704,7 +704,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                     && target.needs_interpreter()
                     && !interpreter::is_registered(&target)?
                 {
-                    docker::register(&engine, &target, msg_info)?;
+                    engine.register_binfmt(&target, msg_info)?;
                 }
 
                 let paths = docker::DockerPaths::create(&engine, metadata, cwd, toolchain.clone())?;

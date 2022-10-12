@@ -102,7 +102,7 @@ unsafe fn termination_handler() {
     // however, we'd need to store the engine path and the argument list as
     // a global CString and `Vec<CString>`, respectively. this atomic guard
     // makes this safe regardless.
-    docker::CONTAINER.terminate();
+    docker::CHILD_CONTAINER.terminate();
 
     // all termination exit codes are 128 + signal code. the exit code is
     // 130 for Ctrl+C or SIGINT (signal code 2) for linux, macos, and windows.
