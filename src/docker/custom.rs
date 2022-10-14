@@ -259,7 +259,7 @@ fn docker_tag_name(file_name: &str) -> String {
     let mut consecutive_underscores = 0;
     for c in file_name.chars() {
         match c {
-            'a'..='z' | '.' | '-' => {
+            'a'..='z' | '0'..='9' | '.' | '-' => {
                 consecutive_underscores = 0;
                 result.push(c);
             }
@@ -278,7 +278,11 @@ fn docker_tag_name(file_name: &str) -> String {
         }
     }
 
-    // in case all characters were invalid, use a non-empty filename
+    // in case all characters were invalid or we had all non-ASCII
+    // characters followed by a `-`, we use a non-empty filename
+    if result.ends_with('-') {
+        result.pop();
+    }
     if result.is_empty() {
         result = "empty".to_owned();
     }
@@ -312,5 +316,8 @@ mod tests {
             docker_tag_name("pAcKaGe---test.name"),
             s!("package---test.name")
         );
+
+        assert_eq!(docker_tag_name("foo-123"), s!("foo-123"));
+        assert_eq!(docker_tag_name("foo-123-"), s!("foo-123"));
     }
 }

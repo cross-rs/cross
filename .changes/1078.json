@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "Fix custom image names for images with a trailing '-' character.\ncustom images in packages with the `^[^0-9-].*([^A-Za-z_]*-)|(-[^A-Za-z_]*)$` package name pattern are now supported.",
+    "issues": [1077]
+}
