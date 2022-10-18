@@ -578,15 +578,14 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
             // set the sysroot explicitly to the toolchain
             let mut is_nightly = toolchain.channel.contains("nightly");
 
-            let installed_toolchains = rustup::installed_toolchains(msg_info)?;
-
-            if !installed_toolchains
-                .into_iter()
-                .any(|t| t == toolchain.to_string())
-            {
-                rustup::install_toolchain(&toolchain, msg_info)?;
-            }
             let available_targets = if !toolchain.is_custom {
+                if !rustup::installed_toolchains(msg_info)?
+                    .into_iter()
+                    .any(|t| t == toolchain.to_string())
+                {
+                    rustup::install_toolchain(&toolchain, msg_info)?;
+                }
+
                 rustup::available_targets(&toolchain.full, msg_info)?
             } else {
                 rustup::AvailableTargets {
