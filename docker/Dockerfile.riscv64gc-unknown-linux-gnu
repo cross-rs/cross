@@ -30,11 +30,12 @@ RUN /linux-image.sh riscv64
 
 COPY linux-runner base-runner.sh /
 
+ENV CROSS_SYSROOT=/usr/riscv64-linux-gnu
 ENV CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc \
     CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner riscv64" \
     CC_riscv64gc_unknown_linux_gnu=riscv64-linux-gnu-gcc \
     CXX_riscv64gc_unknown_linux_gnu=riscv64-linux-gnu-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_riscv64gc_unknown_linux_gnu="--sysroot=/usr/riscv64-linux-gnu" \
-    QEMU_LD_PREFIX=/usr/riscv64-linux-gnu \
+    BINDGEN_EXTRA_CLANG_ARGS_riscv64gc_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT" \
+    QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/riscv64-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"

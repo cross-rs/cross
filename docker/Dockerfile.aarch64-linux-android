@@ -20,7 +20,8 @@ RUN /android-system.sh arm64
 COPY qemu.sh /
 RUN /qemu.sh aarch64
 
-RUN cp /android-ndk/sysroot/usr/lib/aarch64-linux-android/28/libz.so /system/lib/
+ENV CROSS_SYSROOT=/android-ndk/sysroot
+RUN cp $CROSS_SYSROOT/usr/lib/aarch64-linux-android/28/libz.so /system/lib/
 
 COPY android-runner /
 
@@ -30,8 +31,8 @@ ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-gcc \
     CARGO_TARGET_AARCH64_LINUX_ANDROID_RUNNER="/android-runner aarch64" \
     CC_aarch64_linux_android=aarch64-linux-android-gcc \
     CXX_aarch64_linux_android=aarch64-linux-android-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=/android-ndk/sysroot" \
-    DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
+    BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=$CROSS_SYSROOTt" \
+    DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include"/ \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \

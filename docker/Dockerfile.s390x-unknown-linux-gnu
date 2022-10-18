@@ -30,11 +30,12 @@ RUN /linux-image.sh s390x
 
 COPY linux-runner base-runner.sh /
 
+ENV CROSS_SYSROOT=/usr/s390x-linux-gnu
 ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
     CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner s390x" \
     CC_s390x_unknown_linux_gnu=s390x-linux-gnu-gcc \
     CXX_s390x_unknown_linux_gnu=s390x-linux-gnu-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_s390x_unknown_linux_gnu="--sysroot=/usr/s390x-linux-gnu" \
-    QEMU_LD_PREFIX=/usr/s390x-linux-gnu \
+    BINDGEN_EXTRA_CLANG_ARGS_s390x_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT" \
+    QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/s390x-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"

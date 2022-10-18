@@ -20,9 +20,9 @@ RUN /musl.sh \
                       --with-float=soft \
                       --with-mode=arm"
 
-ENV CROSS_MUSL_SYSROOT=/usr/local/arm-linux-musleabi
+ENV CROSS_SYSROOT=/usr/local/arm-linux-musleabi
 COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT arm
+RUN /musl-symlink.sh $CROSS_SYSROOT arm
 
 COPY qemu-runner base-runner.sh /
 
@@ -33,6 +33,6 @@ ENV CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_MUSLEABI_LINKER=arm-linux-musleabi-gcc.sh
     CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_MUSLEABI_RUNNER="/qemu-runner arm" \
     CC_armv5te_unknown_linux_musleabi=arm-linux-musleabi-gcc \
     CXX_armv5te_unknown_linux_musleabi=arm-linux-musleabi-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_armv5te_unknown_linux_musleabi="--sysroot=$CROSS_MUSL_SYSROOT" \
-    QEMU_LD_PREFIX=$CROSS_MUSL_SYSROOT \
+    BINDGEN_EXTRA_CLANG_ARGS_armv5te_unknown_linux_musleabi="--sysroot=$CROSS_SYSROOT" \
+    QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1

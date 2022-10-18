@@ -11,9 +11,10 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-RUN apt-get update && apt-get update && apt-get install --assume-yes --no-install-recommends \
-  libxml2 \
-  python
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    libxml2 \
+    python
 
+ENV CROSS_SYSROOT=/emsdk/upstream/emscripten/cache/sysroot
 ENV CARGO_TARGET_ASMJS_UNKNOWN_EMSCRIPTEN_RUNNER=node \
-  BINDGEN_EXTRA_CLANG_ARGS_asmjs_unknown_emscripten="--sysroot=/emsdk/upstream/emscripten/cache/sysroot"
+    BINDGEN_EXTRA_CLANG_ARGS_asmjs_unknown_emscripten="--sysroot=$CROSS_SYSROOT"
