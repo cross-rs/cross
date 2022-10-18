@@ -21,8 +21,9 @@ RUN /freebsd-extras.sh
 
 COPY i686-unknown-freebsd12-gcc.sh /usr/bin
 
+ENV CROSS_SYSROOT=/usr/local/i686-unknown-freebsd12
 ENV CARGO_TARGET_I686_UNKNOWN_FREEBSD_LINKER=i686-unknown-freebsd12-gcc.sh \
     CC_i686_unknown_freebsd=i686-unknown-freebsd12-gcc \
     CXX_i686_unknown_freebsd=i686-unknown-freebsd12-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_i686_unknown_freebsd="--sysroot=/usr/local/i686-unknown-freebsd12" \
-    I686_UNKNOWN_FREEBSD_OPENSSL_DIR=/usr/local/i686-unknown-freebsd12/
+    BINDGEN_EXTRA_CLANG_ARGS_i686_unknown_freebsd="--sysroot=$CROSS_SYSROOT" \
+    I686_UNKNOWN_FREEBSD_OPENSSL_DIR="$CROSS_SYSROOT"

@@ -19,13 +19,13 @@ RUN /musl.sh \
     TARGET=mips64el-linux-musl \
     "COMMON_CONFIG += -with-arch=mips64r2"
 
-ENV CROSS_MUSL_SYSROOT=/usr/local/mips64el-linux-musl
+ENV CROSS_SYSROOT=/usr/local/mips64el-linux-musl
 COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT mips64el
-RUN mkdir -p $CROSS_MUSL_SYSROOT/usr/lib64
+RUN /musl-symlink.sh $CROSS_SYSROOT mips64el
+RUN mkdir -p $CROSS_SYSROOT/usr/lib64
 # needed for the C/C++ runners
-RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so $CROSS_MUSL_SYSROOT/usr/lib64/libc.so
-RUN ln -s $CROSS_MUSL_SYSROOT/usr/lib/libc.so.1 $CROSS_MUSL_SYSROOT/usr/lib64/libc.so.1
+RUN ln -s $CROSS_SYSROOT/usr/lib/libc.so $CROSS_SYSROOT/usr/lib64/libc.so
+RUN ln -s $CROSS_SYSROOT/usr/lib/libc.so.1 $CROSS_SYSROOT/usr/lib64/libc.so.1
 
 COPY mips64el-linux-musl-gcc.sh /usr/bin/
 COPY rustc_info.sh /
@@ -36,6 +36,6 @@ ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_LINKER=mips64el-linux-musl-gcc
     CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_RUNNER="/qemu-runner mips64el" \
     CC_mips64el_unknown_linux_muslabi64=mips64el-linux-musl-gcc \
     CXX_mips64el_unknown_linux_muslabi64=mips64el-linux-musl-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_mips64el_unknown_linux_muslabi64="--sysroot=$CROSS_MUSL_SYSROOT" \
-    QEMU_LD_PREFIX=$CROSS_MUSL_SYSROOT \
+    BINDGEN_EXTRA_CLANG_ARGS_mips64el_unknown_linux_muslabi64="--sysroot=$CROSS_SYSROOT" \
+    QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1

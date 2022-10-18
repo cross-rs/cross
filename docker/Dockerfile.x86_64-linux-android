@@ -21,7 +21,8 @@ RUN /android-system.sh x86_64
 COPY qemu.sh /
 RUN /qemu.sh x86_64
 
-RUN cp /android-ndk/sysroot/usr/lib/x86_64-linux-android/28/libz.so /system/lib/
+ENV CROSS_SYSROOT=/android-ndk/sysroot
+RUN cp $CROSS_SYSROOT/usr/lib/x86_64-linux-android/28/libz.so /system/lib/
 
 COPY android-runner /
 
@@ -31,8 +32,8 @@ ENV CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android-gcc \
     CARGO_TARGET_X86_64_LINUX_ANDROID_RUNNER="/android-runner x86_64" \
     CC_x86_64_linux_android=x86_64-linux-android-gcc \
     CXX_x86_64_linux_android=x86_64-linux-android-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_x86_64_linux_android="--sysroot=/android-ndk/sysroot" \
-    DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_linux_android="--sysroot=$CROSS_SYSROOT" \
+    DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include/" \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \

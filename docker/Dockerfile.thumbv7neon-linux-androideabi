@@ -20,7 +20,8 @@ RUN /android-system.sh arm
 COPY qemu.sh /
 RUN /qemu.sh arm
 
-RUN cp /android-ndk/sysroot/usr/lib/arm-linux-androideabi/28/libz.so /system/lib/
+ENV CROSS_SYSROOT=/android-ndk/sysroot
+RUN cp $CROSS_SYSROOT/usr/lib/arm-linux-androideabi/28/libz.so /system/lib/
 
 COPY android-runner /
 
@@ -44,8 +45,8 @@ ENV CARGO_TARGET_THUMBV7NEON_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc 
     SIZE_thumbv7neon_linux_androideabi=arm-linux-androideabi-size \
     STRINGS_thumbv7neon_linux_androideabi=arm-linux-androideabi-strings \
     STRIP_thumbv7neon_linux_androideabi=arm-linux-androideabi-strip \
-    BINDGEN_EXTRA_CLANG_ARGS_thumbv7neon_linux_androideabi="--sysroot=/android-ndk/sysroot" \
-    DEP_Z_INCLUDE=/android-ndk/sysroot/usr/include/ \
+    BINDGEN_EXTRA_CLANG_ARGS_thumbv7neon_linux_androideabi="--sysroot=$CROSS_SYSROOT" \
+    DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include/" \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
     TMPDIR=/tmp/ \

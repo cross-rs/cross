@@ -30,11 +30,12 @@ RUN /linux-image.sh powerpc
 
 COPY linux-runner base-runner.sh /
 
+ENV CROSS_SYSROOT=/usr/powerpc-linux-gnu
 ENV CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
     CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner powerpc" \
     CC_powerpc_unknown_linux_gnu=powerpc-linux-gnu-gcc \
     CXX_powerpc_unknown_linux_gnu=powerpc-linux-gnu-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_powerpc_unknown_linux_gnu="--sysroot=/usr/powerpc-linux-gnu" \
-    QEMU_LD_PREFIX=/usr/powerpc-linux-gnu \
+    BINDGEN_EXTRA_CLANG_ARGS_powerpc_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT" \
+    QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/powerpc-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"

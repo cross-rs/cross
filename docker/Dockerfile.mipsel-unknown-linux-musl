@@ -20,9 +20,9 @@ RUN /musl.sh \
     TARGET=mipsel-linux-muslsf \
     "COMMON_CONFIG += -with-arch=mips32r2"
 
-ENV CROSS_MUSL_SYSROOT=/usr/local/mipsel-linux-muslsf
+ENV CROSS_SYSROOT=/usr/local/mipsel-linux-muslsf
 COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_MUSL_SYSROOT mipsel-sf
+RUN /musl-symlink.sh $CROSS_SYSROOT mipsel-sf
 
 COPY qemu-runner base-runner.sh /
 
@@ -30,6 +30,6 @@ ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER=mipsel-linux-muslsf-gcc \
     CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner mipsel" \
     CC_mipsel_unknown_linux_musl=mipsel-linux-muslsf-gcc \
     CXX_mipsel_unknown_linux_musl=mipsel-linux-muslsf-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_mipsel_unknown_linux_musl="--sysroot=$CROSS_MUSL_SYSROOT" \
-    QEMU_LD_PREFIX=$CROSS_MUSL_SYSROOT \
+    BINDGEN_EXTRA_CLANG_ARGS_mipsel_unknown_linux_musl="--sysroot=$CROSS_SYSROOT" \
+    QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1

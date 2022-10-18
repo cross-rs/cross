@@ -26,6 +26,7 @@ RUN /linux-image.sh armv7
 COPY linux-runner base-runner.sh /
 
 # Export all target binutils just in case required.
+ENV CROSS_SYSROOT=/usr/arm-linux-gnueabihf
 ENV CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_RUNNER="/linux-runner armv7hf" \
     AR_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-ar \
@@ -41,7 +42,7 @@ ENV CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-
     SIZE_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-size \
     STRINGS_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-strings \
     STRIP_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-strip \
-    BINDGEN_EXTRA_CLANG_ARGS_thumbv7neon_unknown_linux_gnueabihf="--sysroot=/usr/arm-linux-gnueabihf" \
-    QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf \
+    BINDGEN_EXTRA_CLANG_ARGS_thumbv7neon_unknown_linux_gnueabihf="--sysroot=$CROSS_SYSROOT" \
+    QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/arm-linux-gnueabihf/pkgconfig/:${PKG_CONFIG_PATH}"
