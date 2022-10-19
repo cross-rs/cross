@@ -31,7 +31,7 @@ ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-gcc \
     CARGO_TARGET_AARCH64_LINUX_ANDROID_RUNNER="/android-runner aarch64" \
     CC_aarch64_linux_android=aarch64-linux-android-gcc \
     CXX_aarch64_linux_android=aarch64-linux-android-g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=$CROSS_SYSROOTt" \
+    BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=$CROSS_SYSROOT" \
     DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include"/ \
     RUST_TEST_THREADS=1 \
     HOME=/tmp/ \
