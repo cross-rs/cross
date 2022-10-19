@@ -92,12 +92,18 @@ pub struct QualifiedToolchain {
 }
 
 impl QualifiedToolchain {
-    pub fn new(channel: &str, date: &Option<String>, host: &ImagePlatform, sysroot: &Path) -> Self {
+    pub fn new(
+        channel: &str,
+        date: &Option<String>,
+        host: &ImagePlatform,
+        sysroot: &Path,
+        is_custom: bool,
+    ) -> Self {
         let mut this = Self {
             channel: channel.to_owned(),
             date: date.clone(),
             host: host.clone(),
-            is_custom: false,
+            is_custom,
             full: if let Some(date) = date {
                 format!("{}-{}-{}", channel, date, host.target)
             } else {
@@ -105,14 +111,16 @@ impl QualifiedToolchain {
             },
             sysroot: sysroot.to_owned(),
         };
-        this.sysroot.set_file_name(&this.full);
+        if !is_custom {
+            this.sysroot.set_file_name(&this.full);
+        }
         this
     }
 
     /// Replace the host, does nothing if ran on a custom toolchain
     pub fn replace_host(&mut self, host: &ImagePlatform) -> &mut Self {
         if !self.is_custom {
-            *self = Self::new(&self.channel, &self.date, host, &self.sysroot);
+            *self = Self::new(&self.channel, &self.date, host, &self.sysroot, false);
             self.sysroot.set_file_name(&self.full);
         }
         self
@@ -168,8 +176,8 @@ impl QualifiedToolchain {
                 &build_date,
                 &ImagePlatform::from_target(host.into())?,
                 sysroot,
+                true,
             );
-            toolchain.is_custom = true;
             toolchain.full = name.to_owned();
             return Ok(toolchain);
         }
@@ -217,6 +225,7 @@ impl QualifiedToolchain {
             &date,
             &host,
             &self.sysroot,
+            false,
         ))
     }
 
@@ -256,7 +265,11 @@ impl QualifiedToolchain {
             Ok(_) | Err(_) if config.custom_toolchain() => {
                 QualifiedToolchain::custom(toolchain, &sysroot, config, msg_info)
             }
-            Ok(_) => eyre::bail!("toolchain is not fully qualified"),
+            Ok(_) => return Err(eyre::eyre!("toolchain is not fully qualified")
+                .with_note(|| "cross expects the toolchain to be a rustup installed toolchain")
+                .with_suggestion(|| {
+                    "if you're using a custom toolchain try setting `CROSS_CUSTOM_TOOLCHAIN=1` or install rust via rustup"
+            })),
             Err(e) => Err(e),
         }
     }

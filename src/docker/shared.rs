@@ -1625,6 +1625,7 @@ mod tests {
                 &None,
                 &image_platform,
                 &sysroot,
+                false,
             ))
         }
 
