@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::io::{self, BufRead, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, ExitStatus};
 use std::{env, fs, time};
 
@@ -34,25 +34,40 @@ fn subcommand_or_exit(engine: &Engine, cmd: &str) -> Result<Command> {
     Ok(engine.subcommand(cmd))
 }
 
+pub fn posix_parent(path: &str) -> Option<&str> {
+    Path::new(path).parent()?.to_str()
+}
+
 impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
-    fn create_dir(&self, dir: &Path, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+    // NOTE: `reldir` should be a relative POSIX path to the root directory
+    // on windows, this should be something like `mnt/c`. that is, all paths
+    // inside the container should not have the mount prefix.
+    fn create_dir(
+        &self,
+        reldir: &str,
+        mount_prefix: &str,
+        msg_info: &mut MessageInfo,
+    ) -> Result<ExitStatus> {
         // make our parent directory if needed
         subcommand_or_exit(self.engine, "exec")?
             .arg(self.container)
-            .args([
-                "sh",
-                "-c",
-                &format!("mkdir -p '{}'", dir.as_posix_absolute()?),
-            ])
+            .args(["sh", "-c", &format!("mkdir -p '{mount_prefix}/{reldir}'")])
             .run_and_get_status(msg_info, false)
     }
 
     // copy files for a docker volume, for remote host support
-    fn copy_files(&self, src: &Path, dst: &Path, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
+    // NOTE: `reldst` has the same caveats as `reldir` in `create_dir`.
+    fn copy_files(
+        &self,
+        src: &Path,
+        reldst: &str,
+        mount_prefix: &str,
+        msg_info: &mut MessageInfo,
+    ) -> Result<ExitStatus> {
         subcommand_or_exit(self.engine, "cp")?
             .arg("-a")
             .arg(src.to_utf8()?)
-            .arg(format!("{}:{}", self.container, dst.as_posix_absolute()?))
+            .arg(format!("{}:{mount_prefix}/{reldst}", self.container))
             .run_and_get_status(msg_info, false)
     }
 
@@ -60,7 +75,8 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     fn copy_files_nocache(
         &self,
         src: &Path,
-        dst: &Path,
+        reldst: &str,
+        mount_prefix: &str,
         copy_symlinks: bool,
         msg_info: &mut MessageInfo,
     ) -> Result<ExitStatus> {
@@ -71,7 +87,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         let temppath = tempdir.path();
         let had_symlinks = copy_dir(src, temppath, copy_symlinks, 0, |e, _| is_cachedir(e))?;
         warn_symlinks(had_symlinks, msg_info)?;
-        self.copy_files(&temppath.join("."), dst, msg_info)
+        self.copy_files(&temppath.join("."), reldst, mount_prefix, msg_info)
     }
 
     // copy files for a docker volume, for remote host support
@@ -79,7 +95,8 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     fn copy_file_list(
         &self,
         src: &Path,
-        dst: &Path,
+        reldst: &str,
+        mount_prefix: &str,
         files: &[&str],
         msg_info: &mut MessageInfo,
     ) -> Result<ExitStatus> {
@@ -94,14 +111,15 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         }
         // if copying from a src directory to dst directory with docker, to
         // copy the contents from `src` into `dst`, `src` must end with `/.`
-        self.copy_files(&temppath.join("."), dst, msg_info)
+        self.copy_files(&temppath.join("."), reldst, mount_prefix, msg_info)
     }
 
     // removed files from a docker volume, for remote host support
     // provides a list of files relative to src.
     fn remove_file_list(
         &self,
-        dst: &Path,
+        reldst: &str,
+        mount_prefix: &str,
         files: &[&str],
         msg_info: &mut MessageInfo,
     ) -> Result<ExitStatus> {
@@ -122,7 +140,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         // SAFETY: safe, single-threaded execution.
         let mut tempfile = unsafe { temp::TempFile::new()? };
         for file in files {
-            writeln!(tempfile.file(), "{}", dst.join(file).as_posix_relative()?)?;
+            writeln!(tempfile.file(), "{mount_prefix}/{reldst}/{file}")?;
         }
 
         // need to avoid having hundreds of files on the command, so
@@ -138,27 +156,39 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             .run_and_get_status(msg_info, true)
     }
 
-    fn container_path_exists(&self, path: &Path, msg_info: &mut MessageInfo) -> Result<bool> {
+    fn container_path_exists(
+        &self,
+        relpath: &str,
+        mount_prefix: &str,
+        msg_info: &mut MessageInfo,
+    ) -> Result<bool> {
         Ok(subcommand_or_exit(self.engine, "exec")?
             .arg(self.container)
             .args([
                 "bash",
                 "-c",
-                &format!("[[ -d '{}' ]]", path.as_posix_absolute()?),
+                &format!("[[ -d '{mount_prefix}/{relpath}' ]]"),
             ])
             .run_and_get_status(msg_info, true)?
             .success())
     }
 
-    pub fn copy_xargo(&self, mount_prefix: &Path, msg_info: &mut MessageInfo) -> Result<()> {
+    pub fn copy_xargo(&self, mount_prefix: &str, msg_info: &mut MessageInfo) -> Result<()> {
         let dirs = &self.toolchain_dirs;
-        let dst = mount_prefix.join(&dirs.xargo_mount_path_relative()?);
+        let reldst = dirs.xargo_mount_path_relative()?;
         if dirs.xargo().exists() {
             self.create_dir(
-                dst.parent().expect("destination should have a parent"),
+                // this always works, even if we have `/xargo`, since
+                // this will be an absolute path. passing an empty path
+                // to `create_dir` isn't an issue.
+                posix_parent(dirs.xargo_mount_path())
+                    .expect("destination should have a parent")
+                    .strip_prefix('/')
+                    .expect("parent directory must be absolute"),
+                mount_prefix,
                 msg_info,
             )?;
-            self.copy_files(dirs.xargo(), &dst, msg_info)?;
+            self.copy_files(dirs.xargo(), &reldst, mount_prefix, msg_info)?;
         }
 
         Ok(())
@@ -166,21 +196,21 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
 
     pub fn copy_cargo(
         &self,
-        mount_prefix: &Path,
+        mount_prefix: &str,
         copy_registry: bool,
         msg_info: &mut MessageInfo,
     ) -> Result<()> {
         let dirs = &self.toolchain_dirs;
-        let dst = mount_prefix.join(&dirs.cargo_mount_path_relative()?);
+        let reldst = dirs.cargo_mount_path_relative()?;
         let copy_registry = env::var("CROSS_REMOTE_COPY_REGISTRY")
             .map(|s| bool_from_envvar(&s))
             .unwrap_or(copy_registry);
 
         if copy_registry {
-            self.copy_files(dirs.cargo(), &dst, msg_info)?;
+            self.copy_files(dirs.cargo(), &reldst, mount_prefix, msg_info)?;
         } else {
             // can copy a limit subset of files: the rest is present.
-            self.create_dir(&dst, msg_info)?;
+            self.create_dir(&reldst, mount_prefix, msg_info)?;
             for entry in fs::read_dir(dirs.cargo())
                 .wrap_err_with(|| format!("when reading directory {:?}", dirs.cargo()))?
             {
@@ -191,7 +221,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
                     .wrap_err_with(|| format!("when reading file {file:?}"))?
                     .to_owned();
                 if !basename.starts_with('.') && !matches!(basename.as_ref(), "git" | "registry") {
-                    self.copy_files(&file.path(), &dst, msg_info)?;
+                    self.copy_files(&file.path(), &reldst, mount_prefix, msg_info)?;
                 }
             }
         }
@@ -200,17 +230,17 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     }
 
     // copy over files needed for all targets in the toolchain that should never change
-    fn copy_rust_base(&self, mount_prefix: &Path, msg_info: &mut MessageInfo) -> Result<()> {
+    fn copy_rust_base(&self, mount_prefix: &str, msg_info: &mut MessageInfo) -> Result<()> {
         let dirs = &self.toolchain_dirs;
 
         // the rust toolchain is quite large, but most of it isn't needed
         // we need the bin, libexec, and etc directories, and part of the lib directory.
-        let dst = mount_prefix.join(&dirs.sysroot_mount_path_relative()?);
-        let rustlib = Path::new("lib").join("rustlib");
-        self.create_dir(&dst.join(&rustlib), msg_info)?;
+        let reldst = dirs.sysroot_mount_path_relative()?;
+        let rustlib = "lib/rustlib";
+        self.create_dir(&format!("{reldst}/{}", rustlib), mount_prefix, msg_info)?;
         for basename in ["bin", "libexec", "etc"] {
             let file = dirs.get_sysroot().join(basename);
-            self.copy_files(&file, &dst, msg_info)?;
+            self.copy_files(&file, &reldst, mount_prefix, msg_info)?;
         }
 
         // the lib directories are rather large, so we want only a subset.
@@ -221,7 +251,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         // SAFETY: safe, single-threaded execution.
         let tempdir = unsafe { temp::TempDir::new()? };
         let temppath = tempdir.path();
-        file::create_dir_all(&temppath.join(&rustlib))?;
+        file::create_dir_all(&temppath.join(rustlib))?;
         let mut had_symlinks = copy_dir(
             &dirs.get_sysroot().join("lib"),
             &temppath.join("lib"),
@@ -232,37 +262,37 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
 
         // next, copy the src/etc directories inside rustlib
         had_symlinks |= copy_dir(
-            &dirs.get_sysroot().join(&rustlib),
-            &temppath.join(&rustlib),
+            &dirs.get_sysroot().join(rustlib),
+            &temppath.join(rustlib),
             true,
             0,
             |e, d| d == 0 && !(e.file_name() == "src" || e.file_name() == "etc"),
         )?;
-        self.copy_files(&temppath.join("lib"), &dst, msg_info)?;
+        self.copy_files(&temppath.join("lib"), &reldst, mount_prefix, msg_info)?;
 
         warn_symlinks(had_symlinks, msg_info)
     }
 
-    fn copy_rust_manifest(&self, mount_prefix: &Path, msg_info: &mut MessageInfo) -> Result<()> {
+    fn copy_rust_manifest(&self, mount_prefix: &str, msg_info: &mut MessageInfo) -> Result<()> {
         let dirs = &self.toolchain_dirs;
 
         // copy over all the manifest files in rustlib
         // these are small text files containing names/paths to toolchains
-        let dst = mount_prefix.join(&dirs.sysroot_mount_path_relative()?);
-        let rustlib = Path::new("lib").join("rustlib");
+        let reldst = dirs.sysroot_mount_path_relative()?;
+        let rustlib = "lib/rustlib";
 
         // SAFETY: safe, single-threaded execution.
         let tempdir = unsafe { temp::TempDir::new()? };
         let temppath = tempdir.path();
-        file::create_dir_all(&temppath.join(&rustlib))?;
+        file::create_dir_all(&temppath.join(rustlib))?;
         let had_symlinks = copy_dir(
-            &dirs.get_sysroot().join(&rustlib),
-            &temppath.join(&rustlib),
+            &dirs.get_sysroot().join(rustlib),
+            &temppath.join(rustlib),
             true,
             0,
             |e, d| d != 0 || e.file_type().map(|t| !t.is_file()).unwrap_or(true),
         )?;
-        self.copy_files(&temppath.join("lib"), &dst, msg_info)?;
+        self.copy_files(&temppath.join("lib"), &reldst, mount_prefix, msg_info)?;
 
         warn_symlinks(had_symlinks, msg_info)
     }
@@ -271,30 +301,30 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     fn copy_rust_triple(
         &self,
         target_triple: &TargetTriple,
-        mount_prefix: &Path,
+        mount_prefix: &str,
         skip_exists: bool,
         msg_info: &mut MessageInfo,
     ) -> Result<()> {
         let dirs = &self.toolchain_dirs;
 
         // copy over the files for a specific triple
-        let dst = mount_prefix.join(&dirs.sysroot_mount_path_relative()?);
-        let rustlib = Path::new("lib").join("rustlib");
-        let dst_rustlib = dst.join(&rustlib);
+        let reldst = &dirs.sysroot_mount_path_relative()?;
+        let rustlib = "lib/rustlib";
+        let reldst_rustlib = format!("{reldst}/{rustlib}");
         let src_toolchain = dirs
             .get_sysroot()
-            .join(&rustlib)
+            .join(Path::new(rustlib))
             .join(target_triple.triple());
-        let dst_toolchain = dst_rustlib.join(target_triple.triple());
+        let reldst_toolchain = format!("{reldst_rustlib}/{}", target_triple.triple());
 
         // skip if the toolchain target component already exists. for the host toolchain
         // or the first run of the target toolchain, we know it doesn't exist.
         let mut skip = false;
         if skip_exists {
-            skip = self.container_path_exists(&dst_toolchain, msg_info)?;
+            skip = self.container_path_exists(&reldst_toolchain, mount_prefix, msg_info)?;
         }
         if !skip {
-            self.copy_files(&src_toolchain, &dst_rustlib, msg_info)?;
+            self.copy_files(&src_toolchain, &reldst_rustlib, mount_prefix, msg_info)?;
         }
         if !skip && skip_exists {
             // this means we have a persistent data volume and we have a
@@ -308,7 +338,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     pub fn copy_rust(
         &self,
         target_triple: Option<&TargetTriple>,
-        mount_prefix: &Path,
+        mount_prefix: &str,
         msg_info: &mut MessageInfo,
     ) -> Result<()> {
         let dirs = &self.toolchain_dirs;
@@ -328,16 +358,17 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     fn copy_mount(
         &self,
         src: &Path,
-        dst: &Path,
+        reldst: &str,
+        mount_prefix: &str,
         volume: &VolumeId,
         copy_cache: bool,
         msg_info: &mut MessageInfo,
     ) -> Result<()> {
         let copy_all = |info: &mut MessageInfo| {
             if copy_cache {
-                self.copy_files(src, dst, info)
+                self.copy_files(src, reldst, mount_prefix, info)
             } else {
-                self.copy_files_nocache(src, dst, true, info)
+                self.copy_files_nocache(src, reldst, mount_prefix, true, info)
             }
         };
         match volume {
@@ -351,14 +382,16 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
                 let current = Fingerprint::read_dir(src, copy_cache)?;
                 // need to check if the container path exists, otherwise we might
                 // have stale data: the persistent volume was deleted & recreated.
-                if fingerprint.exists() && self.container_path_exists(dst, msg_info)? {
+                if fingerprint.exists()
+                    && self.container_path_exists(reldst, mount_prefix, msg_info)?
+                {
                     let previous = Fingerprint::read_file(&fingerprint)?;
                     let (to_copy, to_remove) = previous.difference(&current);
                     if !to_copy.is_empty() {
-                        self.copy_file_list(src, dst, &to_copy, msg_info)?;
+                        self.copy_file_list(src, reldst, mount_prefix, &to_copy, msg_info)?;
                     }
                     if !to_remove.is_empty() {
-                        self.remove_file_list(dst, &to_remove, msg_info)?;
+                        self.remove_file_list(reldst, mount_prefix, &to_remove, msg_info)?;
                     }
 
                     // write fingerprint afterwards, in case any failure so we
@@ -732,24 +765,23 @@ pub(crate) fn run(
     let copy_cache = env::var("CROSS_REMOTE_COPY_CACHE")
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
-    let copy = |src, dst: &PathBuf, info: &mut MessageInfo| {
-        data_volume.copy_mount(src, dst, &volume, copy_cache, info)
+    let copy = |src, reldst: &str, info: &mut MessageInfo| {
+        data_volume.copy_mount(src, reldst, mount_prefix, &volume, copy_cache, info)
     };
-    let mount_prefix_path = mount_prefix.as_ref();
     if let VolumeId::Discard = volume {
         data_volume
-            .copy_xargo(mount_prefix_path, msg_info)
+            .copy_xargo(mount_prefix, msg_info)
             .wrap_err("when copying xargo")?;
         data_volume
-            .copy_cargo(mount_prefix_path, false, msg_info)
+            .copy_cargo(mount_prefix, false, msg_info)
             .wrap_err("when copying cargo")?;
         data_volume
-            .copy_rust(Some(target.target()), mount_prefix_path, msg_info)
+            .copy_rust(Some(target.target()), mount_prefix, msg_info)
             .wrap_err("when copying rust")?;
     } else {
         // need to copy over the target triple if it hasn't been previously copied
         data_volume
-            .copy_rust_triple(target.target(), mount_prefix_path, true, msg_info)
+            .copy_rust_triple(target.target(), mount_prefix, true, msg_info)
             .wrap_err("when copying rust target files")?;
     }
     // cannot panic: absolute unix path, must have root
@@ -757,46 +789,41 @@ pub(crate) fn run(
         .mount_root()
         .strip_prefix('/')
         .expect("mount root should be absolute");
-    let mount_root = mount_prefix_path.join(rel_mount_root);
     if !rel_mount_root.is_empty() {
         data_volume
             .create_dir(
-                mount_root
-                    .parent()
-                    .expect("mount root should have a parent directory"),
+                posix_parent(rel_mount_root).expect("mount root should have a parent directory"),
+                mount_prefix,
                 msg_info,
             )
             .wrap_err("when creating mount root")?;
     }
-    copy(package_dirs.host_root(), &mount_root, msg_info).wrap_err("when copying project")?;
+    copy(package_dirs.host_root(), rel_mount_root, msg_info).wrap_err("when copying project")?;
     let sysroot = toolchain_dirs.get_sysroot().to_owned();
     let mut copied = vec![
         (
             toolchain_dirs.xargo(),
-            mount_prefix_path.join(&toolchain_dirs.xargo_mount_path_relative()?),
+            toolchain_dirs.xargo_mount_path_relative()?,
         ),
         (
             toolchain_dirs.cargo(),
-            mount_prefix_path.join(&toolchain_dirs.cargo_mount_path_relative()?),
+            toolchain_dirs.cargo_mount_path_relative()?,
         ),
-        (
-            &sysroot,
-            mount_prefix_path.join(&toolchain_dirs.sysroot_mount_path_relative()?),
-        ),
-        (package_dirs.host_root(), mount_root.clone()),
+        (&sysroot, toolchain_dirs.sysroot_mount_path_relative()?),
+        (package_dirs.host_root(), rel_mount_root.to_owned()),
     ];
     let mut to_symlink = vec![];
     let target_dir = file::canonicalize(package_dirs.target())?;
     let target_dir = if let Ok(relpath) = target_dir.strip_prefix(package_dirs.host_root()) {
-        mount_root.join(relpath)
+        relpath.as_posix_relative()?
     } else {
         // outside project, need to copy the target data over
         // only do if we're copying over cached files.
-        let target_dir = mount_prefix_path.join("target");
+        let target_dir = "target".to_owned();
         if copy_cache {
             copy(package_dirs.target(), &target_dir, msg_info)?;
         } else {
-            data_volume.create_dir(&target_dir, msg_info)?;
+            data_volume.create_dir(&target_dir, mount_prefix, msg_info)?;
         }
 
         copied.push((package_dirs.target(), target_dir.clone()));
@@ -808,22 +835,21 @@ pub(crate) fn run(
             // path has already been copied over
             let relpath = src
                 .strip_prefix(psrc)
-                .expect("source should start with prefix");
-            to_symlink.push((pdst.join(relpath), dst));
+                .expect("source should start with prefix")
+                .as_posix_relative()?;
+            to_symlink.push((format!("{pdst}/{relpath}"), dst));
         } else {
-            let rel_dst = dst
+            let reldst = dst
                 .strip_prefix('/')
                 .expect("destination should be absolute");
-            let mount_dst = mount_prefix_path.join(rel_dst);
-            if !rel_dst.is_empty() {
+            if !reldst.is_empty() {
                 data_volume.create_dir(
-                    mount_dst
-                        .parent()
-                        .expect("destination should have a parent directory"),
+                    posix_parent(reldst).expect("destination should have a parent directory"),
+                    mount_prefix,
                     msg_info,
                 )?;
             }
-            copy(src, &mount_dst, msg_info)?;
+            copy(src, reldst, msg_info)?;
         }
     }
 
@@ -833,18 +859,17 @@ pub(crate) fn run(
     let mut final_args = vec![];
     let mut iter = args.iter().cloned();
     let mut has_target_dir = false;
-    let target_dir_string = target_dir.as_posix_absolute()?;
     while let Some(arg) = iter.next() {
         if arg == "--target-dir" {
             has_target_dir = true;
             final_args.push(arg);
             if iter.next().is_some() {
-                final_args.push(target_dir_string.clone());
+                final_args.push(target_dir.clone());
             }
         } else if arg.starts_with("--target-dir=") {
             has_target_dir = true;
             if arg.split_once('=').is_some() {
-                final_args.push(format!("--target-dir={target_dir_string}"));
+                final_args.push(format!("--target-dir={target_dir}"));
             }
         } else {
             final_args.push(arg);
@@ -852,7 +877,7 @@ pub(crate) fn run(
     }
     if !has_target_dir {
         final_args.push("--target-dir".to_owned());
-        final_args.push(target_dir_string);
+        final_args.push(target_dir.clone());
     }
     let mut cmd = options.cargo_variant.safe_command();
     cmd.args(final_args);
@@ -889,11 +914,7 @@ symlink_recurse \"${{prefix}}\"
 "
     ));
     for (src, dst) in to_symlink {
-        symlink.push(format!(
-            "ln -s \"{}\" \"{}\"",
-            src.as_posix_absolute()?,
-            dst
-        ));
+        symlink.push(format!("ln -s \"{src}\" \"{dst}\"",));
     }
     subcommand_or_exit(engine, "exec")?
         .arg(&container_id)
@@ -919,13 +940,10 @@ symlink_recurse \"${{prefix}}\"
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
     bail_container_exited!();
-    if !skip_artifacts && data_volume.container_path_exists(&target_dir, msg_info)? {
+    if !skip_artifacts && data_volume.container_path_exists(&target_dir, mount_prefix, msg_info)? {
         subcommand_or_exit(engine, "cp")?
             .arg("-a")
-            .arg(&format!(
-                "{container_id}:{}",
-                target_dir.as_posix_absolute()?
-            ))
+            .arg(&format!("{container_id}:{target_dir}",))
             .arg(
                 package_dirs
                     .target()

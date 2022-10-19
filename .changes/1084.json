@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "fixed remote docker data volume paths on windows",
+    "issues": [1081]
+}
