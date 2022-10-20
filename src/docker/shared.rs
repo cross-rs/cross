@@ -200,8 +200,9 @@ impl DockerPaths {
         metadata: CargoMetadata,
         cwd: PathBuf,
         toolchain: QualifiedToolchain,
+        msg_info: &mut MessageInfo,
     ) -> Result<Self> {
-        let mount_finder = MountFinder::create(engine)?;
+        let mount_finder = MountFinder::create(engine, msg_info)?;
         let (directories, metadata) =
             Directories::assemble(&mount_finder, metadata, &cwd, toolchain)?;
         Ok(Self {
@@ -695,22 +696,26 @@ impl<'a, 'b> DockerVolume<'a, 'b> {
         Self { engine, name }
     }
 
+    #[track_caller]
     pub fn create(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
         self.engine
             .run_and_get_status(&["volume", "create", self.name], msg_info)
     }
 
+    #[track_caller]
     pub fn remove(&self, msg_info: &mut MessageInfo) -> Result<ExitStatus> {
         self.engine
             .run_and_get_status(&["volume", "rm", self.name], msg_info)
     }
 
+    #[track_caller]
     pub fn exists(&self, msg_info: &mut MessageInfo) -> Result<bool> {
         self.engine
             .run_and_get_output(&["volume", "inspect", self.name], msg_info)
             .map(|output| output.status.success())
     }
 
+    #[track_caller]
     pub fn existing(
         engine: &Engine,
         toolchain: &QualifiedToolchain,
@@ -833,6 +838,7 @@ impl Engine {
         command
     }
 
+    #[track_caller]
     pub(crate) fn run_and_get_status(
         &self,
         args: &[&str],
@@ -841,6 +847,7 @@ impl Engine {
         self.command().args(args).run_and_get_status(msg_info, true)
     }
 
+    #[track_caller]
     pub(crate) fn run_and_get_output(
         &self,
         args: &[&str],
@@ -1325,7 +1332,10 @@ pub(crate) fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Res
     Ok(image)
 }
 
-fn docker_read_mount_paths(engine: &Engine) -> Result<Vec<MountDetail>> {
+fn docker_read_mount_paths(
+    engine: &Engine,
+    msg_info: &mut MessageInfo,
+) -> Result<Vec<MountDetail>> {
     let hostname = env::var("HOSTNAME").wrap_err("HOSTNAME environment variable not found")?;
 
     let mut docker: Command = {
@@ -1334,7 +1344,7 @@ fn docker_read_mount_paths(engine: &Engine) -> Result<Vec<MountDetail>> {
         command
     };
 
-    let output = docker.run_and_get_stdout(&mut Verbosity::Quiet.into())?;
+    let output = docker.run_and_get_stdout(msg_info)?;
     let info = serde_json::from_str(&output).wrap_err("failed to parse docker inspect output")?;
     dockerinfo_parse_mounts(&info)
 }
@@ -1410,9 +1420,9 @@ impl MountFinder {
         MountFinder { mounts }
     }
 
-    pub fn create(engine: &Engine) -> Result<MountFinder> {
+    pub fn create(engine: &Engine, msg_info: &mut MessageInfo) -> Result<MountFinder> {
         Ok(if engine.in_docker {
-            MountFinder::new(docker_read_mount_paths(engine)?)
+            MountFinder::new(docker_read_mount_paths(engine, msg_info)?)
         } else {
             MountFinder::default()
         })
@@ -1695,12 +1705,12 @@ mod tests {
                 return Ok(());
             }
 
-            let mount_finder = MountFinder::create(&engine)?;
+            let mount_finder = MountFinder::create(&engine, &mut msg_info)?;
             let metadata = cargo_metadata(true, &mut msg_info)?;
             let (directories, _) = get_directories(metadata, &mount_finder)?;
             let toolchain_dirs = directories.toolchain_directories();
             let package_dirs = directories.package_directories();
-            let mount_finder = MountFinder::new(docker_read_mount_paths(&engine)?);
+            let mount_finder = MountFinder::new(docker_read_mount_paths(&engine, &mut msg_info)?);
             let mount_path = |p| mount_finder.find_mount_path(p);
 
             paths_equal(toolchain_dirs.cargo(), &mount_path(home()?.join(".cargo")))?;

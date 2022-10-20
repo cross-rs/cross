@@ -10,16 +10,19 @@ pub const STRIPPED_BINS: &[&str] = &[crate::docker::DOCKER, crate::docker::PODMA
 pub trait CommandExt {
     fn fmt_message(&self, msg_info: &mut MessageInfo) -> String;
 
+    #[track_caller]
     fn print(&self, msg_info: &mut MessageInfo) -> Result<()> {
         let msg = self.fmt_message(msg_info);
         msg_info.print(&msg)
     }
 
+    #[track_caller]
     fn info(&self, msg_info: &mut MessageInfo) -> Result<()> {
         let msg = self.fmt_message(msg_info);
         msg_info.info(&msg)
     }
 
+    #[track_caller]
     fn debug(&self, msg_info: &mut MessageInfo) -> Result<()> {
         let msg = self.fmt_message(msg_info);
         msg_info.debug(&msg)
@@ -31,13 +34,17 @@ pub trait CommandExt {
         status: ExitStatus,
         output: Option<&Output>,
     ) -> Result<(), CommandError>;
+    #[track_caller]
     fn run(&mut self, msg_info: &mut MessageInfo, silence_stdout: bool) -> Result<()>;
+    #[track_caller]
     fn run_and_get_status(
         &mut self,
         msg_info: &mut MessageInfo,
         silence_stdout: bool,
     ) -> Result<ExitStatus>;
+    #[track_caller]
     fn run_and_get_stdout(&mut self, msg_info: &mut MessageInfo) -> Result<String>;
+    #[track_caller]
     fn run_and_get_output(&mut self, msg_info: &mut MessageInfo) -> Result<std::process::Output>;
     fn command_pretty(
         &self,
@@ -84,20 +91,33 @@ impl CommandExt for Command {
         format!("{}", C(self, msg_info, strip))
     }
 
+    #[track_caller]
     fn fmt_message(&self, mut msg_info: &mut MessageInfo) -> String {
+        use std::fmt::Write;
         let msg_info = &mut msg_info;
+        let mut string = String::new();
+        if let Some(caller) = msg_info.caller() {
+            write!(string, "[{}] ->\n+ ", caller).unwrap();
+        } else {
+            write!(string, "+ ").unwrap();
+        };
         if let Some(cwd) = self.get_current_dir() {
-            format!(
-                "+ {:?} {}",
+            write!(
+                string,
+                "{:?} {}",
                 cwd,
                 msg_info.as_verbose(|info| self.command_pretty(info, |_| false))
             )
+            .unwrap();
         } else {
-            format!(
-                "+ {}",
+            write!(
+                string,
+                "{}",
                 msg_info.as_verbose(|info| self.command_pretty(info, |_| false))
             )
+            .unwrap();
         }
+        string
     }
 
     fn status_result(
@@ -127,6 +147,7 @@ impl CommandExt for Command {
     }
 
     /// Runs the command to completion
+    #[track_caller]
     fn run_and_get_status(
         &mut self,
         msg_info: &mut MessageInfo,
@@ -146,6 +167,7 @@ impl CommandExt for Command {
     }
 
     /// Runs the command to completion and returns its stdout
+    #[track_caller]
     fn run_and_get_stdout(&mut self, msg_info: &mut MessageInfo) -> Result<String> {
         let out = self.run_and_get_output(msg_info)?;
         self.status_result(msg_info, out.status, Some(&out))
@@ -158,6 +180,7 @@ impl CommandExt for Command {
     /// # Notes
     ///
     /// This command does not check the status.
+    #[track_caller]
     fn run_and_get_output(&mut self, msg_info: &mut MessageInfo) -> Result<std::process::Output> {
         self.debug(msg_info)?;
         self.output().map_err(|e| {

@@ -396,7 +396,7 @@ pub fn create_persistent_volume(
     if let Some(channel) = channel {
         toolchain.channel = channel.channel.clone();
     };
-    let mount_finder = docker::MountFinder::create(engine)?;
+    let mount_finder = docker::MountFinder::create(engine, msg_info)?;
     let dirs = docker::ToolchainDirectories::assemble(&mount_finder, toolchain.clone())?;
     let container_id = dirs.unique_container_identifier(&toolchain.host().target)?;
     let volume_id = dirs.unique_toolchain_identifier()?;
@@ -464,7 +464,7 @@ pub fn remove_persistent_volume(
     if let Some(channel) = channel {
         toolchain.channel = channel.channel.clone();
     };
-    let mount_finder = docker::MountFinder::create(engine)?;
+    let mount_finder = docker::MountFinder::create(engine, msg_info)?;
     let dirs = docker::ToolchainDirectories::assemble(&mount_finder, toolchain)?;
     let volume_id = dirs.unique_toolchain_identifier()?;
     let volume = docker::DockerVolume::new(engine, &volume_id);
