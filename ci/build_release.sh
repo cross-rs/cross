@@ -19,7 +19,7 @@ rm -rf "${BUILD_BINARIESDIRECTORY}"
 mkdir "${BUILD_BINARIESDIRECTORY}"
 
 if [[ -f "target/${TARGET}/release/cross.exe" ]]; then
-  mv "target/${TARGET}/release/cross.exe" "${BUILD_BINARIESDIRECTORY}/"
+    mv "target/${TARGET}/release/cross.exe" "${BUILD_BINARIESDIRECTORY}/"
 else
-  mv "target/${TARGET}/release/cross" "${BUILD_BINARIESDIRECTORY}/"
+    mv "target/${TARGET}/release/cross" "${BUILD_BINARIESDIRECTORY}/"
 fi

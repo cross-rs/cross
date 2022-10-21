@@ -10,8 +10,8 @@ main() {
     local arch="${1}"
 
     local binutils=2.28.1 \
-          gcc=8.4.0 \
-          target="${arch}-sun-solaris2.10"
+        gcc=8.4.0 \
+        target="${arch}-sun-solaris2.10"
 
     install_packages bzip2 \
         ca-certificates \
@@ -61,22 +61,22 @@ main() {
     apt-get update
     # shellcheck disable=SC2046
     apt-get download $(apt-cache depends --recurse --no-replaces \
-      "libc:${apt_arch}"            \
-      "liblgrp-dev:${apt_arch}"     \
-      "liblgrp:${apt_arch}"         \
-      "libm-dev:${apt_arch}"        \
-      "libpthread:${apt_arch}"      \
-      "libresolv:${apt_arch}"       \
-      "librt:${apt_arch}"           \
-      "libsendfile-dev:${apt_arch}" \
-      "libsendfile:${apt_arch}"     \
-      "libsocket:${apt_arch}"       \
-      "system-crt:${apt_arch}"      \
-      "system-header:${apt_arch}"   \
-      | grep "^\w")
+        "libc:${apt_arch}"            \
+        "liblgrp-dev:${apt_arch}"     \
+        "liblgrp:${apt_arch}"         \
+        "libm-dev:${apt_arch}"        \
+        "libpthread:${apt_arch}"      \
+        "libresolv:${apt_arch}"       \
+        "librt:${apt_arch}"           \
+        "libsendfile-dev:${apt_arch}" \
+        "libsendfile:${apt_arch}"     \
+        "libsocket:${apt_arch}"       \
+        "system-crt:${apt_arch}"      \
+        "system-header:${apt_arch}"   \
+        | grep "^\w")
 
     for deb in *"${apt_arch}.deb"; do
-      dpkg -x "${deb}" "${td}/solaris"
+        dpkg -x "${deb}" "${td}/solaris"
     done
 
     cd binutils-build

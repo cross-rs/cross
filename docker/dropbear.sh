@@ -36,15 +36,15 @@ main() {
     sed -i '/failed to identify current user/d' cli-runopts.c
 
     ./configure \
-       --disable-syslog \
-       --disable-shadow \
-       --disable-lastlog \
-       --disable-utmp \
-       --disable-utmpx \
-       --disable-wtmp \
-       --disable-wtmpx \
-       --disable-pututline \
-       --disable-pututxline
+        --disable-syslog \
+        --disable-shadow \
+        --disable-lastlog \
+        --disable-utmp \
+        --disable-utmpx \
+        --disable-wtmp \
+        --disable-wtmpx \
+        --disable-pututline \
+        --disable-pututxline
 
     make "-j$(nproc)" PROGRAMS=dbclient
     cp dbclient /usr/local/bin/

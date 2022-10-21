@@ -29,7 +29,7 @@ COPY linux-runner base-runner.sh /
 
 COPY aarch64-linux-gnu-glibc.sh /
 RUN /aarch64-linux-gnu-glibc.sh
-   
+
 ENV CROSS_SYSROOT=/usr/aarch64-linux-gnu
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner aarch64" \

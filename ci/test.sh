@@ -13,10 +13,10 @@ ci_dir=$(realpath "${ci_dir}")
 . "${ci_dir}"/shared.sh
 
 workspace_test() {
-  "${CROSS[@]}" build --target "${TARGET}" --workspace "$@" ${CROSS_FLAGS}
-  "${CROSS[@]}" run --target "${TARGET}" -p binary "$@" ${CROSS_FLAGS}
-  "${CROSS[@]}" run --target "${TARGET}" --bin dependencies \
-    --features=dependencies "$@" ${CROSS_FLAGS}
+    "${CROSS[@]}" build --target "${TARGET}" --workspace "$@" ${CROSS_FLAGS}
+    "${CROSS[@]}" run --target "${TARGET}" -p binary "$@" ${CROSS_FLAGS}
+    "${CROSS[@]}" run --target "${TARGET}" --bin dependencies \
+        --features=dependencies "$@" ${CROSS_FLAGS}
 }
 
 main() {
