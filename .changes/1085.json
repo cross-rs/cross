@@ -1,0 +1,4 @@
+{
+    "type": "added",
+    "description": "support custom toolchains without rustup."
+}

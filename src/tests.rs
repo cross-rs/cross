@@ -86,6 +86,7 @@ release: {version}
                     &None,
                     &ImagePlatform::from_const_target(TargetTriple::X86_64UnknownLinuxGnu),
                     Path::new("/toolchains/xxxx-x86_64-unknown-linux-gnu"),
+                    false,
                 ),
                 &target_meta.0,
                 &target_meta.1,
