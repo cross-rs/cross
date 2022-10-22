@@ -2,6 +2,10 @@ on:
   schedule:
     - cron:  '0 0 * * 5'
   workflow_dispatch:
+    inputs:
+      targets:
+        required: false
+        description: 'check these space or comma separated targets, supports wildcard *'
 
 name: Check
 
@@ -10,21 +14,54 @@ env:
   CARGO_HTTP_CHECK_REVOKE: false
 
 jobs:
-  weekly:
-    name: Check All Targets - No Cache
-    timeout-minutes: 1440
+  generate-matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: Generate matrix
+        id: generate-matrix
+        run: |
+          cargo xtask ci-job target-matrix --author "[gha]" --message "check" --weekly
+        env:
+          TARGETS: ${{ inputs.targets }}
+  weekly:
+    name: Check target - No Cache (${{ matrix.pretty }},${{ matrix.os }})
+    timeout-minutes: 1440
+    runs-on: ${{ matrix.os }}
+    needs: generate-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup-rust
       - name: Set up Docker Buildx
+        if: runner.os == 'Linux'
         uses: docker/setup-buildx-action@v2
       - name: Build xtask
         run: cargo build -p xtask
+      - name: Prepare Meta
+        id: prepare-meta
+        timeout-minutes: 60
+        run: cargo xtask ci-job prepare-meta "${TARGET}${SUB:+.$SUB}"
+        env:
+          TARGET: ${{ matrix.target }}
+          SUB: ${{ matrix.sub }}
+        shell: bash
       - name: Build Docker image
         id: build-docker-image
-        run: cargo xtask build-docker-image -v --no-cache --no-output --from-ci --no-fastfail --tag weekly
-        timeout-minutes: 1440
+        if: steps.prepare-meta.outputs.has-image
+        timeout-minutes: 120
+        run: cargo xtask build-docker-image --no-cache --no-output -v "${TARGET}${SUB:+.$SUB}" --tag weekly
+        env:
+          TARGET: ${{ matrix.target }}
+          SUB: ${{ matrix.sub }}
+        shell: bash
   wiki:
     name: Ensure wiki is valid
     runs-on: ubuntu-latest
