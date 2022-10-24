@@ -78,7 +78,7 @@ main() {
             ;;
         armv7)
             arch=armhf
-            kernel="5.*-armmp"
+            kernel='5.*-armmp'
             deps=(libcrypt1:"${arch}")
             ;;
         i686)
@@ -91,15 +91,15 @@ main() {
             libgcc="libgcc1"
             debsource="deb http://http.debian.net/debian/ buster main"
             debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
-            kernel="4.*-4kc-malta"
+            kernel='4.*-4kc-malta'
             ncurses="=6.1*"
             ;;
         mipsel)
-            kernel="5.*-4kc-malta"
+            kernel='5.*-4kc-malta'
             deps=(libcrypt1:"${arch}")
             ;;
         mips64el)
-            kernel="5.*-5kc-malta"
+            kernel='5.*-5kc-malta'
             deps=(libcrypt1:"${arch}")
             ;;
         powerpc)
@@ -123,7 +123,7 @@ main() {
             # there is no stable port
             arch=ppc64
             # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kernel='5.*-powerpc64'
+            kernel='6.*-powerpc64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
@@ -131,24 +131,24 @@ main() {
             ;;
         powerpc64le)
             arch=ppc64el
-            kernel="5.*-powerpc64le"
+            kernel='5.*-powerpc64le'
             deps=(libcrypt1:"${arch}")
             ;;
         riscv64)
-            kernel="5.*-riscv64"
+            kernel='6.*-riscv64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             deps=(libcrypt1:"${arch}")
             ;;
         s390x)
             arch=s390x
-            kernel="5.*-s390x"
+            kernel='5.*-s390x'
             deps=(libcrypt1:"${arch}")
             ;;
         sparc64)
             # there is no stable port
             # https://packages.debian.org/en/sid/linux-image-sparc64
-            kernel='5.*-sparc64'
+            kernel='6.*-sparc64'
             debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
             debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
             # sid version of dropbear requires these dependencies
