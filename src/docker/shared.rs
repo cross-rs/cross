@@ -86,6 +86,9 @@ impl DockerOptions {
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
         let mut image = self.image.clone();
+        if self.target.triple() == "arm-unknown-linux-gnueabihf" {
+            msg_info.note("cannot install armhf system packages via apt for `arm-unknown-linux-gnueabihf`, since they are for ARMv7a targets but this target is ARMv6. installation of all packages for the armhf architecture has been blocked.")?;
+        }
 
         if let Some(path) = self.config.dockerfile(&self.target)? {
             let context = self.config.dockerfile_context(&self.target)?;
