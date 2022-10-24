@@ -1,0 +1,24 @@
+[
+    {
+        "description": "update Ubuntu images to 20.04 LTS.",
+        "type": "changed",
+        "breaking": true,
+        "issues": [417, 517, 556, 616]
+    },
+    {
+        "description": "remove Linux image from `mips-unknown-linux-gnu`.",
+        "type": "removed",
+        "breaking": true
+    },
+    {
+        "type": "changed",
+        "description": "upgraded most linux images to use a 5.x kernel instead of a 4.x kernel.",
+        "breaking": true
+    },
+    {
+        "type": "changed",
+        "description": "updated powerpc64, riscv64, and sparc64 *-linux-gnu images to use a 6.x kernel instead of a 4.x kernel.",
+        "breaking": true,
+        "issues": [1094]
+    }
+]
