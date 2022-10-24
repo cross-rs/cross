@@ -90,7 +90,7 @@ body:
         - label: Windows
         - label: Linux / BSD
         - label: other OS (specify in description)
-  
+
   - type: checkboxes
     id: host-arch
     attributes:

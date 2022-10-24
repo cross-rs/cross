@@ -1,0 +1,25 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+[*.{rs,py,sh,md,toml,yml,js}]
+charset = utf-8
+
+[*.{rs,py,sh,yml,js}]
+trim_trailing_whitespace = true
+
+[*.{rs,py,sh}]
+indent_style = space
+indent_size = 4
+
+[*.yml]
+indent_style = space
+indent_size = 2
+
+[Dockerfile.*]
+charset = utf-8
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4

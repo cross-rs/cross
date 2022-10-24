@@ -42,22 +42,22 @@ main() {
     yum install -y epel-release
     yum install -y gcc-aarch64-linux-gnu gcc-c++-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils gcc-c++ glibc-devel
     yum clean all
-     
+
     local td
     td="$(mktemp -d)"
-  
+
     pushd "${td}"
-    
+
     local target=aarch64-linux-gnu
     local prefix="/usr/${target}"
     local kernel_v4="4.18.20"
-    
+
     curl --retry 3 "https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-${kernel_v4}.tar.xz" -O
     tar -xvf "linux-${kernel_v4}.tar.xz"
     pushd "linux-${kernel_v4}"
     make ARCH=arm64 INSTALL_HDR_PATH="${prefix}" headers_install
     popd
-    
+
     curl --retry 3 http://ftp.gnu.org/gnu/glibc/glibc-2.17.tar.xz -O
     tar -xvf glibc-2.17.tar.xz
     mkdir build
@@ -76,13 +76,13 @@ main() {
         --with-headers="${prefix}/include" \
         --libdir="${prefix}/lib" \
         --libexecdir="${prefix}/lib"
-    
+
     make -j && make install
     popd
 
     mkdir -p "${prefix}"/{include,lib}
     mkdir -p "/usr/lib/gcc/aarch64-linux-gnu"/{4.8.2,4.8.5}
-    
+
     mkdir libgcc
     pushd libgcc
     unpack_rpm "libgcc-4.8.5-44.el7.aarch64.rpm"
@@ -113,7 +113,7 @@ main() {
     # these are currently empty, but might contain content later
     mv "${redhat_485}/bits"/* "${cpp_485}/bits" || true
     mv "${redhat_485}/ext"/* "${cpp_485}/ext" || true
-    
+
     popd
 
     rm -rf "${td}"

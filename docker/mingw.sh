@@ -21,7 +21,7 @@ main() {
 
     local dependencies=(build-essential)
     while IFS='' read -r dep; do dependencies+=("${dep}"); done < \
-      <(apt-cache showsrc gcc-mingw-w64-i686 | grep Build | cut -d: -f2 | tr , '\n' | cut -d' ' -f2 | sort | uniq)
+        <(apt-cache showsrc gcc-mingw-w64-i686 | grep Build | cut -d: -f2 | tr , '\n' | cut -d' ' -f2 | sort | uniq)
 
     install_packages "${dependencies[@]}"
 

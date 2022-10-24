@@ -57,7 +57,7 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-          kversion=5.10.0-16
+        kversion=5.10.0-16
 
     local debsource="deb http://http.debian.net/debian/ bullseye main"
     debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"
@@ -204,8 +204,8 @@ main() {
     curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022}.key' -O
 
     for key in *.asc *.key; do
-      apt-key add "${key}"
-      rm "${key}"
+        apt-key add "${key}"
+        rm "${key}"
     done
 
     # allow apt-get to retry downloads

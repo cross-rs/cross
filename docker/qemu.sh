@@ -115,7 +115,7 @@ main() {
     if_centos version=4.2.1
 
     local arch="${1}" \
-          softmmu="${2:-}"
+        softmmu="${2:-}"
 
     install_packages \
         autoconf \

@@ -9,9 +9,9 @@ set -euo pipefail
 hide_output() {
     set +x
     trap "
-      echo 'ERROR: An error was encountered with the build.'
-      cat /tmp/build.log
-      exit 1
+        echo 'ERROR: An error was encountered with the build.'
+        cat /tmp/build.log
+        exit 1
     " ERR
     bash -c 'while true; do sleep 30; echo $(date) - building ...; done' &
     PING_LOOP_PID=$!

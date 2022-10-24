@@ -161,7 +161,7 @@ case "${target}" in
     *-*-netbsd)
         cc_regex=".*gcc \(.*\) ([0-9]+.[0-9]+.[0-9]+).*"
         ;;
-     *-*-dragonfly)
+    *-*-dragonfly)
         cc_regex=".*gcc \(GCC\) ([0-9]+.[0-9]+.[0-9]+).*"
         ;;
     *-*-solaris)

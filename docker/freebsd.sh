@@ -48,8 +48,8 @@ bsd_http="http://${bsd_ftp}"
 
 main() {
     local binutils=2.32 \
-          gcc=6.4.0 \
-          target="${ARCH}-unknown-freebsd${BSD_MAJOR}"
+        gcc=6.4.0 \
+        target="${ARCH}-unknown-freebsd${BSD_MAJOR}"
 
     install_packages ca-certificates \
         curl \

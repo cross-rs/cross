@@ -9,9 +9,9 @@ set -euo pipefail
 main() {
     local nproc=
     local binutils=2.32 \
-          dragonfly=6.0.1_REL \
-          gcc=10.3.0 \
-          target=x86_64-unknown-dragonfly
+        dragonfly=6.0.1_REL \
+        gcc=10.3.0 \
+        target=x86_64-unknown-dragonfly
     if [[ $# != "0" ]]; then
         nproc="${1}"
     fi

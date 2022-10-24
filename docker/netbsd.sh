@@ -8,8 +8,8 @@ set -euo pipefail
 
 main() {
     local binutils=2.36.1 \
-          gcc=9.4.0 \
-          target=x86_64-unknown-netbsd
+        gcc=9.4.0 \
+        target=x86_64-unknown-netbsd
 
     install_packages bzip2 \
         ca-certificates \
