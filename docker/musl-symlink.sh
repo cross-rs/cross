@@ -49,6 +49,10 @@ main() {
         fi
     done
 
+    # ensure we statically link libstdc++, so avoid segfaults with c++
+    # https://github.com/cross-rs/cross/issues/902
+    rm "${sysroot}"/lib/libstdc++.so* || true
+
     echo "${sysroot}/lib" >> "/etc/ld-musl-${arch}.path"
 
     rm -rf "${0}"
