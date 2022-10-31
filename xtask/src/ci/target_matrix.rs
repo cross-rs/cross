@@ -1,19 +1,29 @@
+use std::process::Command;
+
 use clap::builder::BoolishValueParser;
 use clap::Parser;
-use serde::Serialize;
+use cross::{shell::Verbosity, CommandExt};
+use serde::{Deserialize, Serialize};
 
 use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
 
 pub(crate) fn run(message: String, author: String) -> Result<(), color_eyre::Report> {
     let mut matrix: Vec<CiTarget> = get_matrix().clone();
-    if author == "bors[bot]" && message.starts_with("Try #") {
-        if let Some((_, args)) = message.split_once(": ") {
-            let app = TargetMatrixArgs::parse_from(args.split(' '));
-            app.filter(&mut matrix);
-        }
+    let (prs, mut app) = if author == "bors[bot]" {
+        process_bors_message(&message)?
     } else {
-        gha_print("Running all targets.");
+        (vec![], TargetMatrixArgs::default())
+    };
+
+    if !prs.is_empty()
+        && prs.iter().try_fold(true, |b, pr| {
+            Ok::<_, eyre::Report>(b && has_no_ci_target(pr)?)
+        })?
+    {
+        app.none = true;
     }
+
+    app.filter(&mut matrix);
 
     let matrix = matrix
         .iter()
@@ -32,10 +42,66 @@ pub(crate) fn run(message: String, author: String) -> Result<(), color_eyre::Rep
             std: target.std.map(|b| b as u8),
         })
         .collect::<Vec<_>>();
+
     let json = serde_json::to_string(&matrix)?;
     gha_print(&json);
     gha_output("matrix", &json);
     Ok(())
+}
+
+fn parse_gh_labels(pr: &str) -> cross::Result<Vec<String>> {
+    #[derive(Deserialize)]
+    struct PullRequest {
+        labels: Vec<PullRequestLabels>,
+    }
+
+    #[derive(Deserialize)]
+    struct PullRequestLabels {
+        name: String,
+    }
+    eyre::ensure!(
+        pr.chars().all(|c| c.is_ascii_digit()),
+        "pr should be a number, got {:?}",
+        pr
+    );
+    let stdout = Command::new("gh")
+        .args(["pr", "view", pr, "--json", "labels"])
+        .run_and_get_stdout(&mut Verbosity::Quiet.into())?;
+    let pr_info: PullRequest = serde_json::from_str(&stdout)?;
+    Ok(pr_info.labels.into_iter().map(|l| l.name).collect())
+}
+
+fn has_no_ci_target(pr: &str) -> cross::Result<bool> {
+    Ok(parse_gh_labels(pr)?.contains(&"no-ci-targets".to_owned()))
+}
+
+/// Returns the pr(s) associated with this bors commit and the app to use for processing
+fn process_bors_message(message: &str) -> cross::Result<(Vec<&str>, TargetMatrixArgs)> {
+    if let Some(message) = message.strip_prefix("Try #") {
+        let (pr, args) = message
+            .split_once(':')
+            .ok_or_else(|| eyre::eyre!("bors message must start with \"Try #:\""))?;
+        let args = args.trim_start();
+        let app = if !args.is_empty() {
+            TargetMatrixArgs::parse_from(args.split(' '))
+        } else {
+            TargetMatrixArgs::default()
+        };
+        Ok((vec![pr], app))
+    } else if let Some(message) = message.strip_prefix("Merge") {
+        Ok((
+            message
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .split(" #")
+                .skip(1)
+                .collect(),
+            TargetMatrixArgs::default(),
+        ))
+    } else {
+        eyre::bail!("unexpected bors commit message encountered")
+    }
 }
 
 #[derive(Serialize)]
@@ -63,7 +129,7 @@ struct TargetMatrixElement<'a> {
     std: Option<u8>,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Default, PartialEq, Eq)]
 #[clap(no_binary_name = true)]
 struct TargetMatrixArgs {
     #[clap(long, short, num_args = 0..)]
@@ -84,7 +150,11 @@ struct TargetMatrixArgs {
 
 impl TargetMatrixArgs {
     pub fn filter(&self, matrix: &mut Vec<CiTarget>) {
+        if self == &TargetMatrixArgs::default() {
+            gha_print("Running all targets.");
+        }
         if self.none {
+            gha_print("Running no targets.");
             std::mem::take(matrix);
             return;
         }
@@ -195,5 +265,40 @@ mod tests {
     fn none() {
         let matrix = run(["--none"]);
         assert_eq!(&Vec::<CiTarget>::new(), &matrix);
+    }
+
+    #[test]
+    fn prs() {
+        assert_eq!(
+            process_bors_message("Merge #1337\n1337: merge").unwrap().0,
+            vec!["1337"]
+        );
+        assert_eq!(
+            process_bors_message("Merge #1337 #42\n1337: merge\n42: merge 2")
+                .unwrap()
+                .0,
+            vec!["1337", "42"]
+        );
+        assert_eq!(
+            // the trailing space is intentional
+            process_bors_message("Try #1337: \n").unwrap().0,
+            vec!["1337"]
+        );
+    }
+
+    #[test]
+    fn full_invocation() {
+        let (prs, app) = process_bors_message("Try #1337: ").unwrap();
+        assert_eq!(prs, vec!["1337"]);
+        assert_eq!(app, TargetMatrixArgs::default());
+        let (prs, app) = process_bors_message("Try #1337: --std 1").unwrap();
+        assert_eq!(prs, vec!["1337"]);
+        assert_eq!(
+            app,
+            TargetMatrixArgs {
+                std: Some(true),
+                ..TargetMatrixArgs::default()
+            }
+        );
     }
 }
