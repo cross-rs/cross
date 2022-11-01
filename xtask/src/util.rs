@@ -276,14 +276,23 @@ pub fn project_dir(msg_info: &mut MessageInfo) -> cross::Result<PathBuf> {
     Ok(cargo_metadata(msg_info)?.workspace_root)
 }
 
+macro_rules! gha_output {
+    ($fmt:literal$(, $args:expr)* $(,)?) => {
+        #[cfg(not(test))]
+        println!($fmt $(, $args)*);
+        #[cfg(test)]
+        eprintln!($fmt $(,$args)*);
+    };
+}
+
 // note: for GHA actions we need to output these tags no matter the verbosity level
 pub fn gha_print(content: &str) {
-    println!("{}", content)
+    gha_output!("{}", content);
 }
 
 // note: for GHA actions we need to output these tags no matter the verbosity level
 pub fn gha_error(content: &str) {
-    println!("::error {}", content)
+    gha_output!("::error {}", content);
 }
 
 #[track_caller]
@@ -292,7 +301,7 @@ pub fn gha_output(tag: &str, content: &str) {
         // https://github.com/actions/toolkit/issues/403
         panic!("output `{tag}` contains newlines, consider serializing with json and deserializing in gha with fromJSON()")
     }
-    println!("::set-output name={tag}::{}", content)
+    gha_output!("::set-output name={tag}::{}", content);
 }
 
 pub fn read_dockerfiles(msg_info: &mut MessageInfo) -> cross::Result<Vec<(PathBuf, String)>> {
