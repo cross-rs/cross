@@ -31,7 +31,10 @@ case "${arch}" in
 esac
 libdir="/android-ndk/sysroot/usr/lib/${android_abi}"
 
-export LD_PRELOAD="${libdir}/libc++_shared.so"
+# Android 5.x doesn't support C++.
+if [[ -f "${libdir}/libc++_shared.so" ]]; then
+    export LD_PRELOAD="${libdir}/libc++_shared.so"
+fi
 case "${CROSS_RUNNER}" in
     native)
         exec "${@}"

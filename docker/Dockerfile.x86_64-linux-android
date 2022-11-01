@@ -10,19 +10,32 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY android-ndk.sh /
-RUN /android-ndk.sh x86_64 28
-ENV PATH=$PATH:/android-ndk/bin
-
-COPY android-system.sh /
-RUN /android-system.sh x86_64
-
 # Using qemu allows older host cpus (without sse4) to execute the target binaries
 COPY qemu.sh /
 RUN /qemu.sh x86_64
 
+ARG ANDROID_NDK=r25b
+ARG ANDROID_SDK=28
+ARG ANDROID_VERSION=9.0.0_r1
+ARG ANDROID_SYSTEM_NONE=0
+ARG ANDROID_SYSTEM_COMPLETE=0
+ARG PYTHON_TMPDIR=/tmp/android
+
+COPY validate-android-args.sh /
+RUN /validate-android-args.sh x86_64
+
+COPY android-ndk.sh /
+RUN /android-ndk.sh x86_64
+ENV PATH=$PATH:/android-ndk/bin
+
+COPY android-system.sh /
+RUN mkdir -p $PYTHON_TMPDIR
+COPY android $PYTHON_TMPDIR
+RUN /android-system.sh x86_64
+
 ENV CROSS_SYSROOT=/android-ndk/sysroot
-RUN cp $CROSS_SYSROOT/usr/lib/x86_64-linux-android/28/libz.so /system/lib/
+COPY android-symlink.sh /
+RUN /android-symlink.sh x86_64 x86_64-linux-android
 
 COPY android-runner /
 
@@ -30,8 +43,19 @@ COPY android-runner /
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android-gcc \
     CARGO_TARGET_X86_64_LINUX_ANDROID_RUNNER="/android-runner x86_64" \
+    AR_x86_64_linux_android=x86_64-linux-android-ar \
+    AS_x86_64_linux_android=x86_64-linux-android-as \
     CC_x86_64_linux_android=x86_64-linux-android-gcc \
     CXX_x86_64_linux_android=x86_64-linux-android-g++ \
+    LD_x86_64_linux_android=x86_64-linux-android-ld \
+    NM_x86_64_linux_android=x86_64-linux-android-nm \
+    OBJCOPY_x86_64_linux_android=x86_64-linux-android-objcopy \
+    OBJDUMP_x86_64_linux_android=x86_64-linux-android-objdump \
+    RANLIB_x86_64_linux_android=x86_64-linux-android-ranlib \
+    READELF_x86_64_linux_android=x86_64-linux-android-readelf \
+    SIZE_x86_64_linux_android=x86_64-linux-android-size \
+    STRINGS_x86_64_linux_android=x86_64-linux-android-strings \
+    STRIP_x86_64_linux_android=x86_64-linux-android-strip \
     BINDGEN_EXTRA_CLANG_ARGS_x86_64_linux_android="--sysroot=$CROSS_SYSROOT" \
     DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include/" \
     RUST_TEST_THREADS=1 \

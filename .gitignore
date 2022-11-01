@@ -4,3 +4,12 @@
 **/*.log
 /cargo-timing*.html
 CHANGELOG.md.draft
+
+# python stuff
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.tox

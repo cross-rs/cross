@@ -1,0 +1,80 @@
+// sample heading comment
+sample_array = [
+    "value1",
+    "value2",
+]
+/**
+    sample
+    multiline
+    comment
+ */
+cc_defaults {
+    name: "target",
+    cflags: [
+        "-Wall",
+        "-fstrict-aliasing",
+    ],
+    option: true,
+    tidy_checks: sample_array,
+    tidy_checks_as_errors: sample_array,
+    array: [
+        "-short",
+        "--root='/path/to/dir'",
+    ],
+}
+cc_library_static {
+    name: "static_lib",
+    srcs: [
+        "tree.cc",
+        "lib.cc",
+    ],
+    include_dirs: ["bionic/libc"],
+    export_include_dirs: ["."],
+}
+cc_library {
+    name: "lib",
+    srcs: [
+        "tree.cc",
+        "lib.cc",
+    ],
+    include_dirs: ["bionic/libc"],
+    export_include_dirs: ["."],
+}
+cc_test {
+    name: "test",
+    defaults: ["target"],
+    srcs: ["test.cc"],
+    nested: {
+        array: {
+            option: false,
+        },
+    },
+}
+cc_test_host {
+    name: "host_test",
+    include_dirs: ["path/to/lib"],
+    compile_multilib: "64",
+    static_libs: [
+        "libm",
+        "libz",
+    ],
+    host_ldlibs: [
+        "-ldl",
+        "-lzstd",
+        "-l" + "z",
+    ],
+    shared_libs: [],
+    cflags = [
+        "-Wall",
+        "-fstrict-aliasing",
+    ],
+}
+cc_defaults {
+    name: "custom",
+    shared_libs: ["libcustom"],
+    whole_static_libs: [
+        "libz",
+        "libgtest_main",
+    ],
+    host_ldlibs: ["-lgtest"],
+}

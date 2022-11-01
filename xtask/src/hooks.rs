@@ -1,12 +1,14 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, ErrorKind};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::util::{cargo, get_channel_prefer_nightly};
+use crate::util::{cargo, cargo_metadata, get_channel_prefer_nightly};
+use clap::builder::BoolishValueParser;
 use clap::Args;
 use cross::shell::MessageInfo;
 use cross::CommandExt;
+use eyre::Context;
 
 const CARGO_FLAGS: &[&str] = &["--all-features", "--all-targets", "--workspace"];
 
@@ -24,6 +26,12 @@ pub struct Check {
     /// Run shellcheck on all files, not just staged files.
     #[clap(short, long)]
     all: bool,
+    /// Run Python linter checks.
+    #[clap(short, long, env = "PYTHON", value_parser = BoolishValueParser::new())]
+    python: bool,
+    /// Flake8 command (either an executable or list of arguments)
+    #[clap(short, long, env = "FLAKE8")]
+    flake8: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -37,6 +45,12 @@ pub struct Test {
     /// Coloring: auto, always, never
     #[clap(long)]
     pub color: Option<String>,
+    /// Run Python test suite.
+    #[clap(short, long, env = "PYTHON", value_parser = BoolishValueParser::new())]
+    python: bool,
+    /// Tox command (either an executable or list of arguments)
+    #[clap(short, long, env = "TOX")]
+    tox: Option<String>,
 }
 
 fn cargo_fmt(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Result<()> {
@@ -122,27 +136,109 @@ fn shellcheck(all: bool, msg_info: &mut MessageInfo) -> cross::Result<()> {
     Ok(())
 }
 
+fn parse_command(value: &str) -> cross::Result<Vec<String>> {
+    shell_words::split(value).wrap_err_with(|| format!("could not parse command of {}", value))
+}
+
+fn python_dir(metadata: &cross::CargoMetadata) -> PathBuf {
+    metadata.workspace_root.join("docker").join("android")
+}
+
+fn python_env(cmd: &mut Command, metadata: &cross::CargoMetadata) {
+    cmd.env("PYTHONDONTWRITEBYTECODE", "1");
+    cmd.env(
+        "PYTHONPYCACHEPREFIX",
+        metadata.target_directory.join("__pycache__"),
+    );
+}
+
+fn python_lint(flake8: Option<&str>, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    let metadata = cargo_metadata(msg_info)?;
+    let args = flake8
+        .map(parse_command)
+        .unwrap_or_else(|| Ok(vec!["flake8".to_owned()]))?;
+    let mut cmd = Command::new(
+        args.get(0)
+            .ok_or_else(|| eyre::eyre!("empty string provided for flake8 command"))?,
+    );
+    cmd.args(&args[1..]);
+    python_env(&mut cmd, &metadata);
+    if msg_info.is_verbose() {
+        cmd.arg("--verbose");
+    }
+    cmd.current_dir(python_dir(&metadata));
+    cmd.run(msg_info, false)?;
+
+    Ok(())
+}
+
+fn python_test(tox: Option<&str>, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    let metadata = cargo_metadata(msg_info)?;
+    let args = tox
+        .map(parse_command)
+        .unwrap_or_else(|| Ok(vec!["tox".to_owned()]))?;
+    let mut cmd = Command::new(
+        args.get(0)
+            .ok_or_else(|| eyre::eyre!("empty string provided for tox command"))?,
+    );
+    cmd.args(&args[1..]);
+    cmd.args(["-e", "py3"]);
+    python_env(&mut cmd, &metadata);
+    cmd.arg("--workdir");
+    cmd.arg(&metadata.target_directory);
+    if msg_info.is_verbose() {
+        cmd.arg("--verbose");
+    }
+    cmd.current_dir(python_dir(&metadata));
+    cmd.run(msg_info, false)?;
+
+    Ok(())
+}
+
 pub fn check(
-    Check { all, .. }: Check,
+    Check {
+        all,
+        python,
+        flake8,
+        ..
+    }: Check,
     toolchain: Option<&str>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    msg_info.info("Running rustfmt, clippy, and shellcheck checks.")?;
+    let mut checks = vec!["rustfmt", "clippy", "shellcheck"];
+    if python {
+        checks.push("python");
+    }
+    msg_info.info(format_args!("Running {} checks.", checks.join(", ")))?;
 
     let channel = get_channel_prefer_nightly(msg_info, toolchain)?;
     cargo_fmt(msg_info, channel)?;
     cargo_clippy(msg_info, channel)?;
     shellcheck(all, msg_info)?;
+    if python {
+        python_lint(flake8.as_deref(), msg_info)?;
+    }
 
     Ok(())
 }
 
-pub fn test(toolchain: Option<&str>, msg_info: &mut MessageInfo) -> cross::Result<()> {
-    msg_info.info("Running cargo fmt and tests")?;
+pub fn test(
+    Test { python, tox, .. }: Test,
+    toolchain: Option<&str>,
+    msg_info: &mut MessageInfo,
+) -> cross::Result<()> {
+    let mut tests = vec!["rustfmt", "unit"];
+    if python {
+        tests.push("python");
+    }
+    msg_info.info(format_args!("Running {} tests.", tests.join(", ")))?;
 
     let channel = get_channel_prefer_nightly(msg_info, toolchain)?;
     cargo_fmt(msg_info, channel)?;
     cargo_test(msg_info, channel)?;
+    if python {
+        python_test(tox.as_deref(), msg_info)?;
+    }
 
     Ok(())
 }

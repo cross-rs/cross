@@ -1,0 +1,9 @@
+// this contains a list of maps
+scope {
+    key: [
+        {
+            name: "art",
+            deps: ["dependency"],
+        },
+    ],
+}
