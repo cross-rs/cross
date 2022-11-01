@@ -1,0 +1,5 @@
+{
+    "type": "changed",
+    "description": "explicitly prefer `-ar` to `-gcc-ar`.",
+    "issues": [1100]
+}
