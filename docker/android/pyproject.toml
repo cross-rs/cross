@@ -1,0 +1,12 @@
+[project]
+name = "android"
+version = "0.0.0-dev.0"
+license = { text = "MIT OR Apache-2.0" }
+dependencies = ["sly==0.4", "google-re2==1.0"]
+
+[build-system]
+requires = [
+    "setuptools >= 35.0.2",
+    "setuptools_scm >= 2.0.0, <3"
+]
+build-backend = "setuptools.build_meta"

@@ -10,18 +10,31 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY android-ndk.sh /
-RUN /android-ndk.sh arm 28
-ENV PATH=$PATH:/android-ndk/bin
-
-COPY android-system.sh /
-RUN /android-system.sh arm
-
 COPY qemu.sh /
 RUN /qemu.sh arm
 
+ARG ANDROID_NDK=r25b
+ARG ANDROID_SDK=28
+ARG ANDROID_VERSION=9.0.0_r1
+ARG ANDROID_SYSTEM_NONE=0
+ARG ANDROID_SYSTEM_COMPLETE=0
+ARG PYTHON_TMPDIR=/tmp/android
+
+COPY validate-android-args.sh /
+RUN /validate-android-args.sh arm
+
+COPY android-ndk.sh /
+RUN /android-ndk.sh arm
+ENV PATH=$PATH:/android-ndk/bin
+
+COPY android-system.sh /
+RUN mkdir -p $PYTHON_TMPDIR
+COPY android $PYTHON_TMPDIR
+RUN /android-system.sh arm
+
 ENV CROSS_SYSROOT=/android-ndk/sysroot
-RUN cp $CROSS_SYSROOT/usr/lib/arm-linux-androideabi/28/libz.so /system/lib/
+COPY android-symlink.sh /
+RUN /android-symlink.sh arm arm-linux-androideabi
 
 COPY android-runner /
 

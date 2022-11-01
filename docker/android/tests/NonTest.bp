@@ -1,0 +1,6 @@
+cc_defaults {
+    name: "lib-non-test-defaults",
+    cflags: ["-Wall"],
+    srcs: ["src/libc.cc"],
+    min_sdk_version: "29",
+}

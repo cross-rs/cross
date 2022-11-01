@@ -10,25 +10,39 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY android-ndk.sh /
-RUN /android-ndk.sh x86 28
-ENV PATH=$PATH:/android-ndk/bin
-
-COPY android-system.sh /
-RUN /android-system.sh x86
-
 # We could supposedly directly run i686 binaries like we do for x86_64, but
 # doing so generates an assertion failure:
 #   ... assertion failed: signal(libc::SIGPIPE, libc::SIG_IGN) != libc::SIG_ERR
 #   ... src/libstd/sys/unix/mod.rs
 #   fatal runtime error: failed to initiate panic, error 5
 #
-# Running with qemu works as expected
+# Running with qemu works as expected. it also ensures that're we're
+# running on a CPU that only supports 32-bit x86 systems.
 COPY qemu.sh /
 RUN /qemu.sh i386
 
+ARG ANDROID_NDK=r25b
+ARG ANDROID_SDK=28
+ARG ANDROID_VERSION=9.0.0_r1
+ARG ANDROID_SYSTEM_NONE=0
+ARG ANDROID_SYSTEM_COMPLETE=0
+ARG PYTHON_TMPDIR=/tmp/android
+
+COPY validate-android-args.sh /
+RUN /validate-android-args.sh x86
+
+COPY android-ndk.sh /
+RUN /android-ndk.sh x86
+ENV PATH=$PATH:/android-ndk/bin
+
+COPY android-system.sh /
+RUN mkdir -p $PYTHON_TMPDIR
+COPY android $PYTHON_TMPDIR
+RUN /android-system.sh x86
+
 ENV CROSS_SYSROOT=/android-ndk/sysroot
-RUN cp $CROSS_SYSROOT/usr/lib/i686-linux-android/28/libz.so /system/lib/
+COPY android-symlink.sh /
+RUN /android-symlink.sh i386 i686-linux-android
 
 COPY android-runner /
 
@@ -36,8 +50,19 @@ COPY android-runner /
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_I686_LINUX_ANDROID_LINKER=i686-linux-android-gcc \
     CARGO_TARGET_I686_LINUX_ANDROID_RUNNER="/android-runner i686" \
+    AR_i686_linux_android=i686-linux-android-ar \
+    AS_i686_linux_android=i686-linux-android-as \
     CC_i686_linux_android=i686-linux-android-gcc \
     CXX_i686_linux_android=i686-linux-android-g++ \
+    LD_i686_linux_android=i686-linux-android-ld \
+    NM_i686_linux_android=i686-linux-android-nm \
+    OBJCOPY_i686_linux_android=i686-linux-android-objcopy \
+    OBJDUMP_i686_linux_android=i686-linux-android-objdump \
+    RANLIB_i686_linux_android=i686-linux-android-ranlib \
+    READELF_i686_linux_android=i686-linux-android-readelf \
+    SIZE_i686_linux_android=i686-linux-android-size \
+    STRINGS_i686_linux_android=i686-linux-android-strings \
+    STRIP_i686_linux_android=i686-linux-android-strip \
     BINDGEN_EXTRA_CLANG_ARGS_i686_linux_android="--sysroot=$CROSS_SYSROOT" \
     DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include/" \
     LIBZ_SYS_STATIC=1 \

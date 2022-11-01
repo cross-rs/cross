@@ -1,0 +1,11 @@
+# don't copy any of the python artifacts to the docker context
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*$py.class
+**/*.egg-info/
+*.egg
+.tox
+
+# also skip our test suite
+android/tests/

@@ -10,18 +10,31 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY android-ndk.sh /
-RUN /android-ndk.sh arm 28
-ENV PATH=$PATH:/android-ndk/bin
-
-COPY android-system.sh /
-RUN /android-system.sh arm
-
 COPY qemu.sh /
 RUN /qemu.sh arm
 
+ARG ANDROID_NDK=r25b
+ARG ANDROID_SDK=28
+ARG ANDROID_VERSION=9.0.0_r1
+ARG ANDROID_SYSTEM_NONE=0
+ARG ANDROID_SYSTEM_COMPLETE=0
+ARG PYTHON_TMPDIR=/tmp/android
+
+COPY validate-android-args.sh /
+RUN /validate-android-args.sh arm
+
+COPY android-ndk.sh /
+RUN /android-ndk.sh arm
+ENV PATH=$PATH:/android-ndk/bin
+
+COPY android-system.sh /
+RUN mkdir -p $PYTHON_TMPDIR
+COPY android $PYTHON_TMPDIR
+RUN /android-system.sh arm
+
 ENV CROSS_SYSROOT=/android-ndk/sysroot
-RUN cp $CROSS_SYSROOT/usr/lib/arm-linux-androideabi/28/libz.so /system/lib/
+COPY android-symlink.sh /
+RUN /android-symlink.sh arm arm-linux-androideabi
 
 COPY android-runner /
 
@@ -29,8 +42,19 @@ COPY android-runner /
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
     CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_RUNNER="/android-runner arm" \
+    AR_armv7_linux_androideabi=arm-linux-androideabi-ar \
+    AS_armv7_linux_androideabi=arm-linux-androideabi-as \
     CC_armv7_linux_androideabi=arm-linux-androideabi-gcc \
     CXX_armv7_linux_androideabi=arm-linux-androideabi-g++ \
+    LD_armv7_linux_androideabi=arm-linux-androideabi-ld \
+    NM_armv7_linux_androideabi=arm-linux-androideabi-nm \
+    OBJCOPY_armv7_linux_androideabi=arm-linux-androideabi-objcopy \
+    OBJDUMP_armv7_linux_androideabi=arm-linux-androideabi-objdump \
+    RANLIB_armv7_linux_androideabi=arm-linux-androideabi-ranlib \
+    READELF_armv7_linux_androideabi=arm-linux-androideabi-readelf \
+    SIZE_armv7_linux_androideabi=arm-linux-androideabi-size \
+    STRINGS_armv7_linux_androideabi=arm-linux-androideabi-strings \
+    STRIP_armv7_linux_androideabi=arm-linux-androideabi-strip \
     BINDGEN_EXTRA_CLANG_ARGS_armv7_linux_androideabi="--sysroot=$CROSS_SYSROOT" \
     DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include/" \
     RUST_TEST_THREADS=1 \

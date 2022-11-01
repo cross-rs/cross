@@ -265,7 +265,7 @@ impl QualifiedToolchain {
             Ok(_) | Err(_) if config.custom_toolchain() => {
                 QualifiedToolchain::custom(toolchain, &sysroot, config, msg_info)
             }
-            Ok(_) => return Err(eyre::eyre!("toolchain is not fully qualified")
+            Ok(_) => Err(eyre::eyre!("toolchain is not fully qualified")
                 .with_note(|| "cross expects the toolchain to be a rustup installed toolchain")
                 .with_suggestion(|| {
                     "if you're using a custom toolchain try setting `CROSS_CUSTOM_TOOLCHAIN=1` or install rust via rustup"

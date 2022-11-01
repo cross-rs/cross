@@ -1,0 +1,62 @@
+// special file testing `+` and `+=` operators
+// this is assignment + add assignment
+list = ["value1"]
+list += ["value2"]
+number = 1
+number += 2
+string = "string"
+string += "_suffix"
+scope {
+    name: "target",
+}
+scope += {
+    name: "_suffix",
+    srcs: [
+        // sequence items just have to evaluate to strings
+        "tree.cc" + string,
+        "lib.cc",
+    ],
+}
+// this is addition with lhs idents
+lhs_sum = number + 4
+lhs_string = string + "_suffix"
+lhs_list = list + ["value3"]
+lhs_scope = scope + {
+    name: "_suffix",
+    cflags: [
+        "-Wall",
+    ],
+}
+// this is addition with rhs idents
+rhs_sum = 4 + number
+rhs_string = "prefix_" + string
+rhs_list = ["value0"] + list
+rhs_scope = {
+    name: "_suffix",
+    cflags: [
+        "-Wall",
+    ],
+} + scope
+// this is addition with both being non-idents
+expr_sum = 4 + 1
+expr_string = "prefix_" + "suffix"
+expr_list = ["value0"] + ["value1"]
+expr_scope = {} + {
+    name: "target",
+}
+// test multiple binary ops
+tri_sum = 4 + 1 + 2
+tri_string = "prefix_" + "middle" + "_suffix"
+tri_list = ["value0"] + ["value1"] + ["value2"]
+tri_scope = {} + {
+    name: "target",
+} + {}
+// test sequence lhs and rhs strings
+home = "dir/"
+test = "test.c"
+
+files = [
+    home + "file.c",
+    "test/" + test,
+    home + test,
+]

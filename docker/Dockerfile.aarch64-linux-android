@@ -10,18 +10,31 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY android-ndk.sh /
-RUN /android-ndk.sh arm64 28
-ENV PATH=$PATH:/android-ndk/bin
-
-COPY android-system.sh /
-RUN /android-system.sh arm64
-
 COPY qemu.sh /
 RUN /qemu.sh aarch64
 
+ARG ANDROID_NDK=r25b
+ARG ANDROID_SDK=28
+ARG ANDROID_VERSION=9.0.0_r1
+ARG ANDROID_SYSTEM_NONE=0
+ARG ANDROID_SYSTEM_COMPLETE=0
+ARG PYTHON_TMPDIR=/tmp/android
+
+COPY validate-android-args.sh /
+RUN /validate-android-args.sh arm64
+
+COPY android-ndk.sh /
+RUN /android-ndk.sh arm64
+ENV PATH=$PATH:/android-ndk/bin
+
+COPY android-system.sh /
+RUN mkdir -p $PYTHON_TMPDIR
+COPY android $PYTHON_TMPDIR
+RUN /android-system.sh arm64
+
 ENV CROSS_SYSROOT=/android-ndk/sysroot
-RUN cp $CROSS_SYSROOT/usr/lib/aarch64-linux-android/28/libz.so /system/lib/
+COPY android-symlink.sh /
+RUN /android-symlink.sh aarch64 aarch64-linux-android
 
 COPY android-runner /
 
@@ -29,8 +42,19 @@ COPY android-runner /
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
 ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-gcc \
     CARGO_TARGET_AARCH64_LINUX_ANDROID_RUNNER="/android-runner aarch64" \
+    AR_aarch64_linux_android=aarch64-linux-android-ar \
+    AS_aarch64_linux_android=aarch64-linux-android-as \
     CC_aarch64_linux_android=aarch64-linux-android-gcc \
     CXX_aarch64_linux_android=aarch64-linux-android-g++ \
+    LD_aarch64_linux_android=aarch64-linux-android-ld \
+    NM_aarch64_linux_android=aarch64-linux-android-nm \
+    OBJCOPY_aarch64_linux_android=aarch64-linux-android-objcopy \
+    OBJDUMP_aarch64_linux_android=aarch64-linux-android-objdump \
+    RANLIB_aarch64_linux_android=aarch64-linux-android-ranlib \
+    READELF_aarch64_linux_android=aarch64-linux-android-readelf \
+    SIZE_aarch64_linux_android=aarch64-linux-android-size \
+    STRINGS_aarch64_linux_android=aarch64-linux-android-strings \
+    STRIP_aarch64_linux_android=aarch64-linux-android-strip \
     BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=$CROSS_SYSROOT" \
     DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include"/ \
     RUST_TEST_THREADS=1 \
