@@ -17,4 +17,7 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     /qemu.sh arm
 
 ENV QEMU_CPU=cortex-m4 \
+    AR_thumbv7em_none_eabi=arm-none-eabi-ar \
+    CC_thumbv7em_none_eabi=arm-none-eabi-gcc \
+    CXX_thumbv7em_none_eabi=arm-none-eabi-g++ \
     CARGO_TARGET_THUMBV7EM_NONE_EABI_RUNNER=qemu-arm
