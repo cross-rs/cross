@@ -20,7 +20,7 @@ TARGETS=(
     "i586-unknown-linux-musl"
 )
 
-# on CI, it sets `CROSS_TARGET_ZIG_IMAGE` rather than `CROSS_TARGET_ZIG_IMAGE`
+# on CI, it sets `CROSS_TARGET_ZIG_IMAGE` rather than `CROSS_BUILD_ZIG_IMAGE`
 if [[ -n "${CROSS_TARGET_ZIG_IMAGE}" ]]; then
     export CROSS_BUILD_ZIG_IMAGE="${CROSS_TARGET_ZIG_IMAGE}"
     unset CROSS_TARGET_ZIG_IMAGE

@@ -1,0 +1,5 @@
+{
+    "description": "added a zig-based image (v0.10.0), allowing multiple targets to be built from the same image, using cargo-zigbuild (v0.14.1).",
+    "type": "added",
+    "issues": [860, 1109]
+}
