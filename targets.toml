@@ -440,22 +440,22 @@ std = true
 [[target]]
 target = "thumbv6m-none-eabi"
 os = "ubuntu-latest"
-std = true
+std = false
 
 [[target]]
 target = "thumbv7em-none-eabi"
 os = "ubuntu-latest"
-std = true
+std = false
 
 [[target]]
 target = "thumbv7em-none-eabihf"
 os = "ubuntu-latest"
-std = true
+std = false
 
 [[target]]
 target = "thumbv7m-none-eabi"
 os = "ubuntu-latest"
-std = true
+std = false
 
 [[target]]
 target = "cross"
