@@ -7,7 +7,7 @@ use crate::shell::MessageInfo;
 use crate::{errors::*, file, CommandExt, ToUtf8};
 use crate::{CargoMetadata, TargetTriple};
 
-use super::{get_image_name, path_hash, Engine, ImagePlatform};
+use super::{get_image_name, path_hash, BuildCommandExt, BuildResultExt, Engine, ImagePlatform};
 
 pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "localhost/cross-rs/cross-custom-";
 
@@ -72,30 +72,14 @@ impl<'a> Dockerfile<'a> {
     ) -> Result<String> {
         let uses_zig = options.cargo_variant.uses_zig();
         let mut docker_build = options.engine.command();
-        match docker::Engine::has_buildkit() {
-            true => docker_build.args(["buildx", "build"]),
-            false => docker_build.arg("build"),
-        };
-        docker_build.env("DOCKER_SCAN_SUGGEST", "false");
+        docker_build.invoke_build_command();
+        docker_build.disable_scan_suggest();
         self.runs_with()
             .specify_platform(&options.engine, &mut docker_build);
 
-        docker_build.args([
-            "--label",
-            &format!(
-                "{}.for-cross-target={}",
-                crate::CROSS_LABEL_DOMAIN,
-                options.target,
-            ),
-        ]);
-        docker_build.args([
-            "--label",
-            &format!(
-                "{}.runs-with={}",
-                crate::CROSS_LABEL_DOMAIN,
-                self.runs_with().target
-            ),
-        ]);
+        docker_build.progress(None)?;
+        docker_build.verbose(msg_info.verbosity);
+        docker_build.cross_labels(options.target.triple(), self.runs_with().target.triple());
 
         docker_build.args([
             "--label",
@@ -163,32 +147,13 @@ impl<'a> Dockerfile<'a> {
             docker_build.arg(paths.host_root());
         }
 
-        let mut res = docker_build.run(msg_info, true).with_warning(|| {
-            format!(
-                "call to {} failed",
-                options
-                    .engine
-                    .path
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                    .map_or_else(|| "container engine", |s| s)
-            )
-        });
-
         // FIXME: Inspect the error message, while still inheriting stdout on verbose mode to
         // conditionally apply this suggestion and note. This could then inspect if a help string is emitted,
         // if the daemon is not running, etc.
-        if docker::Engine::has_buildkit() {
-            res = res
-                .suggestion("is `buildx` available for the container engine?")
-                .with_note(|| {
-                    format!(
-                        "disable the `buildkit` dependency optionally with `{}=1`",
-                        docker::Engine::CROSS_CONTAINER_ENGINE_NO_BUILDKIT_ENV
-                    )
-                });
-        }
-        res?;
+        docker_build
+            .run(msg_info, true)
+            .engine_warning(&options.engine)
+            .buildkit_warning()?;
         Ok(image_name)
     }
 

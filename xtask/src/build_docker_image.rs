@@ -6,9 +6,9 @@ use crate::util::{
 };
 use crate::ImageTarget;
 use clap::Args;
-use cross::docker::ImagePlatform;
+use cross::docker::{self, BuildCommandExt, BuildResultExt, ImagePlatform, Progress};
 use cross::shell::MessageInfo;
-use cross::{docker, CommandExt, ToUtf8};
+use cross::{CommandExt, ToUtf8};
 
 #[derive(Args, Debug)]
 pub struct BuildDockerImage {
@@ -55,9 +55,8 @@ pub struct BuildDockerImage {
     #[clap(
         long,
         value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]),
-        default_value = "auto"
     )]
-    pub progress: String,
+    pub progress: Option<Progress>,
     /// Do not load from cache when building the image.
     #[clap(long)]
     pub no_cache: bool,
@@ -107,12 +106,11 @@ pub fn build_docker_image(
         tag: tag_override,
         repository,
         labels,
-        verbose,
         dry_run,
         force,
         push,
         no_output,
-        progress,
+        mut progress,
         no_cache,
         no_fastfail,
         from_ci,
@@ -124,10 +122,6 @@ pub fn build_docker_image(
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let verbose = match verbose {
-        0 => msg_info.verbosity.level(),
-        v => v,
-    };
     let metadata = cargo_metadata(msg_info)?;
     let version = metadata
         .get_package("cross")
@@ -158,6 +152,9 @@ pub fn build_docker_image(
         }
     }
     let gha = std::env::var("GITHUB_ACTIONS").is_ok();
+    if gha {
+        progress = Some(Progress::Plain);
+    }
     let root = metadata.workspace_root;
     let docker_root = root.join("docker");
     let cross_toolchains_root = docker_root.join("cross-toolchains").join("docker");
@@ -183,11 +180,8 @@ pub fn build_docker_image(
             msg_info.note(format_args!("Build {target} for {}", platform.target))?;
         }
         let mut docker_build = engine.command();
+        docker_build.invoke_build_command();
         let has_buildkit = docker::Engine::has_buildkit();
-        match has_buildkit {
-            true => docker_build.args(["buildx", "build"]),
-            false => docker_build.arg("build"),
-        };
         docker_build.current_dir(&docker_root);
 
         let docker_platform = platform.docker_platform();
@@ -249,15 +243,13 @@ pub fn build_docker_image(
         if engine.kind.supports_pull_flag() {
             docker_build.arg("--pull");
         }
+        let base_name = format!("{repository}/{}", target.name);
         if no_cache {
             docker_build.arg("--no-cache");
         } else if engine.kind.supports_cache_from_type() {
             docker_build.args([
                 "--cache-from",
-                &format!(
-                    "type=registry,ref={}",
-                    target.image_name(&repository, "main")
-                ),
+                &format!("type=registry,ref={base_name}:main"),
             ]);
         } else {
             // we can't use `image_name` since podman doesn't support tags
@@ -267,7 +259,7 @@ pub fn build_docker_image(
             // can't use caches from registry. this is only an issue if
             // building with podman without a local cache, which never
             // happens in practice.
-            docker_build.args(["--cache-from", &format!("{repository}/{}", target.name)]);
+            docker_build.args(["--cache-from", &base_name]);
         }
 
         if push {
@@ -287,49 +279,29 @@ pub fn build_docker_image(
             docker_build.args(["--label", label]);
         }
 
-        docker_build.args([
-            "--label",
-            &format!(
-                "{}.for-cross-target={}",
-                cross::CROSS_LABEL_DOMAIN,
-                target.name
-            ),
-        ]);
-        docker_build.args([
-            "--label",
-            &format!(
-                "{}.runs-with={}",
-                cross::CROSS_LABEL_DOMAIN,
-                platform.target
-            ),
-        ]);
+        docker_build.cross_labels(&target.name, platform.target.triple());
+        docker_build.args(["--file", &dockerfile]);
 
-        docker_build.args(["-f", &dockerfile]);
-
-        if gha || progress == "plain" {
-            docker_build.args(["--progress", "plain"]);
-        } else {
-            docker_build.args(["--progress", &progress]);
-        }
+        docker_build.progress(progress)?;
+        docker_build.verbose(msg_info.verbosity);
         for arg in &build_arg {
             docker_build.args(["--build-arg", arg]);
-        }
-        if verbose > 1 {
-            docker_build.args(["--build-arg", "VERBOSE=1"]);
         }
 
         if let Some(opts) = &build_opts {
             docker_build.args(docker::Engine::parse_opts(opts)?);
         }
 
-        if target.needs_workspace_root_context() {
-            docker_build.arg(&root);
-        } else {
-            docker_build.arg(".");
-        }
+        docker_build.arg(match target.needs_workspace_root_context() {
+            true => root.as_path(),
+            false => Path::new("."),
+        });
 
         if !dry_run && (force || !push || gha) {
-            let result = docker_build.run(msg_info, false);
+            let result = docker_build
+                .run(msg_info, false)
+                .engine_warning(engine)
+                .buildkit_warning();
             if gha && targets.len() > 1 {
                 if let Err(e) = &result {
                     // TODO: Determine what instruction errorred, and place warning on that line with appropriate warning
