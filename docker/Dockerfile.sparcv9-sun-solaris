@@ -13,9 +13,10 @@ RUN /xargo.sh
 COPY solaris.sh /
 RUN /solaris.sh sparcv9
 
+ENV CROSS_TOOLCHAIN_PREFIX=sparcv9-sun-solaris2.10-
 ENV CROSS_SYSROOT=/usr/local/sparcv9-sun-solaris2.10
-ENV CARGO_TARGET_SPARCV9_SUN_SOLARIS_LINKER=sparcv9-sun-solaris2.10-gcc \
-    AR_sparcv9_sun_solaris=sparcv9-sun-solaris2.10-ar \
-    CC_sparcv9_sun_solaris=sparcv9-sun-solaris2.10-gcc \
-    CXX_sparcv9_sun_solaris=sparcv9-sun-solaris2.10-g++ \
+ENV CARGO_TARGET_SPARCV9_SUN_SOLARIS_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    AR_sparcv9_sun_solaris="$CROSS_TOOLCHAIN_PREFIX"ar \
+    CC_sparcv9_sun_solaris="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_sparcv9_sun_solaris="$CROSS_TOOLCHAIN_PREFIX"g++ \
     BINDGEN_EXTRA_CLANG_ARGS_sparcv9_sun_solaris="--sysroot=$CROSS_SYSROOT"

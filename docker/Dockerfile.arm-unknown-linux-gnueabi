@@ -24,11 +24,12 @@ RUN /qemu.sh arm
 
 COPY qemu-runner base-runner.sh /
 
+ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabi-
 ENV CROSS_SYSROOT=/usr/arm-linux-gnueabi
-ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
+ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_RUNNER="/qemu-runner arm" \
-    CC_arm_unknown_linux_gnueabi=arm-linux-gnueabi-gcc \
-    CXX_arm_unknown_linux_gnueabi=arm-linux-gnueabi-g++ \
+    CC_arm_unknown_linux_gnueabi="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_arm_unknown_linux_gnueabi="$CROSS_TOOLCHAIN_PREFIX"g++ \
     BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_gnueabi="--sysroot=$CROSS_SYSROOT" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
