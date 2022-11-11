@@ -30,11 +30,12 @@ RUN /linux-image.sh powerpc64
 
 COPY linux-runner base-runner.sh /
 
+ENV CROSS_TOOLCHAIN_PREFIX=powerpc64-linux-gnu-
 ENV CROSS_SYSROOT=/usr/powerpc64-linux-gnu
-ENV CARGO_TARGET_POWERPC64_UNKNOWN_LINUX_GNU_LINKER=powerpc64-linux-gnu-gcc \
+ENV CARGO_TARGET_POWERPC64_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_POWERPC64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner powerpc64" \
-    CC_powerpc64_unknown_linux_gnu=powerpc64-linux-gnu-gcc \
-    CXX_powerpc64_unknown_linux_gnu=powerpc64-linux-gnu-g++ \
+    CC_powerpc64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_powerpc64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"g++ \
     BINDGEN_EXTRA_CLANG_ARGS_powerpc64_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \

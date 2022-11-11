@@ -34,9 +34,10 @@ RUN mkdir -p /usr/lib/binfmt-support/ && \
 COPY windows-entry.sh /
 ENTRYPOINT ["/windows-entry.sh"]
 
+ENV CROSS_TOOLCHAIN_PREFIX=i686-w64-mingw32-
 ENV CROSS_SYSROOT=/usr/i686-w64-mingw32
-ENV CARGO_TARGET_I686_PC_WINDOWS_GNU_LINKER=i686-w64-mingw32-gcc \
+ENV CARGO_TARGET_I686_PC_WINDOWS_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_I686_PC_WINDOWS_GNU_RUNNER=wine \
-    CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix \
-    CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix \
+    CC_i686_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc-posix \
+    CXX_i686_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"g++-posix \
     BINDGEN_EXTRA_CLANG_ARGS_i686_pc_windows_gnu="--sysroot=$CROSS_SYSROOT"

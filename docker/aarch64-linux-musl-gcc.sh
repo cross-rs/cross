@@ -16,10 +16,10 @@ main() {
 
     if (( minor >= 48 )) || [[ $# -eq 0 ]]; then
         # no workaround
-        exec aarch64-linux-musl-gcc "${@}"
+        exec "${CROSS_TOOLCHAIN_PREFIX}gcc" "${@}"
     else
         # apply workaround
-        exec aarch64-linux-musl-gcc "${@}" -lgcc -static-libgcc
+        exec "${CROSS_TOOLCHAIN_PREFIX}gcc" "${@}" -lgcc -static-libgcc
     fi
 }
 

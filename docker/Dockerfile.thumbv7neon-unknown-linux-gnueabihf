@@ -26,22 +26,23 @@ RUN /linux-image.sh armv7
 COPY linux-runner base-runner.sh /
 
 # Export all target binutils just in case required.
+ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabihf-
 ENV CROSS_SYSROOT=/usr/arm-linux-gnueabihf
-ENV CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
+ENV CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_RUNNER="/linux-runner armv7hf" \
-    AR_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-ar \
-    AS_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-as \
-    CC_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc \
-    CXX_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++ \
-    LD_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-ld \
-    NM_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-nm \
-    OBJCOPY_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-objcopy \
-    OBJDUMP_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-objdump \
-    RANLIB_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-ranlib \
-    READELF_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-readelf \
-    SIZE_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-size \
-    STRINGS_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-strings \
-    STRIP_thumbv7neon_unknown_linux_gnueabihf=arm-linux-gnueabihf-strip \
+    AR_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"ar \
+    AS_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"as \
+    CC_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    LD_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"ld \
+    NM_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"nm \
+    OBJCOPY_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"objcopy \
+    OBJDUMP_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"objdump \
+    RANLIB_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"ranlib \
+    READELF_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"readelf \
+    SIZE_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"size \
+    STRINGS_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"strings \
+    STRIP_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"strip \
     BINDGEN_EXTRA_CLANG_ARGS_thumbv7neon_unknown_linux_gnueabihf="--sysroot=$CROSS_SYSROOT" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \

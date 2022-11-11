@@ -32,6 +32,7 @@ RUN mkdir -p $PYTHON_TMPDIR
 COPY android $PYTHON_TMPDIR
 RUN /android-system.sh arm
 
+ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-androideabi-
 ENV CROSS_SYSROOT=/android-ndk/sysroot
 COPY android-symlink.sh /
 RUN /android-symlink.sh arm arm-linux-androideabi
@@ -40,21 +41,21 @@ COPY android-runner /
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
-ENV CARGO_TARGET_ARM_LINUX_ANDROIDEABI_LINKER=arm-linux-androideabi-gcc \
+ENV CARGO_TARGET_ARM_LINUX_ANDROIDEABI_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_ARM_LINUX_ANDROIDEABI_RUNNER="/android-runner arm" \
-    AR_arm_linux_androideabi=arm-linux-androideabi-ar \
-    AS_arm_linux_androideabi=arm-linux-androideabi-as \
-    CC_arm_linux_androideabi=arm-linux-androideabi-gcc \
-    CXX_arm_linux_androideabi=arm-linux-androideabi-g++ \
-    LD_arm_linux_androideabi=arm-linux-androideabi-ld \
-    NM_arm_linux_androideabi=arm-linux-androideabi-nm \
-    OBJCOPY_arm_linux_androideabi=arm-linux-androideabi-objcopy \
-    OBJDUMP_arm_linux_androideabi=arm-linux-androideabi-objdump \
-    RANLIB_arm_linux_androideabi=arm-linux-androideabi-ranlib \
-    READELF_arm_linux_androideabi=arm-linux-androideabi-readelf \
-    SIZE_arm_linux_androideabi=arm-linux-androideabi-size \
-    STRINGS_arm_linux_androideabi=arm-linux-androideabi-strings \
-    STRIP_arm_linux_androideabi=arm-linux-androideabi-strip \
+    AR_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"ar \
+    AS_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"as \
+    CC_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    LD_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"ld \
+    NM_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"nm \
+    OBJCOPY_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"objcopy \
+    OBJDUMP_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"objdump \
+    RANLIB_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"ranlib \
+    READELF_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"readelf \
+    SIZE_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"size \
+    STRINGS_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"strings \
+    STRIP_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"strip \
     BINDGEN_EXTRA_CLANG_ARGS_arm_linux_androideabi="--sysroot=$CROSS_SYSROOT" \
     DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include/" \
     RUST_TEST_THREADS=1 \

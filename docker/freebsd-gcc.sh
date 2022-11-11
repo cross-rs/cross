@@ -8,9 +8,9 @@ set -euo pipefail
 
 main() {
     if [[ $# -eq 0 ]]; then
-        exec x86_64-unknown-freebsd12-gcc "${@}"
+        exec "${CROSS_TOOLCHAIN_PREFIX}gcc" "${@}"
     else
-        exec x86_64-unknown-freebsd12-gcc "${@}" -lc++ -lstdc++
+        exec "${CROSS_TOOLCHAIN_PREFIX}gcc" "${@}" -lc++ -lstdc++
     fi
 }
 

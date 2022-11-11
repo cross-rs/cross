@@ -32,6 +32,7 @@ RUN mkdir -p $PYTHON_TMPDIR
 COPY android $PYTHON_TMPDIR
 RUN /android-system.sh arm64
 
+ENV CROSS_TOOLCHAIN_PREFIX=aarch64-linux-android-
 ENV CROSS_SYSROOT=/android-ndk/sysroot
 COPY android-symlink.sh /
 RUN /android-symlink.sh aarch64 aarch64-linux-android
@@ -40,21 +41,21 @@ COPY android-runner /
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
-ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-gcc \
+ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_AARCH64_LINUX_ANDROID_RUNNER="/android-runner aarch64" \
-    AR_aarch64_linux_android=aarch64-linux-android-ar \
-    AS_aarch64_linux_android=aarch64-linux-android-as \
-    CC_aarch64_linux_android=aarch64-linux-android-gcc \
-    CXX_aarch64_linux_android=aarch64-linux-android-g++ \
-    LD_aarch64_linux_android=aarch64-linux-android-ld \
-    NM_aarch64_linux_android=aarch64-linux-android-nm \
-    OBJCOPY_aarch64_linux_android=aarch64-linux-android-objcopy \
-    OBJDUMP_aarch64_linux_android=aarch64-linux-android-objdump \
-    RANLIB_aarch64_linux_android=aarch64-linux-android-ranlib \
-    READELF_aarch64_linux_android=aarch64-linux-android-readelf \
-    SIZE_aarch64_linux_android=aarch64-linux-android-size \
-    STRINGS_aarch64_linux_android=aarch64-linux-android-strings \
-    STRIP_aarch64_linux_android=aarch64-linux-android-strip \
+    AR_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"ar \
+    AS_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"as \
+    CC_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    LD_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"ld \
+    NM_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"nm \
+    OBJCOPY_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"objcopy \
+    OBJDUMP_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"objdump \
+    RANLIB_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"ranlib \
+    READELF_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"readelf \
+    SIZE_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"size \
+    STRINGS_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"strings \
+    STRIP_aarch64_linux_android="$CROSS_TOOLCHAIN_PREFIX"strip \
     BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=$CROSS_SYSROOT" \
     DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include"/ \
     RUST_TEST_THREADS=1 \

@@ -26,5 +26,6 @@ COPY --from=0 /qemu /qemu
 
 COPY linux-runner base-runner.sh /
 
+ENV CROSS_TOOLCHAIN_PREFIX=
 ENV CROSS_SYSROOT=/
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner x86_64"
