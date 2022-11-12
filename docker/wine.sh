@@ -7,6 +7,7 @@ set -euo pipefail
 . lib.sh
 
 main() {
+    local version="7.0.1~focal-1"
     install_packages wget
 
     dpkg --add-architecture i386
@@ -26,9 +27,14 @@ main() {
     mv winehq-focal.sources /etc/apt/sources.list.d/
     sed -i s@/usr/share/keyrings/@/etc/apt/keyrings/@ /etc/apt/sources.list.d/winehq-focal.sources || true
 
+    # winehq requires all the dependencies to be manually specified
+    # if we're not using the latest version of a given major version.
     apt-get update
     apt install --no-install-recommends --assume-yes \
-        "winehq-stable=7.0.0.0~focal-1"
+        "wine-stable=${version}" \
+        "wine-stable-amd64=${version}" \
+        "wine-stable-i386=${version}" \
+        "winehq-stable=${version}"
 
     purge_packages
 }
