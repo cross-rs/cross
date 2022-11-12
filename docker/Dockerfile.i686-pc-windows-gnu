@@ -34,9 +34,11 @@ RUN mkdir -p /usr/lib/binfmt-support/ && \
 COPY windows-entry.sh /
 ENTRYPOINT ["/windows-entry.sh"]
 
+# for why we always link with pthread support, see:
+# https://github.com/cross-rs/cross/pull/1123#issuecomment-1312287148
 ENV CROSS_TOOLCHAIN_PREFIX=i686-w64-mingw32-
 ENV CROSS_SYSROOT=/usr/i686-w64-mingw32
-ENV CARGO_TARGET_I686_PC_WINDOWS_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
+ENV CARGO_TARGET_I686_PC_WINDOWS_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc-posix \
     CARGO_TARGET_I686_PC_WINDOWS_GNU_RUNNER=wine \
     CC_i686_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc-posix \
     CXX_i686_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"g++-posix \
