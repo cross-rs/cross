@@ -1,0 +1,6 @@
+{
+    "description": "support external C/C++ dependencies using C11/C++11 threads for MinGW targets by switching linkers from `*-gcc` to `*gcc-posix`.",
+    "type": "added",
+    "issues": [1122],
+    "breaking": true
+}

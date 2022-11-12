@@ -17,7 +17,7 @@
     },
     {
         "type": "changed",
-        "description": "updated powerpc64, riscv64, and sparc64 *-linux-gnu images to use a 6.x kernel instead of a 4.x kernel.",
+        "description": "updated powerpc64, riscv64, and sparc64 `*-linux-gnu` images to use a 6.x kernel instead of a 4.x kernel.",
         "breaking": true,
         "issues": [1094]
     }
