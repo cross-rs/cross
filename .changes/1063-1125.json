@@ -9,5 +9,10 @@
         "description": "fixed C++ support for musl targets.",
         "issues": [902],
         "breaking": true
+    },
+    {
+        "type": "fixed",
+        "description": "always link to libc when compiling alpine since static libstdc++ may have undefined references to libc symbols.",
+        "issues": [1124]
     }
 ]

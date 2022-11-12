@@ -23,10 +23,12 @@ main() {
     local minor
     minor=$(rustc_minor_version)
 
-    if (( minor >= 65 )) || [[ $# -eq 0 ]]; then
+    if [[ $# -eq 0 ]]; then
         exec "${CROSS_TOOLCHAIN_PREFIX}gcc" "${@}"
+    elif (( minor >= 65 )); then
+        exec "${CROSS_TOOLCHAIN_PREFIX}gcc" "${@}" -lc
     else
-        exec "${CROSS_TOOLCHAIN_PREFIX}gcc" "${@}" -lgcc -static-libgcc
+        exec "${CROSS_TOOLCHAIN_PREFIX}gcc" "${@}" -lgcc -static-libgcc -lc
     fi
 }
 
