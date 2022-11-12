@@ -28,7 +28,9 @@ RUN /musl-symlink.sh $CROSS_SYSROOT armhf
 
 COPY qemu-runner base-runner.sh /
 
-ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
+COPY musl-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
+
+ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_RUNNER="/qemu-runner armhf" \
     CC_arm_unknown_linux_musleabihf="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_arm_unknown_linux_musleabihf="$CROSS_TOOLCHAIN_PREFIX"g++ \

@@ -1030,6 +1030,10 @@ impl DockerCommandExt for Command {
         self.args(["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
             .args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
             .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
+            .args([
+                "-e",
+                &format!("CROSS_RUST_SYSROOT={}", dirs.sysroot_mount_path()),
+            ])
             .args(["-e", "CARGO_TARGET_DIR=/target"])
             .args(["-e", &cross_runner]);
         if options.cargo_variant.uses_zig() {

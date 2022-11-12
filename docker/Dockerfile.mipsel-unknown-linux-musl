@@ -27,7 +27,9 @@ RUN /musl-symlink.sh $CROSS_SYSROOT mipsel-sf
 
 COPY qemu-runner base-runner.sh /
 
-ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
+COPY musl-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
+
+ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
     CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner mipsel" \
     CC_mipsel_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_mipsel_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"g++ \
