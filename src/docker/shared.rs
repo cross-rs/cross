@@ -293,7 +293,7 @@ impl ToolchainDirectories {
         let default_nix_store = PathBuf::from("/nix/store");
         let nix_store = match nix_store {
             Some(store) if store.exists() => {
-                let path = file::canonicalize(&store)?;
+                let path = file::canonicalize(store)?;
                 Some(path)
             }
             Some(store) => {
@@ -819,7 +819,7 @@ fn create_target_dir(path: &Path) -> Result<()> {
         fs::OpenOptions::new()
             .write(true)
             .create_new(true)
-            .open(&path.join("CACHEDIR.TAG"))?
+            .open(path.join("CACHEDIR.TAG"))?
             .write_all(CACHEDIR_TAG.as_bytes())?;
     }
     Ok(())

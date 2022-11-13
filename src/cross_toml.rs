@@ -251,7 +251,7 @@ impl CrossToml {
         }
 
         // Builds maps of objects
-        let mut self_map = to_map(&self)?;
+        let mut self_map = to_map(self)?;
         let other_map = to_map(other)?;
 
         merge_objects(&mut self_map, &other_map).ok_or_else(|| eyre::eyre!("could not merge"))?;

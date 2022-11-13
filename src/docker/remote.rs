@@ -112,7 +112,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             let src_path = src.join(file);
             let dst_path = temppath.join(file);
             file::create_dir_all(dst_path.parent().expect("must have parent"))?;
-            fs::copy(&src_path, &dst_path)?;
+            fs::copy(src_path, &dst_path)?;
         }
         // if copying from a src directory to dst directory with docker, to
         // copy the contents from `src` into `dst`, `src` must end with `/.`
@@ -261,7 +261,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         // SAFETY: safe, single-threaded execution.
         let tempdir = unsafe { temp::TempDir::new()? };
         let temppath = tempdir.path();
-        file::create_dir_all(&temppath.join(rustlib))?;
+        file::create_dir_all(temppath.join(rustlib))?;
         let mut had_symlinks = copy_dir(
             &dirs.get_sysroot().join("lib"),
             &temppath.join("lib"),
@@ -295,7 +295,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         // SAFETY: safe, single-threaded execution.
         let tempdir = unsafe { temp::TempDir::new()? };
         let temppath = tempdir.path();
-        file::create_dir_all(&temppath.join(rustlib))?;
+        file::create_dir_all(temppath.join(rustlib))?;
         let had_symlinks = copy_dir(
             &dirs.get_sysroot().join(rustlib),
             &temppath.join(rustlib),
