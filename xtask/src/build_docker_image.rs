@@ -56,7 +56,7 @@ pub struct BuildDockerImage {
         long,
         value_parser = clap::builder::PossibleValuesParser::new(["auto", "plain", "tty"]),
     )]
-    pub progress: Option<Progress>,
+    pub progress: Option<String>,
     /// Do not load from cache when building the image.
     #[clap(long)]
     pub no_cache: bool,
@@ -110,7 +110,7 @@ pub fn build_docker_image(
         force,
         push,
         no_output,
-        mut progress,
+        progress,
         no_cache,
         no_fastfail,
         from_ci,
@@ -152,6 +152,7 @@ pub fn build_docker_image(
         }
     }
     let gha = std::env::var("GITHUB_ACTIONS").is_ok();
+    let mut progress = progress.map(|x| x.parse().unwrap());
     if gha {
         progress = Some(Progress::Plain);
     }
