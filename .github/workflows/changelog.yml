@@ -14,19 +14,19 @@ jobs:
 
       - name: Get Changed Files
         id: files
-        uses: Ana06/get-changed-files@v2.1.0
+        uses: tj-actions/changed-files@v34
         with:
-          # use JSON so we don't have to worry about filenames with spaces
-          format: 'json'
-          filter: '.changes/*.json'
+          separator: ';'
+          files: |
+            .changes/*.json
 
       - name: Validate Changelog Files
         id: changelog
         run: |
           set -x
           set -e
-          readarray -t added_modified < <(jq -r '.[]' <<<'${{ steps.files.outputs.added_modified }}')
-          readarray -t removed < <(jq -r '.[]' <<<'${{ steps.files.outputs.removed }}')
+          readarray -d ';' -t added_modified <<< '${{ steps.files.outputs.all_changed_files }}'
+          readarray -d ';' -t removed <<< '${{ steps.files.outputs.deleted_files }}'
           added_count=${#added_modified[@]}
           removed_count=${#removed[@]}
           if ${{ !contains(github.event.pull_request.labels.*.name, 'no changelog' ) }}; then
