@@ -385,7 +385,7 @@ jobs:
         with:
           path: ${{ runner.temp }}/artifacts
       - name: Grab PR number
-        run: echo "::set-output name=pr::"$(echo $commit_message | sed -ne  's/.*\#\(.*\):/\1/p')
+        run: echo "pr=$(echo ${commit_message} | sed -ne 's/.*#\(.*\):/\1/p')" >> $GITHUB_OUTPUT
         id: pr-number
         if: ${{ !github.event.pull_request.number }}
         env:

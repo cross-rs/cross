@@ -1,3 +1,4 @@
+use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -296,12 +297,13 @@ pub fn gha_error(content: &str) {
 }
 
 #[track_caller]
-pub fn gha_output(tag: &str, content: &str) {
+pub fn gha_output(tag: &str, content: &str) -> cross::Result<()> {
     if content.contains('\n') {
         // https://github.com/actions/toolkit/issues/403
-        panic!("output `{tag}` contains newlines, consider serializing with json and deserializing in gha with fromJSON()")
+        eyre::bail!("output `{tag}` contains newlines, consider serializing with json and deserializing in gha with fromJSON()");
     }
-    gha_output!("::set-output name={tag}::{}", content);
+    write_to_gha_env_file("GITHUB_OUTPUT", &format!("{tag}={content}"))?;
+    Ok(())
 }
 
 pub fn read_dockerfiles(msg_info: &mut MessageInfo) -> cross::Result<Vec<(PathBuf, String)>> {
@@ -408,6 +410,15 @@ pub fn write_to_string(path: &Path, contents: &str) -> cross::Result<()> {
         .truncate(true)
         .create(true)
         .open(path)?;
+    writeln!(file, "{}", contents)?;
+    Ok(())
+}
+
+// https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#environment-files
+pub fn write_to_gha_env_file(env_name: &str, contents: &str) -> cross::Result<()> {
+    let path = env::var(env_name)?;
+    let path = Path::new(&path);
+    let mut file = fs::OpenOptions::new().append(true).open(path)?;
     writeln!(file, "{}", contents)?;
     Ok(())
 }

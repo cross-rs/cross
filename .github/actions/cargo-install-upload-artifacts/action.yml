@@ -14,7 +14,7 @@ runs:
         metadata="$(cargo metadata --format-version 1 --no-deps)"
 
         package_name="cross"
-        echo "::set-output name=package-name::${package_name}"
+        echo "package-name=${package_name}" >> $GITHUB_OUTPUT
 
         out_dir="$(mktemp -d)"
         artifacts_dir="$(mktemp -d)"
@@ -24,8 +24,8 @@ runs:
           artifacts_dir="$(cygpath -w "${artifacts_dir}")"
         fi
 
-        echo "::set-output name=out-dir::${out_dir}"
-        echo "::set-output name=artifacts-dir::${artifacts_dir}"
+        echo "out-dir=${out_dir}" >> $GITHUB_OUTPUT
+        echo "artifacts-dir=${artifacts_dir}" >> $GITHUB_OUTPUT
       shell: bash
     - run: rm -rf .git
       shell: bash
@@ -66,8 +66,8 @@ runs:
           artifact_path="$(cygpath -w "${artifact_path}")"
         fi
 
-        echo "::set-output name=name::${artifact_name}"
-        echo "::set-output name=path::${artifact_path}"
+        echo "name=${artifact_name}" >> $GITHUB_OUTPUT
+        echo "path=${artifact_path}" >> $GITHUB_OUTPUT
       env:
         package_name: ${{ steps.metadata.outputs.package-name }}
         out_dir: ${{ steps.metadata.outputs.out-dir }}

@@ -31,7 +31,7 @@ runs:
           echo LLVM_PROFILE_FILE="${pwd}/target/cross-%m.profraw" >> $GITHUB_ENV
           echo CARGO_INCREMENTAL="0" >> $GITHUB_ENV
           echo RUST_TEST_THREADS="1" >> $GITHUB_ENV
-          echo "::set-output name=artifact-name::_coverage-${name}"
+          echo "artifact-name=_coverage-${name}" >> $GITHUB_OUTPUT
         post: |
           # XXX(emilgardis): Upload early?
           pwd=$(pwd)
