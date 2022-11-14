@@ -1,31 +1,3 @@
+# HACK: this file is currently never used and only exists for usage with `Dockerfile.native.centos`
+# it will be supported for aarch64 hosts, see #751 and #975
 FROM ubuntu:20.04
-ARG DEBIAN_FRONTEND=noninteractive
-
-COPY lib.sh /
-COPY linux-image.sh /
-RUN /linux-image.sh x86_64
-
-FROM centos:7
-
-COPY common.sh lib.sh /
-RUN /common.sh
-
-COPY cmake.sh /
-RUN /cmake.sh
-
-COPY xargo.sh /
-RUN /xargo.sh
-
-COPY qemu.sh /
-RUN /qemu.sh x86_64 softmmu
-
-COPY dropbear.sh /
-RUN /dropbear.sh
-
-COPY --from=0 /qemu /qemu
-
-COPY linux-runner base-runner.sh /
-
-ENV CROSS_TOOLCHAIN_PREFIX=
-ENV CROSS_SYSROOT=/
-ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner x86_64"
