@@ -27,9 +27,7 @@ RUN /musl-symlink.sh $CROSS_SYSROOT mips-sf
 
 COPY qemu-runner base-runner.sh /
 
-COPY musl-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
-
-ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
+ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner mips" \
     AR_mips_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_mips_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"gcc \

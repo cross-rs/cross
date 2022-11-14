@@ -12,7 +12,7 @@
     },
     {
         "type": "fixed",
-        "description": "always link to libc when compiling alpine since static libstdc++ may have undefined references to libc symbols.",
+        "description": "use a linker script for musl libstdc++ to ensure the archive links to libc, libm, and libgcc as needed.",
         "issues": [1124]
     }
 ]

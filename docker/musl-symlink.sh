@@ -53,6 +53,25 @@ main() {
     # https://github.com/cross-rs/cross/issues/902
     rm "${sysroot}"/lib/libstdc++.so* || true
 
+    # now, we create a linker script that adds all the required dependencies
+    # because we link to a static libstdc++ to avoid runtime issues and
+    # with the shared libstdc++, we can have missing symbols that are reference
+    # in libstdc++, such as those from libc like `setlocale` and `__cxa_atexit`,
+    # as well as those from libgcc, like `__extendsftf2`. all musl targets
+    # can require symbols from libc, however, only the following are known
+    # to require symbols from libgcc:
+    #   - aarch64-unknown-linux-musl
+    #   - mips64-unknown-linux-muslabi64
+    #   - mips64el-unknown-linux-muslabi64
+    echo '/* cross-rs linker script
+ * this allows us to statically link libstdc++ to avoid segfaults
+ * https://github.com/cross-rs/cross/issues/902
+ */
+GROUP ( libstdc++.a AS_NEEDED( -lgcc -lc -lm ) )
+' > "${sysroot}"/lib/libstdc++.so.6.0.27
+    ln -s libstdc++.so.6.0.27 "${sysroot}"/lib/libstdc++.so.6
+    ln -s libstdc++.so.6.0.27 "${sysroot}"/lib/libstdc++.so
+
     echo "${sysroot}/lib" >> "/etc/ld-musl-${arch}.path"
 
     rm -rf "${0}"
