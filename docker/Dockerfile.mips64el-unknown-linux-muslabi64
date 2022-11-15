@@ -35,6 +35,7 @@ COPY qemu-runner base-runner.sh /
 
 ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
     CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_MUSLABI64_RUNNER="/qemu-runner mips64el" \
+    AR_mips64el_unknown_linux_muslabi64="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_mips64el_unknown_linux_muslabi64="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_mips64el_unknown_linux_muslabi64="$CROSS_TOOLCHAIN_PREFIX"g++ \
     BINDGEN_EXTRA_CLANG_ARGS_mips64el_unknown_linux_muslabi64="--sysroot=$CROSS_SYSROOT" \
