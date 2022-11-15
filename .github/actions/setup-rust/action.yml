@@ -26,4 +26,4 @@ runs:
       run: echo "::add-matcher::.github/actions/setup-rust/rust.json"
       shell: bash
 
-    - uses: Swatinem/rust-cache@v2.1.0
+    - uses: Swatinem/rust-cache@v2.2.0
