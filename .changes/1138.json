@@ -1,0 +1,5 @@
+{
+    "description": "explicitly specify ar for all toolchains",
+    "type": "changed",
+    "issues": [1137]
+}

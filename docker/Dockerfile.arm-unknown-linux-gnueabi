@@ -28,6 +28,7 @@ ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabi-
 ENV CROSS_SYSROOT=/usr/arm-linux-gnueabi
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABI_RUNNER="/qemu-runner arm" \
+    AR_arm_unknown_linux_gnueabi="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_arm_unknown_linux_gnueabi="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_arm_unknown_linux_gnueabi="$CROSS_TOOLCHAIN_PREFIX"g++ \
     BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_gnueabi="--sysroot=$CROSS_SYSROOT" \
