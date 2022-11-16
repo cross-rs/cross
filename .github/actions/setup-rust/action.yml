@@ -16,7 +16,7 @@ runs:
   using: composite
   steps:
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ inputs.toolchain }}
         target: ${{ inputs.target }}
@@ -26,4 +26,4 @@ runs:
       run: echo "::add-matcher::.github/actions/setup-rust/rust.json"
       shell: bash
 
-    - uses: Swatinem/rust-cache@v2.1.0
+    - uses: Swatinem/rust-cache@v2.2.0

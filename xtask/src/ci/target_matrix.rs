@@ -45,7 +45,7 @@ pub(crate) fn run(message: String, author: String) -> Result<(), color_eyre::Rep
 
     let json = serde_json::to_string(&matrix)?;
     gha_print(&json);
-    gha_output("matrix", &json);
+    gha_output("matrix", &json)?;
     Ok(())
 }
 

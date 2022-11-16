@@ -324,8 +324,8 @@ pub fn build_docker_image(
             }
         }
         if gha {
-            gha_output("image", &tags[0]);
-            gha_output("images", &format!("'{}'", serde_json::to_string(&tags)?));
+            gha_output("image", &tags[0])?;
+            gha_output("images", &format!("'{}'", serde_json::to_string(&tags)?))?;
             if targets.len() > 1 {
                 gha_print("::endgroup::");
             }

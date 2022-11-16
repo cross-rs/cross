@@ -13,7 +13,7 @@ runs:
   steps:
     - name: Read changelog
       id: changelog-reader
-      uses: mindsers/changelog-reader-action@v2.0.0
+      uses: mindsers/changelog-reader-action@v2
       with:
         # validation_depth: 10
         version: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, '-') && github.ref_name) || 'Unreleased' }}

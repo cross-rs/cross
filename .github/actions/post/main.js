@@ -21,6 +21,6 @@ if (process.env[`STATE_POST`] != undefined) {
   run(process.env.INPUT_POST);
 } else {
   // Otherwise, this is the main step
-  console.log(`::save-state name=POST::true`);
+  console.log(`POST=true >> $GITHUB_STATE`);
   run(process.env.INPUT_MAIN);
 }
