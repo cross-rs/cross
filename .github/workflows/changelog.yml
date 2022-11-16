@@ -25,8 +25,8 @@ jobs:
         run: |
           set -x
           set -e
-          readarray -d ';' -t added_modified <<< '${{ steps.files.outputs.all_changed_files }}'
-          readarray -d ';' -t removed <<< '${{ steps.files.outputs.deleted_files }}'
+          IFS=';' read -a added_modified <<< '${{ steps.files.outputs.all_changed_files }}'
+          IFS=';' read -a removed <<< '${{ steps.files.outputs.deleted_files }}'
           added_count=${#added_modified[@]}
           removed_count=${#removed[@]}
           if ${{ !contains(github.event.pull_request.labels.*.name, 'no changelog' ) }}; then
