@@ -87,33 +87,33 @@ main() {
 
     local destdir="/usr/local/${target}"
     cp -r "${td}/freebsd/usr/include" "${destdir}"
-    cp "${td}/freebsd/lib/libc.so.7" "${destdir}/lib"
-    cp "${td}/freebsd/lib/libcxxrt.so.1" "${destdir}/lib"
-    cp "${td}/freebsd/lib/libm.so.5" "${destdir}/lib"
-    cp "${td}/freebsd/lib/libkvm.so.7" "${destdir}/lib"
-    cp "${td}/freebsd/lib/libthr.so.3" "${destdir}/lib"
-    cp "${td}/freebsd/lib/libutil.so.9" "${destdir}/lib"
-    cp "${td}/freebsd/lib/libdevstat.so.7" "${destdir}/lib"
+    cp -r "${td}/freebsd/lib/"* "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.so.1" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.a" "${destdir}/lib"
-    cp "${td}/freebsd/usr/lib/libcxxrt.a" "${destdir}/lib"
-    cp "${td}/freebsd/usr/lib/libcompiler_rt.a" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp_nonshared}.a "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{rt,execinfo,procstat}.so.1 "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/libkvm.a "${destdir}/lib"
 
-    ln -s libc.so.7 "${destdir}/lib/libc.so"
-    ln -s libc++.so.1 "${destdir}/lib/libc++.so"
-    ln -s libcxxrt.so.1 "${destdir}/lib/libcxxrt.so"
-    ln -s libexecinfo.so.1 "${destdir}/lib/libexecinfo.so"
-    ln -s libprocstat.so.1 "${destdir}/lib/libprocstat.so"
-    ln -s libm.so.5 "${destdir}/lib/libm.so"
-    ln -s librt.so.1 "${destdir}/lib/librt.so"
-    ln -s libutil.so.9 "${destdir}/lib/libutil.so"
+    local lib=
+    local base=
+    local link=
+    for lib in "${destdir}/lib/"*.so.*; do
+        base=$(basename "${lib}")
+        link="${base}"
+        # not strictly necessary since this will always work, but good fallback
+        while [[ "${link}" == *.so.* ]]; do
+            link="${link%.*}"
+        done
+
+        # just extra insurance that we won't try to overwrite an existing file
+        local dstlink="${destdir}/lib/${link}"
+        if [[ -n "${link}" ]] && [[ "${link}" != "${base}" ]] && [[ ! -f "${dstlink}" ]]; then
+            ln -s "${base}" "${dstlink}"
+        fi
+    done
+
     ln -s libthr.so.3 "${destdir}/lib/libpthread.so"
-    ln -s libdevstat.so.7 "${destdir}/lib/libdevstat.so"
-    ln -s libkvm.so.7 "${destdir}/lib/libkvm.so"
 
     cd gcc-build
     ../gcc/configure \
