@@ -649,7 +649,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 .map_or(false, |s| !s.needs_target_in_command())
             {
                 let mut filtered_args = Vec::new();
-                let mut args_iter = args.all.clone().into_iter();
+                let mut args_iter = args.cargo_args.clone().into_iter();
                 while let Some(arg) = args_iter.next() {
                     if arg == "--target" {
                         args_iter.next();
@@ -661,14 +661,14 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 }
                 filtered_args
             // Make sure --target is present
-            } else if !args.all.iter().any(|a| a.starts_with("--target")) {
-                let mut args_with_target = args.all.clone();
+            } else if !args.cargo_args.iter().any(|a| a.starts_with("--target")) {
+                let mut args_with_target = args.cargo_args.clone();
                 args_with_target.push("--target".to_owned());
                 args_with_target.push(add_libc(target.triple()));
                 args_with_target
             } else if zig_version.is_some() {
                 let mut filtered_args = Vec::new();
-                let mut args_iter = args.all.clone().into_iter();
+                let mut args_iter = args.cargo_args.clone().into_iter();
                 while let Some(arg) = args_iter.next() {
                     if arg == "--target" {
                         filtered_args.push("--target".to_owned());
@@ -683,7 +683,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 }
                 filtered_args
             } else {
-                args.all.clone()
+                args.cargo_args.clone()
             };
 
             let is_test = args.subcommand.map_or(false, |sc| sc == Subcommand::Test);
@@ -693,6 +693,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
             if uses_build_std {
                 filtered_args.push("-Zbuild-std".to_owned());
             }
+            filtered_args.extend(args.rest_args.iter().cloned());
 
             let needs_docker = args
                 .subcommand

@@ -10,7 +10,8 @@ use crate::Target;
 
 #[derive(Debug)]
 pub struct Args {
-    pub all: Vec<String>,
+    pub cargo_args: Vec<String>,
+    pub rest_args: Vec<String>,
     pub subcommand: Option<Subcommand>,
     pub channel: Option<String>,
     pub target: Option<Target>,
@@ -163,7 +164,8 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut manifest_path: Option<PathBuf> = None;
     let mut target_dir = None;
     let mut sc = None;
-    let mut all: Vec<String> = Vec::new();
+    let mut cargo_args: Vec<String> = Vec::new();
+    let mut rest_args: Vec<String> = Vec::new();
     let mut version = false;
     let mut quiet = false;
     let mut verbose = 0;
@@ -176,39 +178,53 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                 continue;
             }
             if matches!(arg.as_str(), "--") {
-                all.push(arg);
-                all.extend(args.by_ref());
+                rest_args.push(arg);
+                rest_args.extend(args.by_ref());
             } else if let v @ 1.. = is_verbose(arg.as_str()) {
                 verbose += v;
-                all.push(arg);
+                cargo_args.push(arg);
             } else if matches!(arg.as_str(), "--version" | "-V") {
                 version = true;
             } else if matches!(arg.as_str(), "--quiet" | "-q") {
                 quiet = true;
-                all.push(arg);
+                cargo_args.push(arg);
             } else if let Some(kind) = is_value_arg(&arg, "--color") {
                 color = match kind {
                     ArgKind::Next => {
-                        match parse_next_arg(arg, &mut all, str_to_owned, identity, &mut args)? {
+                        match parse_next_arg(
+                            arg,
+                            &mut cargo_args,
+                            str_to_owned,
+                            identity,
+                            &mut args,
+                        )? {
                             Some(c) => Some(c),
                             None => shell::invalid_color(None),
                         }
                     }
-                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, str_to_owned, identity)?),
+                    ArgKind::Equal => Some(parse_equal_arg(
+                        arg,
+                        &mut cargo_args,
+                        str_to_owned,
+                        identity,
+                    )?),
                 };
             } else if let Some(kind) = is_value_arg(&arg, "--manifest-path") {
                 manifest_path = match kind {
                     ArgKind::Next => parse_next_arg(
                         arg,
-                        &mut all,
+                        &mut cargo_args,
                         parse_manifest_path,
                         store_manifest_path,
                         &mut args,
                     )?
                     .flatten(),
-                    ArgKind::Equal => {
-                        parse_equal_arg(arg, &mut all, parse_manifest_path, store_manifest_path)?
-                    }
+                    ArgKind::Equal => parse_equal_arg(
+                        arg,
+                        &mut cargo_args,
+                        parse_manifest_path,
+                        store_manifest_path,
+                    )?,
                 };
             } else if let ("+", ch) = arg.split_at(1) {
                 channel = Some(ch.to_owned());
@@ -216,21 +232,36 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                 let parse_target = |t: &str| Ok(Target::from(t, target_list));
                 target = match kind {
                     ArgKind::Next => {
-                        parse_next_arg(arg, &mut all, parse_target, identity, &mut args)?
+                        parse_next_arg(arg, &mut cargo_args, parse_target, identity, &mut args)?
                     }
-                    ArgKind::Equal => Some(parse_equal_arg(arg, &mut all, parse_target, identity)?),
+                    ArgKind::Equal => Some(parse_equal_arg(
+                        arg,
+                        &mut cargo_args,
+                        parse_target,
+                        identity,
+                    )?),
                 };
             } else if let Some(kind) = is_value_arg(&arg, "--features") {
                 match kind {
                     ArgKind::Next => {
-                        let next =
-                            parse_next_arg(arg, &mut all, str_to_owned, identity, &mut args)?;
+                        let next = parse_next_arg(
+                            arg,
+                            &mut cargo_args,
+                            str_to_owned,
+                            identity,
+                            &mut args,
+                        )?;
                         if let Some(feature) = next {
                             features.push(feature);
                         }
                     }
                     ArgKind::Equal => {
-                        features.push(parse_equal_arg(arg, &mut all, str_to_owned, identity)?);
+                        features.push(parse_equal_arg(
+                            arg,
+                            &mut cargo_args,
+                            str_to_owned,
+                            identity,
+                        )?);
                     }
                 }
             } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
@@ -238,7 +269,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                     ArgKind::Next => {
                         target_dir = parse_next_arg(
                             arg,
-                            &mut all,
+                            &mut cargo_args,
                             parse_target_dir,
                             store_target_dir,
                             &mut args,
@@ -247,7 +278,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                     ArgKind::Equal => {
                         target_dir = Some(parse_equal_arg(
                             arg,
-                            &mut all,
+                            &mut cargo_args,
                             parse_target_dir,
                             store_target_dir,
                         )?);
@@ -258,13 +289,14 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                     sc = Some(Subcommand::from(arg.as_ref()));
                 }
 
-                all.push(arg.clone());
+                cargo_args.push(arg.clone());
             }
         }
     }
 
     Ok(Args {
-        all,
+        cargo_args,
+        rest_args,
         subcommand: sc,
         channel,
         target,
