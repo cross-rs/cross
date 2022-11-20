@@ -1,0 +1,3 @@
+bin.name = "cross"
+args = ["--color", "invalid"]
+status = "failed"

@@ -1,0 +1,6 @@
++ cargo --quiet --verbose
+Rust's package manager
+
+USAGE:
+    cargo [+toolchain] [OPTIONS] [SUBCOMMAND]
+...

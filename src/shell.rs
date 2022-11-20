@@ -305,19 +305,19 @@ impl MessageInfo {
         }
     }
 
-    pub fn fatal_usage<T: fmt::Display>(
+    pub fn invalid_fatal_usage<T: fmt::Display>(
         &mut self,
         arg: T,
         provided: Option<&str>,
         possible: Option<&[&str]>,
         code: i32,
     ) -> ! {
-        self.error_usage(arg, provided, possible)
+        self.invalid_error_usage(arg, provided, possible)
             .expect("could not display usage message");
         std::process::exit(code);
     }
 
-    fn error_usage<T: fmt::Display>(
+    fn invalid_error_usage<T: fmt::Display>(
         &mut self,
         arg: T,
         provided: Option<&str>,
@@ -361,7 +361,38 @@ impl MessageInfo {
             }
             _ => (),
         }
-        write_style!(stream, self, "Usage:\n");
+        write_style!(stream, self, "\n");
+        self.help(&mut stream)?;
+        stream.flush()?;
+
+        Ok(())
+    }
+
+    pub fn double_fatal_usage<T: fmt::Display>(&mut self, arg: T, code: i32) -> ! {
+        self.double_error_usage(arg)
+            .expect("could not display usage message");
+        std::process::exit(code);
+    }
+
+    fn double_error_usage<T: fmt::Display>(&mut self, arg: T) -> Result<()> {
+        let mut stream = io::stderr();
+        write_style!(stream, self, cross_prefix!("error"), bold, red);
+        write_style!(stream, self, ":", bold);
+        write_style!(stream, self, " The argument '");
+        write_style!(stream, self, arg, yellow);
+        write_style!(
+            stream,
+            self,
+            format_args!("' was provided more than once, but cannot be used multiple times\n\n")
+        );
+        self.help(&mut stream)?;
+        stream.flush()?;
+
+        Ok(())
+    }
+
+    fn help(&mut self, stream: &mut (impl Stream + Write)) -> Result<()> {
+        write_style!(stream, self, "USAGE:\n");
         write_style!(
             stream,
             self,
@@ -371,8 +402,6 @@ impl MessageInfo {
         write_style!(stream, self, "For more information try ");
         write_style!(stream, self, "--help", green);
         write_style!(stream, self, "\n");
-
-        stream.flush()?;
 
         Ok(())
     }
@@ -412,9 +441,10 @@ pub fn cargo_envvar_bool(var: &str) -> Result<bool> {
     }
 }
 
-pub fn invalid_color(provided: Option<&str>) -> ! {
-    let possible = ["auto", "always", "never"];
-    MessageInfo::default().fatal_usage("--color <WHEN>", provided, Some(&possible), 1);
+pub const COLORS: &[&str] = &["auto", "always", "never"];
+
+fn invalid_color(provided: Option<&str>) -> ! {
+    MessageInfo::default().invalid_fatal_usage("--color <WHEN>", provided, Some(COLORS), 1);
 }
 
 fn get_color_choice(color: Option<&str>) -> Result<ColorChoice> {

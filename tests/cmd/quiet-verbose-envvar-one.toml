@@ -1,0 +1,5 @@
+bin.name = "cross"
+args = ["search", "cross-this-does-not-exist", "--quiet"]
+
+[env.add]
+CARGO_TERM_VERBOSE = "true"

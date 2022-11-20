@@ -58,7 +58,7 @@ use rustc_version::Channel;
 use serde::{Deserialize, Serialize, Serializer};
 
 pub use self::cargo::{cargo_command, cargo_metadata_with_args, CargoMetadata, Subcommand};
-use self::cross_toml::CrossToml;
+pub use self::cross_toml::CrossToml;
 use self::errors::Context;
 use self::shell::{MessageInfo, Verbosity};
 
@@ -500,14 +500,6 @@ pub fn run(
     target_list: TargetList,
     msg_info: &mut MessageInfo,
 ) -> Result<Option<ExitStatus>> {
-    if args.version && args.subcommand.is_none() {
-        msg_info.print(concat!(
-            "cross ",
-            env!("CARGO_PKG_VERSION"),
-            crate::commit_info!()
-        ))?;
-    }
-
     let host_version_meta = rustc::version_meta()?;
 
     let cwd = std::env::current_dir()?;
@@ -736,6 +728,10 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
         }
     }
     Ok(None)
+}
+
+pub const fn version() -> &'static str {
+    concat!("cross ", env!("CARGO_PKG_VERSION"), crate::commit_info!())
 }
 
 #[derive(PartialEq, Eq, Debug)]

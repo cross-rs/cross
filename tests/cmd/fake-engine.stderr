@@ -1,0 +1,10 @@
+Error: 
+[..]no container engine found[..]
+
+Location:
+[..]src/docker/engine.rs[..]:[..]
+
+[..]Suggestion[..]: is docker or podman installed?[..]
+
+Backtrace omitted. Run with RUST_BACKTRACE=1 environment variable to display it.
+Run with RUST_BACKTRACE=full to include source snippets.

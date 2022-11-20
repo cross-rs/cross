@@ -1,0 +1,6 @@
+bin.name = "cross"
+args = ["build"]
+status = "failed"
+
+[env.add]
+CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE = "ghcr.io/cross-rs/fake-image:main"

@@ -1,0 +1,3 @@
+[cross] warning: unable to get metadata for package
+[cross] note: Falling back to `cargo` on the host.
+error: could not find `Cargo.toml` in `[CWD]` or any parent directory

@@ -21,13 +21,32 @@ pub enum Subcommand {
     Metadata,
     List,
     Clean,
+    Explain,
+    Version,
+    Help,
 }
 
 impl Subcommand {
     #[must_use]
+    pub fn never_needs_docker(self) -> bool {
+        matches!(
+            self,
+            Subcommand::Other
+                | Subcommand::List
+                | Subcommand::Version
+                | Subcommand::Explain
+                | Subcommand::Help
+        )
+    }
+
+    #[must_use]
     pub fn needs_docker(self, is_remote: bool) -> bool {
         match self {
-            Subcommand::Other | Subcommand::List => false,
+            Subcommand::Other
+            | Subcommand::List
+            | Subcommand::Version
+            | Subcommand::Explain
+            | Subcommand::Help => false,
             Subcommand::Clean if !is_remote => false,
             _ => true,
         }
@@ -47,6 +66,31 @@ impl Subcommand {
     pub fn needs_target_in_command(self) -> bool {
         !matches!(self, Subcommand::Metadata)
     }
+
+    #[must_use]
+    pub fn is_flag_subcommand(self) -> bool {
+        matches!(
+            self,
+            Subcommand::List | Subcommand::Version | Subcommand::Explain | Subcommand::Help
+        )
+    }
+
+    #[must_use]
+    pub fn set(self, other: Subcommand) -> Subcommand {
+        // choose the higher-priority subcommand when parsing two values
+        // the priority goes in the following order:
+        //      1. help > all
+        //      2. version > explain
+        //      3. explain > list
+        //      4. version > list
+        //      5. all others go left-to-right
+        match (self, other) {
+            (_, Subcommand::Help) => other,
+            (Subcommand::Version, Subcommand::Explain | Subcommand::List) => self,
+            (Subcommand::Explain, Subcommand::List) => self,
+            _ => self,
+        }
+    }
 }
 
 impl<'a> From<&'a str> for Subcommand {
@@ -63,6 +107,9 @@ impl<'a> From<&'a str> for Subcommand {
             "clippy" => Subcommand::Clippy,
             "metadata" => Subcommand::Metadata,
             "--list" => Subcommand::List,
+            "--version" | "-V" => Subcommand::Version,
+            "--explain" => Subcommand::Explain,
+            "--help" => Subcommand::Help,
             _ => Subcommand::Other,
         }
     }

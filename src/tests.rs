@@ -138,7 +138,10 @@ release: {version}
 
 #[test]
 fn check_newlines() -> crate::Result<()> {
-    for file in walk_dir(get_cargo_workspace(), &[".git", "target"], |_| true) {
+    // tests contains the trycmd tests, which may have placeholders
+    for file in walk_dir(get_cargo_workspace(), &[".git", "target", "tests"], |_| {
+        true
+    }) {
         let file = file?;
         if !file.file_type().map_or(true, |f| f.is_file()) {
             continue;

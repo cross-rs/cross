@@ -8,6 +8,7 @@ pub mod crosstool;
 pub mod hooks;
 pub mod install_git_hooks;
 pub mod target_info;
+pub mod temp;
 pub mod util;
 
 use ci::CiJob;
@@ -23,6 +24,7 @@ use self::crosstool::ConfigureCrosstool;
 use self::hooks::{Check, Test};
 use self::install_git_hooks::InstallGitHooks;
 use self::target_info::TargetInfo;
+use self::temp::MakeTempDir;
 
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
@@ -65,6 +67,8 @@ enum Commands {
     ValidateChangelog(ValidateChangelog),
     /// Code generation
     Codegen(Codegen),
+    /// Create temporary directory
+    MakeTempDir(MakeTempDir),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<String> {
@@ -131,6 +135,7 @@ pub fn main() -> cross::Result<()> {
             changelog::validate_changelog(args, &mut msg_info)?;
         }
         Commands::Codegen(args) => codegen::codegen(args)?,
+        Commands::MakeTempDir(args) => temp::make_temp_dir(args)?,
     }
 
     Ok(())
