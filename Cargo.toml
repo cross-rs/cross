@@ -26,7 +26,7 @@ dev = []
 members = ["xtask"]
 
 [dependencies]
-atty = "0.2"
+is-terminal = "0.4.0"
 clap = { version = "4.0", features = ["derive"] }
 color-eyre = { version = "0.6.2", default-features = false, features = ["track-caller"] }
 eyre = "0.6"
