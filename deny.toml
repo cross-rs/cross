@@ -12,7 +12,11 @@ vulnerability = "deny"
 unmaintained = "deny"
 notice = "deny"
 unsound = "deny"
-ignore = []
+# FIXME: remove this if/when clap changes to is-terminal, atty is
+# patched, or we migrated to an MSRV of 1.66.0.
+ignore = [
+    "RUSTSEC-2021-0145",
+]
 
 [bans]
 multiple-versions = "deny"
