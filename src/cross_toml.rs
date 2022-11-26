@@ -131,7 +131,7 @@ impl CrossToml {
         let (cross_toml, mut unused) = Self::parse_from_cross_str(cross_toml, msg_info)?;
 
         if let Some((cargo_toml, u_cargo)) = Self::parse_from_cargo_str(cargo_toml, msg_info)? {
-            unused.extend(u_cargo.into_iter());
+            unused.extend(u_cargo);
             Ok((cargo_toml.merge(cross_toml)?, unused))
         } else {
             Ok((cross_toml, unused))
@@ -144,7 +144,7 @@ impl CrossToml {
         msg_info: &mut MessageInfo,
     ) -> Result<(Self, BTreeSet<String>)> {
         let tomld = toml::Deserializer::new(toml_str);
-        Self::parse_from_deserializer(tomld, msg_info)
+        Self::parse_from_deserializer(tomld, None, msg_info)
     }
 
     /// Parses the [`CrossToml`] from a string containing the Cargo.toml contents
@@ -161,6 +161,7 @@ impl CrossToml {
         if let Some(cross_meta) = cross_metadata_opt {
             Ok(Some(Self::parse_from_deserializer(
                 cross_meta.clone(),
+                None,
                 msg_info,
             )?))
         } else {
@@ -171,6 +172,7 @@ impl CrossToml {
     /// Parses the [`CrossToml`] from a [`Deserializer`]
     fn parse_from_deserializer<'de, D>(
         deserializer: D,
+        source: Option<&str>,
         msg_info: &mut MessageInfo,
     ) -> Result<(Self, BTreeSet<String>)>
     where
@@ -184,7 +186,8 @@ impl CrossToml {
 
         if !unused.is_empty() {
             msg_info.warn(format_args!(
-                "found unused key(s) in Cross configuration:\n > {}",
+                "found unused key(s) in Cross configuration{}:\n > {}",
+                source.map(|s| format!(" at {s}")).unwrap_or_default(),
                 unused.clone().into_iter().collect::<Vec<_>>().join(", ")
             ))?;
         }
