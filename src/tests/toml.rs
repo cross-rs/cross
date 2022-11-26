@@ -62,9 +62,9 @@ fn toml_check() -> Result<(), Box<dyn std::error::Error>> {
             );
             let mut msg_info = crate::shell::MessageInfo::default();
             let toml = if !cargo {
-                crate::cross_toml::CrossToml::parse_from_cross(&fence_content, &mut msg_info)?
+                crate::cross_toml::CrossToml::parse_from_cross_str(&fence_content, &mut msg_info)?
             } else {
-                crate::cross_toml::CrossToml::parse_from_cargo(&fence_content, &mut msg_info)?
+                crate::cross_toml::CrossToml::parse_from_cargo_str(&fence_content, &mut msg_info)?
                     .unwrap_or_default()
             };
             assert!(toml.1.is_empty());

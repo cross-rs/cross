@@ -912,7 +912,7 @@ pub fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Opti
         let cross_toml_str = file::read(&cross_config_path)
             .wrap_err_with(|| format!("could not read file `{cross_config_path:?}`"))?;
 
-        let (config, _) = CrossToml::parse(&cargo_toml_str, &cross_toml_str, msg_info)
+        let (config, _) = CrossToml::parse_str(&cargo_toml_str, &cross_toml_str, msg_info)
             .wrap_err_with(|| format!("failed to parse file `{cross_config_path:?}` as TOML",))?;
 
         Ok(Some(config))
@@ -922,7 +922,7 @@ pub fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Opti
             msg_info.warn("There's a file named cross.toml, instead of Cross.toml. You may want to rename it, or it won't be considered.")?;
         }
 
-        if let Some((cfg, _)) = CrossToml::parse_from_cargo(&cargo_toml_str, msg_info)? {
+        if let Some((cfg, _)) = CrossToml::parse_from_cargo_str(&cargo_toml_str, msg_info)? {
             Ok(Some(cfg))
         } else {
             Ok(None)
