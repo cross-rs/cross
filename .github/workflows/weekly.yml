@@ -2,6 +2,10 @@ on:
   schedule:
     - cron:  '0 0 * * 5'
   workflow_dispatch:
+    inputs:
+      targets:
+        required: false
+        description: 'check these space or comma separated targets, supports wildcard *'
 
 name: Check
 
@@ -10,21 +14,116 @@ env:
   CARGO_HTTP_CHECK_REVOKE: false
 
 jobs:
-  weekly:
-    name: Check All Targets - No Cache
-    timeout-minutes: 1440
+  generate-matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: Generate matrix
+        id: generate-matrix
+        run: |
+          cargo xtask ci-job target-matrix --author "[gha]" --message "check" --weekly
+        env:
+          TARGETS: ${{ inputs.targets }}
+  weekly:
+    name: Check target - No Cache (${{ matrix.pretty }},${{ matrix.os }})
+    timeout-minutes: 1440
+    runs-on: ${{ matrix.os }}
+    needs: generate-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup-rust
       - name: Set up Docker Buildx
+        if: runner.os == 'Linux'
         uses: docker/setup-buildx-action@v2
       - name: Build xtask
         run: cargo build -p xtask
+
+      - name: Prepare Meta
+        id: prepare-meta
+        timeout-minutes: 60
+        run: cargo xtask ci-job prepare-meta "${TARGET}${SUB:+.$SUB}"
+        env:
+          TARGET: ${{ matrix.target }}
+          SUB: ${{ matrix.sub }}
+        shell: bash
+      - name: Docker Meta
+        if: steps.prepare-meta.outputs.has-image
+        id: docker-meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            name=${{ steps.prepare-meta.outputs.image }}
+          labels: |
+            ${{ fromJSON(steps.prepare-meta.outputs.labels) }}
+
       - name: Build Docker image
         id: build-docker-image
-        run: cargo xtask build-docker-image -v --no-cache --no-output --from-ci --no-fastfail --tag weekly
-        timeout-minutes: 1440
+        if: steps.prepare-meta.outputs.has-image
+        timeout-minutes: 120
+        run: cargo xtask build-docker-image --no-cache -v "${TARGET}${SUB:+.$SUB}"
+        env:
+          TARGET: ${{ matrix.target }}
+          SUB: ${{ matrix.sub }}
+        shell: bash
+      - name: Set Docker image for test
+        if: steps.prepare-meta.outputs.has-image
+        run: |
+          TARGET_VAR="cross_target_${TARGET//-/_}_image"
+          echo "${TARGET_VAR^^}=${IMAGE}" | tee -a "${GITHUB_ENV}"
+        env:
+          TARGET: ${{ matrix.target }}
+          IMAGE: ${{ steps.build-docker-image.outputs.image }}
+        shell: bash
+      - name: Test Image
+        if: steps.prepare-meta.outputs.has-image && steps.prepare-meta.outputs.test-variant == 'default'
+        run: ./ci/test.sh
+        env:
+          TARGET: ${{ matrix.target }}
+          CPP: ${{ matrix.cpp }}
+          DYLIB: ${{ matrix.dylib }}
+          STD: ${{ matrix.std }}
+          BUILD_STD: ${{ matrix.build-std }}
+          RUN: ${{ matrix.run }}
+          RUNNERS: ${{ matrix.runners }}
+        shell: bash
+
+      - name: Test Zig Image
+        if: steps.prepare-meta.outputs.has-image && steps.prepare-meta.outputs.test-variant == 'zig'
+        run: ./ci/test-zig-image.sh
+        shell: bash
+
+      - name: Test Cross Image
+        if: steps.prepare-meta.outputs.has-image && steps.prepare-meta.outputs.test-variant == 'cross'
+        run: ./ci/test-cross-image.sh
+        env:
+          TARGET: 'aarch64-unknown-linux-gnu'
+          IMAGE: 'ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main'
+        shell: bash
+
+      - name: Login to GitHub Container Registry
+        if: steps.prepare-meta.outputs.has-image && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: cargo xtask build-docker-image -v --push "${TARGET}${SUB:+.$SUB}"
+        env:
+          TARGET: ${{ matrix.target }}
+          SUB: ${{ matrix.sub }}
+          LABELS: ${{ steps.docker-meta.outputs.labels }}
+        shell: bash
   wiki:
     name: Ensure wiki is valid
     runs-on: ubuntu-latest

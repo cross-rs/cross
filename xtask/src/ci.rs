@@ -31,6 +31,9 @@ pub enum CiJob {
         message: String,
         #[clap(long, env = "COMMIT_AUTHOR")]
         author: String,
+        // check is being run as part of a weekly check
+        #[clap(long)]
+        weekly: bool,
     },
 }
 
@@ -114,8 +117,12 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
                 }
             }
         }
-        CiJob::TargetMatrix { message, author } => {
-            target_matrix::run(message, author)?;
+        CiJob::TargetMatrix {
+            message,
+            author,
+            weekly,
+        } => {
+            target_matrix::run(message, author, weekly)?;
         }
     }
     Ok(())
