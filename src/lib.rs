@@ -568,6 +568,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
         let image = image.to_definite_with(&engine, msg_info);
 
         toolchain.replace_host(&image.platform);
+        let maybe_warn = matches!(toolchain.channel.as_str(), "stable" | "beta" | "nightly");
 
         if image.platform.target.is_supported(Some(&target)) {
             if image.platform.architecture != toolchain.host().architecture {
@@ -597,7 +598,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
 
             let mut rustc_version = None;
             if let Some((version, channel, commit)) = toolchain.rustc_version()? {
-                if toolchain.date.is_none() {
+                if maybe_warn && toolchain.date.is_none() {
                     warn_host_version_mismatch(
                         &host_version_meta,
                         &toolchain,
