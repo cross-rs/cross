@@ -31,7 +31,8 @@ main() {
     export QEMU_STRACE=1
 
     # ensure we have the proper toolchain and optional rust flags
-    export CROSS=("${PROJECT_HOME}/target/debug/cross")
+    CROSS=$(binary_path cross "${PROJECT_HOME}" debug)
+    export CROSS=("${CROSS}")
     export CROSS_FLAGS="-v"
     if (( ${BUILD_STD:-0} )); then
         # use build-std instead of xargo, due to xargo being

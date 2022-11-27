@@ -78,6 +78,7 @@ pub(crate) fn run(
         ])
         // Prevent `bin` from being mounted inside the Docker container.
         .args(["-v", &format!("{}/bin", toolchain_dirs.cargo_mount_path())]);
+
     docker.args([
         "-v",
         &format!(

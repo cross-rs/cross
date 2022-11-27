@@ -15,7 +15,8 @@ main() {
 
     retry cargo fetch
     cargo build
-    export CROSS="${PROJECT_HOME}/target/debug/cross"
+    CROSS=$(binary_path cross "${PROJECT_HOME}" debug)
+    export CROSS
 
     td="$(mkcargotemp -d)"
 
@@ -31,7 +32,7 @@ image.name = "alpine:edge"
 image.toolchain = ["x86_64-unknown-linux-musl"]
 pre-build = ["apk add --no-cache gcc musl-dev"]' >"${CARGO_TMP_DIR}"/Cross.toml
 
-    "$CROSS" run -v
+    "${CROSS}" run -v
 
     local tmp_basename
     tmp_basename=$(basename "${CARGO_TMP_DIR}")
@@ -59,7 +60,7 @@ name = "ubuntu:20.04"
 toolchain = ["aarch64-unknown-linux-gnu"]
     ' >"${CARGO_TMP_DIR}"/Cross.toml
 
-    "$CROSS" build -v
+    "${CROSS}" build -v
 
     "${CROSS_ENGINE}" images --format '{{.Repository}}:{{.Tag}}' --filter 'label=org.cross-rs.for-cross-target' | grep "cross-custom-${tmp_basename}" | xargs "${CROSS_ENGINE}" rmi
 

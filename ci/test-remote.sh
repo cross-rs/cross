@@ -20,8 +20,10 @@ main() {
 
     retry cargo fetch
     cargo build
-    export CROSS="${PROJECT_HOME}/target/debug/cross"
-    export CROSS_UTIL="${PROJECT_HOME}/target/debug/cross-util"
+    CROSS=$(binary_path cross "${PROJECT_HOME}" debug)
+    export CROSS
+    CROSS_UTIL=$(binary_path cross-util "${PROJECT_HOME}" debug)
+    export CROSS_UTIL
 
     # if the create volume fails, ensure it exists.
     if ! err=$("${CROSS_UTIL}" volumes create 2>&1 >/dev/null); then
