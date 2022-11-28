@@ -1,0 +1,24 @@
+FROM ubuntu:20.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+COPY qemu.sh /
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    gcc-arm-none-eabi \
+    libnewlib-arm-none-eabi && \
+    /qemu.sh arm
+
+ENV CROSS_TOOLCHAIN_PREFIX=arm-none-eabi-
+ENV QEMU_CPU=cortex-m33 \
+    AR_thumbv8m.main_none_eabi="$CROSS_TOOLCHAIN_PREFIX"ar \
+    CC_thumbv8m.main_none_eabi="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_thumbv8m.main_none_eabi="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CARGO_TARGET_THUMBV8M.MAIN_NONE_EABI_RUNNER=qemu-arm

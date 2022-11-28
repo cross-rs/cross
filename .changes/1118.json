@@ -1,0 +1,5 @@
+{
+    "type": "added",
+    "description": "added ARMv8-M newlib targets.",
+    "issues": [1116]
+}

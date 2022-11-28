@@ -458,6 +458,18 @@ os = "ubuntu-latest"
 std = true
 
 [[target]]
+target = "thumbv8m.base-none-eabi"
+os = "ubuntu-latest"
+
+[[target]]
+target = "thumbv8m.main-none-eabi"
+os = "ubuntu-latest"
+
+[[target]]
+target = "thumbv8m.main-none-eabihf"
+os = "ubuntu-latest"
+
+[[target]]
 target = "cross"
 os = "ubuntu-latest"
 special = true
