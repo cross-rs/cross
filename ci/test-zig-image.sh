@@ -34,7 +34,8 @@ main() {
 
     retry cargo fetch
     cargo build
-    export CROSS="${PROJECT_HOME}/target/debug/cross"
+    CROSS=$(binary_path cross "${PROJECT_HOME}" debug)
+    export CROSS
 
     td="$(mktemp -d)"
     git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"

@@ -34,7 +34,7 @@ pub trait PathExt {
 #[cfg(target_family = "windows")]
 fn format_prefix(prefix: &str) -> Result<String> {
     match prefix {
-        "" => eyre::bail!("Error: got empty windows prefix"),
+        "" => Ok("".to_owned()),
         _ => Ok(format!("/mnt/{}", prefix.to_lowercase())),
     }
 }
@@ -196,13 +196,28 @@ fn _canonicalize(path: &Path) -> Result<PathBuf> {
     }
 }
 
+fn is_wsl_absolute(path: &str) -> bool {
+    if !cfg!(target_os = "windows") {
+        return false;
+    }
+    let path = path.strip_prefix("/mnt/").unwrap_or(path);
+    let maybe_drive = path.split_once('/').map_or(path, |x| x.0);
+
+    maybe_drive.len() == 1 && matches!(maybe_drive.chars().next(), Some('a'..='z'))
+}
+
 // Fix for issue #581. target_dir must be absolute.
 pub fn absolute_path(path: impl AsRef<Path>) -> Result<PathBuf> {
-    Ok(if path.as_ref().is_absolute() {
-        path.as_ref().to_path_buf()
-    } else {
-        env::current_dir()?.join(path)
-    })
+    let as_ref = path.as_ref();
+    Ok(
+        if as_ref.is_absolute()
+            || cfg!(target_family = "windows") && is_wsl_absolute(as_ref.to_utf8()?)
+        {
+            as_ref.to_path_buf()
+        } else {
+            env::current_dir()?.join(path)
+        },
+    )
 }
 
 /// Pretty format a file path. Also removes the path prefix from a command if wanted
@@ -321,7 +336,20 @@ mod tests {
 
     #[test]
     #[cfg(target_family = "windows")]
+    fn is_absolute_wslpath() {
+        assert!(is_wsl_absolute("/mnt/c/Users"));
+        assert!(is_wsl_absolute("/mnt/c"));
+        assert!(is_wsl_absolute("/mnt/z/Users"));
+        assert!(!is_wsl_absolute("/mnt"));
+        assert!(!is_wsl_absolute("/mnt/cc"));
+        assert!(!is_wsl_absolute("/mnt/zc"));
+    }
+
+    #[test]
+    #[cfg(target_family = "windows")]
     fn as_posix_with_drive() {
+        use regex::Regex;
+
         result_eq(p!(r"C:\").as_posix_absolute(), Ok("/mnt/c".to_owned()));
         result_eq(
             p!(r"C:\Users").as_posix_absolute(),
@@ -336,6 +364,17 @@ mod tests {
             p!(r"\\.\C:\Users").as_posix_absolute(),
             Ok("/mnt/c/Users".to_owned()),
         );
+
+        result_eq(
+            p!(r"/mnt/c/Users").as_posix_absolute(),
+            Ok("/mnt/c/Users".to_owned()),
+        );
+        result_eq(p!(r"/mnt/c").as_posix_absolute(), Ok("/mnt/c".to_owned()));
+
+        let regex = Regex::new("/mnt/[A-Za-z]/mnt").unwrap();
+        let result = p!(r"/mnt").as_posix_absolute();
+        assert!(result.is_ok());
+        assert!(regex.is_match(&result.unwrap()));
     }
 
     #[test]

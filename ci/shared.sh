@@ -48,3 +48,20 @@ function mkcargotemp {
     ' > "$CARGO_TMP_DIR"/Cargo.toml
     echo "$td"
 }
+
+function binary_path() {
+    local binary="${1}"
+    local home="${2}"
+    local build_mode="${3}"
+    local cross="${home}/target/${build_mode}/${binary}"
+
+    case "$OSTYPE" in
+        msys*|cygwin*)
+            cross="${cross}.exe"
+            ;;
+        *)
+            ;;
+    esac
+
+    echo "${cross}"
+}

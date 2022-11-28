@@ -1,0 +1,5 @@
+{
+    "description": "fix mount paths outside of the workspace mount directory on Windows and those provided as a WSL path.",
+    "type": "fixed",
+    "issues": [1145, 1156]
+}
