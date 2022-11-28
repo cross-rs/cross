@@ -8,6 +8,50 @@ set -euo pipefail
 # shellcheck disable=SC1091
 . lib.sh
 
+# we prefer those closer in geography to the US. they're triaged in
+# order of ease of use, reliability, and then geography. the mirror
+# list is at https://docs.freebsd.org/en/books/handbook/mirrors/.
+# these mirrors were known to work as of 2022-11-27. this does
+# not include any mirrors that are known to be rate-limited or
+# commercial.
+MIRRORS=(
+    # these do not return HTML, and only list the directories
+    "ftp.freebsd.org/pub/FreeBSD/releases"
+    # these return HTML output, and therefore are lower priority
+    "ftp11.freebsd.org/pub/FreeBSD/releases"
+    "ftp3.br.freebsd.org/pub/FreeBSD/releases"
+    "ftp2.uk.freebsd.org/pub/FreeBSD/releases"
+    "ftp2.nl.freebsd.org/pub/FreeBSD/releases"
+    "ftp6.fr.freebsd.org/pub/FreeBSD/releases"
+    "ftp1.de.freebsd.org/pub/FreeBSD/releases"
+    "ftp2.de.freebsd.org/pub/FreeBSD/releases"
+    "ftp5.de.freebsd.org/pub/FreeBSD/releases"
+    "ftp2.ru.freebsd.org/pub/FreeBSD/releases"
+    "ftp2.gr.freebsd.org/pub/FreeBSD/releases"
+    "ftp4.za.freebsd.org/pub/FreeBSD/releases"
+    "ftp2.za.freebsd.org/pub/FreeBSD/releases"
+    "ftp4.tw.freebsd.org/pub/FreeBSD/releases"
+    "ftp3.jp.freebsd.org/pub/FreeBSD/releases"
+    "ftp6.jp.freebsd.org/pub/FreeBSD/releases"
+    # these only support HTTP, and not implicit
+    # FTP as well, and have HTML output
+    "http://ftp.uk.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.nl.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.fr.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.at.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.dk.freebsd.org/FreeBSD/releases"
+    "http://ftp.cz.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.se.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.lv.freebsd.org/freebsd/releases"
+    "http://ftp.pl.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.ua.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.gr.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.ru.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.nz.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.kr.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp.jp.freebsd.org/pub/FreeBSD/releases"
+)
+
 max_freebsd() {
     local best=
     local minor=0
@@ -18,13 +62,13 @@ max_freebsd() {
         version=$(echo "${release}" | cut -d '-' -f 1)
         release_major=$(echo "${version}"| cut -d '.' -f 1)
         release_minor=$(echo "${version}"| cut -d '.' -f 2)
-        if [ "${release_major}" == "${BSD_MAJOR}" ] && [ "${release_minor}" -gt "${minor}" ]; then
+        if [ "${release_major}" == "${FREEBSD_MAJOR}" ] && [ "${release_minor}" -gt "${minor}" ]; then
             best="${release}"
             minor="${release_minor}"
         fi
     done
     if [[ -z "$best" ]]; then
-        echo -e "\e[31merror:\e[0m could not find best release for FreeBSD ${BSD_MAJOR}." 1>&2
+        echo -e "\e[31merror:\e[0m could not find best release for FreeBSD ${FREEBSD_MAJOR}." 1>&2
         exit 1
     fi
     echo "${best}"
@@ -38,9 +82,9 @@ latest_freebsd() {
     local releases=
     local max_release=
 
-    response=$(curl --silent --list-only --location "${mirror}/${BSD_ARCH}/" | grep RELEASE)
+    response=$(curl --silent --list-only --location "${mirror}/${FREEBSD_ARCH}/" | grep RELEASE)
     if [[ "${response}" != *RELEASE* ]]; then
-        echo -e "\e[31merror:\e[0m could not find a candidate release for FreeBSD ${BSD_MAJOR}." 1>&2
+        echo -e "\e[31merror:\e[0m could not find a candidate release for FreeBSD ${FREEBSD_MAJOR}." 1>&2
         exit 1
     fi
     readarray -t lines <<< "${response}"
@@ -67,21 +111,21 @@ latest_freebsd() {
 }
 
 freebsd_mirror() {
-    local home=
+    local mirror=
     local code=
 
     set +e
-    for home in "${BSD_HOME[@]}"; do
+    for mirror in "${MIRRORS[@]}"; do
         # we need a timeout in case the server is down to avoid
         # infinitely hanging. timeout error code is always 124
         # these mirrors can be quite slow, so have a long timeout
-        timeout 20s curl --silent --list-only --location "${home}/${BSD_ARCH}/" >/dev/null
+        timeout 20s curl --silent --list-only --location "${mirror}/${FREEBSD_ARCH}/" >/dev/null
         code=$?
         if [[ "${code}" == 0 ]]; then
-            echo "${home}"
+            echo "${mirror}"
             return 0
         elif [[ "${code}" != 124 ]]; then
-            echo -e "\e[1;33mwarning:\e[0m mirror ${home} does not seem to work." 1>&2
+            echo -e "\e[1;33mwarning:\e[0m mirror ${mirror} does not seem to work." 1>&2
         fi
     done
     set -e
@@ -92,7 +136,7 @@ freebsd_mirror() {
 
 mirror=$(freebsd_mirror)
 base_release=$(latest_freebsd "${mirror}")
-bsd_base_url="${mirror}/${BSD_ARCH}/${base_release}-RELEASE"
+bsd_base_url="${mirror}/${FREEBSD_ARCH}/${base_release}-RELEASE"
 if [[ "${bsd_base_url}" == "http"* ]]; then
     bsd_url="${bsd_base_url}"
 else
@@ -102,7 +146,7 @@ fi
 main() {
     local binutils=2.32 \
         gcc=6.4.0 \
-        target="${ARCH}-unknown-freebsd${BSD_MAJOR}"
+        target="${ARCH}-unknown-freebsd${FREEBSD_MAJOR}"
 
     install_packages ca-certificates \
         curl \

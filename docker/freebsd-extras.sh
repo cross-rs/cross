@@ -11,8 +11,16 @@ set -euo pipefail
 . freebsd-install.sh
 
 main() {
-    setup_packagesite
-    install_freebsd_package openssl sqlite3
+    apt-get update && apt-get install --assume-yes --no-install-recommends \
+        curl \
+        dnsutils \
+        jq \
+        xz-utils
+
+    local url=
+    url=$(fetch_best_freebsd_mirror)
+    FREEBSD_MIRROR="${url}" setup_freebsd_packagesite
+    FREEBSD_MIRROR="${url}" install_freebsd_package openssl sqlite3
 
     rm "${0}"
 }
