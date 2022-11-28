@@ -369,6 +369,9 @@ terminate.
 | `thumbv7m-none-eabi` [4]             | 3.3.0  | 9.2.1   |     | N/A   |       |
 | `thumbv7neon-linux-androideabi` [1]  | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `thumbv7neon-unknown-linux-gnueabihf`| 2.31   | 9.4.0   | ✓   | N/A   |   ✓    |
+| `thumbv8m.base-none-eabi` [4]        | 3.3.0  | 9.2.1   |     | N/A   |       |
+| `thumbv8m.main-none-eabi` [4]        | 3.3.0  | 9.2.1   |     | N/A   |       |
+| `thumbv8m.main-none-eabihf` [4]      | 3.3.0  | 9.2.1   |     | N/A   |       |
 | `wasm32-unknown-emscripten` [6]        | 3.1.14 | 15.0.0  | ✓   | N/A   |   ✓    |
 | `x86_64-linux-android` [1]           | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `x86_64-pc-windows-gnu`              | N/A    | 9.3     | ✓   | N/A   |   ✓    |
