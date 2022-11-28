@@ -24,27 +24,80 @@ max_freebsd() {
         fi
     done
     if [[ -z "$best" ]]; then
-        echo "Could not find best release for FreeBSD ${BSD_MAJOR}." 1>&2
+        echo -e "\e[31merror:\e[0m could not find best release for FreeBSD ${BSD_MAJOR}." 1>&2
         exit 1
     fi
     echo "${best}"
 }
 
 latest_freebsd() {
-    local dirs
-    local releases
-    local max_release
+    local mirror="${1}"
+    local response=
+    local line=
+    local lines=
+    local releases=
+    local max_release=
 
-    dirs=$(curl --silent --list-only "${BSD_HOME}/${BSD_ARCH}/" | grep RELEASE)
-    read -r -a releases <<< "${dirs[@]}"
+    response=$(curl --silent --list-only --location "${mirror}/${BSD_ARCH}/" | grep RELEASE)
+    if [[ "${response}" != *RELEASE* ]]; then
+        echo -e "\e[31merror:\e[0m could not find a candidate release for FreeBSD ${BSD_MAJOR}." 1>&2
+        exit 1
+    fi
+    readarray -t lines <<< "${response}"
+
+    # shellcheck disable=SC2016
+    local regex='/<a.*?>\s*(\d+\.\d+-RELEASE)\s*\/?\s*<\/a>/; print $1'
+    # not all lines will match: some return `*-RELEASE/` as a line
+    if [[ "${response}" == *"<a"* ]]; then
+        # have HTML output, need to extract it via a regex
+        releases=()
+        for line in "${lines[@]}"; do
+            if [[ "${line}" == *"<a"* ]]; then
+                # because of the pattern we're extracting, this can't split
+                # shellcheck disable=SC2207
+                releases+=($(echo "${line}" | perl -nle "${regex}"))
+            fi
+        done
+    else
+        releases=("${lines[@]}")
+    fi
+
     max_release=$(max_freebsd "${releases[@]}")
-
     echo "${max_release//-RELEASE/}"
 }
 
-base_release="$(latest_freebsd)"
-bsd_ftp="${BSD_HOME}/${BSD_ARCH}/${base_release}-RELEASE"
-bsd_http="http://${bsd_ftp}"
+freebsd_mirror() {
+    local home=
+    local code=
+
+    set +e
+    for home in "${BSD_HOME[@]}"; do
+        # we need a timeout in case the server is down to avoid
+        # infinitely hanging. timeout error code is always 124
+        # these mirrors can be quite slow, so have a long timeout
+        timeout 20s curl --silent --list-only --location "${home}/${BSD_ARCH}/" >/dev/null
+        code=$?
+        if [[ "${code}" == 0 ]]; then
+            echo "${home}"
+            return 0
+        elif [[ "${code}" != 124 ]]; then
+            echo -e "\e[1;33mwarning:\e[0m mirror ${home} does not seem to work." 1>&2
+        fi
+    done
+    set -e
+
+    echo -e "\e[31merror:\e[0m could not find a working FreeBSD mirror." 1>&2
+    exit 1
+}
+
+mirror=$(freebsd_mirror)
+base_release=$(latest_freebsd "${mirror}")
+bsd_base_url="${mirror}/${BSD_ARCH}/${base_release}-RELEASE"
+if [[ "${bsd_base_url}" == "http"* ]]; then
+    bsd_url="${bsd_base_url}"
+else
+    bsd_url="http://${bsd_base_url}"
+fi
 
 main() {
     local binutils=2.32 \
@@ -75,7 +128,7 @@ main() {
     ./contrib/download_prerequisites
     cd ..
 
-    curl --retry 3 -sSfL "${bsd_http}/base.txz" -O
+    curl --retry 3 -sSfL "${bsd_url}/base.txz" -O
     tar -C "${td}/freebsd" -xJf base.txz ./usr/include ./usr/lib ./lib
 
     cd binutils-build
@@ -140,7 +193,7 @@ main() {
     purge_packages
 
     # store the version info for the FreeBSD release
-    bsd_revision=$(curl --retry 3 -sSfL "${bsd_http}/REVISION")
+    bsd_revision=$(curl --retry 3 -sSfL "${bsd_url}/REVISION")
     echo "${base_release} (${bsd_revision})" > /opt/freebsd-version
 
     rm -rf "${td}"
