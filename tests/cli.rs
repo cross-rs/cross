@@ -1,5 +1,3 @@
-// simplifies addition of tests due to warning on last
-// of needless borrow on last test in block.
 #![allow(clippy::needless_borrow)]
 
 use std::path::{Path, PathBuf};

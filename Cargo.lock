@@ -266,6 +266,7 @@ dependencies = [
  "trycmd",
  "walkdir",
  "which",
+ "wildmatch",
  "winapi",
 ]
 

@@ -30,7 +30,6 @@ impl<T> FlagOption<T> {
         matches!(self, Self::Some(_))
     }
 
-    /// If the flag is present multiple times, always set to `Double`.
     pub fn set(&mut self, other: Self) {
         *self = match self {
             FlagOption::None => other,
