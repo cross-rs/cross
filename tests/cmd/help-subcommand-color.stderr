@@ -1,0 +1,7 @@
+[..][cross] note[..]: Falling back to `cargo` on the host.
+[..]error:[..] The subcommand [..]'--color'[..] wasn't recognized
+
+USAGE:
+    cargo <subcommands>
+
+For more information try [..]--help[..]

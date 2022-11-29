@@ -1,7 +1,7 @@
-[cross] error: The argument '--color <WHEN>' requires a value but none was supplied
-               [possible values: auto, always, never]
+[..][cross] error[..]: The argument '[..]--color <WHEN>[..]' requires a value but none was supplied
+               [possible values: [..]auto[..], [..]always[..], [..]never[..]]
 
 USAGE:
     cross [+toolchain] [OPTIONS] [SUBCOMMAND]
 
-For more information try --help
+For more information try [..]--help[..]

@@ -1,1 +1,1 @@
-[cross] error: cannot set both --verbose and --quiet
+[..][cross] error[..]: cannot set both --verbose and --quiet
