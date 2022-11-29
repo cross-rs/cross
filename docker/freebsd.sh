@@ -82,7 +82,7 @@ latest_freebsd() {
     local releases=
     local max_release=
 
-    response=$(curl --silent --list-only --location "${mirror}/${FREEBSD_ARCH}/" | grep RELEASE)
+    response=$(curl --retry 3 -sSflL "${mirror}/${FREEBSD_ARCH}/" | grep RELEASE)
     if [[ "${response}" != *RELEASE* ]]; then
         echo -e "\e[31merror:\e[0m could not find a candidate release for FreeBSD ${FREEBSD_MAJOR}." 1>&2
         exit 1
@@ -119,7 +119,7 @@ freebsd_mirror() {
         # we need a timeout in case the server is down to avoid
         # infinitely hanging. timeout error code is always 124
         # these mirrors can be quite slow, so have a long timeout
-        timeout 20s curl --silent --list-only --location "${mirror}/${FREEBSD_ARCH}/" >/dev/null
+        timeout 20s curl --retry 3 -sSflL "${mirror}/${FREEBSD_ARCH}/" >/dev/null
         code=$?
         if [[ "${code}" == 0 ]]; then
             echo "${mirror}"
