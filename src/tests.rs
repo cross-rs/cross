@@ -22,7 +22,7 @@ pub fn get_cargo_workspace() -> &'static Path {
     })
 }
 
-pub fn walk_dir<'a>(
+pub fn walk_dir(
     root: &'_ Path,
     skip: &'static [&str],
     ext: impl for<'s> Fn(Option<&'s std::ffi::OsStr>) -> bool + Sync + Send + 'static,
