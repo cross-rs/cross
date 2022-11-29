@@ -13,28 +13,25 @@ set -euo pipefail
 # list is at https://docs.freebsd.org/en/books/handbook/mirrors/.
 # these mirrors were known to work as of 2022-11-27. this does
 # not include any mirrors that are known to be rate-limited or
-# commercial.
+# commercial. everything returns HTML output.
 MIRRORS=(
-    # these do not return HTML, and only list the directories
-    "ftp.freebsd.org/pub/FreeBSD/releases"
-    # these return HTML output, and therefore are lower priority
-    "ftp11.freebsd.org/pub/FreeBSD/releases"
-    "ftp3.br.freebsd.org/pub/FreeBSD/releases"
-    "ftp2.uk.freebsd.org/pub/FreeBSD/releases"
-    "ftp2.nl.freebsd.org/pub/FreeBSD/releases"
-    "ftp6.fr.freebsd.org/pub/FreeBSD/releases"
-    "ftp1.de.freebsd.org/pub/FreeBSD/releases"
-    "ftp2.de.freebsd.org/pub/FreeBSD/releases"
-    "ftp5.de.freebsd.org/pub/FreeBSD/releases"
-    "ftp2.ru.freebsd.org/pub/FreeBSD/releases"
-    "ftp2.gr.freebsd.org/pub/FreeBSD/releases"
-    "ftp4.za.freebsd.org/pub/FreeBSD/releases"
-    "ftp2.za.freebsd.org/pub/FreeBSD/releases"
-    "ftp4.tw.freebsd.org/pub/FreeBSD/releases"
-    "ftp3.jp.freebsd.org/pub/FreeBSD/releases"
-    "ftp6.jp.freebsd.org/pub/FreeBSD/releases"
-    # these only support HTTP, and not implicit
-    # FTP as well, and have HTML output
+    # this is a guaranteed mirror, unlike those below.
+    "http://ftp.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp11.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp3.br.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp2.uk.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp2.nl.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp6.fr.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp1.de.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp2.de.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp5.de.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp2.ru.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp2.gr.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp4.za.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp2.za.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp4.tw.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp3.jp.freebsd.org/pub/FreeBSD/releases"
+    "http://ftp6.jp.freebsd.org/pub/FreeBSD/releases"
     "http://ftp.uk.freebsd.org/pub/FreeBSD/releases"
     "http://ftp.nl.freebsd.org/pub/FreeBSD/releases"
     "http://ftp.fr.freebsd.org/pub/FreeBSD/releases"
@@ -82,7 +79,7 @@ latest_freebsd() {
     local releases=
     local max_release=
 
-    response=$(curl --retry 3 -sSflL "${mirror}/${FREEBSD_ARCH}/" | grep RELEASE)
+    response=$(curl --retry 3 -sSfL "${mirror}/${FREEBSD_ARCH}/" | grep RELEASE)
     if [[ "${response}" != *RELEASE* ]]; then
         echo -e "\e[31merror:\e[0m could not find a candidate release for FreeBSD ${FREEBSD_MAJOR}." 1>&2
         exit 1
@@ -110,16 +107,15 @@ latest_freebsd() {
     echo "${max_release//-RELEASE/}"
 }
 
-freebsd_mirror() {
+_freebsd_mirror() {
     local mirror=
     local code=
 
-    set +e
     for mirror in "${MIRRORS[@]}"; do
         # we need a timeout in case the server is down to avoid
         # infinitely hanging. timeout error code is always 124
         # these mirrors can be quite slow, so have a long timeout
-        timeout 20s curl --retry 3 -sSflL "${mirror}/${FREEBSD_ARCH}/" >/dev/null
+        timeout 20s curl --retry 3 -sSfL "${mirror}/${FREEBSD_ARCH}/" >/dev/null
         code=$?
         if [[ "${code}" == 0 ]]; then
             echo "${mirror}"
@@ -128,20 +124,23 @@ freebsd_mirror() {
             echo -e "\e[1;33mwarning:\e[0m mirror ${mirror} does not seem to work." 1>&2
         fi
     done
-    set -e
 
     echo -e "\e[31merror:\e[0m could not find a working FreeBSD mirror." 1>&2
     exit 1
 }
 
+freebsd_mirror() {
+    set +e
+    _freebsd_mirror
+    code=$?
+    set -e
+
+    return "${code}"
+}
+
 mirror=$(freebsd_mirror)
 base_release=$(latest_freebsd "${mirror}")
-bsd_base_url="${mirror}/${FREEBSD_ARCH}/${base_release}-RELEASE"
-if [[ "${bsd_base_url}" == "http"* ]]; then
-    bsd_url="${bsd_base_url}"
-else
-    bsd_url="http://${bsd_base_url}"
-fi
+bsd_url="${mirror}/${FREEBSD_ARCH}/${base_release}-RELEASE"
 
 main() {
     local binutils=2.32 \

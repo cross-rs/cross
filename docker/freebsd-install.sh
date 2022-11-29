@@ -51,7 +51,7 @@ freebsd_mirror_works() {
     timeout 20s curl --retry 3 -sSfL "${path}" >/dev/null 2>&1
 }
 
-fetch_best_freebsd_mirror() {
+_fetch_best_freebsd_mirror() {
     # in case if the default mirror is down, we can use various known
     # fallbacks, or at worst, SRV fallbacks to find the ideal package
     # site. no individual mirror other than the default mirror is
@@ -100,6 +100,15 @@ fetch_best_freebsd_mirror() {
 
     echo -e "\e[31merror:\e[0m could not find a working FreeBSD package mirror." 1>&2
     exit 1
+}
+
+fetch_best_freebsd_mirror() {
+    set +e
+    _fetch_best_freebsd_mirror
+    code=$?
+    set -e
+
+    return "${code}"
 }
 
 setup_freebsd_packagesite() {
