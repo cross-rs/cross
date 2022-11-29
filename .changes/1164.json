@@ -1,0 +1,5 @@
+{
+    "type": "internal",
+    "description": "add fallback mirrors for FreeBSD packages.",
+    "issues": [1162]
+}
