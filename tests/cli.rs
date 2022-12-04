@@ -6,20 +6,26 @@ use std::{fs, mem};
 
 use cross::shell::MessageInfo;
 use cross::{docker, CommandExt, ToUtf8};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use snapbox::assert_matches;
 use snapbox::cmd::cargo_bin;
+
+pub static ANSI_COLOR_CODES: Lazy<Regex> = Lazy::new(|| Regex::new(r"\x1b\[[0-9;]*m").unwrap());
 
 macro_rules! stdout_contains {
     ($stdout:expr, $value:expr) => {{
         let stdout = $stdout;
-        assert!(stdout.contains($value), "unexpected stdout of {stdout}");
+        let replaced = ANSI_COLOR_CODES.replace_all(&stdout, "");
+        assert!(replaced.contains($value), "unexpected stdout of {stdout:?}");
     }};
 }
 
 macro_rules! stderr_contains {
     ($stderr:expr, $value:expr) => {{
         let stderr = $stderr;
-        assert!(stderr.contains($value), "unexpected stderr of {stderr}");
+        let replaced = ANSI_COLOR_CODES.replace_all(&stderr, "");
+        assert!(replaced.contains($value), "unexpected stderr of {stderr:?}");
     }};
 }
 
