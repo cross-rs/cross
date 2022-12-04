@@ -24,12 +24,14 @@ COPY linux-image.sh /
 RUN /linux-image.sh armv7
 
 COPY linux-runner base-runner.sh /
+COPY toolchain.cmake /opt/toolchain.cmake
 
 # Export all target binutils just in case required.
 ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabihf-
 ENV CROSS_SYSROOT=/usr/arm-linux-gnueabihf
+ENV CROSS_TARGET_RUNNER="/linux-runner armv7hf"
 ENV CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
-    CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_RUNNER="/linux-runner armv7hf" \
+    CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"ar \
     AS_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"as \
     CC_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"gcc \
@@ -43,7 +45,12 @@ ENV CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_LINKER="$CROSS_TOOLCHAIN_PR
     SIZE_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"size \
     STRINGS_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"strings \
     STRIP_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"strip \
+    CMAKE_TOOLCHAIN_FILE_thumbv7neon_unknown_linux_gnueabihf=/opt/toolchain.cmake \
     BINDGEN_EXTRA_CLANG_ARGS_thumbv7neon_unknown_linux_gnueabihf="--sysroot=$CROSS_SYSROOT" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
-    PKG_CONFIG_PATH="/usr/lib/arm-linux-gnueabihf/pkgconfig/:${PKG_CONFIG_PATH}"
+    PKG_CONFIG_PATH="/usr/lib/arm-linux-gnueabihf/pkgconfig/:${PKG_CONFIG_PATH}" \
+    CROSS_CMAKE_SYSTEM_NAME=Linux \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=arm \
+    CROSS_CMAKE_CRT=gnu \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -march=armv7-a -mfpu=vfpv3-d16 -mfpu=neon-vfpv4 -mthumb -mfloat-abi=hard"

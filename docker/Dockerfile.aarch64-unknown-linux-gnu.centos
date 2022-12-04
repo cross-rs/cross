@@ -30,13 +30,21 @@ COPY linux-runner base-runner.sh /
 COPY aarch64-linux-gnu-glibc.sh /
 RUN /aarch64-linux-gnu-glibc.sh
 
+COPY toolchain.cmake /opt/toolchain.cmake
+
 ENV CROSS_TOOLCHAIN_PREFIX=aarch64-linux-gnu-
 ENV CROSS_SYSROOT=/usr/aarch64-linux-gnu
+ENV CROSS_TARGET_RUNNER="/linux-runner aarch64"
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
-    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="/linux-runner aarch64" \
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_aarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_aarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_aarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_aarch64_unknown_linux_gnu=/opt/toolchain.cmake \
     BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
-    RUST_TEST_THREADS=1
+    RUST_TEST_THREADS=1 \
+    CROSS_CMAKE_SYSTEM_NAME=Linux \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=aarch64 \
+    CROSS_CMAKE_CRT=gnu \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC"

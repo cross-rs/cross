@@ -440,34 +440,44 @@ std = true
 [[target]]
 target = "thumbv6m-none-eabi"
 os = "ubuntu-latest"
-std = true
+cpp = true
+std = false
 
 [[target]]
 target = "thumbv7em-none-eabi"
 os = "ubuntu-latest"
-std = true
+cpp = true
+std = false
 
 [[target]]
 target = "thumbv7em-none-eabihf"
 os = "ubuntu-latest"
-std = true
+cpp = true
+std = false
 
 [[target]]
 target = "thumbv7m-none-eabi"
 os = "ubuntu-latest"
-std = true
+cpp = true
+std = false
 
 [[target]]
 target = "thumbv8m.base-none-eabi"
 os = "ubuntu-latest"
+cpp = true
+std = false
 
 [[target]]
 target = "thumbv8m.main-none-eabi"
 os = "ubuntu-latest"
+cpp = true
+std = false
 
 [[target]]
 target = "thumbv8m.main-none-eabihf"
 os = "ubuntu-latest"
+cpp = true
+std = false
 
 [[target]]
 target = "cross"

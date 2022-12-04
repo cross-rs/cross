@@ -34,15 +34,18 @@ RUN /android-system.sh arm
 
 ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-androideabi-
 ENV CROSS_SYSROOT=/android-ndk/sysroot
+ENV CROSS_ANDROID_SDK=$ANDROID_SDK
 COPY android-symlink.sh /
 RUN /android-symlink.sh arm arm-linux-androideabi
 
 COPY android-runner /
+COPY android.cmake /opt/toolchain.cmake
 
 # Libz is distributed in the android ndk, but for some unknown reason it is not
 # found in the build process of some crates, so we explicit set the DEP_Z_ROOT
+ENV CROSS_TARGET_RUNNER="/android-runner arm"
 ENV CARGO_TARGET_ARM_LINUX_ANDROIDEABI_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
-    CARGO_TARGET_ARM_LINUX_ANDROIDEABI_RUNNER="/android-runner arm" \
+    CARGO_TARGET_ARM_LINUX_ANDROIDEABI_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"ar \
     AS_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"as \
     CC_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"gcc \
@@ -56,6 +59,7 @@ ENV CARGO_TARGET_ARM_LINUX_ANDROIDEABI_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     SIZE_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"size \
     STRINGS_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"strings \
     STRIP_arm_linux_androideabi="$CROSS_TOOLCHAIN_PREFIX"strip \
+    CMAKE_TOOLCHAIN_FILE_arm_linux_androideabi=/opt/toolchain.cmake \
     BINDGEN_EXTRA_CLANG_ARGS_arm_linux_androideabi="--sysroot=$CROSS_SYSROOT" \
     DEP_Z_INCLUDE="$CROSS_SYSROOT/usr/include/" \
     RUST_TEST_THREADS=1 \
@@ -63,4 +67,8 @@ ENV CARGO_TARGET_ARM_LINUX_ANDROIDEABI_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     TMPDIR=/tmp/ \
     ANDROID_DATA=/ \
     ANDROID_DNS_MODE=local \
-    ANDROID_ROOT=/system
+    ANDROID_ROOT=/system \
+    CROSS_CMAKE_SYSTEM_NAME=Android \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=armv5te \
+    CROSS_CMAKE_CRT=android \
+    CROSS_CMAKE_OBJECT_FLAGS="--target=arm-linux-androideabi -DANDROID -ffunction-sections -fdata-sections -fPIC --target=arm-linux-androideabi"

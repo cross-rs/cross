@@ -26,12 +26,19 @@ COPY musl-symlink.sh /
 RUN /musl-symlink.sh $CROSS_SYSROOT mips-sf
 
 COPY qemu-runner base-runner.sh /
+COPY toolchain.cmake /opt/toolchain.cmake
 
+ENV CROSS_TARGET_RUNNER="/qemu-runner mips"
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
-    CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner mips" \
+    CARGO_TARGET_MIPS_UNKNOWN_LINUX_MUSL_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_mips_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_mips_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_mips_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_mips_unknown_linux_musl=/opt/toolchain.cmake \
     BINDGEN_EXTRA_CLANG_ARGS_mips_unknown_linux_musl="--sysroot=$CROSS_SYSROOT" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
-    RUST_TEST_THREADS=1
+    RUST_TEST_THREADS=1 \
+    CROSS_CMAKE_SYSTEM_NAME=Linux \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=mips \
+    CROSS_CMAKE_CRT=musl \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC"

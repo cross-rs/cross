@@ -12,6 +12,8 @@ RUN /xargo.sh
 COPY illumos.sh /
 RUN /illumos.sh x86_64
 
+COPY toolchain.cmake /opt/toolchain.cmake
+
 ENV CROSS_TOOLCHAIN_PREFIX=x86_64-unknown-illumos-
 ENV CROSS_SYSROOT=/usr/local/x86_64-unknown-illumos/sysroot
 ENV PATH=$PATH:/usr/local/x86_64-unknown-illumos/bin/ \
@@ -19,4 +21,9 @@ ENV PATH=$PATH:/usr/local/x86_64-unknown-illumos/bin/ \
     AR_x86_64_unknown_illumos="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_x86_64_unknown_illumos="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_x86_64_unknown_illumos="$CROSS_TOOLCHAIN_PREFIX"g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_sparcv9_sun_solaris="--sysroot=$CROSS_SYSROOT"
+    CMAKE_TOOLCHAIN_FILE_x86_64_unknown_illumos=/opt/toolchain.cmake \
+    BINDGEN_EXTRA_CLANG_ARGS_sparcv9_sun_solaris="--sysroot=$CROSS_SYSROOT" \
+    CROSS_CMAKE_SYSTEM_NAME=illumos \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=x86_64 \
+    CROSS_CMAKE_CRT=solaris \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m64"

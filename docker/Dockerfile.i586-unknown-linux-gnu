@@ -23,15 +23,22 @@ COPY qemu.sh /
 RUN /qemu.sh i386
 
 COPY qemu-runner base-runner.sh /
+COPY toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TOOLCHAIN_PREFIX=i686-linux-gnu-
 ENV CROSS_SYSROOT=/usr/i686-linux-gnu
+ENV CROSS_TARGET_RUNNER="/qemu-runner i586"
 ENV CARGO_TARGET_I586_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
-    CARGO_TARGET_I586_UNKNOWN_LINUX_GNU_RUNNER="/qemu-runner i586" \
+    CARGO_TARGET_I586_UNKNOWN_LINUX_GNU_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_i586_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_i586_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_i586_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_i586_unknown_linux_gnu=/opt/toolchain.cmake \
     BINDGEN_EXTRA_CLANG_ARGS_i586_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
-    PKG_CONFIG_PATH="/usr/lib/i386-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"
+    PKG_CONFIG_PATH="/usr/lib/i386-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}" \
+    CROSS_CMAKE_SYSTEM_NAME=Linux \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=x86 \
+    CROSS_CMAKE_CRT=gnu \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m32 -march=pentium"

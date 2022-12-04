@@ -32,13 +32,22 @@ RUN mkdir -p /usr/lib/binfmt-support/ && \
 COPY windows-entry.sh /
 ENTRYPOINT ["/windows-entry.sh"]
 
+COPY toolchain.cmake /opt/toolchain.cmake
+
 # for why we always link with pthread support, see:
 # https://github.com/cross-rs/cross/pull/1123#issuecomment-1312287148
 ENV CROSS_TOOLCHAIN_PREFIX=x86_64-w64-mingw32-
+ENV CROSS_TOOLCHAIN_SUFFIX=-posix
 ENV CROSS_SYSROOT=/usr/x86_64-w64-mingw32
-ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc-posix \
-    CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER=wine \
+ENV CROSS_TARGET_RUNNER="wine"
+ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc"$CROSS_TOOLCHAIN_SUFFIX" \
+    CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_x86_64_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"ar \
-    CC_x86_64_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc-posix \
-    CXX_x86_64_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"g++-posix \
-    BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_gnu="--sysroot=$CROSS_SYSROOT"
+    CC_x86_64_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc"$CROSS_TOOLCHAIN_SUFFIX" \
+    CXX_x86_64_pc_windows_gnu="$CROSS_TOOLCHAIN_PREFIX"g++"$CROSS_TOOLCHAIN_SUFFIX" \
+    CMAKE_TOOLCHAIN_FILE_x86_64_pc_windows_gnu=/opt/toolchain.cmake \
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_gnu="--sysroot=$CROSS_SYSROOT" \
+    CROSS_CMAKE_SYSTEM_NAME=Windows \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=AMD64 \
+    CROSS_CMAKE_CRT=gnu \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -m64"

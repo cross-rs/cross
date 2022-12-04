@@ -10,15 +10,27 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-COPY qemu.sh /
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     gcc-arm-none-eabi \
-    libnewlib-arm-none-eabi && \
-    /qemu.sh arm
+    libnewlib-arm-none-eabi \
+    libstdc++-arm-none-eabi-newlib
+
+COPY qemu.sh /
+RUN /qemu.sh arm
+
+COPY toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TOOLCHAIN_PREFIX=arm-none-eabi-
+ENV CROSS_SYSROOT="/usr/lib/arm-none-eabi"
+ENV CROSS_TARGET_RUNNER=qemu-arm
 ENV QEMU_CPU=cortex-m33 \
     AR_thumbv8m.main_none_eabihf="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_thumbv8m.main_none_eabihf="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_thumbv8m.main_none_eabihf="$CROSS_TOOLCHAIN_PREFIX"g++ \
-    CARGO_TARGET_THUMBV8M.MAIN_NONE_EABIHF_RUNNER=qemu-arm
+    # cmake-rs does not accept CMAKE_TOOLCHAIN_FILE_thumbv8m.main_none_eabihf
+    TARGET_CMAKE_TOOLCHAIN_FILE=/opt/toolchain.cmake \
+    CARGO_TARGET_THUMBV8M.BASE_NONE_EABI_RUNNER="$CROSS_TARGET_RUNNER" \
+    CROSS_CMAKE_SYSTEM_NAME=Generic \
+    CROSS_CMAKE_SYSTEM_PROCESSOR="armv8-m.main" \
+    CROSS_CMAKE_CRT=newlib \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -mthumb -mfloat-abi=hard -march=armv8-m.main -mfpu=fpv5-sp-d16"
