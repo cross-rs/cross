@@ -1,0 +1,4 @@
+{
+    "description": "freebsd: include memstat in build image to fix build with libc 0.2.138 and up.",
+    "type": "fixed"
+}
