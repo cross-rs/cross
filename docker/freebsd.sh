@@ -186,6 +186,8 @@ main() {
     cp -r "${td}/freebsd/lib/"* "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.so.1" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.a" "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib/libcxxrt.a" "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib/libcompiler_rt.a" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp_nonshared,memstat}.a "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{rt,execinfo,procstat}.so.1 "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/libmemstat.so.3 "${destdir}/lib"

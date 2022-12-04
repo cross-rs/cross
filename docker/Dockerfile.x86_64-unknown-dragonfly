@@ -13,10 +13,17 @@ RUN /xargo.sh
 COPY dragonfly.sh /
 RUN /dragonfly.sh 5
 
+COPY toolchain.cmake /opt/toolchain.cmake
+
 ENV CROSS_TOOLCHAIN_PREFIX=x86_64-unknown-dragonfly-
 ENV CROSS_SYSROOT=/usr/local/x86_64-unknown-dragonfly
 ENV CARGO_TARGET_X86_64_UNKNOWN_DRAGONFLY_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     AR_x86_64_unknown_dragonfly="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_x86_64_unknown_dragonfly="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_x86_64_unknown_dragonfly="$CROSS_TOOLCHAIN_PREFIX"g++ \
-    BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_dragonfly="--sysroot=$CROSS_SYSROOT"
+    CMAKE_TOOLCHAIN_FILE_x86_64_unknown_dragonfly=/opt/toolchain.cmake \
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_dragonfly="--sysroot=$CROSS_SYSROOT" \
+    CROSS_CMAKE_SYSTEM_NAME=DragonFly \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=x86_64 \
+    CROSS_CMAKE_CRT=dragonfly \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m64"

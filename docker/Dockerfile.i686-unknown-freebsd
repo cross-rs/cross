@@ -23,10 +23,16 @@ ENV CROSS_TOOLCHAIN_PREFIX=i686-unknown-freebsd12-
 ENV CROSS_SYSROOT=/usr/local/i686-unknown-freebsd12
 
 COPY freebsd-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
+COPY toolchain.cmake /opt/toolchain.cmake
 
 ENV CARGO_TARGET_I686_UNKNOWN_FREEBSD_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
     AR_i686_unknown_freebsd="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_i686_unknown_freebsd="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_i686_unknown_freebsd="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_i686_unknown_freebsd=/opt/toolchain.cmake \
     BINDGEN_EXTRA_CLANG_ARGS_i686_unknown_freebsd="--sysroot=$CROSS_SYSROOT" \
-    I686_UNKNOWN_FREEBSD_OPENSSL_DIR="$CROSS_SYSROOT"
+    I686_UNKNOWN_FREEBSD_OPENSSL_DIR="$CROSS_SYSROOT" \
+    CROSS_CMAKE_SYSTEM_NAME=FreeBSD \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=x86 \
+    CROSS_CMAKE_CRT=freebsd \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m32"

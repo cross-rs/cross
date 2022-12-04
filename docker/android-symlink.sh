@@ -23,9 +23,10 @@ main() {
 
     # older SDK versions install the libraries directly in the lib directory.
     local sysroot=/android-ndk/sysroot
+    local ndk_libdir="${sysroot}/usr/lib/${target}/"
     if [[ "${ANDROID_SYSTEM_NONE}" != "1" ]]; then
-        if [[ -d "${sysroot}/usr/lib/${target}/" ]]; then
-            cp "${sysroot}/usr/lib/${target}/${ANDROID_SDK}/libz.so" /system/lib/
+        if [[ -d "${ndk_libdir}/" ]]; then
+            cp "${ndk_libdir}/${ANDROID_SDK}/libz.so" /system/lib/
         else
             cp "${sysroot}/usr/lib/libz.so" /system/lib/
         fi
@@ -45,6 +46,34 @@ main() {
             ln -s "/android-ndk/bin/${tool}" "${tool_dst}"
         fi
     done
+
+    # this is required for CMake builds, since the first pass doesn't
+    # add on the SDK API level to the linker search path. for example,
+    # it will set the linker search path to `${sysroot}/usr/lib/${target}/`,
+    # but not to `${sysroot}/usr/lib/${target}/${ANDROID_SDK}`. this isn't
+    # fixable seemingly with **any** environment variable or CMake option:
+    # cmake with `CMAKE_ANDROID_STANDALONE_TOOLCHAIN` seemingly ignores:
+    #   - `LD_LIBRARY_PATH`
+    #   - `CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES`
+    #   - `CMAKE_C_COMPILER`
+    #   - `CMAKE_CXX_COMPILER`
+    #
+    # running the cmake configuration a second time works, but this isn't
+    # adequate. the resulting config sets `CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES`
+    # but this is ignored in our toolchain file. likewise, not testing the
+    # compiler via `set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)` fails
+    # because during the build it will not add the API level to the linker
+    # search path.
+    local lib=
+    local libname=
+    if [[ -d "${ndk_libdir}" ]] && [[ -d "${ndk_libdir}/${ANDROID_SDK}" ]]; then
+        for lib in "${ndk_libdir}/${ANDROID_SDK}"/*; do
+            libname=$(basename "${lib}")
+            if [[ ! -f "${ndk_libdir}/${libname}" ]]; then
+                ln -s "${lib}" "${ndk_libdir}/${libname}"
+            fi
+        done
+    fi
 
     rm "${0}"
 }

@@ -24,14 +24,21 @@ COPY qemu.sh /
 RUN /qemu.sh arm
 
 COPY qemu-runner base-runner.sh /
+COPY toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TOOLCHAIN_PREFIX=arm-unknown-linux-gnueabihf-
 ENV CROSS_SYSROOT=/x-tools/arm-unknown-linux-gnueabihf/arm-unknown-linux-gnueabihf/sysroot/
+ENV CROSS_TARGET_RUNNER="/qemu-runner armhf"
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
-    CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER="/qemu-runner armhf" \
+    CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_arm_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_arm_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_arm_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_arm_unknown_linux_gnueabihf=/opt/toolchain.cmake \
     BINDGEN_EXTRA_CLANG_ARGS_arm_unknown_linux_gnueabihf="--sysroot=$CROSS_SYSROOT" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
-    RUST_TEST_THREADS=1
+    RUST_TEST_THREADS=1 \
+    CROSS_CMAKE_SYSTEM_NAME=Linux \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=arm \
+    CROSS_CMAKE_CRT=gnu \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -march=armv6 -marm -mfpu=vfp"

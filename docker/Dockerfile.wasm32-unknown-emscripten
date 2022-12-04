@@ -17,5 +17,7 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
 
 ENV CROSS_TOOLCHAIN_PREFIX=em
 ENV CROSS_SYSROOT=/emsdk/upstream/emscripten/cache/sysroot
-ENV CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUNNER=node \
-    BINDGEN_EXTRA_CLANG_ARGS_wasm32_unknown_emscripten="--sysroot=$CROSS_SYSROOT"
+ENV CROSS_TARGET_RUNNER="node"
+ENV CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_RUNNER="$CROSS_TARGET_RUNNER" \
+    BINDGEN_EXTRA_CLANG_ARGS_wasm32_unknown_emscripten="--sysroot=$CROSS_SYSROOT" \
+    CMAKE_TOOLCHAIN_FILE_wasm32_unknown_emscripten=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake

@@ -1,0 +1,11 @@
+[
+    {
+        "description": "fixed CMake support for Android and newlib targets.",
+        "type": "fixed",
+        "issues": [1110]
+    },
+    {
+        "description": "added C++ support for newlib targets.",
+        "type": "added"
+    }
+]
