@@ -443,19 +443,17 @@ fn get_verbosity(
 
 pub trait Stream {
     type TTY: IsTerminal;
-    const OWO: owo_colors::Stream;
 
     #[must_use]
     fn is_atty() -> bool;
+}
 
-    fn owo(&self) -> owo_colors::Stream {
-        Self::OWO
-    }
+pub trait StreamOwo: Stream {
+    fn owo(&self) -> owo_colors::Stream;
 }
 
 impl Stream for io::Stdin {
     type TTY = io::Stdin;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stdin;
 
     fn is_atty() -> bool {
         io::stdin().is_terminal()
@@ -464,19 +462,29 @@ impl Stream for io::Stdin {
 
 impl Stream for io::Stdout {
     type TTY = io::Stdout;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stdout;
 
     fn is_atty() -> bool {
         io::stdout().is_terminal()
     }
 }
 
+impl StreamOwo for io::Stdout {
+    fn owo(&self) -> owo_colors::Stream {
+        owo_colors::Stream::Stdout
+    }
+}
+
 impl Stream for io::Stderr {
     type TTY = io::Stderr;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stderr;
 
     fn is_atty() -> bool {
         io::stderr().is_terminal()
+    }
+}
+
+impl StreamOwo for io::Stderr {
+    fn owo(&self) -> owo_colors::Stream {
+        owo_colors::Stream::Stderr
     }
 }
 
