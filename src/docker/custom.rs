@@ -247,11 +247,12 @@ fn docker_tag_name(file_name: &str) -> String {
         }
     }
 
+    // in case our result ends in an invalid last char `-` or `.`
+    // we remove
+    result = result.trim_end_matches(&['.', '-']).to_owned();
+
     // in case all characters were invalid or we had all non-ASCII
-    // characters followed by a `-`, we use a non-empty filename
-    if result.ends_with('-') {
-        result.pop();
-    }
+    // characters followed by a `-` or `.`, we use a non-empty filename
     if result.is_empty() {
         result = "empty".to_owned();
     }
