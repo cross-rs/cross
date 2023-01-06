@@ -25,7 +25,7 @@ pub enum Dockerfile<'a> {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 pub enum PreBuild {
     /// A path to a file to copy or a single line to `RUN` if line comes from env
     Single { line: String, env: bool },
@@ -33,6 +33,21 @@ pub enum PreBuild {
     Lines(Vec<String>),
 }
 
+impl serde::Serialize for PreBuild {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            PreBuild::Single { line, .. } => serializer.serialize_str(line),
+            PreBuild::Lines(lines) => {
+                use serde::ser::SerializeSeq;
+                let mut seq = serializer.serialize_seq(Some(lines.len()))?;
+                for line in lines {
+                    seq.serialize_element(line)?;
+                }
+                seq.end()
+            }
+        }
+    }
+}
 impl FromStr for PreBuild {
     type Err = std::convert::Infallible;
 
