@@ -70,8 +70,8 @@ pub use self::rustc::{TargetList, VersionMetaExt};
 pub const CROSS_LABEL_DOMAIN: &str = "org.cross-rs";
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash, Serialize)]
-#[serde(from = "&str")]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash)]
+#[serde(from = "&str", into = "String")]
 #[serde(rename_all = "snake_case")]
 pub enum TargetTriple {
     Other(String),
@@ -258,6 +258,12 @@ impl std::fmt::Display for TargetTriple {
 impl From<String> for TargetTriple {
     fn from(s: String) -> TargetTriple {
         s.as_str().into()
+    }
+}
+
+impl Serialize for TargetTriple {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.triple())
     }
 }
 

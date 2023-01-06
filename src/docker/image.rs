@@ -104,8 +104,8 @@ impl std::fmt::Display for PossibleImage {
 /// The architecture/platform to use in the image
 ///
 /// https://github.com/containerd/containerd/blob/release/1.6/platforms/platforms.go#L63
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(try_from = "&str")]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(try_from = "String")]
 pub struct ImagePlatform {
     /// CPU architecture, x86_64, aarch64 etc
     pub architecture: Architecture,
@@ -141,11 +141,17 @@ impl Default for ImagePlatform {
     }
 }
 
-impl TryFrom<&str> for ImagePlatform {
+impl TryFrom<String> for ImagePlatform {
     type Error = <Self as std::str::FromStr>::Err;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: String) -> Result<Self, Self::Error> {
         value.parse()
+    }
+}
+
+impl Serialize for ImagePlatform {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&format!("{}={}", self.docker_platform(), self.target))
     }
 }
 

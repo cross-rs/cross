@@ -61,14 +61,17 @@ fn toml_check() -> Result<(), Box<dyn std::error::Error>> {
                 text_line_no(&contents, fence.range().start),
             );
             let mut msg_info = crate::shell::MessageInfo::default();
-            assert!(if !cargo {
+            let toml = if !cargo {
                 crate::cross_toml::CrossToml::parse_from_cross(&fence_content, &mut msg_info)?
             } else {
                 crate::cross_toml::CrossToml::parse_from_cargo(&fence_content, &mut msg_info)?
                     .unwrap_or_default()
-            }
-            .1
-            .is_empty());
+            };
+            assert!(toml.1.is_empty());
+
+            // TODO: Add serde_path_to_error
+            // Check if roundtrip works, needed for merging Cross.toml and Cargo.toml
+            serde_json::from_value::<crate::cross_toml::CrossToml>(serde_json::to_value(toml.0)?)?;
         }
     }
     Ok(())

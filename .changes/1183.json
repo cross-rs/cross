@@ -1,0 +1,5 @@
+{
+    "description": "resolve issue when using `pre-build` and `image.toolchain` in `Cargo.toml`",
+    "type": "fixed",
+    "issues": [1182]
+}
