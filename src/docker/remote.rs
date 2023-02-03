@@ -954,10 +954,13 @@ symlink_recurse \"${{prefix}}\"
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
     bail_container_exited!();
-    if !skip_artifacts && data_volume.container_path_exists(&target_dir, mount_prefix, msg_info)? {
+    let mount_target_dir = format!("{}/{}", package_dirs.mount_root(), target_dir);
+    if !skip_artifacts
+        && data_volume.container_path_exists(&mount_target_dir, mount_prefix, msg_info)?
+    {
         subcommand_or_exit(engine, "cp")?
             .arg("-a")
-            .arg(&format!("{container_id}:{target_dir}",))
+            .arg(&format!("{container_id}:{mount_target_dir}",))
             .arg(
                 package_dirs
                     .target()
