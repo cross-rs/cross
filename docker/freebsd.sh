@@ -3,7 +3,6 @@
 set -x
 set -euo pipefail
 
-export ARCH="${1}"
 # shellcheck disable=SC1091
 . freebsd-common.sh
 # shellcheck disable=SC1091
@@ -96,8 +95,9 @@ main() {
     cp "${td}/freebsd/lib/libdevstat.so.7" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.so.1" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.a" "${destdir}/lib"
-    cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp_nonshared}.a "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp_nonshared,memstat}.a "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{rt,execinfo,procstat}.so.1 "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/libmemstat.so.3 "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/libkvm.a "${destdir}/lib"
 

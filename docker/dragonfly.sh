@@ -105,7 +105,7 @@ EOF
     cp "${td}/dragonfly/usr/lib/libexecinfo.so.1" "${destdir}/lib"
     cp "${td}/dragonfly/usr/lib/libpthread.so" "${destdir}/lib/libpthread.so"
     cp "${td}/dragonfly/usr/lib/librt.so.0" "${destdir}/lib"
-    cp "${td}"/dragonfly/usr/lib/lib{c,m,util}.a "${destdir}/lib"
+    cp "${td}"/dragonfly/usr/lib/lib{c,m,util,kvm}.a "${destdir}/lib"
     cp "${td}/dragonfly/usr/lib/thread/libthread_xu.so.2" "${destdir}/lib/libpthread.so.0"
     cp "${td}"/dragonfly/usr/lib/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib/"
 
