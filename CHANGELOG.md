@@ -7,6 +7,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+## Fixed
+
+- #962 - fix SELinux labels to allow use in multiple containers and/or the host filesystem.
+- #1166 - freebsd: include memstat in build image to fix build with libc 0.2.138 and up.
+- #1183 - resolve issue when using `pre-build` in `Cargo.toml`
+
 ## [v0.2.4] - 2022-07-10
 
 ## Fixed
