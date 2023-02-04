@@ -84,7 +84,21 @@ fn locate_dockerfile(
     } else {
         eyre::bail!("unable to find dockerfile for target \"{target}\"");
     };
-    let dockerfile = dockerfile_root.join(dockerfile_name).to_utf8()?.to_string();
+    let dockerfile = if matches!(
+        target.triplet.as_str(),
+        "powerpc64-unknown-linux-gnu"
+            | "x86_64-sun-solaris"
+            | "i686-pc-windows-gnu"
+            | "x86_64-pc-windows-gnu"
+            | "sparc64-unknown-linux-gnu"
+    ) {
+        crate::util::project_dir(&mut <_>::default())?
+            .join("Dockerfile.hack")
+            .to_utf8()?
+            .to_string()
+    } else {
+        dockerfile_root.join(dockerfile_name).to_utf8()?.to_string()
+    };
     Ok((target, dockerfile))
 }
 
@@ -242,6 +256,11 @@ pub fn build_docker_image(
         if verbose > 1 {
             docker_build.args(&["--build-arg", "VERBOSE=1"]);
         }
+
+        docker_build.args(&[
+            "--build-arg",
+            &format!("CROSS_IMAGE={}", target.image_name(&repository, "0.2.4")),
+        ]);
 
         if target.needs_workspace_root_context() {
             docker_build.arg(&root);
