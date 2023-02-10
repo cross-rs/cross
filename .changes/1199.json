@@ -1,5 +1,5 @@
 {
     "type": "fixed",
-    "description": "use corrent target_dir path when copying build artifacts back",
+    "description": "use current target_dir path when copying build artifacts back",
     "issues": [1103]
 }
