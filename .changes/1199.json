@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "use current target_dir path when copying build artifacts back",
+    "issues": [1103]
+}
