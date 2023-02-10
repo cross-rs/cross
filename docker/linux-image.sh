@@ -115,6 +115,7 @@ main() {
             # archive.debian.org Release files are expired.
             echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
             echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
+            echo "Acquire::AllowInsecureRepositories True;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
 
             dropbear="dropbear"
             deps=(libcrypt1:"${arch}")
@@ -397,6 +398,9 @@ EOF
     mv -f /etc/apt/sources.list.d.bak /etc/apt/sources.list.d
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch.bak ]; then
         mv /etc/dpkg/dpkg.cfg.d/multiarch.bak /etc/dpkg/dpkg.cfg.d/multiarch
+    fi
+    if [ -f /etc/apt/apt.conf.d/10-nocheckvalid ]; then
+        rm /etc/apt/apt.conf.d/10-nocheckvalid
     fi
     # can fail if arch is used (image arch, such as amd64 and/or i386)
     dpkg --remove-architecture "${arch}" || true
