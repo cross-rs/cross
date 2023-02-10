@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "properly copy directories when using `CROSS_REMOTE`",
+    "issues": [1206]
+}
