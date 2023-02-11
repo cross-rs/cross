@@ -7,6 +7,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+## [v0.2.5] - 2023-02-04
+
+## Fixed
+
+- #962 - fix SELinux labels to allow use in multiple containers and/or the host filesystem.
+- #1166 - freebsd: include memstat in build image to fix build with libc 0.2.138 and up.
+- #1183 - resolve issue when using `pre-build` in `Cargo.toml`
+
 ## [v0.2.4] - 2022-07-10
 
 ### Fixed
@@ -364,7 +372,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 <!-- prettier-ignore-start -->
 <!-- next-url -->
 
-[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.5...HEAD
+
+[v0.2.5]: https://github.com/cross-rs/cross/compare/v0.2.4...v0.2.5
 
 [v0.2.4]: https://github.com/cross-rs/cross/compare/v0.2.3...v0.2.4
 
