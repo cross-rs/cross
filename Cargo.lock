@@ -193,7 +193,7 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "cross"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "clap",
  "color-eyre",

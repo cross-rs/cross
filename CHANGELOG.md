@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+## [v0.2.5] - 2023-02-04
+
 ## Fixed
 
 - #962 - fix SELinux labels to allow use in multiple containers and/or the host filesystem.
@@ -370,7 +372,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 <!-- prettier-ignore-start -->
 <!-- next-url -->
 
-[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/cross-rs/cross/compare/v0.2.5...HEAD
+
+[v0.2.5]: https://github.com/cross-rs/cross/compare/v0.2.4...v0.2.5
 
 [v0.2.4]: https://github.com/cross-rs/cross/compare/v0.2.3...v0.2.4
 
