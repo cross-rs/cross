@@ -57,8 +57,14 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             .run_and_get_status(msg_info, false)
     }
 
-    // copy files for a docker volume, for remote host support
-    // NOTE: `reldst` has the same caveats as `reldir` in `create_dir`.
+    /// Copy files for a docker volume
+    ///
+    /// `reldst` has the same caveats as `reldir` in [`Self::create_dir`].
+    ///
+    /// ## Note
+    ///
+    /// if copying from a src directory to dst directory with docker, to
+    /// copy the contents from `src` into `dst`, `src` must end with `/.`
     #[track_caller]
     fn copy_files(
         &self,
@@ -67,6 +73,20 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         mount_prefix: &str,
         msg_info: &mut MessageInfo,
     ) -> Result<ExitStatus> {
+        if let Some((_, rel)) = reldst.rsplit_once('/') {
+            if msg_info.cross_debug
+                && src.is_dir()
+                && !src.to_string_lossy().ends_with("/.")
+                && rel == src.file_name().unwrap()
+            {
+                msg_info.warn(format_args!(
+                    "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
+                    src.as_posix_relative()?,
+                    reldst,
+                    std::panic::Location::caller()
+                ))?;
+            }
+        }
         subcommand_or_exit(self.engine, "cp")?
             .arg("-a")
             .arg(src.to_utf8()?)
@@ -74,7 +94,12 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             .run_and_get_status(msg_info, false)
     }
 
-    // copy files for a docker volume, for remote host support
+    /// copy files for a docker volume, does not include cache directories
+    ///
+    /// ## Note
+    ///
+    /// if copying from a src directory to dst directory with docker, to
+    /// copy the contents from `src` into `dst`, `src` must end with `/.`
     #[track_caller]
     fn copy_files_nocache(
         &self,
@@ -114,8 +139,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             file::create_dir_all(dst_path.parent().expect("must have parent"))?;
             fs::copy(src_path, &dst_path)?;
         }
-        // if copying from a src directory to dst directory with docker, to
-        // copy the contents from `src` into `dst`, `src` must end with `/.`
+
         self.copy_files(&temppath.join("."), reldst, mount_prefix, msg_info)
     }
 
@@ -196,7 +220,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
                 mount_prefix,
                 msg_info,
             )?;
-            self.copy_files(dirs.xargo(), &reldst, mount_prefix, msg_info)?;
+            self.copy_files(&dirs.xargo().join("."), &reldst, mount_prefix, msg_info)?;
         }
 
         Ok(())
@@ -215,11 +239,11 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             .map(|s| bool_from_envvar(&s))
             .unwrap_or(copy_registry);
 
+        self.create_dir(&reldst, mount_prefix, msg_info)?;
         if copy_registry {
-            self.copy_files(dirs.cargo(), &reldst, mount_prefix, msg_info)?;
+            self.copy_files(&dirs.cargo().join("."), &reldst, mount_prefix, msg_info)?;
         } else {
             // can copy a limit subset of files: the rest is present.
-            self.create_dir(&reldst, mount_prefix, msg_info)?;
             for entry in fs::read_dir(dirs.cargo())
                 .wrap_err_with(|| format!("when reading directory {:?}", dirs.cargo()))?
             {
@@ -380,9 +404,9 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     ) -> Result<()> {
         let copy_all = |info: &mut MessageInfo| {
             if copy_cache {
-                self.copy_files(src, reldst, mount_prefix, info)
+                self.copy_files(&src.join("."), reldst, mount_prefix, info)
             } else {
-                self.copy_files_nocache(src, reldst, mount_prefix, true, info)
+                self.copy_files_nocache(&src.join("."), reldst, mount_prefix, true, info)
             }
         };
         match volume {
