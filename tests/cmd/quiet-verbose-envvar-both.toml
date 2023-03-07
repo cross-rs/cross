@@ -1,0 +1,7 @@
+bin.name = "cross"
+args = ["build"]
+status = "failed"
+
+[env.add]
+CARGO_TERM_VERBOSE = "true"
+CARGO_TERM_QUIET = "true"

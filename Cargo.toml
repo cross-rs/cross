@@ -63,6 +63,9 @@ lto = true
 regex = "1"
 once_cell = "1.15"
 ignore = "0.4"
+trycmd = "0.14.4"
+snapbox = "0.4"
+wildmatch = "2.1.1"
 
 [package.metadata.release]
 push = false

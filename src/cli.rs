@@ -1,27 +1,414 @@
-use std::env;
 use std::path::{Path, PathBuf};
+use std::{env, fmt};
 
 use crate::cargo::Subcommand;
 use crate::errors::Result;
 use crate::file::{absolute_path, PathExt};
 use crate::rustc::TargetList;
-use crate::shell::{self, MessageInfo};
+use crate::shell::{MessageInfo, COLORS};
 use crate::Target;
+
+/// An option for a CLI flag value.
+#[derive(Debug)]
+pub enum FlagOption<T> {
+    /// Value for flag was not provided.
+    Some(T),
+    /// Flag was not provided.
+    None,
+    /// Flag was provided multiple times.
+    Double,
+    /// Flag was not provided.
+    Missing,
+}
+
+impl<T> FlagOption<T> {
+    pub fn is_some(&self) -> bool {
+        matches!(self, Self::Some(_))
+    }
+
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::Some(_))
+    }
+
+    pub fn set(&mut self, other: Self) {
+        *self = match self {
+            FlagOption::None => other,
+            _ => FlagOption::Double,
+        };
+    }
+
+    pub fn as_ref(&self) -> FlagOption<&T> {
+        match self {
+            FlagOption::Some(ref value) => FlagOption::Some(value),
+            FlagOption::None => FlagOption::None,
+            FlagOption::Double => FlagOption::Double,
+            FlagOption::Missing => FlagOption::Missing,
+        }
+    }
+
+    pub fn as_mut(&mut self) -> FlagOption<&mut T> {
+        match self {
+            FlagOption::Some(ref mut value) => FlagOption::Some(value),
+            FlagOption::None => FlagOption::None,
+            FlagOption::Double => FlagOption::Double,
+            FlagOption::Missing => FlagOption::Missing,
+        }
+    }
+
+    pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> FlagOption<U> {
+        match self {
+            FlagOption::Some(x) => FlagOption::Some(f(x)),
+            FlagOption::None => FlagOption::None,
+            FlagOption::Double => FlagOption::Double,
+            FlagOption::Missing => FlagOption::Missing,
+        }
+    }
+
+    /// Consume self and report a fatal error message if missing or doubled up
+    pub fn to_option<Message: fmt::Display>(
+        self,
+        arg: Message,
+        possible: Option<&[&str]>,
+        code: i32,
+    ) -> Option<T> {
+        let mut msg_info = MessageInfo::default();
+        match self {
+            FlagOption::Some(value) => Some(value),
+            FlagOption::None => None,
+            FlagOption::Double => msg_info.double_fatal_usage(arg, code),
+            FlagOption::Missing => msg_info.invalid_fatal_usage(arg, None, possible, code),
+        }
+    }
+}
+
+impl<T> FlagOption<Option<T>> {
+    pub fn flatten(self) -> FlagOption<T> {
+        match self {
+            FlagOption::Some(value) => value.into(),
+            FlagOption::None => FlagOption::None,
+            FlagOption::Double => FlagOption::Double,
+            FlagOption::Missing => FlagOption::Missing,
+        }
+    }
+}
+
+impl<T> From<Option<T>> for FlagOption<T> {
+    fn from(option: Option<T>) -> Self {
+        match option {
+            Some(value) => FlagOption::Some(value),
+            None => FlagOption::None,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Args {
     pub cargo_args: Vec<String>,
     pub rest_args: Vec<String>,
+    pub features: Vec<String>,
     pub subcommand: Option<Subcommand>,
     pub channel: Option<String>,
     pub target: Option<Target>,
-    pub features: Vec<String>,
     pub target_dir: Option<PathBuf>,
     pub manifest_path: Option<PathBuf>,
-    pub version: bool,
+    pub color: Option<String>,
     pub verbose: u8,
     pub quiet: bool,
-    pub color: Option<String>,
+}
+
+/// Internal implementation of args for the parsing, that handles
+/// missing values for flags and flags which are provided multiple times.
+#[derive(Debug)]
+pub struct ArgsImpl {
+    pub cargo_args: Vec<String>,
+    pub rest_args: Vec<String>,
+    pub subcommand: Option<Subcommand>,
+    pub channel: Option<String>,
+    pub target: FlagOption<Target>,
+    pub target_dir: FlagOption<PathBuf>,
+    pub manifest_path: FlagOption<PathBuf>,
+    pub color: FlagOption<String>,
+    pub features: FlagOption<Vec<String>>,
+    pub verbose: u8,
+    pub quiet: bool,
+}
+
+impl ArgsImpl {
+    pub const fn new() -> Self {
+        Self {
+            cargo_args: Vec::new(),
+            rest_args: Vec::new(),
+            subcommand: None,
+            channel: None,
+            target: FlagOption::None,
+            target_dir: FlagOption::None,
+            manifest_path: FlagOption::None,
+            color: FlagOption::None,
+            features: FlagOption::None,
+            verbose: 0,
+            quiet: false,
+        }
+    }
+
+    fn into_args(self) -> Args {
+        // FIXME: cargo always goes right-to-left when printing missing
+        // or doubled arguments, however, we print in a fixed order.
+        Args {
+            cargo_args: self.cargo_args,
+            rest_args: self.rest_args,
+            subcommand: self.subcommand,
+            channel: self.channel,
+            target: self.target.to_option("--target <TRIPLE>", None, 1),
+            target_dir: self
+                .target_dir
+                .to_option("--target-dir <DIRECTORY>", None, 1),
+            manifest_path: self
+                .manifest_path
+                .to_option("--manifest-path <PATH>", None, 1),
+            color: self.color.to_option("--color <WHEN>", Some(COLORS), 1),
+            features: self
+                .features
+                .to_option("--features <FEATURES>", None, 1)
+                .unwrap_or_default(),
+            verbose: self.verbose,
+            quiet: self.quiet,
+        }
+    }
+}
+
+impl Default for ArgsImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug)]
+enum ArgKind {
+    Next,
+    Equal,
+}
+
+#[derive(Debug)]
+struct Parser<'a, Iter: Iterator<Item = String>> {
+    result: ArgsImpl,
+    input: Iter,
+    target_list: &'a TargetList,
+}
+
+impl<'a, Iter: Iterator<Item = String>> Parser<'a, Iter> {
+    fn parse_channel(arg: &str) -> Option<String> {
+        match arg.split_at(1) {
+            ("+", channel) => Some(channel.to_owned()),
+            _ => None,
+        }
+    }
+
+    fn parse_color(&mut self, arg: String, kind: ArgKind) -> Result<()> {
+        let color = match kind {
+            ArgKind::Next => self.parse_flag_next(arg, str_to_owned, identity)?,
+            ArgKind::Equal => {
+                FlagOption::Some(self.parse_flag_equal(arg, str_to_owned, identity)?)
+            }
+        };
+        self.result.color.set(color);
+
+        Ok(())
+    }
+
+    fn parse_manifest(&mut self, arg: String, kind: ArgKind) -> Result<()> {
+        let manifest_path = match kind {
+            ArgKind::Next => self
+                .parse_flag_next(arg, parse_manifest_path, store_manifest_path)?
+                .flatten(),
+            ArgKind::Equal => self
+                .parse_flag_equal(arg, parse_manifest_path, store_manifest_path)?
+                .into(),
+        };
+        self.result.manifest_path.set(manifest_path);
+
+        Ok(())
+    }
+
+    fn parse_target(&mut self, arg: String, kind: ArgKind) -> Result<()> {
+        let into = |t: &str| Ok(Target::from(t, self.target_list));
+        let target = match kind {
+            ArgKind::Next => self.parse_flag_next(arg, into, identity)?,
+            ArgKind::Equal => FlagOption::Some(self.parse_flag_equal(arg, into, identity)?),
+        };
+        self.result.target.set(target);
+
+        Ok(())
+    }
+
+    fn parse_explain(&mut self, arg: String, kind: ArgKind) -> Result<()> {
+        let subcommand = Subcommand::Explain;
+        self.result.subcommand = Some(match self.result.subcommand {
+            Some(ref mut sc) => sc.set(subcommand),
+            None => subcommand,
+        });
+        self.parse_flag_value(arg, kind)
+    }
+
+    fn parse_target_dir(&mut self, arg: String, kind: ArgKind) -> Result<()> {
+        let target_dir = match kind {
+            ArgKind::Next => self.parse_flag_next(arg, parse_target_dir, store_target_dir)?,
+            ArgKind::Equal => {
+                FlagOption::Some(self.parse_flag_equal(arg, parse_target_dir, store_target_dir)?)
+            }
+        };
+
+        self.result.target_dir.set(target_dir);
+
+        Ok(())
+    }
+
+    fn parse_features(&mut self, arg: String, kind: ArgKind) -> Result<()> {
+        let features = match kind {
+            ArgKind::Next => self.parse_flag_next(arg, str_to_owned, identity)?,
+            ArgKind::Equal => {
+                FlagOption::Some(self.parse_flag_equal(arg, str_to_owned, identity)?)
+            }
+        };
+
+        let features = features.map(|x| match x.is_empty() {
+            true => vec![],
+            false => vec![x],
+        });
+        match (self.result.features.as_mut(), features) {
+            (FlagOption::Some(lhs), FlagOption::Some(mut rhs)) => lhs.append(&mut rhs),
+            (FlagOption::Some(_), _) => (),
+            (_, rhs) => self.result.features = rhs,
+        }
+
+        Ok(())
+    }
+
+    fn parse_flag_value(&mut self, arg: String, kind: ArgKind) -> Result<()> {
+        self.result.cargo_args.push(arg);
+        match kind {
+            ArgKind::Next => match self.input.next() {
+                Some(next) if is_flag(&next) => self.parse_flag(next)?,
+                Some(next) => self.result.cargo_args.push(next),
+                None => (),
+            },
+            ArgKind::Equal => (),
+        }
+
+        Ok(())
+    }
+
+    fn parse_flag_next<T>(
+        &mut self,
+        arg: String,
+        parse: impl Fn(&str) -> Result<T>,
+        store: impl Fn(String) -> Result<String>,
+    ) -> Result<FlagOption<T>> {
+        // `--$flag $value` does not support flag-like values: `--target-dir --x` is invalid
+        self.result.cargo_args.push(arg);
+        match self.input.next() {
+            Some(next) if is_flag(&next) => {
+                self.parse_flag(next)?;
+                Ok(FlagOption::Missing)
+            }
+            Some(next) => {
+                let parsed = parse(&next)?;
+                self.result.cargo_args.push(store(next)?);
+                Ok(FlagOption::Some(parsed))
+            }
+            None => Ok(FlagOption::Missing),
+        }
+    }
+
+    fn parse_flag_equal<T>(
+        &mut self,
+        arg: String,
+        parse: impl Fn(&str) -> Result<T>,
+        store: impl Fn(String) -> Result<String>,
+    ) -> Result<T> {
+        // `--$flag=$value` supports flag-like values: `--target-dir=--x` is valid
+        let (first, second) = arg.split_once('=').expect("argument should contain `=`");
+        let parsed = parse(second)?;
+        self.result
+            .cargo_args
+            .push(format!("{first}={}", store(second.to_owned())?));
+
+        Ok(parsed)
+    }
+
+    fn parse_flag(&mut self, arg: String) -> Result<()> {
+        // we only consider flags accepted by `cargo` itself or `--help`,
+        // and we will ignore any subcommand value. this is fine
+        // since we will already have a subcommand, and since `--help` is
+        // a flag, we will never accidentally parse it as a value.
+        if arg == "--" {
+            self.result.rest_args.push(arg);
+            self.result.rest_args.extend(self.input.by_ref());
+        } else if let v @ 1.. = is_verbose(arg.as_str()) {
+            self.result.verbose += v;
+            self.result.cargo_args.push(arg);
+        } else if matches!(arg.as_str(), "--quiet" | "-q") {
+            self.result.quiet = true;
+            self.result.cargo_args.push(arg);
+        } else if let Some(kind) = is_value_arg(&arg, "--color") {
+            self.parse_color(arg, kind)?;
+        } else if let Some(kind) = is_value_arg(&arg, "--manifest-path") {
+            self.parse_manifest(arg, kind)?;
+        } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
+            self.parse_target_dir(arg, kind)?;
+        } else if let Some(kind) = is_value_arg(&arg, "--explain") {
+            self.parse_explain(arg, kind)?;
+        } else if let Some(kind) = is_value_arg(&arg, "--config") {
+            self.parse_flag_value(arg, kind)?;
+        } else if let Some(kind) = is_value_arg(&arg, "-Z") {
+            self.parse_flag_value(arg, kind)?;
+        } else if let Some(kind) = is_value_arg(&arg, "--target") {
+            self.parse_target(arg, kind)?;
+        } else if let Some(kind) = is_value_arg(&arg, "--features") {
+            self.parse_features(arg, kind)?;
+        } else if matches!(arg.as_str(), "--help" | "--list" | "--version" | "-V") {
+            let subcommand = Subcommand::from(arg.as_str());
+            self.result.subcommand = Some(match self.result.subcommand {
+                Some(ref mut sc) => sc.set(subcommand),
+                None => subcommand,
+            });
+            self.result.cargo_args.push(arg);
+        } else {
+            self.result.cargo_args.push(arg);
+        }
+
+        Ok(())
+    }
+
+    fn parse_value(&mut self, arg: String) -> Result<()> {
+        let subcommand = Subcommand::from(arg.as_ref());
+        self.result.subcommand = Some(match self.result.subcommand {
+            Some(ref mut sc) => sc.set(subcommand),
+            None => subcommand,
+        });
+        self.result.cargo_args.push(arg);
+
+        Ok(())
+    }
+
+    fn parse_next(&mut self, arg: String) -> Result<()> {
+        if arg.is_empty() {
+            Ok(())
+        } else if let Some(channel) = Self::parse_channel(&arg) {
+            self.result.channel = Some(channel);
+            Ok(())
+        } else if is_flag(&arg) {
+            self.parse_flag(arg)
+        } else {
+            self.parse_value(arg)
+        }
+    }
+
+    fn parse(&mut self) -> Result<()> {
+        while let Some(arg) = self.input.next() {
+            self.parse_next(arg)?;
+        }
+        Ok(())
+    }
 }
 
 pub fn is_subcommand_list(stdout: &str) -> bool {
@@ -55,7 +442,7 @@ pub fn fmt_subcommands(stdout: &str, msg_info: &mut MessageInfo) -> Result<()> {
     }
     if !host.is_empty() {
         msg_info.print("Host Commands:")?;
-        for line in &cross {
+        for line in &host {
             msg_info.print(line)?;
         }
     }
@@ -82,11 +469,6 @@ fn is_verbose(arg: &str) -> u8 {
     }
 }
 
-enum ArgKind {
-    Next,
-    Equal,
-}
-
 fn is_value_arg(arg: &str, field: &str) -> Option<ArgKind> {
     if arg == field {
         Some(ArgKind::Next)
@@ -101,35 +483,8 @@ fn is_value_arg(arg: &str, field: &str) -> Option<ArgKind> {
     }
 }
 
-fn parse_next_arg<T>(
-    arg: String,
-    out: &mut Vec<String>,
-    parse: impl Fn(&str) -> Result<T>,
-    store_cb: impl Fn(String) -> Result<String>,
-    iter: &mut impl Iterator<Item = String>,
-) -> Result<Option<T>> {
-    out.push(arg);
-    match iter.next() {
-        Some(next) => {
-            let result = parse(&next)?;
-            out.push(store_cb(next)?);
-            Ok(Some(result))
-        }
-        None => Ok(None),
-    }
-}
-
-fn parse_equal_arg<T>(
-    arg: String,
-    out: &mut Vec<String>,
-    parse: impl Fn(&str) -> Result<T>,
-    store_cb: impl Fn(String) -> Result<String>,
-) -> Result<T> {
-    let (first, second) = arg.split_once('=').expect("argument should contain `=`");
-    let result = parse(second)?;
-    out.push(format!("{first}={}", store_cb(second.to_owned())?));
-
-    Ok(result)
+fn is_flag(arg: &str) -> bool {
+    arg.starts_with('-')
 }
 
 fn parse_manifest_path(path: &str) -> Result<Option<PathBuf>> {
@@ -158,156 +513,16 @@ fn store_target_dir(_: String) -> Result<String> {
 }
 
 pub fn parse(target_list: &TargetList) -> Result<Args> {
-    let mut channel = None;
-    let mut target = None;
-    let mut features = Vec::new();
-    let mut manifest_path: Option<PathBuf> = None;
-    let mut target_dir = None;
-    let mut sc = None;
-    let mut cargo_args: Vec<String> = Vec::new();
-    let mut rest_args: Vec<String> = Vec::new();
-    let mut version = false;
-    let mut quiet = false;
-    let mut verbose = 0;
-    let mut color = None;
+    let result = ArgsImpl::new();
+    let input = env::args().skip(1);
+    let mut parser = Parser {
+        result,
+        input,
+        target_list,
+    };
+    parser.parse()?;
 
-    {
-        let mut args = env::args().skip(1);
-        while let Some(arg) = args.next() {
-            if arg.is_empty() {
-                continue;
-            }
-            if matches!(arg.as_str(), "--") {
-                rest_args.push(arg);
-                rest_args.extend(args.by_ref());
-            } else if let v @ 1.. = is_verbose(arg.as_str()) {
-                verbose += v;
-                cargo_args.push(arg);
-            } else if matches!(arg.as_str(), "--version" | "-V") {
-                version = true;
-            } else if matches!(arg.as_str(), "--quiet" | "-q") {
-                quiet = true;
-                cargo_args.push(arg);
-            } else if let Some(kind) = is_value_arg(&arg, "--color") {
-                color = match kind {
-                    ArgKind::Next => {
-                        match parse_next_arg(
-                            arg,
-                            &mut cargo_args,
-                            str_to_owned,
-                            identity,
-                            &mut args,
-                        )? {
-                            Some(c) => Some(c),
-                            None => shell::invalid_color(None),
-                        }
-                    }
-                    ArgKind::Equal => Some(parse_equal_arg(
-                        arg,
-                        &mut cargo_args,
-                        str_to_owned,
-                        identity,
-                    )?),
-                };
-            } else if let Some(kind) = is_value_arg(&arg, "--manifest-path") {
-                manifest_path = match kind {
-                    ArgKind::Next => parse_next_arg(
-                        arg,
-                        &mut cargo_args,
-                        parse_manifest_path,
-                        store_manifest_path,
-                        &mut args,
-                    )?
-                    .flatten(),
-                    ArgKind::Equal => parse_equal_arg(
-                        arg,
-                        &mut cargo_args,
-                        parse_manifest_path,
-                        store_manifest_path,
-                    )?,
-                };
-            } else if let ("+", ch) = arg.split_at(1) {
-                channel = Some(ch.to_owned());
-            } else if let Some(kind) = is_value_arg(&arg, "--target") {
-                let parse_target = |t: &str| Ok(Target::from(t, target_list));
-                target = match kind {
-                    ArgKind::Next => {
-                        parse_next_arg(arg, &mut cargo_args, parse_target, identity, &mut args)?
-                    }
-                    ArgKind::Equal => Some(parse_equal_arg(
-                        arg,
-                        &mut cargo_args,
-                        parse_target,
-                        identity,
-                    )?),
-                };
-            } else if let Some(kind) = is_value_arg(&arg, "--features") {
-                match kind {
-                    ArgKind::Next => {
-                        let next = parse_next_arg(
-                            arg,
-                            &mut cargo_args,
-                            str_to_owned,
-                            identity,
-                            &mut args,
-                        )?;
-                        if let Some(feature) = next {
-                            features.push(feature);
-                        }
-                    }
-                    ArgKind::Equal => {
-                        features.push(parse_equal_arg(
-                            arg,
-                            &mut cargo_args,
-                            str_to_owned,
-                            identity,
-                        )?);
-                    }
-                }
-            } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
-                match kind {
-                    ArgKind::Next => {
-                        target_dir = parse_next_arg(
-                            arg,
-                            &mut cargo_args,
-                            parse_target_dir,
-                            store_target_dir,
-                            &mut args,
-                        )?;
-                    }
-                    ArgKind::Equal => {
-                        target_dir = Some(parse_equal_arg(
-                            arg,
-                            &mut cargo_args,
-                            parse_target_dir,
-                            store_target_dir,
-                        )?);
-                    }
-                }
-            } else {
-                if (!arg.starts_with('-') || arg == "--list") && sc.is_none() {
-                    sc = Some(Subcommand::from(arg.as_ref()));
-                }
-
-                cargo_args.push(arg.clone());
-            }
-        }
-    }
-
-    Ok(Args {
-        cargo_args,
-        rest_args,
-        subcommand: sc,
-        channel,
-        target,
-        features,
-        target_dir,
-        manifest_path,
-        version,
-        verbose,
-        quiet,
-        color,
-    })
+    Ok(parser.result.into_args())
 }
 
 #[cfg(test)]

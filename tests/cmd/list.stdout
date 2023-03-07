@@ -1,0 +1,19 @@
+Cross Commands:
+    b [..] alias: build
+    bench [..] Execute all benchmarks of a local package
+    build [..] Compile a local package and all of its dependencies
+    c [..] alias: check
+    check [..] Check a local package and all of its dependencies for errors
+    clean [..] Remove artifacts that cargo has generated in the past
+    clippy [..] Checks a package to catch common mistakes and improve your Rust code.
+    doc [..] Build a package's documentation
+    metadata [..] Output the resolved dependencies of a package, the concrete used versions including overrides, in machine-readable format
+    r [..] alias: run
+    run [..] Run a binary or example of the local package
+    rustc [..] Compile a package, and pass extra options to the compiler
+    t [..] alias: test
+    test [..] Execute all unit and integration tests and build examples of a local package
+Host Commands:
+...
+    add                  Add dependencies to a Cargo.toml manifest file
+...

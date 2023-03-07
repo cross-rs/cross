@@ -1,0 +1,2 @@
+bin.name = "cross"
+args = ["--explain", "E0004"]

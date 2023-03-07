@@ -74,6 +74,10 @@ jobs:
       - name: Run unit tests
         run: cargo test --locked --all-targets --workspace --all-features
         timeout-minutes: 10
+
+      - name: Run ignored unit tests
+        run: cargo test --locked --all-targets --workspace --all-features -- --ignored
+        timeout-minutes: 10
   check:
     runs-on: ubuntu-latest
     outputs:
@@ -345,6 +349,23 @@ jobs:
         env:
           CROSS_CONTAINER_ENGINE: podman
           TARGET: aarch64-unknown-linux-gnu
+        shell: bash
+
+  rest-args:
+    needs: [test, check]
+    runs-on: ubuntu-latest
+    if: github.actor == 'bors[bot]'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-rust
+
+      - name: LLVM instrument coverage
+        uses: ./.github/actions/cargo-llvm-cov
+        with:
+          name: integration-remote
+
+      - name: Run Rest Args Test
+        run: ./ci/test-rest-args.sh
         shell: bash
 
   publish:

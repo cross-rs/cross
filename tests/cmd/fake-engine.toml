@@ -1,0 +1,7 @@
+# NOTE: `stderr` has a lot of inline replacements for bash escape codes
+bin.name = "cross"
+args = ["build", "--color", "never"]
+status = "failed"
+
+[env.add]
+CROSS_CONTAINER_ENGINE = "cross-fake-engine"

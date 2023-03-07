@@ -1,9 +1,6 @@
 mod toml;
 
-use std::{
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use once_cell::sync::OnceCell;
 use rustc_version::VersionMeta;
@@ -25,17 +22,17 @@ pub fn get_cargo_workspace() -> &'static Path {
     })
 }
 
-pub fn walk_dir<'a>(
+pub fn walk_dir(
     root: &'_ Path,
-    skip: &'static [impl AsRef<OsStr> + Send + Sync + 'a],
+    skip: &'static [&str],
     ext: impl for<'s> Fn(Option<&'s std::ffi::OsStr>) -> bool + Sync + Send + 'static,
 ) -> impl Iterator<Item = Result<ignore::DirEntry, ignore::Error>> {
     ignore::WalkBuilder::new(root)
         .filter_entry(move |e| {
+            let file_name = e.file_name().to_utf8().unwrap();
             if skip
                 .iter()
-                .map(|s| -> &std::ffi::OsStr { s.as_ref() })
-                .any(|dir| e.file_name() == dir)
+                .any(|t| wildmatch::WildMatch::new(t).matches(file_name))
             {
                 return false;
             } else if e.file_type().map_or(false, |f| f.is_dir()) {
@@ -138,7 +135,14 @@ release: {version}
 
 #[test]
 fn check_newlines() -> crate::Result<()> {
-    for file in walk_dir(get_cargo_workspace(), &[".git", "target"], |_| true) {
+    // tests contains the trycmd tests, which may have placeholders
+    // these folders are not checked due to them containing binary
+    // files or files which should not have trailing newlines
+    for file in walk_dir(
+        get_cargo_workspace(),
+        &[".git", "target", "*.stdout", "*.stderr"],
+        |_| true,
+    ) {
         let file = file?;
         if !file.file_type().map_or(true, |f| f.is_file()) {
             continue;

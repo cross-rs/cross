@@ -1,0 +1,4 @@
+bin.name = "cross"
+args = ["build"]
+status = "failed"
+fs.cwd = "/"

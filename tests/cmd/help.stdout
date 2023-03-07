@@ -1,0 +1,13 @@
+Rust's package manager
+
+USAGE:
+    cargo [+toolchain] [OPTIONS] [SUBCOMMAND]
+
+OPTIONS:
+...
+
+Some common cargo commands are (see all commands with --list):
+...
+
+See 'cargo help <command>' for more information on a specific command.
+
