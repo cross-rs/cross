@@ -288,6 +288,29 @@ pub fn build_docker_image(
         for arg in &build_arg {
             docker_build.args(["--build-arg", arg]);
         }
+        // FIXME: Move to matrix?
+        if target.triplet == "cross" {
+            let rustup = cross::rustup::rustup_command(msg_info, false)
+                .arg("check")
+                .run_and_get_stdout(msg_info)?;
+            let version = rustup
+                .lines()
+                .find(|line| line.starts_with("stable"))
+                .and_then(|stable| {
+                    // Check is formatted as
+                    // `Update available : 1.61.0 (fe5b13d68 2022-05-18) -> 1.62.0 (a8314ef7d 2022-06-27)`
+                    // or
+                    // `Up to date : 1.62.0 (a8314ef7d 2022-06-27)`
+                    stable
+                        .split_once(" -> ")
+                        .or_else(|| stable.split_once(" : "))
+                })
+                .and_then(|(_, v)| v.split_once(' '))
+                .map(|(v, _)| v)
+                .unwrap_or("stable");
+            dbg!(&version);
+            docker_build.args(&["--build-arg", &format!("RUST_STABLE={version}")]);
+        }
 
         if let Some(opts) = &build_opts {
             docker_build.args(docker::Engine::parse_opts(opts)?);

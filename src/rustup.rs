@@ -30,7 +30,7 @@ impl AvailableTargets {
     }
 }
 
-fn rustup_command(msg_info: &mut MessageInfo, no_flags: bool) -> Command {
+pub fn rustup_command(msg_info: &mut MessageInfo, no_flags: bool) -> Command {
     let mut cmd = Command::new("rustup");
     if no_flags {
         return cmd;

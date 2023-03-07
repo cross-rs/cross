@@ -1,14 +1,13 @@
 FROM ubuntu:20.04 as rust
 ARG DEBIAN_FRONTEND=noninteractive
+ARG RUST_STABLE
 COPY docker/lib.sh docker/cross.sh /
 COPY ./ /project
-RUN /cross.sh /project
+RUN /cross.sh /project $RUST_STABLE
 
 # we build our images in 2 steps, to ensure we have a compact
 # image, since we want to add our current subdirectory
 FROM ubuntu:20.04
-COPY --from=rust /root/.cargo /root/.cargo
-COPY --from=rust /root/.rustup /root/.rustup
 
 # need some basic devtools, and requirements for docker
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
@@ -17,6 +16,9 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     git
 
 RUN curl -fsSL https://get.docker.com | sh
+
+COPY --from=rust /root/.cargo /root/.cargo
+COPY --from=rust /root/.rustup /root/.rustup
 
 ENV CROSS_CONTAINER_IN_CONTAINER=1 \
     PATH=/root/.cargo/bin:$PATH
