@@ -33,6 +33,7 @@ pub struct DockerOptions {
     pub target: Target,
     pub config: Config,
     pub image: Image,
+    pub skip_target_dir: bool,
     pub cargo_variant: CargoVariant,
     // not all toolchains will provide this
     pub rustc_version: Option<RustcVersion>,
@@ -52,6 +53,7 @@ impl DockerOptions {
             target,
             config,
             image,
+            skip_target_dir: false,
             cargo_variant,
             rustc_version,
         }
@@ -1039,8 +1041,11 @@ impl DockerCommandExt for Command {
                 "-e",
                 &format!("CROSS_RUST_SYSROOT={}", dirs.sysroot_mount_path()),
             ])
-            .args(["-e", "CARGO_TARGET_DIR=/target"])
             .args(["-e", &cross_runner]);
+
+        if !options.skip_target_dir {
+            self.args(["-e", "CARGO_TARGET_DIR=/target"]);
+        }
         if options.cargo_variant.uses_zig() {
             // otherwise, zig has a permission error trying to create the cache
             self.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
