@@ -473,7 +473,7 @@ impl CargoVariant {
     }
 }
 
-fn warn_on_failure(
+pub fn warn_on_failure(
     target: &Target,
     toolchain: &QualifiedToolchain,
     msg_info: &mut MessageInfo,
@@ -518,6 +518,8 @@ pub fn run(
 
     let cwd = std::env::current_dir()?;
     if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), msg_info)? {
+        let toml = toml(&metadata, msg_info)?;
+
         let Some(CrossSetup {
             config,
             target,
@@ -529,7 +531,7 @@ pub fn run(
             is_remote,
             engine,
             image,
-        }) = setup(&host_version_meta, &metadata, &args, target_list, msg_info)? else {
+        }) = setup(&host_version_meta, toml, &args, target_list, msg_info)? else {
             return Ok(None);
         };
 
@@ -587,7 +589,7 @@ pub fn run(
             if target.needs_docker() && needs_docker {
                 let paths = docker::DockerPaths::create(
                     &engine,
-                    metadata,
+                    todo!(),
                     cwd,
                     toolchain.clone(),
                     msg_info,
@@ -710,13 +712,12 @@ pub fn get_filtered_args(
 /// Setup cross configuration
 pub fn setup(
     host_version_meta: &rustc_version::VersionMeta,
-    metadata: &CargoMetadata,
+    toml: Option<CrossToml>,
     args: &Args,
     target_list: TargetList,
     msg_info: &mut MessageInfo,
 ) -> Result<Option<CrossSetup>, color_eyre::Report> {
     let host = host_version_meta.host();
-    let toml = toml(metadata, msg_info)?;
     let config = Config::new(toml);
     let target = args
         .target

@@ -16,7 +16,7 @@ pub fn main() -> cross::Result<()> {
     cross::install_termination_hook()?;
 
     let target_list = rustc::target_list(&mut Verbosity::Quiet.into())?;
-    let args = cli::parse(&target_list)?;
+    let args = cli::parse(env::args().skip(1), &target_list)?;
     let subcommand = args.subcommand;
     let mut msg_info = shell::MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
     let status = match cross::run(args, target_list, &mut msg_info)? {

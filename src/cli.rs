@@ -157,7 +157,7 @@ fn store_target_dir(_: String) -> Result<String> {
     Ok("/target".to_owned())
 }
 
-pub fn parse(target_list: &TargetList) -> Result<Args> {
+pub fn parse(args: impl IntoIterator<Item = String>, target_list: &TargetList) -> Result<Args> {
     let mut channel = None;
     let mut target = None;
     let mut features = Vec::new();
@@ -171,8 +171,9 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut verbose = 0;
     let mut color = None;
 
+    let mut args = args.into_iter();
+
     {
-        let mut args = env::args().skip(1);
         while let Some(arg) = args.next() {
             if arg.is_empty() {
                 continue;
