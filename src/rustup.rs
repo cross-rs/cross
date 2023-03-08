@@ -28,6 +28,31 @@ impl AvailableTargets {
     }
 }
 
+pub fn setup_rustup(
+    toolchain: &QualifiedToolchain,
+    msg_info: &mut MessageInfo,
+) -> Result<AvailableTargets, color_eyre::Report> {
+    if !toolchain.is_custom
+        && !installed_toolchains(msg_info)?
+            .into_iter()
+            .any(|t| t == toolchain.to_string())
+    {
+        install_toolchain(toolchain, msg_info)?;
+    }
+    let available_targets = if !toolchain.is_custom {
+        available_targets(&toolchain.full, msg_info).with_note(|| {
+            format!("cross would use the toolchain '{toolchain}' for mounting rust")
+        })?
+    } else {
+        AvailableTargets {
+            default: String::new(),
+            installed: vec![],
+            not_installed: vec![],
+        }
+    };
+    Ok(available_targets)
+}
+
 fn rustup_command(msg_info: &mut MessageInfo, no_flags: bool) -> Command {
     let mut cmd = Command::new("rustup");
     if no_flags {
@@ -239,6 +264,48 @@ pub fn component_is_installed(
     msg_info: &mut MessageInfo,
 ) -> Result<bool> {
     Ok(check_component(component, toolchain, msg_info)?.is_installed())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn setup_components(
+    target: &Target,
+    uses_xargo: bool,
+    uses_build_std: bool,
+    toolchain: &QualifiedToolchain,
+    is_nightly: bool,
+    available_targets: AvailableTargets,
+    args: &crate::cli::Args,
+    msg_info: &mut MessageInfo,
+) -> Result<(), color_eyre::Report> {
+    if !toolchain.is_custom {
+        // build-std overrides xargo, but only use it if it's a built-in
+        // tool but not an available target or doesn't have rust-std.
+
+        if !is_nightly && uses_build_std {
+            eyre::bail!(
+                "no rust-std component available for {}: must use nightly",
+                target.triple()
+            );
+        }
+
+        if !uses_xargo
+            && !uses_build_std
+            && !available_targets.is_installed(target)
+            && available_targets.contains(target)
+        {
+            install(target, toolchain, msg_info)?;
+        } else if !component_is_installed("rust-src", toolchain, msg_info)? {
+            install_component("rust-src", toolchain, msg_info)?;
+        }
+        if args
+            .subcommand
+            .map_or(false, |sc| sc == crate::Subcommand::Clippy)
+            && !component_is_installed("clippy", toolchain, msg_info)?
+        {
+            install_component("clippy", toolchain, msg_info)?;
+        }
+    }
+    Ok(())
 }
 
 fn rustc_channel(version: &Version) -> Result<Channel> {
