@@ -665,6 +665,7 @@ pub(crate) fn run(
     options: DockerOptions,
     paths: DockerPaths,
     args: &[String],
+    subcommand: Option<crate::Subcommand>,
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     let engine = &options.engine;
@@ -913,7 +914,7 @@ pub(crate) fn run(
             final_args.push(arg);
         }
     }
-    if !has_target_dir {
+    if !has_target_dir && subcommand.map_or(true, |s| s.needs_target_in_command()) {
         final_args.push("--target-dir".to_owned());
         final_args.push(target_dir.clone());
     }
