@@ -110,8 +110,9 @@ pub fn get_matrix() -> &'static Vec<CiTarget> {
     }
     MATRIX
         .get_or_try_init::<_, eyre::Report>(|| {
-            let targets: Targets =
-                toml::from_slice(&std::fs::read(get_cargo_workspace().join("targets.toml"))?)?;
+            let targets: Targets = toml::from_str(std::str::from_utf8(&std::fs::read(
+                get_cargo_workspace().join("targets.toml"),
+            )?)?)?;
             Ok(targets.target)
         })
         .unwrap()
