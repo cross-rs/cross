@@ -70,9 +70,10 @@ macro_rules! status {
 }
 
 /// the requested verbosity of output.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Verbosity {
     Quiet,
+    #[default]
     Normal,
     Verbose(u8),
 }
@@ -102,12 +103,6 @@ impl Verbosity {
             (0, true) => Some(Verbosity::Quiet),
             (0, false) => None,
         }
-    }
-}
-
-impl Default for Verbosity {
-    fn default() -> Verbosity {
-        Verbosity::Normal
     }
 }
 

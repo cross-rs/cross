@@ -77,7 +77,10 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             if msg_info.cross_debug
                 && src.is_dir()
                 && !src.to_string_lossy().ends_with("/.")
-                && rel == src.file_name().unwrap()
+                && rel
+                    == src
+                        .file_name()
+                        .expect("filename should be defined as we are a directory")
             {
                 msg_info.warn(format_args!(
                     "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
@@ -665,6 +668,7 @@ pub(crate) fn run(
     options: DockerOptions,
     paths: DockerPaths,
     args: &[String],
+    subcommand: Option<crate::Subcommand>,
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
     let engine = &options.engine;
@@ -913,7 +917,7 @@ pub(crate) fn run(
             final_args.push(arg);
         }
     }
-    if !has_target_dir {
+    if !has_target_dir && subcommand.map_or(true, |s| s.needs_target_in_command()) {
         final_args.push("--target-dir".to_owned());
         final_args.push(target_dir.clone());
     }

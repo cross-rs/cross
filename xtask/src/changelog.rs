@@ -446,7 +446,7 @@ fn delete_changes(root: &Path) -> cross::Result<()> {
 /// Get the date as a year/month/day tuple.
 pub fn get_current_date() -> String {
     let utc = Utc::now();
-    let date = utc.date();
+    let date = utc.date_naive();
 
     format!("{}-{:0>2}-{}", date.year(), date.month(), date.day())
 }

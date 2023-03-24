@@ -143,8 +143,8 @@ impl CrossToml {
         toml_str: &str,
         msg_info: &mut MessageInfo,
     ) -> Result<(Self, BTreeSet<String>)> {
-        let mut tomld = toml::Deserializer::new(toml_str);
-        Self::parse_from_deserializer(&mut tomld, msg_info)
+        let tomld = toml::Deserializer::new(toml_str);
+        Self::parse_from_deserializer(tomld, msg_info)
     }
 
     /// Parses the [`CrossToml`] from a string containing the Cargo.toml contents

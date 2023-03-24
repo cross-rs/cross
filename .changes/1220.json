@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "don't pass `--target-dir` in remote context when it's not needed",
+    "issues": [1218]
+}

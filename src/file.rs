@@ -69,7 +69,7 @@ fn fmt_unc(server: &std::ffi::OsStr, volume: &std::ffi::OsStr) -> Result<String>
     if server == "localhost"
         && bytes.len() == 2
         && bytes[1] == b'$'
-        && matches!(bytes[0], b'A'..=b'Z' | b'a'..=b'z')
+        && bytes[0].is_ascii_alphabetic()
     {
         Ok(fmt_disk(bytes[0]))
     } else {
@@ -188,7 +188,7 @@ fn _canonicalize(path: &Path) -> Result<PathBuf> {
     #[cfg(target_os = "windows")]
     {
         // Docker does not support UNC paths, this will try to not use UNC paths
-        dunce::canonicalize(&path).map_err(Into::into)
+        dunce::canonicalize(path).map_err(Into::into)
     }
     #[cfg(not(target_os = "windows"))]
     {

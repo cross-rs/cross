@@ -21,6 +21,9 @@ ignore = [
 [bans]
 multiple-versions = "deny"
 deny = []
+skip-tree = [
+    { name = "tempfile", version = "=3.4.0", depth = 2 },
+]
 
 [sources]
 unknown-registry = "deny"

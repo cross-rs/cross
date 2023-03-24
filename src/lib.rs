@@ -24,7 +24,7 @@
     clippy::semicolon_if_nothing_returned,
     clippy::str_to_string,
     clippy::string_to_string,
-    // needs clippy 1.61 clippy::unwrap_used
+    clippy::unwrap_used
 )]
 
 #[cfg(test)]
@@ -729,7 +729,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                     cargo_variant,
                     rustc_version,
                 );
-                let status = docker::run(options, paths, &filtered_args, msg_info)
+                let status = docker::run(options, paths, &filtered_args, args.subcommand, msg_info)
                     .wrap_err("could not run container")?;
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
                 if !status.success() {
