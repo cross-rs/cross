@@ -284,6 +284,19 @@ pub struct Toolchain {
     pub full: String,
 }
 
+impl Toolchain {
+    pub fn remove_host(&self) -> Self {
+        let mut new = Self {
+            host: None,
+            ..self.clone()
+        };
+        if let Some(host) = &self.host {
+            new.full = new.full.replace(&format!("-{host}"), "");
+        }
+        new
+    }
+}
+
 impl std::fmt::Display for Toolchain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.full)
