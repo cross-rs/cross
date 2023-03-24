@@ -261,7 +261,7 @@ impl QualifiedToolchain {
         if path.exists() {
             let contents =
                 std::fs::read(&path).wrap_err_with(|| format!("couldn't open file `{path:?}`"))?;
-            let manifest: toml::value::Table = toml::from_slice(&contents)?;
+            let manifest: toml::value::Table = toml::from_str(std::str::from_utf8(&contents)?)?;
             return Ok(manifest
                 .get("pkg")
                 .and_then(|pkg| pkg.get("rust"))
