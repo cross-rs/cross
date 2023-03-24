@@ -31,7 +31,7 @@ pub(crate) fn run(
     paths: DockerPaths,
     args: &[String],
     msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
+) -> Result<Option<ExitStatus>> {
     let engine = &options.engine;
     let toolchain_dirs = paths.directories.toolchain_directories();
     let package_dirs = paths.directories.package_directories();
@@ -147,6 +147,9 @@ pub(crate) fn run(
     }
 
     ChildContainer::create(engine.clone(), container_id)?;
+    if msg_info.should_fail() {
+        return Ok(None);
+    }
     let status = docker
         .arg(&image_name)
         .add_build_command(toolchain_dirs, &cmd)
@@ -162,5 +165,5 @@ pub(crate) fn run(
         ChildContainer::exit_static();
     }
 
-    status
+    status.map(Some)
 }

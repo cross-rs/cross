@@ -41,13 +41,16 @@ pub fn image_name(target: &str, sub: Option<&str>, repository: &str, tag: &str) 
     }
 }
 
+// TODO: The Option here in the result should be removed and Result::Error replaced with a enum to properly signal error
+
+// Ok(None) means that the command failed, due to a warning or error, when `msg_info.should_fail() == true`
 pub fn run(
     options: DockerOptions,
     paths: DockerPaths,
     args: &[String],
     subcommand: Option<crate::Subcommand>,
     msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
+) -> Result<Option<ExitStatus>> {
     if cfg!(target_os = "windows") && options.in_docker() {
         msg_info.fatal(
             "running cross insider a container running windows is currently unsupported",

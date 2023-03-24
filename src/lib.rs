@@ -624,6 +624,10 @@ pub fn run(
                     false,
                 );
 
+                if msg_info.should_fail() {
+                    return Ok(None);
+                }
+
                 install_interpreter_if_needed(
                     &args,
                     host_version_meta,
@@ -631,14 +635,20 @@ pub fn run(
                     &options,
                     msg_info,
                 )?;
-                let status = docker::run(
+                let status = if let Some(status) = docker::run(
                     options,
                     paths,
                     &filtered_args,
                     args.subcommand.clone(),
                     msg_info,
                 )
-                .wrap_err("could not run container")?;
+                .wrap_err("could not run container")?
+                {
+                    status
+                } else {
+                    return Ok(None);
+                };
+
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
                 if !status.success() {
                     warn_on_failure(&target, &toolchain, msg_info)?;

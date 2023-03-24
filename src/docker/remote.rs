@@ -670,7 +670,7 @@ pub(crate) fn run(
     args: &[String],
     subcommand: Option<crate::Subcommand>,
     msg_info: &mut MessageInfo,
-) -> Result<ExitStatus> {
+) -> Result<Option<ExitStatus>> {
     let engine = &options.engine;
     let target = &options.target;
     let toolchain_dirs = paths.directories.toolchain_directories();
@@ -897,6 +897,10 @@ pub(crate) fn run(
 
     let mut cmd = options.command_variant.safe_command();
 
+    if msg_info.should_fail() {
+        return Ok(None);
+    }
+
     if !options.command_variant.is_shell() {
         // `clean` doesn't handle symlinks: it will just unlink the target
         // directory, so we should just substitute it our target directory
@@ -1010,5 +1014,5 @@ symlink_recurse \"${{prefix}}\"
 
     ChildContainer::finish_static(is_tty, msg_info);
 
-    status
+    status.map(Some)
 }

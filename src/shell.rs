@@ -375,6 +375,15 @@ impl MessageInfo {
 
         Ok(())
     }
+
+    /// Returns true if we've previously warned or errored, and we're in CI or `CROSS_NO_WARNINGS` has been set.
+    ///
+    /// This is used so that unexpected warnings and errors cause ci to fail.
+    pub fn should_fail(&self) -> bool {
+        // FIXME: store env var
+        env::var("CROSS_NO_WARNINGS").map_or_else(|_| is_ci::cached(), |env| bool_from_envvar(&env))
+            && self.has_warned
+    }
 }
 
 impl Default for MessageInfo {
