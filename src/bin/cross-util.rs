@@ -39,6 +39,8 @@ enum Commands {
     Containers(commands::Containers),
     /// Clean all cross data in local storage.
     Clean(commands::Clean),
+    /// Install a binary crate
+    Install(commands::Install),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<Toolchain> {
@@ -102,6 +104,14 @@ pub fn main() -> cross::Result<()> {
             let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, false, msg_info)?;
             args.run(engine, &mut msg_info)?;
+        }
+        Commands::Install(args) => {
+            let mut msg_info = get_msg_info!(args)?;
+            let status = args.run(&mut msg_info)?;
+            let code = status
+                .code()
+                .ok_or_else(|| eyre::Report::msg("Cargo process terminated by signal"))?;
+            std::process::exit(code)
         }
     }
 

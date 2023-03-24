@@ -87,19 +87,20 @@ pub(crate) fn run(
             package_dirs.mount_root()
         ),
     ]);
-    docker
-        .args([
-            "-v",
-            &format!(
-                "{}:{}:z,ro",
-                toolchain_dirs.get_sysroot().to_utf8()?,
-                toolchain_dirs.sysroot_mount_path()
-            ),
-        ])
-        .args([
+    docker.args([
+        "-v",
+        &format!(
+            "{}:{}:z,ro",
+            toolchain_dirs.get_sysroot().to_utf8()?,
+            toolchain_dirs.sysroot_mount_path()
+        ),
+    ]);
+    if !options.skip_target_dir {
+        docker.args([
             "-v",
             &format!("{}:/target:z", package_dirs.target().to_utf8()?),
         ]);
+    }
     docker.add_cwd(&paths)?;
 
     // When running inside NixOS or using Nix packaging we need to add the Nix

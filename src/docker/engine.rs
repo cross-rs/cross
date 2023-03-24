@@ -11,6 +11,7 @@ use super::{Architecture, ContainerOs};
 
 pub const DOCKER: &str = "docker";
 pub const PODMAN: &str = "podman";
+pub const CROSS_CONTAINER_ENGINE_VAR: &str = "CROSS_CONTAINER_ENGINE";
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EngineType {
@@ -260,7 +261,7 @@ fn get_custom_info(
 }
 
 pub fn get_container_engine() -> Result<PathBuf, which::Error> {
-    if let Ok(ce) = env::var("CROSS_CONTAINER_ENGINE") {
+    if let Ok(ce) = env::var(CROSS_CONTAINER_ENGINE_VAR) {
         which::which(ce)
     } else {
         which::which(DOCKER).or_else(|_| which::which(PODMAN))
