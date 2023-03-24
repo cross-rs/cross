@@ -140,6 +140,7 @@ pub struct MessageInfo {
     pub stdout_needs_erase: bool,
     pub stderr_needs_erase: bool,
     pub cross_debug: bool,
+    pub has_warned: bool,
 }
 
 impl MessageInfo {
@@ -153,6 +154,7 @@ impl MessageInfo {
                 .as_deref()
                 .map(bool_from_envvar)
                 .unwrap_or_default(),
+            has_warned: false,
         }
     }
 
@@ -231,6 +233,7 @@ impl MessageInfo {
     /// prints a red 'error' message.
     #[track_caller]
     pub fn error<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        self.has_warned = true;
         self.stderr_check_erase()?;
         status!(@stderr cross_prefix!("error"), Some(&message), red, self)
     }
@@ -238,6 +241,7 @@ impl MessageInfo {
     /// prints an amber 'warning' message.
     #[track_caller]
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> Result<()> {
+        self.has_warned = true;
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
             _ => status!(@stderr

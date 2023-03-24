@@ -214,6 +214,7 @@ dependencies = [
  "home",
  "ignore",
  "is-terminal",
+ "is_ci",
  "libc",
  "nix",
  "once_cell",

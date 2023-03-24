@@ -6,7 +6,7 @@ use std::{
 };
 
 use cross::{
-    cargo, cli, rustc,
+    cargo, cli, config, rustc,
     shell::{self, Verbosity},
     OutputExt, Subcommand,
 };
@@ -21,7 +21,11 @@ pub fn main() -> cross::Result<()> {
     let mut msg_info = shell::MessageInfo::create(args.verbose, args.quiet, args.color.as_deref())?;
     let status = match cross::run(args, target_list, &mut msg_info)? {
         Some(status) => status,
-        None => {
+        None if env::var("CROSS_NO_WARNINGS")
+            .map(|env| config::bool_from_envvar(&env))
+            .unwrap_or_else(|_| is_ci::uncached())
+            && !msg_info.has_warned =>
+        {
             // if we fallback to the host cargo, use the same invocation that was made to cross
             let argv: Vec<String> = env::args().skip(1).collect();
             msg_info.note("Falling back to `cargo` on the host.")?;
@@ -41,6 +45,11 @@ pub fn main() -> cross::Result<()> {
                 }
                 _ => cargo::run(&argv, &mut msg_info)?,
             }
+        }
+        None => {
+            msg_info.error("Errors encountered before cross compilation, aborting.")?;
+            msg_info.note("Disable this with `CROSS_NO_WARNINGS=0`")?;
+            std::process::exit(1);
         }
     };
     let code = status
