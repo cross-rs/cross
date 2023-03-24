@@ -612,7 +612,10 @@ impl ChildContainer {
         // relax the no-timeout and lack of output
         // ensure we have atomic ordering
         if self.exists() {
-            let info = self.info.as_mut().unwrap();
+            let info = self
+                .info
+                .as_mut()
+                .expect("since we're loaded and exist, child should not be terminated");
             if is_tty {
                 info.timeout = DEFAULT_TIMEOUT;
             }
@@ -635,7 +638,9 @@ impl ChildContainer {
     // be stopped again.
     pub fn terminate(&mut self) {
         if self.exists.swap(false, Ordering::SeqCst) {
-            let info = self.info.as_mut().unwrap();
+            let info = self.info.as_mut().expect(
+                "since we're loaded and exist, child should not have been terminated already",
+            );
             let mut msg_info = MessageInfo::new(info.color_choice, info.verbosity);
             let container = DockerContainer::new(&info.engine, &info.name);
             container.stop(info.timeout, &mut msg_info).ok();

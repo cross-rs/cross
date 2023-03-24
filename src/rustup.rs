@@ -99,7 +99,7 @@ cross will not attempt to configure the toolchain further so that it can run you
         }
         return Err(cmd
             .status_result(msg_info, output.status, Some(&output))
-            .unwrap_err()
+            .expect_err("we know the command failed")
             .to_section_report());
     }
     let out = output.stdout()?;

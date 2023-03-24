@@ -24,7 +24,7 @@
     clippy::semicolon_if_nothing_returned,
     clippy::str_to_string,
     clippy::string_to_string,
-    // needs clippy 1.61 clippy::unwrap_used
+    clippy::unwrap_used
 )]
 
 #[cfg(test)]

@@ -77,7 +77,10 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             if msg_info.cross_debug
                 && src.is_dir()
                 && !src.to_string_lossy().ends_with("/.")
-                && rel == src.file_name().unwrap()
+                && rel
+                    == src
+                        .file_name()
+                        .expect("filename should be defined as we are a directory")
             {
                 msg_info.warn(format_args!(
                     "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
