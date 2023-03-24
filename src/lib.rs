@@ -553,10 +553,7 @@ pub fn run(
                     .with_suggestion(|| {
                         format!(
                             "try `cross +{}` instead",
-                            Toolchain {
-                                host: None,
-                                ..picked_toolchain
-                            }
+                            picked_toolchain.remove_host()
                         )
                     }).with_section(|| format!(
 r#"Overriding the toolchain in cross is only possible in CLI by specifying a channel and optional date: `+channel[-YYYY-MM-DD]`.
@@ -574,7 +571,8 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
         let image = image.to_definite_with(&engine, msg_info);
 
         toolchain.replace_host(&image.platform);
-        let maybe_warn = matches!(toolchain.channel.as_str(), "stable" | "beta" | "nightly");
+        let picked_generic_channel =
+            matches!(toolchain.channel.as_str(), "stable" | "beta" | "nightly");
 
         if image.platform.target.is_supported(Some(&target)) {
             if image.platform.architecture != toolchain.host().architecture {
@@ -593,7 +591,9 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
                 rustup::install_toolchain(&toolchain, msg_info)?;
             }
             let available_targets = if !toolchain.is_custom {
-                rustup::available_targets(&toolchain.full, msg_info)?
+                rustup::available_targets(&toolchain.full, msg_info).with_note(|| {
+                    format!("cross would use the toolchain '{toolchain}' for mounting rust")
+                })?
             } else {
                 rustup::AvailableTargets {
                     default: String::new(),
@@ -604,7 +604,7 @@ To override the toolchain mounted in the image, set `target.{}.image.toolchain =
 
             let mut rustc_version = None;
             if let Some((version, channel, commit)) = toolchain.rustc_version()? {
-                if maybe_warn && toolchain.date.is_none() {
+                if picked_generic_channel && toolchain.date.is_none() {
                     warn_host_version_mismatch(
                         &host_version_meta,
                         &toolchain,

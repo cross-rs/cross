@@ -1,8 +1,6 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-use color_eyre::owo_colors::OwoColorize;
-use color_eyre::SectionExt;
 use rustc_version::{Channel, Version};
 
 use crate::errors::*;
@@ -93,14 +91,22 @@ pub fn available_targets(
         .suggestion("is rustup installed?")?;
 
     if !output.status.success() {
-        if String::from_utf8_lossy(&output.stderr).contains("is a custom toolchain") {
-            return Err(eyre::eyre!("`{toolchain}` is a custom toolchain.").with_section(|| r#"To use this toolchain with cross, you'll need to set the environment variable `CROSS_CUSTOM_TOOLCHAIN=1`
-cross will not attempt to configure the toolchain further so that it can run your binary."#.header("Suggestion".bright_cyan())));
-        }
-        return Err(cmd
+        let mut err = cmd
             .status_result(msg_info, output.status, Some(&output))
             .expect_err("we know the command failed")
-            .to_section_report());
+            .to_section_report();
+        if String::from_utf8_lossy(&output.stderr).contains("is a custom toolchain") {
+            err = err.wrap_err("'{toolchain}' is a custom toolchain.")
+            .suggestion(r#"To use this toolchain with cross, you'll need to set the environment variable `CROSS_CUSTOM_TOOLCHAIN=1`
+cross will not attempt to configure the toolchain further so that it can run your binary."#);
+        } else if String::from_utf8_lossy(&output.stderr).contains("does not support components") {
+            err = err.suggestion(format!(
+                "try reinstalling the '{toolchain}' toolchain
+$ rustup toolchain uninstall {toolchain}
+$ rustup toolchain install {toolchain} --force-non-host"
+            ));
+        }
+        return Err(err);
     }
     let out = output.stdout()?;
     let mut default = String::new();
