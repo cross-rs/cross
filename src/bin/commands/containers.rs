@@ -1,10 +1,10 @@
 use std::io;
 
 use clap::{Args, Subcommand};
-use cross::docker::ImagePlatform;
 use cross::rustc::{QualifiedToolchain, Toolchain};
 use cross::shell::{MessageInfo, Stream};
 use cross::{docker, CommandExt, TargetTriple};
+use cross::{docker::ImagePlatform, rustup::ToolchainMode};
 
 #[derive(Args, Debug)]
 pub struct ListVolumes {
@@ -392,7 +392,8 @@ pub fn create_persistent_volume(
     channel: Option<&Toolchain>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let mut toolchain = toolchain_or_target(&toolchain, msg_info)?;
+    let installed_toolchains = cross::rustup::installed_toolchains(msg_info)?;
+    let mut toolchain = toolchain_or_target(&toolchain, &installed_toolchains, msg_info)?;
     if let Some(channel) = channel {
         toolchain.channel = channel.channel.clone();
     };
@@ -460,7 +461,8 @@ pub fn remove_persistent_volume(
     channel: Option<&Toolchain>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let mut toolchain = toolchain_or_target(&toolchain, msg_info)?;
+    let installed_toolchains = cross::rustup::installed_toolchains(msg_info)?;
+    let mut toolchain = toolchain_or_target(&toolchain, &installed_toolchains, msg_info)?;
     if let Some(channel) = channel {
         toolchain.channel = channel.channel.clone();
     };
@@ -557,10 +559,11 @@ pub fn remove_all_containers(
 
 fn toolchain_or_target(
     s: &str,
+    installed_toolchains: &[(String, ToolchainMode, std::path::PathBuf)],
     msg_info: &mut MessageInfo,
 ) -> Result<QualifiedToolchain, color_eyre::Report> {
     let config = cross::config::Config::new(None);
-    let mut toolchain = QualifiedToolchain::default(&config, msg_info)?;
+    let mut toolchain = QualifiedToolchain::default(&config, installed_toolchains, msg_info)?;
     let target_list = cross::rustc::target_list(msg_info)?;
     if target_list.contains(s) {
         toolchain.replace_host(&ImagePlatform::from_target(s.into())?);
