@@ -155,6 +155,12 @@ impl Serialize for ImagePlatform {
     }
 }
 
+impl std::fmt::Display for ImagePlatform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.serialize(f)
+    }
+}
+
 impl std::str::FromStr for ImagePlatform {
     type Err = eyre::Report;
     // [os/arch[/variant]=]toolchain

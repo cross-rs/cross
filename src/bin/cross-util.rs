@@ -39,6 +39,8 @@ enum Commands {
     Containers(commands::Containers),
     /// Clean all cross data in local storage.
     Clean(commands::Clean),
+    /// List all cross targets, including those specialized for the current project (if in one).
+    ListTargets(commands::ListTargets),
 }
 
 fn is_toolchain(toolchain: &str) -> cross::Result<Toolchain> {
@@ -102,6 +104,10 @@ pub fn main() -> cross::Result<()> {
             let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, false, msg_info)?;
             args.run(engine, &mut msg_info)?;
+        }
+        Commands::ListTargets(args) => {
+            let mut msg_info = get_msg_info!(args)?;
+            args.run(&mut msg_info)?;
         }
     }
 
