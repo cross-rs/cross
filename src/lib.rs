@@ -310,7 +310,10 @@ impl Target {
     }
 
     fn is_bare_metal(&self) -> bool {
-        self.triple().contains("thumb")
+        self.triple().ends_with("-none")
+            || self.triple().ends_with("-none-elf")
+            || self.triple().ends_with("-none-eabi")
+            || self.triple().ends_with("-none-eabihf")
     }
 
     fn is_builtin(&self) -> bool {

@@ -1,0 +1,4 @@
+{
+    "description": "fix support for bare metal targets other than thumb",
+    "type": "fixed"
+}
