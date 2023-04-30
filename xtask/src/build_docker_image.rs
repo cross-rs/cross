@@ -60,6 +60,12 @@ pub struct BuildDockerImage {
     /// Do not load from cache when building the image.
     #[clap(long)]
     pub no_cache: bool,
+    /// Cache to option for docker, only would work if push is not set to true
+    #[clap(long)]
+    pub cache_to: Option<String>,
+    /// Cache from option for docker, would only work if engine supports cache from type and no_cache is not set to true
+    #[clap(long)]
+    pub cache_from: Option<String>,
     /// Continue building images even if an image fails to build.
     #[clap(long)]
     pub no_fastfail: bool,
@@ -116,6 +122,8 @@ pub fn build_docker_image(
         from_ci,
         build_arg,
         platform,
+        cache_from,
+        cache_to,
         mut targets,
         ..
     }: BuildDockerImage,
@@ -248,10 +256,14 @@ pub fn build_docker_image(
         if no_cache {
             docker_build.arg("--no-cache");
         } else if engine.kind.supports_cache_from_type() {
-            docker_build.args([
-                "--cache-from",
-                &format!("type=registry,ref={base_name}:main"),
-            ]);
+            if let Some(ref cache_from) = cache_from {
+                docker_build.args(["--cache-from", cache_from]);
+            } else {
+                docker_build.args([
+                    "--cache-from",
+                    &format!("type=registry,ref={base_name}:main"),
+                ]);
+            }
         } else {
             // we can't use `image_name` since podman doesn't support tags
             // with `--cache-from`. podman only supports an image format
@@ -265,6 +277,10 @@ pub fn build_docker_image(
 
         if push {
             docker_build.args(["--cache-to", "type=inline"]);
+        } else {
+            if let Some(ref cache_to) = cache_to {
+                docker_build.args(["--cache-to", cache_to]);
+            }
         }
 
         for tag in &tags {
