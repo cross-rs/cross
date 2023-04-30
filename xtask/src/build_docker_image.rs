@@ -277,10 +277,8 @@ pub fn build_docker_image(
 
         if push {
             docker_build.args(["--cache-to", "type=inline"]);
-        } else {
-            if let Some(ref cache_to) = cache_to {
-                docker_build.args(["--cache-to", cache_to]);
-            }
+        } else if let Some(ref cache_to) = cache_to {
+            docker_build.args(["--cache-to", cache_to]);
         }
 
         for tag in &tags {
