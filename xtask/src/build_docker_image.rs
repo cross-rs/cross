@@ -63,7 +63,7 @@ pub struct BuildDockerImage {
     /// Option `--cache-to` for docker, only would work if push is not set to true
     ///
     /// Additionally you can use {base_name} to replace with base name of the image
-    /// If not specified, would not be passed to docker
+    /// If not specified, would not be passed to docker unless `--push` is used
     #[clap(long)]
     pub cache_to: Option<String>,
     /// Option `--cache-from` for docker, would only work if engine supports cache from type and no_cache is not set to true
