@@ -1,4 +1,4 @@
 {
     "description": "customize `--cache-from` and `--cache-to` options for `build-docker-image`",
-    "type": "added"
+    "type": "internal"
 }
