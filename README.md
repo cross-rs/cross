@@ -397,7 +397,7 @@ terminate.
 
 [4] libc = newlib
 
-[5] Must change `image = "x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
+[5] Must change `image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
 
 [6] libc = emscripten and GCC = clang
 
