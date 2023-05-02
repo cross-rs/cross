@@ -410,6 +410,13 @@ dylib = true
 std = true
 
 [[target]]
+target = "aarch64-unknown-freebsd"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+
+[[target]]
 target = "x86_64-unknown-netbsd"
 os = "ubuntu-latest"
 cpp = true

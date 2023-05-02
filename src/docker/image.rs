@@ -407,6 +407,7 @@ pub mod tests {
         assert_eq!(arch!("arm-unknown-linux-gnueabihf")?, Architecture::Arm);
         assert_eq!(arch!("armv7-unknown-linux-gnueabihf")?, Architecture::Arm);
         assert_eq!(arch!("aarch64-unknown-linux-gnu")?, Architecture::Arm64);
+        assert_eq!(arch!("aarch64-unknown-freebsd")?, Architecture::Arm64);
         assert_eq!(arch!("mips-unknown-linux-gnu")?, Architecture::Mips);
         assert_eq!(
             arch!("mips64-unknown-linux-gnuabi64")?,
@@ -424,6 +425,7 @@ pub mod tests {
     fn os_from_target() -> Result<()> {
         assert_eq!(Os::from_target(&t!("x86_64-apple-darwin"))?, Os::Darwin);
         assert_eq!(Os::from_target(&t!("x86_64-unknown-freebsd"))?, Os::Freebsd);
+        assert_eq!(Os::from_target(&t!("aarch64-unknown-freebsd"))?, Os::Freebsd);
         assert_eq!(Os::from_target(&t!("x86_64-unknown-netbsd"))?, Os::Netbsd);
         assert_eq!(Os::from_target(&t!("sparcv9-sun-solaris"))?, Os::Solaris);
         assert_eq!(Os::from_target(&t!("sparcv9-sun-illumos"))?, Os::Illumos);

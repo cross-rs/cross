@@ -155,6 +155,7 @@ impl TargetTriple {
             "x86_64-unknown-dragonfly" => Some("dragonflybsd-amd64"),
             "i686-unknown-freebsd" => Some("freebsd-i386"),
             "x86_64-unknown-freebsd" => Some("freebsd-amd64"),
+            "aarch64-unknown-freebsd" => Some("freebsd-arm64"),
             "x86_64-unknown-netbsd" => Some("netbsd-amd64"),
             "sparcv9-sun-solaris" => Some("solaris-sparc"),
             "x86_64-sun-solaris" => Some("solaris-amd64"),

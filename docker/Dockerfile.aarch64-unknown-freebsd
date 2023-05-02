@@ -1,0 +1,38 @@
+FROM ubuntu:20.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+RUN echo "export ARCH=aarch64" > /freebsd-arch.sh
+COPY freebsd-common.sh /
+COPY freebsd.sh /
+RUN /freebsd.sh
+
+COPY freebsd-install.sh /
+COPY freebsd-extras.sh /
+RUN /freebsd-extras.sh
+
+ENV CROSS_TOOLCHAIN_PREFIX=aarch64-unknown-freebsd12-
+ENV CROSS_SYSROOT=/usr/local/aarch64-unknown-freebsd12
+
+COPY freebsd-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
+COPY toolchain.cmake /opt/toolchain.cmake
+
+ENV CARGO_TARGET_AARCH64_UNKNOWN_FREEBSD_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
+    AR_aarch64_unknown_freebsd="$CROSS_TOOLCHAIN_PREFIX"ar \
+    CC_aarch64_unknown_freebsd="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_aarch64_unknown_freebsd="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_aarch64_unknown_freebsd=/opt/toolchain.cmake \
+    BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_freebsd="--sysroot=$CROSS_SYSROOT" \
+    AARCH64_UNKNOWN_FREEBSD_OPENSSL_DIR="$CROSS_SYSROOT" \
+    CROSS_CMAKE_SYSTEM_NAME=FreeBSD \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=amd64 \
+    CROSS_CMAKE_CRT=freebsd \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m64"
