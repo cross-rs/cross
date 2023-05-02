@@ -397,11 +397,11 @@ terminate.
 
 [4] libc = newlib
 
-[5] Must change `image = "x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
+[5] Must change `image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
 
 [6] libc = emscripten and GCC = clang
 
-[7] Must change `image = "aarch64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.aarch64-unknown-linux-gnu]` to use the CentOS7-compatible target.
+[7] Must change `image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.aarch64-unknown-linux-gnu]` to use the CentOS7-compatible target.
 
 <!--[7] libc = emscripten and GCC = clang. The Docker images for these targets are currently not built automatically
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/98216), you will have to build them yourself for now.-->
