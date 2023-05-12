@@ -360,7 +360,7 @@ impl ImagePlatform {
                 target,
             },
             TargetTriple::Aarch64UnknownLinuxMusl => ImagePlatform {
-                architecture: Architecture::Arm,
+                architecture: Architecture::Arm64,
                 os: Os::Linux,
                 variant: None,
                 target,
