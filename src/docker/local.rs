@@ -11,11 +11,17 @@ use crate::shell::{MessageInfo, Stream};
 use eyre::Context;
 
 // NOTE: host path must be absolute
-fn mount(docker: &mut Command, host_path: &Path, absolute_path: &Path, prefix: &str) -> Result<()> {
+fn mount(
+    docker: &mut Command,
+    host_path: &Path,
+    absolute_path: &Path,
+    prefix: &str,
+    selinux: &str,
+) -> Result<()> {
     let mount_path = absolute_path.as_posix_absolute()?;
     docker.args([
         "-v",
-        &format!("{}:{prefix}{}:z", host_path.to_utf8()?, mount_path),
+        &format!("{}:{prefix}{}{selinux}", host_path.to_utf8()?, mount_path),
     ]);
     Ok(())
 }
@@ -36,6 +42,16 @@ pub(crate) fn run(
     let mut docker = engine.subcommand("run");
     docker.add_userns();
 
+    // Podman on macOS doesn't support selinux labels, see issue #756
+    #[cfg(target_os = "macos")]
+    let (selinux, selinux_ro) = if engine.kind.is_podman() {
+        ("", ":ro")
+    } else {
+        (":z", ":z,ro")
+    };
+    #[cfg(not(target_os = "macos"))]
+    let (selinux, selinux_ro) = (":z", ":z,ro");
+
     options
         .image
         .platform
@@ -45,7 +61,7 @@ pub(crate) fn run(
     docker.add_mounts(
         &options,
         &paths,
-        |docker, host, absolute| mount(docker, host, absolute, ""),
+        |docker, host, absolute| mount(docker, host, absolute, "", selinux),
         |_| {},
         msg_info,
     )?;
@@ -63,7 +79,7 @@ pub(crate) fn run(
         .args([
             "-v",
             &format!(
-                "{}:{}:z",
+                "{}:{}{selinux}",
                 toolchain_dirs.xargo_host_path()?,
                 toolchain_dirs.xargo_mount_path()
             ),
@@ -71,7 +87,7 @@ pub(crate) fn run(
         .args([
             "-v",
             &format!(
-                "{}:{}:z",
+                "{}:{}{selinux}",
                 toolchain_dirs.cargo_host_path()?,
                 toolchain_dirs.cargo_mount_path()
             ),
@@ -82,7 +98,7 @@ pub(crate) fn run(
     docker.args([
         "-v",
         &format!(
-            "{}:{}:z",
+            "{}:{}{selinux}",
             package_dirs.host_root().to_utf8()?,
             package_dirs.mount_root()
         ),
@@ -91,14 +107,14 @@ pub(crate) fn run(
         .args([
             "-v",
             &format!(
-                "{}:{}:z,ro",
+                "{}:{}{selinux_ro}",
                 toolchain_dirs.get_sysroot().to_utf8()?,
                 toolchain_dirs.sysroot_mount_path()
             ),
         ])
         .args([
             "-v",
-            &format!("{}:/target:z", package_dirs.target().to_utf8()?),
+            &format!("{}:/target{selinux}", package_dirs.target().to_utf8()?),
         ]);
     docker.add_cwd(&paths)?;
 
@@ -108,7 +124,7 @@ pub(crate) fn run(
         docker.args([
             "-v",
             &format!(
-                "{}:{}:z",
+                "{}:{}{selinux}",
                 nix_store.to_utf8()?,
                 nix_store.as_posix_absolute()?
             ),

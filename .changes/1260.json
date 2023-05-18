@@ -1,0 +1,6 @@
+{
+    "description": "fix podman bind mounts on macOS by removing SELinux labels.",
+    "issues": [756],
+    "type": "fixed",
+    "breaking": false
+}
