@@ -279,13 +279,13 @@ impl Target {
         triple: TargetTriple::DEFAULT,
     };
 
-    fn new_built_in(triple: &str) -> Self {
+    pub fn new_built_in(triple: &str) -> Self {
         Target::BuiltIn {
             triple: triple.into(),
         }
     }
 
-    fn new_custom(triple: &str) -> Self {
+    pub fn new_custom(triple: &str) -> Self {
         Target::Custom {
             triple: triple.into(),
         }
@@ -864,7 +864,7 @@ macro_rules! commit_info {
 ///
 /// The values from `CROSS_CONFIG` or `Cross.toml` are concatenated with the package
 /// metadata in `Cargo.toml`, with `Cross.toml` having the highest priority.
-fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
+pub fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
     let root = &metadata.workspace_root;
     let cross_config_path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),

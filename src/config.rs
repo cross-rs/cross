@@ -212,6 +212,13 @@ impl Config {
         }
     }
 
+    /// Grabs all defined targets in toml
+    pub fn targets(
+        &self,
+    ) -> Option<impl Iterator<Item = (&Target, &crate::cross_toml::CrossTargetConfig)>> {
+        self.toml.as_ref().map(|toml| toml.targets.iter())
+    }
+
     pub fn confusable_target(&self, target: &Target, msg_info: &mut MessageInfo) -> Result<()> {
         if let Some(keys) = self.toml.as_ref().map(|t| t.targets.keys()) {
             for mentioned_target in keys {

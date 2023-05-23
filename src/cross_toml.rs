@@ -43,7 +43,7 @@ pub struct CrossTargetConfig {
     #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
     zig: Option<CrossZigConfig>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
-    image: Option<PossibleImage>,
+    pub image: Option<PossibleImage>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
     dockerfile: Option<CrossTargetDockerfileConfig>,
     #[serde(default, deserialize_with = "opt_string_or_string_vec")]
