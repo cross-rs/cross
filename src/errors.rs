@@ -111,7 +111,11 @@ unsafe fn termination_handler() {
 
 pub fn install_termination_hook() -> Result<()> {
     // SAFETY: safe since single-threaded execution.
-    ctrlc::set_handler(|| unsafe { termination_handler() }).map_err(Into::into)
+    unsafe {
+        signal_hook::low_level::register(signal_hook::consts::SIGINT, || termination_handler())
+    }
+    .map_err(Into::into)
+    .map(|_| ())
 }
 
 #[derive(Debug, thiserror::Error)]
