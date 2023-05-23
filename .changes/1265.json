@@ -1,0 +1,4 @@
+{
+    "description": "replace `ctrlc` signal handler with `signal-hook`",
+    "type": "changed"
+}
