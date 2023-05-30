@@ -425,7 +425,10 @@ pub mod tests {
     fn os_from_target() -> Result<()> {
         assert_eq!(Os::from_target(&t!("x86_64-apple-darwin"))?, Os::Darwin);
         assert_eq!(Os::from_target(&t!("x86_64-unknown-freebsd"))?, Os::Freebsd);
-        assert_eq!(Os::from_target(&t!("aarch64-unknown-freebsd"))?, Os::Freebsd);
+        assert_eq!(
+            Os::from_target(&t!("aarch64-unknown-freebsd"))?,
+            Os::Freebsd
+        );
         assert_eq!(Os::from_target(&t!("x86_64-unknown-netbsd"))?, Os::Netbsd);
         assert_eq!(Os::from_target(&t!("sparcv9-sun-solaris"))?, Os::Solaris);
         assert_eq!(Os::from_target(&t!("sparcv9-sun-illumos"))?, Os::Illumos);
