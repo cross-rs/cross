@@ -10,12 +10,12 @@ use super::engine::Engine;
 use super::shared::*;
 use crate::config::bool_from_envvar;
 use crate::errors::Result;
-use crate::extensions::CommandExt;
+use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
 use crate::shell::{MessageInfo, Stream};
-use crate::temp;
 use crate::TargetTriple;
+use crate::{temp, CargoVariant};
 
 // prevent further commands from running if we handled
 // a signal earlier, and the volume is exited.
@@ -667,6 +667,7 @@ impl QualifiedToolchain {
 pub(crate) fn run(
     options: DockerOptions,
     paths: DockerPaths,
+    mut cmd: SafeCommand,
     args: &[String],
     subcommand: Option<crate::Subcommand>,
     msg_info: &mut MessageInfo,
@@ -895,34 +896,38 @@ pub(crate) fn run(
         }
     }
 
-    // `clean` doesn't handle symlinks: it will just unlink the target
-    // directory, so we should just substitute it our target directory
-    // for it. we'll still have the same end behavior
-    let mut final_args = vec![];
-    let mut iter = args.iter().cloned();
-    let mut has_target_dir = false;
-    while let Some(arg) = iter.next() {
-        if arg == "--target-dir" {
-            has_target_dir = true;
-            final_args.push(arg);
-            if iter.next().is_some() {
-                final_args.push(target_dir.clone());
+    if options.cargo_variant != CargoVariant::None {
+        // `clean` doesn't handle symlinks: it will just unlink the target
+        // directory, so we should just substitute it our target directory
+        // for it. we'll still have the same end behavior
+        let mut final_args = vec![];
+        let mut iter = args.iter().cloned();
+        let mut has_target_dir = false;
+        while let Some(arg) = iter.next() {
+            if arg == "--target-dir" {
+                has_target_dir = true;
+                final_args.push(arg);
+                if iter.next().is_some() {
+                    final_args.push(target_dir.clone());
+                }
+            } else if arg.starts_with("--target-dir=") {
+                has_target_dir = true;
+                if arg.split_once('=').is_some() {
+                    final_args.push(format!("--target-dir={target_dir}"));
+                }
+            } else {
+                final_args.push(arg);
             }
-        } else if arg.starts_with("--target-dir=") {
-            has_target_dir = true;
-            if arg.split_once('=').is_some() {
-                final_args.push(format!("--target-dir={target_dir}"));
-            }
-        } else {
-            final_args.push(arg);
         }
+        if !has_target_dir && subcommand.map_or(true, |s| s.needs_target_in_command()) {
+            final_args.push("--target-dir".to_owned());
+            final_args.push(target_dir.clone());
+        }
+
+        cmd.args(final_args);
+    } else {
+        cmd.args(args);
     }
-    if !has_target_dir && subcommand.map_or(true, |s| s.needs_target_in_command()) {
-        final_args.push("--target-dir".to_owned());
-        final_args.push(target_dir.clone());
-    }
-    let mut cmd = options.cargo_variant.safe_command();
-    cmd.args(final_args);
 
     // 5. create symlinks for copied data
     let mut symlink = vec!["set -e pipefail".to_owned()];

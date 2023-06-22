@@ -1271,7 +1271,7 @@ pub fn get_image_name(config: &Config, target: &Target, uses_zig: bool) -> Resul
         .image_name(CROSS_IMAGE, version))
 }
 
-pub(crate) fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Result<PossibleImage> {
+pub fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Result<PossibleImage> {
     if let Some(image) = config.image(target)? {
         return Ok(image);
     }

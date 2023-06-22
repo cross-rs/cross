@@ -63,7 +63,7 @@ use self::errors::Context;
 use self::shell::{MessageInfo, Verbosity};
 
 pub use self::errors::{install_panic_hook, install_termination_hook, Result};
-pub use self::extensions::{CommandExt, OutputExt};
+pub use self::extensions::{CommandExt, OutputExt, SafeCommand};
 pub use self::file::{pretty_path, ToUtf8};
 pub use self::rustc::{TargetList, VersionMetaExt};
 
@@ -447,6 +447,7 @@ pub enum CargoVariant {
     Cargo,
     Xargo,
     Zig,
+    None,
 }
 
 impl CargoVariant {
@@ -464,6 +465,7 @@ impl CargoVariant {
             CargoVariant::Cargo => "cargo",
             CargoVariant::Xargo => "xargo",
             CargoVariant::Zig => "cargo-zigbuild",
+            CargoVariant::None => "",
         }
     }
 
@@ -615,9 +617,16 @@ pub fn run(
                     &options,
                     msg_info,
                 )?;
-
-                let status = docker::run(options, paths, &filtered_args, args.subcommand, msg_info)
-                    .wrap_err("could not run container")?;
+                let cmd = options.cargo_variant.safe_command();
+                let status = docker::run(
+                    options,
+                    paths,
+                    cmd,
+                    &filtered_args,
+                    args.subcommand,
+                    msg_info,
+                )
+                .wrap_err("could not run container")?;
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
                 if !status.success() {
                     warn_on_failure(&target, &toolchain, msg_info)?;
@@ -864,7 +873,7 @@ macro_rules! commit_info {
 ///
 /// The values from `CROSS_CONFIG` or `Cross.toml` are concatenated with the package
 /// metadata in `Cargo.toml`, with `Cross.toml` having the highest priority.
-fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
+pub fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
     let root = &metadata.workspace_root;
     let cross_config_path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),

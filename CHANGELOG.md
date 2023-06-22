@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - ReleaseDate
 
+- #1266 Allow to run arbitrary commands in containers using `cross-util run --target <target> --command <command>`
+
 ## [v0.2.5] - 2023-02-04
 
 ## Fixed

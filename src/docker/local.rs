@@ -5,7 +5,7 @@ use std::sync::atomic::Ordering;
 
 use super::shared::*;
 use crate::errors::Result;
-use crate::extensions::CommandExt;
+use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{PathExt, ToUtf8};
 use crate::shell::{MessageInfo, Stream};
 use eyre::Context;
@@ -29,6 +29,7 @@ fn mount(
 pub(crate) fn run(
     options: DockerOptions,
     paths: DockerPaths,
+    mut cmd: SafeCommand,
     args: &[String],
     msg_info: &mut MessageInfo,
 ) -> Result<ExitStatus> {
@@ -36,7 +37,6 @@ pub(crate) fn run(
     let toolchain_dirs = paths.directories.toolchain_directories();
     let package_dirs = paths.directories.package_directories();
 
-    let mut cmd = options.cargo_variant.safe_command();
     cmd.args(args);
 
     let mut docker = engine.subcommand("run");

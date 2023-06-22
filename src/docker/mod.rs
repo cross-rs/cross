@@ -17,6 +17,7 @@ pub use image::{Architecture, Image, ImagePlatform, Os as ContainerOs, PossibleI
 use std::process::ExitStatus;
 
 use crate::errors::*;
+use crate::extensions::SafeCommand;
 use crate::shell::MessageInfo;
 
 #[derive(Debug)]
@@ -44,6 +45,7 @@ pub fn image_name(target: &str, sub: Option<&str>, repository: &str, tag: &str) 
 pub fn run(
     options: DockerOptions,
     paths: DockerPaths,
+    command: SafeCommand,
     args: &[String],
     subcommand: Option<crate::Subcommand>,
     msg_info: &mut MessageInfo,
@@ -55,9 +57,9 @@ pub fn run(
         );
     }
     if options.is_remote() {
-        remote::run(options, paths, args, subcommand, msg_info)
+        remote::run(options, paths, command, args, subcommand, msg_info)
             .wrap_err("could not complete remote run")
     } else {
-        local::run(options, paths, args, msg_info)
+        local::run(options, paths, command, args, msg_info)
     }
 }
