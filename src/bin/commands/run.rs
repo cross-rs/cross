@@ -1,9 +1,8 @@
 use clap::Args as ClapArgs;
 use cross::config::Config;
 use cross::shell::{MessageInfo, Verbosity};
-use cross::SafeCommand;
 use cross::{
-    cargo_metadata_with_args, cli::Args, docker, rustc, setup, toml, CargoVariant, CrossSetup,
+    cargo_metadata_with_args, cli::Args, docker, rustc, setup, toml, CommandVariant, CrossSetup,
     Target,
 };
 use eyre::Context;
@@ -22,11 +21,14 @@ pub struct Run {
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
-
+    /// Target
     #[clap(short, long)]
     pub target: String,
-
-    #[clap(short, long)]
+    /// Interactive session
+    #[clap(short, long, default_value = "false")]
+    pub interactive: bool,
+    /// Command to run, will be run in a shell
+    #[clap(last = true)]
     pub command: String,
 }
 
@@ -76,14 +78,20 @@ impl Run {
             let image = image.to_definite_with(&engine, msg_info);
 
             let paths = docker::DockerPaths::create(&engine, metadata, cwd, toolchain, msg_info)?;
-            let options =
-                docker::DockerOptions::new(engine, target, config, image, CargoVariant::None, None);
+            let options = docker::DockerOptions::new(
+                engine,
+                target,
+                config,
+                image,
+                CommandVariant::Shell,
+                None,
+                self.interactive,
+            );
 
-            let command = SafeCommand::new("sh");
             let mut args = vec![String::from("-c")];
             args.push(self.command.clone());
 
-            docker::run(options, paths, command, &args, None, msg_info)
+            docker::run(options, paths, &args, None, msg_info)
                 .wrap_err("could not run container")?;
         }
 

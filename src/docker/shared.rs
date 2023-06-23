@@ -17,7 +17,7 @@ use crate::file::{self, write_file, PathExt, ToUtf8};
 use crate::id;
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{ColorChoice, MessageInfo, Verbosity};
-use crate::{CargoVariant, OutputExt, Target, TargetTriple};
+use crate::{CommandVariant, OutputExt, Target, TargetTriple};
 
 use rustc_version::Version as RustcVersion;
 
@@ -33,9 +33,10 @@ pub struct DockerOptions {
     pub target: Target,
     pub config: Config,
     pub image: Image,
-    pub cargo_variant: CargoVariant,
+    pub command_variant: CommandVariant,
     // not all toolchains will provide this
     pub rustc_version: Option<RustcVersion>,
+    pub interactive: bool,
 }
 
 impl DockerOptions {
@@ -44,16 +45,18 @@ impl DockerOptions {
         target: Target,
         config: Config,
         image: Image,
-        cargo_variant: CargoVariant,
+        cargo_variant: CommandVariant,
         rustc_version: Option<RustcVersion>,
+        interactive: bool,
     ) -> DockerOptions {
         DockerOptions {
             engine,
             target,
             config,
             image,
-            cargo_variant,
+            command_variant: cargo_variant,
             rustc_version,
+            interactive,
         }
     }
 
@@ -928,8 +931,8 @@ fn validate_env_var<'a>(
     Ok((key, value))
 }
 
-impl CargoVariant {
-    pub(crate) fn safe_command(self) -> SafeCommand {
+impl CommandVariant {
+    pub(crate) fn safe_command(&self) -> SafeCommand {
         SafeCommand::new(self.to_str())
     }
 }
@@ -1041,7 +1044,7 @@ impl DockerCommandExt for Command {
             ])
             .args(["-e", "CARGO_TARGET_DIR=/target"])
             .args(["-e", &cross_runner]);
-        if options.cargo_variant.uses_zig() {
+        if options.command_variant.uses_zig() {
             // otherwise, zig has a permission error trying to create the cache
             self.args(["-e", "XDG_CACHE_HOME=/target/.zig-cache"]);
         }

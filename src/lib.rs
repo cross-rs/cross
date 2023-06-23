@@ -443,38 +443,42 @@ impl Serialize for Target {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CargoVariant {
+pub enum CommandVariant {
     Cargo,
     Xargo,
     Zig,
-    None,
+    Shell,
 }
 
-impl CargoVariant {
-    pub fn create(uses_zig: bool, uses_xargo: bool) -> Result<CargoVariant> {
+impl CommandVariant {
+    pub fn create(uses_zig: bool, uses_xargo: bool) -> Result<CommandVariant> {
         match (uses_zig, uses_xargo) {
             (true, true) => eyre::bail!("cannot use both zig and xargo"),
-            (true, false) => Ok(CargoVariant::Zig),
-            (false, true) => Ok(CargoVariant::Xargo),
-            (false, false) => Ok(CargoVariant::Cargo),
+            (true, false) => Ok(CommandVariant::Zig),
+            (false, true) => Ok(CommandVariant::Xargo),
+            (false, false) => Ok(CommandVariant::Cargo),
         }
     }
 
     pub fn to_str(self) -> &'static str {
         match self {
-            CargoVariant::Cargo => "cargo",
-            CargoVariant::Xargo => "xargo",
-            CargoVariant::Zig => "cargo-zigbuild",
-            CargoVariant::None => "",
+            CommandVariant::Cargo => "cargo",
+            CommandVariant::Xargo => "xargo",
+            CommandVariant::Zig => "cargo-zigbuild",
+            CommandVariant::Shell => "sh",
         }
     }
 
     pub fn uses_xargo(self) -> bool {
-        self == CargoVariant::Xargo
+        self == CommandVariant::Xargo
     }
 
     pub fn uses_zig(self) -> bool {
-        self == CargoVariant::Zig
+        self == CommandVariant::Zig
+    }
+
+    pub(crate) fn is_shell(self) -> bool {
+        self == CommandVariant::Shell
     }
 }
 
@@ -606,8 +610,9 @@ pub fn run(
                     target.clone(),
                     config,
                     image,
-                    crate::CargoVariant::create(uses_zig, uses_xargo)?,
+                    crate::CommandVariant::create(uses_zig, uses_xargo)?,
                     rustc_version,
+                    false,
                 );
 
                 install_interpreter_if_needed(
@@ -617,16 +622,8 @@ pub fn run(
                     &options,
                     msg_info,
                 )?;
-                let cmd = options.cargo_variant.safe_command();
-                let status = docker::run(
-                    options,
-                    paths,
-                    cmd,
-                    &filtered_args,
-                    args.subcommand,
-                    msg_info,
-                )
-                .wrap_err("could not run container")?;
+                let status = docker::run(options, paths, &filtered_args, args.subcommand, msg_info)
+                    .wrap_err("could not run container")?;
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
                 if !status.success() {
                     warn_on_failure(&target, &toolchain, msg_info)?;

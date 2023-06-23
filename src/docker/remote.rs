@@ -10,12 +10,12 @@ use super::engine::Engine;
 use super::shared::*;
 use crate::config::bool_from_envvar;
 use crate::errors::Result;
-use crate::extensions::{CommandExt, SafeCommand};
+use crate::extensions::CommandExt;
 use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
 use crate::shell::{MessageInfo, Stream};
+use crate::temp;
 use crate::TargetTriple;
-use crate::{temp, CargoVariant};
 
 // prevent further commands from running if we handled
 // a signal earlier, and the volume is exited.
@@ -667,7 +667,6 @@ impl QualifiedToolchain {
 pub(crate) fn run(
     options: DockerOptions,
     paths: DockerPaths,
-    mut cmd: SafeCommand,
     args: &[String],
     subcommand: Option<crate::Subcommand>,
     msg_info: &mut MessageInfo,
@@ -896,7 +895,9 @@ pub(crate) fn run(
         }
     }
 
-    if options.cargo_variant != CargoVariant::None {
+    let mut cmd = options.command_variant.safe_command();
+
+    if !options.command_variant.is_shell() {
         // `clean` doesn't handle symlinks: it will just unlink the target
         // directory, so we should just substitute it our target directory
         // for it. we'll still have the same end behavior
@@ -976,6 +977,11 @@ symlink_recurse \"${{prefix}}\"
     docker.add_cwd(&paths)?;
     docker.arg(&container_id);
     docker.add_build_command(toolchain_dirs, &cmd);
+
+    if options.interactive {
+        docker.arg("-i");
+    }
+
     bail_container_exited!();
     let status = docker
         .run_and_get_status(msg_info, false)
