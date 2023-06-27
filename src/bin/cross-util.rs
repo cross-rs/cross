@@ -37,6 +37,8 @@ enum Commands {
     /// Work with cross containers in local storage.
     #[clap(subcommand)]
     Containers(commands::Containers),
+    /// Run in cross container.
+    Run(commands::Run),
     /// Clean all cross data in local storage.
     Clean(commands::Clean),
 }
@@ -99,6 +101,11 @@ pub fn main() -> cross::Result<()> {
             args.run(engine, &mut msg_info)?;
         }
         Commands::Clean(args) => {
+            let mut msg_info = get_msg_info!(args)?;
+            let engine = get_engine!(args, false, msg_info)?;
+            args.run(engine, &mut msg_info)?;
+        }
+        Commands::Run(args) => {
             let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, false, msg_info)?;
             args.run(engine, &mut msg_info)?;

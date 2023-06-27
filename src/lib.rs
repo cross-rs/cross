@@ -63,7 +63,7 @@ use self::errors::Context;
 use self::shell::{MessageInfo, Verbosity};
 
 pub use self::errors::{install_panic_hook, install_termination_hook, Result};
-pub use self::extensions::{CommandExt, OutputExt};
+pub use self::extensions::{CommandExt, OutputExt, SafeCommand};
 pub use self::file::{pretty_path, ToUtf8};
 pub use self::rustc::{TargetList, VersionMetaExt};
 
@@ -443,36 +443,42 @@ impl Serialize for Target {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CargoVariant {
+pub enum CommandVariant {
     Cargo,
     Xargo,
     Zig,
+    Shell,
 }
 
-impl CargoVariant {
-    pub fn create(uses_zig: bool, uses_xargo: bool) -> Result<CargoVariant> {
+impl CommandVariant {
+    pub fn create(uses_zig: bool, uses_xargo: bool) -> Result<CommandVariant> {
         match (uses_zig, uses_xargo) {
             (true, true) => eyre::bail!("cannot use both zig and xargo"),
-            (true, false) => Ok(CargoVariant::Zig),
-            (false, true) => Ok(CargoVariant::Xargo),
-            (false, false) => Ok(CargoVariant::Cargo),
+            (true, false) => Ok(CommandVariant::Zig),
+            (false, true) => Ok(CommandVariant::Xargo),
+            (false, false) => Ok(CommandVariant::Cargo),
         }
     }
 
     pub fn to_str(self) -> &'static str {
         match self {
-            CargoVariant::Cargo => "cargo",
-            CargoVariant::Xargo => "xargo",
-            CargoVariant::Zig => "cargo-zigbuild",
+            CommandVariant::Cargo => "cargo",
+            CommandVariant::Xargo => "xargo",
+            CommandVariant::Zig => "cargo-zigbuild",
+            CommandVariant::Shell => "sh",
         }
     }
 
     pub fn uses_xargo(self) -> bool {
-        self == CargoVariant::Xargo
+        self == CommandVariant::Xargo
     }
 
     pub fn uses_zig(self) -> bool {
-        self == CargoVariant::Zig
+        self == CommandVariant::Zig
+    }
+
+    pub(crate) fn is_shell(self) -> bool {
+        self == CommandVariant::Shell
     }
 }
 
@@ -604,8 +610,9 @@ pub fn run(
                     target.clone(),
                     config,
                     image,
-                    crate::CargoVariant::create(uses_zig, uses_xargo)?,
+                    crate::CommandVariant::create(uses_zig, uses_xargo)?,
                     rustc_version,
+                    false,
                 );
 
                 install_interpreter_if_needed(
@@ -615,7 +622,6 @@ pub fn run(
                     &options,
                     msg_info,
                 )?;
-
                 let status = docker::run(options, paths, &filtered_args, args.subcommand, msg_info)
                     .wrap_err("could not run container")?;
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
@@ -864,7 +870,7 @@ macro_rules! commit_info {
 ///
 /// The values from `CROSS_CONFIG` or `Cross.toml` are concatenated with the package
 /// metadata in `Cargo.toml`, with `Cross.toml` having the highest priority.
-fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
+pub fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Option<CrossToml>> {
     let root = &metadata.workspace_root;
     let cross_config_path = match env::var("CROSS_CONFIG") {
         Ok(var) => PathBuf::from(var),

@@ -895,34 +895,40 @@ pub(crate) fn run(
         }
     }
 
-    // `clean` doesn't handle symlinks: it will just unlink the target
-    // directory, so we should just substitute it our target directory
-    // for it. we'll still have the same end behavior
-    let mut final_args = vec![];
-    let mut iter = args.iter().cloned();
-    let mut has_target_dir = false;
-    while let Some(arg) = iter.next() {
-        if arg == "--target-dir" {
-            has_target_dir = true;
-            final_args.push(arg);
-            if iter.next().is_some() {
-                final_args.push(target_dir.clone());
+    let mut cmd = options.command_variant.safe_command();
+
+    if !options.command_variant.is_shell() {
+        // `clean` doesn't handle symlinks: it will just unlink the target
+        // directory, so we should just substitute it our target directory
+        // for it. we'll still have the same end behavior
+        let mut final_args = vec![];
+        let mut iter = args.iter().cloned();
+        let mut has_target_dir = false;
+        while let Some(arg) = iter.next() {
+            if arg == "--target-dir" {
+                has_target_dir = true;
+                final_args.push(arg);
+                if iter.next().is_some() {
+                    final_args.push(target_dir.clone());
+                }
+            } else if arg.starts_with("--target-dir=") {
+                has_target_dir = true;
+                if arg.split_once('=').is_some() {
+                    final_args.push(format!("--target-dir={target_dir}"));
+                }
+            } else {
+                final_args.push(arg);
             }
-        } else if arg.starts_with("--target-dir=") {
-            has_target_dir = true;
-            if arg.split_once('=').is_some() {
-                final_args.push(format!("--target-dir={target_dir}"));
-            }
-        } else {
-            final_args.push(arg);
         }
+        if !has_target_dir && subcommand.map_or(true, |s| s.needs_target_in_command()) {
+            final_args.push("--target-dir".to_owned());
+            final_args.push(target_dir.clone());
+        }
+
+        cmd.args(final_args);
+    } else {
+        cmd.args(args);
     }
-    if !has_target_dir && subcommand.map_or(true, |s| s.needs_target_in_command()) {
-        final_args.push("--target-dir".to_owned());
-        final_args.push(target_dir.clone());
-    }
-    let mut cmd = options.cargo_variant.safe_command();
-    cmd.args(final_args);
 
     // 5. create symlinks for copied data
     let mut symlink = vec!["set -e pipefail".to_owned()];
@@ -971,6 +977,11 @@ symlink_recurse \"${{prefix}}\"
     docker.add_cwd(&paths)?;
     docker.arg(&container_id);
     docker.add_build_command(toolchain_dirs, &cmd);
+
+    if options.interactive {
+        docker.arg("-i");
+    }
+
     bail_container_exited!();
     let status = docker
         .run_and_get_status(msg_info, false)

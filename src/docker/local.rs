@@ -36,7 +36,7 @@ pub(crate) fn run(
     let toolchain_dirs = paths.directories.toolchain_directories();
     let package_dirs = paths.directories.package_directories();
 
-    let mut cmd = options.cargo_variant.safe_command();
+    let mut cmd = options.command_variant.safe_command();
     cmd.args(args);
 
     let mut docker = engine.subcommand("run");
@@ -134,6 +134,11 @@ pub(crate) fn run(
     if io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty() {
         docker.arg("-t");
     }
+
+    if options.interactive {
+        docker.arg("-i");
+    }
+
     let mut image_name = options.image.name.clone();
     if options.needs_custom_image() {
         image_name = options

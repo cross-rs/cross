@@ -85,7 +85,7 @@ impl<'a> Dockerfile<'a> {
         build_args: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
         msg_info: &mut MessageInfo,
     ) -> Result<String> {
-        let uses_zig = options.cargo_variant.uses_zig();
+        let uses_zig = options.command_variant.uses_zig();
         let mut docker_build = options.engine.command();
         docker_build.invoke_build_command();
         docker_build.disable_scan_suggest();

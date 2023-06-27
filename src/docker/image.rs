@@ -27,7 +27,7 @@ pub struct PossibleImage {
 }
 
 impl PossibleImage {
-    pub(crate) fn to_definite_with(&self, engine: &Engine, msg_info: &mut MessageInfo) -> Image {
+    pub fn to_definite_with(&self, engine: &Engine, msg_info: &mut MessageInfo) -> Image {
         if self.toolchain.is_empty() {
             Image {
                 name: self.name.clone(),

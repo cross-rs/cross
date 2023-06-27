@@ -1,0 +1,6 @@
+{
+  "description": "Allow to run arbitrary commands in containers using `cross-util run ...`",
+  "issues": [1266],
+  "type": "added",
+  "breaking": false
+}
