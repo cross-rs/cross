@@ -415,6 +415,7 @@ os = "ubuntu-latest"
 cpp = true
 dylib = true
 std = true
+build-std = true
 
 [[target]]
 target = "x86_64-unknown-netbsd"
