@@ -955,6 +955,7 @@ pub(crate) trait DockerCommandExt {
         target: &Target,
         metadata: &CargoMetadata,
     ) -> Result<()>;
+    fn add_extra_args(&mut self, options: &DockerOptions) -> Result<()>;
     fn add_mounts(
         &mut self,
         options: &DockerOptions,
@@ -1161,6 +1162,14 @@ impl DockerCommandExt for Command {
             self.args(["--security-opt", &format!("seccomp={}", seccomp)]);
         }
 
+        Ok(())
+    }
+
+    fn add_extra_args(&mut self, options: &DockerOptions) -> Result<()> {
+        let extra_args = options.config.extra_args(&options.target)?;
+        if let Some(args) = extra_args {
+            self.args(args);
+        }
         Ok(())
     }
 
