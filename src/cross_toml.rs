@@ -624,6 +624,7 @@ mod tests {
                 env: CrossEnvConfig {
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                     passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
+                    extra_args: None,
                 },
                 xargo: Some(true),
                 build_std: None,
@@ -662,6 +663,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
+                    extra_args: None,
                 },
                 xargo: Some(false),
                 build_std: Some(true),
@@ -680,6 +682,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: None,
                     volumes: None,
+                    extra_args: None,
                 },
                 xargo: None,
                 build_std: None,
@@ -750,6 +753,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: None,
                     volumes: Some(vec![p!("VOL")]),
+                    extra_args: None,
                 },
             },
         );
@@ -760,6 +764,7 @@ mod tests {
                 env: CrossEnvConfig {
                     volumes: None,
                     passthrough: Some(vec![]),
+                    extra_args: None,
                 },
                 xargo: Some(true),
                 build_std: None,
@@ -834,6 +839,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: None,
                     volumes: None,
+                    extra_args: None,
                 },
                 build_std: None,
                 xargo: Some(true),
