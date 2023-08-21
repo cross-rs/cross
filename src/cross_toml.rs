@@ -15,6 +15,8 @@ use std::str::FromStr;
 pub struct CrossEnvConfig {
     volumes: Option<Vec<String>>,
     passthrough: Option<Vec<String>>,
+    /// Additional arguments to the underlying container engine
+    extra_args: Option<Vec<String>>,
 }
 
 /// Build configuration
@@ -359,6 +361,14 @@ impl CrossToml {
             target,
             |build| build.env.volumes.as_deref(),
             |t| t.env.volumes.as_deref(),
+        )
+    }
+
+    pub fn extra_args(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+        self.get_ref(
+            target,
+            |build| build.env.extra_args.as_deref(),
+            |t| t.env.extra_args.as_deref(),
         )
     }
 
