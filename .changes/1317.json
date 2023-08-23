@@ -1,0 +1,6 @@
+{
+  "description": "Re-add PKG_CONFIG_PATH for the arm-unknown-linux-gnueabihf target.",
+  "issues": [1316],
+  "type": "fixed",
+  "breaking": false
+}
