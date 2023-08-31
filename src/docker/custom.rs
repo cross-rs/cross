@@ -7,7 +7,10 @@ use crate::shell::MessageInfo;
 use crate::{errors::*, file, CommandExt, ToUtf8};
 use crate::{CargoMetadata, TargetTriple};
 
-use super::{get_image_name, path_hash, BuildCommandExt, BuildResultExt, Engine, ImagePlatform};
+use super::{
+    create_target_dir, get_image_name, path_hash, BuildCommandExt, BuildResultExt, Engine,
+    ImagePlatform,
+};
 
 pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "localhost/cross-rs/cross-custom-";
 
@@ -119,11 +122,12 @@ impl<'a> Dockerfile<'a> {
         let path = match self {
             Dockerfile::File { path, .. } => PathBuf::from(path),
             Dockerfile::Custom { content, .. } => {
-                let path = paths
+                let target_dir = paths
                     .metadata
                     .target_directory
-                    .join(options.target.to_string())
-                    .join(format!("Dockerfile.{}-custom", &options.target));
+                    .join(options.target.to_string());
+                create_target_dir(&target_dir)?;
+                let path = target_dir.join(format!("Dockerfile.{}-custom", &options.target));
                 {
                     let mut file = file::write_file(&path, true)?;
                     file.write_all(content.as_bytes())?;
