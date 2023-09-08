@@ -819,7 +819,7 @@ const CACHEDIR_TAG: &str = "Signature: 8a477f597d28d172789f06886806bc55
 # This file is a cache directory tag created by cross.
 # For information about cache directory tags see https://bford.info/cachedir/";
 
-fn create_target_dir(path: &Path) -> Result<()> {
+pub fn create_target_dir(path: &Path) -> Result<()> {
     // cargo creates all paths to the target directory, and writes
     // a cache dir tag only if the path doesn't previously exist.
     if !path.exists() {

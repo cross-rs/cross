@@ -1,0 +1,5 @@
+{
+    "description": "create CACHEDIR.TAG during custom docker build",
+    "type": "fixed",
+    "issues": [1324]
+}
