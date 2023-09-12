@@ -19,7 +19,7 @@ main() {
 
 install_zig() {
     local platform="${1}"
-    local version="0.10.0"
+    local version="0.11.0"
     local dst="/opt/zig"
     local arch=
     local os=
@@ -119,7 +119,7 @@ install_zig_source() {
 
 install_zigbuild() {
     local platform="${1}"
-    local version="0.14.1"
+    local version="0.17.2"
     local dst="/usr/local"
     local triple=
 
