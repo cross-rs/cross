@@ -17,8 +17,8 @@ silence_stdout() {
 main() {
     local config="${1}"
     local nproc="${2}"
-    local ctng_version=1.24.0
-    local ctng_url="https://ci-mirrors.rust-lang.org/rustc/crosstool-ng-${ctng_version}.tar.gz"
+    local ctng_version=1.25.0
+    local ctng_url="https://github.com/crosstool-ng/crosstool-ng/archive/crosstool-ng-${ctng_version}.tar.gz"
     local username=crosstool
     local crosstooldir=/opt/crosstool
     local buildir

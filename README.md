@@ -331,7 +331,7 @@ terminate.
 | `aarch64-unknown-linux-musl`         | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `arm-linux-androideabi` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabihf`        | 2.17   | 8.3.0   | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabihf`        | 2.31   | 8.5.0   | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-musleabi`         | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-musleabihf`       | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `armv5te-unknown-linux-gnueabi`      | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
