@@ -8,6 +8,9 @@ set -euo pipefail
 
 export FREEBSD_ARCH=
 case "${ARCH}" in
+    aarch64) # releases are under http://ftp.freebsd.org/pub/FreeBSD/releases/
+        FREEBSD_ARCH=arm64 # http://ftp.freebsd.org/pub/FreeBSD/releases/arm64/
+        ;;
     x86_64)
         FREEBSD_ARCH=amd64
         ;;

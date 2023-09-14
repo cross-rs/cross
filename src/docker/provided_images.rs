@@ -234,6 +234,11 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             sub: None
         },
         ProvidedImage {
+            name: "aarch64-unknown-freebsd",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
             name: "x86_64-unknown-netbsd",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None

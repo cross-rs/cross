@@ -33,6 +33,7 @@ body:
         - aarch64-linux-android
         - aarch64-unknown-linux-gnu
         - aarch64-unknown-linux-musl
+        - aarch64-unknown-freebsd
         - arm-linux-androideabi
         - arm-unknown-linux-gnueabi
         - arm-unknown-linux-gnueabihf

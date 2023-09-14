@@ -1,0 +1,5 @@
+{
+    "description": "add aarch64-unknown-freebsd image.",
+    "type": "added",
+    "breaking": false
+}
