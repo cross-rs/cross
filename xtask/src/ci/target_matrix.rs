@@ -27,6 +27,7 @@ pub(crate) fn run(message: String, author: String, weekly: bool) -> Result<(), c
             runners: vec![],
             none: false,
             has_image: true,
+            verbose: false,
         };
         (vec![], app)
     } else {
@@ -58,6 +59,7 @@ pub(crate) fn run(message: String, author: String, weekly: bool) -> Result<(), c
             dylib: target.dylib.map(|b| b as u8),
             runners: target.runners.as_deref(),
             std: target.std.map(|b| b as u8),
+            verbose: app.verbose,
         })
         .collect::<Vec<_>>();
 
@@ -145,6 +147,7 @@ struct TargetMatrixElement<'a> {
     runners: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     std: Option<u8>,
+    verbose: bool,
 }
 
 #[derive(Parser, Debug, Default, PartialEq, Eq)]
@@ -166,6 +169,8 @@ struct TargetMatrixArgs {
     none: bool,
     #[clap(long)]
     has_image: bool,
+    #[clap(long, short)]
+    verbose: bool,
 }
 
 impl TargetMatrixArgs {
