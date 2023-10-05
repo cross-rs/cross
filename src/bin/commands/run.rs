@@ -69,6 +69,11 @@ impl Run {
 
             let image = match docker::get_image(&config, &target, false) {
                 Ok(i) => i,
+                Err(docker::GetImageError::NoCompatibleImages(..))
+                    if config.dockerfile(&target)?.is_some() =>
+                {
+                    "scratch".into()
+                }
                 Err(err) => {
                     msg_info.warn(&err)?;
                     eyre::bail!("Error: {}", &err);

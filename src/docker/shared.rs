@@ -1237,14 +1237,33 @@ pub(crate) fn group_id() -> String {
     env::var("CROSS_CONTAINER_GID").unwrap_or_else(|_| id::group().to_string())
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum GetImageError {
+    #[error(
+        "`cross` does not provide a Docker image for target {0}, \
+    specify a custom image in `Cross.toml`."
+    )]
+    NoCompatibleImages(String),
+    #[error("platforms for provided image `{0}` are not specified, this is a bug in cross")]
+    SpecifiedImageNoPlatform(String),
+    #[error(transparent)]
+    MultipleImages(eyre::Report),
+    #[error(transparent)]
+    Other(eyre::Report),
+}
+
 /// Simpler version of [get_image]
-pub fn get_image_name(config: &Config, target: &Target, uses_zig: bool) -> Result<String> {
-    if let Some(image) = config.image(target)? {
+pub fn get_image_name(
+    config: &Config,
+    target: &Target,
+    uses_zig: bool,
+) -> Result<String, GetImageError> {
+    if let Some(image) = config.image(target).map_err(GetImageError::Other)? {
         return Ok(image.name);
     }
 
     let target_name = match uses_zig {
-        true => match config.zig_image(target)? {
+        true => match config.zig_image(target).map_err(GetImageError::Other)? {
             Some(image) => return Ok(image.name),
             None => "zig",
         },
@@ -1256,10 +1275,7 @@ pub fn get_image_name(config: &Config, target: &Target, uses_zig: bool) -> Resul
         .collect::<Vec<_>>();
 
     if compatible.is_empty() {
-        eyre::bail!(
-            "`cross` does not provide a Docker image for target {target_name}, \
-                   specify a custom image in `Cross.toml`."
-        );
+        return Err(GetImageError::NoCompatibleImages(target_name.to_owned()));
     }
 
     let version = if crate::commit_info().is_empty() {
@@ -1274,13 +1290,17 @@ pub fn get_image_name(config: &Config, target: &Target, uses_zig: bool) -> Resul
         .image_name(CROSS_IMAGE, version))
 }
 
-pub fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Result<PossibleImage> {
-    if let Some(image) = config.image(target)? {
+pub fn get_image(
+    config: &Config,
+    target: &Target,
+    uses_zig: bool,
+) -> Result<PossibleImage, GetImageError> {
+    if let Some(image) = config.image(target).map_err(GetImageError::Other)? {
         return Ok(image);
     }
 
     let target_name = match uses_zig {
-        true => match config.zig_image(target)? {
+        true => match config.zig_image(target).map_err(GetImageError::Other)? {
             Some(image) => return Ok(image),
             None => "zig",
         },
@@ -1292,10 +1312,7 @@ pub fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Result<Pos
         .collect::<Vec<_>>();
 
     if compatible.is_empty() {
-        eyre::bail!(
-            "`cross` does not provide a Docker image for target {target_name}, \
-               specify a custom image in `Cross.toml`."
-        );
+        return Err(GetImageError::NoCompatibleImages(target_name.to_owned()));
     }
 
     let version = if crate::commit_info().is_empty() {
@@ -1320,28 +1337,32 @@ pub fn get_image(config: &Config, target: &Target, uses_zig: bool) -> Result<Pos
             .expect("should exists at least one non-sub image in list")
     } else {
         // if there's multiple targets and no option can be chosen, bail
-        return Err(eyre::eyre!(
-            "`cross` provides multiple images for target {target_name}, \
+        return Err(GetImageError::MultipleImages(
+            eyre::eyre!(
+                "`cross` provides multiple images for target {target_name}, \
                specify toolchain in `Cross.toml`."
-        )
-        .with_note(|| {
-            format!(
-                "candidates: {}",
-                compatible
-                    .iter()
-                    .map(|provided| format!("\"{}\"", provided.image_name(CROSS_IMAGE, version)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
             )
-        }));
+            .with_note(|| {
+                format!(
+                    "candidates: {}",
+                    compatible
+                        .iter()
+                        .map(|provided| format!(
+                            "\"{}\"",
+                            provided.image_name(CROSS_IMAGE, version)
+                        ))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }),
+        ));
     };
 
     let mut image: PossibleImage = pick.image_name(CROSS_IMAGE, version).into();
 
-    eyre::ensure!(
-        !pick.platforms.is_empty(),
-        "platforms for provided image `{image}` are not specified, this is a bug in cross"
-    );
+    if pick.platforms.is_empty() {
+        return Err(GetImageError::SpecifiedImageNoPlatform(image.to_string()));
+    };
 
     image.toolchain = pick.platforms.to_vec();
     Ok(image)

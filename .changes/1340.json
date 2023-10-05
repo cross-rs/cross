@@ -1,0 +1,4 @@
+{
+    "description": "don't error when a non-provided target is used with only a dockerfile specified",
+    "type": "fixed"
+}
