@@ -36,7 +36,7 @@ pub fn group_subcommands(stdout: &str) -> (Vec<&str>, Vec<&str>) {
         let first = line.split_whitespace().next();
         if let Some(command) = first {
             match Subcommand::from(command) {
-                Subcommand::Other => host.push(line),
+                Subcommand::Other(_) => host.push(line),
                 _ => cross.push(line),
             }
         }

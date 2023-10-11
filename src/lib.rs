@@ -524,6 +524,13 @@ pub fn run(
         ))?;
     }
 
+    if let Some(Subcommand::Other(command)) = &args.subcommand {
+        msg_info.warn(format_args!(
+            "specified cargo subcommand `{command}` is not supported by `cross`."
+        ))?;
+        return Ok(None);
+    }
+
     let host_version_meta = rustc::version_meta()?;
 
     let cwd = std::env::current_dir()?;
@@ -597,6 +604,7 @@ pub fn run(
 
             let needs_docker = args
                 .subcommand
+                .clone()
                 .map_or(false, |sc| sc.needs_docker(is_remote));
             if target.needs_docker() && needs_docker {
                 let paths = docker::DockerPaths::create(
@@ -623,8 +631,14 @@ pub fn run(
                     &options,
                     msg_info,
                 )?;
-                let status = docker::run(options, paths, &filtered_args, args.subcommand, msg_info)
-                    .wrap_err("could not run container")?;
+                let status = docker::run(
+                    options,
+                    paths,
+                    &filtered_args,
+                    args.subcommand.clone(),
+                    msg_info,
+                )
+                .wrap_err("could not run container")?;
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
                 if !status.success() {
                     warn_on_failure(&target, &toolchain, msg_info)?;
@@ -646,7 +660,10 @@ pub fn install_interpreter_if_needed(
     options: &docker::DockerOptions,
     msg_info: &mut MessageInfo,
 ) -> Result<(), color_eyre::Report> {
-    let needs_interpreter = args.subcommand.map_or(false, |sc| sc.needs_interpreter());
+    let needs_interpreter = args
+        .subcommand
+        .clone()
+        .map_or(false, |sc| sc.needs_interpreter());
 
     if host_version_meta.needs_interpreter()
         && needs_interpreter
@@ -670,6 +687,7 @@ pub fn get_filtered_args(
     let add_libc = |triple: &str| add_libc_version(triple, zig_version.as_deref());
     let mut filtered_args = if args
         .subcommand
+        .clone()
         .map_or(false, |s| !s.needs_target_in_command())
     {
         let mut filtered_args = Vec::new();
@@ -710,7 +728,10 @@ pub fn get_filtered_args(
         args.cargo_args.clone()
     };
 
-    let is_test = args.subcommand.map_or(false, |sc| sc == Subcommand::Test);
+    let is_test = args
+        .subcommand
+        .clone()
+        .map_or(false, |sc| sc == Subcommand::Test);
     if is_test && config.doctests().unwrap_or_default() && is_nightly {
         filtered_args.push("-Zdoctest-xcompile".to_owned());
     }
