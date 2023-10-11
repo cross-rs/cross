@@ -55,7 +55,7 @@ pub fn fmt_subcommands(stdout: &str, msg_info: &mut MessageInfo) -> Result<()> {
     }
     if !host.is_empty() {
         msg_info.print("Host Commands:")?;
-        for line in &cross {
+        for line in &host {
             msg_info.print(line)?;
         }
     }
