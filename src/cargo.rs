@@ -7,13 +7,13 @@ use crate::errors::*;
 use crate::extensions::CommandExt;
 use crate::shell::{self, MessageInfo};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Subcommand {
     Build,
     Check,
     Doc,
-    Other,
     Run,
+    Rustdoc,
     Rustc,
     Test,
     Bench,
@@ -21,13 +21,14 @@ pub enum Subcommand {
     Metadata,
     List,
     Clean,
+    Other(String),
 }
 
 impl Subcommand {
     #[must_use]
     pub fn needs_docker(self, is_remote: bool) -> bool {
         match self {
-            Subcommand::Other | Subcommand::List => false,
+            Subcommand::Other(_) | Subcommand::List => false,
             Subcommand::Clean if !is_remote => false,
             _ => true,
         }
@@ -58,12 +59,13 @@ impl<'a> From<&'a str> for Subcommand {
             "doc" => Subcommand::Doc,
             "r" | "run" => Subcommand::Run,
             "rustc" => Subcommand::Rustc,
+            "rustdoc" => Subcommand::Rustdoc,
             "t" | "test" => Subcommand::Test,
             "bench" => Subcommand::Bench,
             "clippy" => Subcommand::Clippy,
             "metadata" => Subcommand::Metadata,
             "--list" => Subcommand::List,
-            _ => Subcommand::Other,
+            command => Subcommand::Other(command.to_owned()),
         }
     }
 }

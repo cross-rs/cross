@@ -36,7 +36,7 @@ pub fn group_subcommands(stdout: &str) -> (Vec<&str>, Vec<&str>) {
         let first = line.split_whitespace().next();
         if let Some(command) = first {
             match Subcommand::from(command) {
-                Subcommand::Other => host.push(line),
+                Subcommand::Other(_) => host.push(line),
                 _ => cross.push(line),
             }
         }
@@ -55,7 +55,7 @@ pub fn fmt_subcommands(stdout: &str, msg_info: &mut MessageInfo) -> Result<()> {
     }
     if !host.is_empty() {
         msg_info.print("Host Commands:")?;
-        for line in &cross {
+        for line in &host {
             msg_info.print(line)?;
         }
     }

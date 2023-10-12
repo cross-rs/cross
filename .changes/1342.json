@@ -1,0 +1,10 @@
+[
+    {
+        "description": "fix `--list` showing cross commands for the host",
+        "type": "fixed"
+    },
+    {
+        "description": "add `rustdoc` as a supported cargo subcommand",
+        "type": "added"
+    }
+]
