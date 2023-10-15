@@ -78,6 +78,7 @@ main() {
     cp "${td}/netbsd/lib/libpthread.so.1.4" "${destdir}/lib"
     cp "${td}/netbsd/usr/lib/librt.so.1.1" "${destdir}/lib"
     cp "${td}/netbsd/usr/lib"/lib{c,m,pthread}{,_p}.a "${destdir}/lib"
+    cp "${td}/netbsd/usr/lib"/libexecinfo.so "${destdir}/lib"
     cp "${td}/netbsd/usr/lib"/{crt0,crti,crtn,crtbeginS,crtendS,crtbegin,crtend,gcrt0}.o "${destdir}/lib"
 
     ln -s libc.so.12.213 "${destdir}/lib/libc.so"
