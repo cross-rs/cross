@@ -328,33 +328,33 @@ terminate.
 | `aarch64-linux-android` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `aarch64-unknown-linux-gnu`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
 | `aarch64-unknown-linux-gnu:centos` [7] | 2.17   | 4.8.5   |     | 4.2.1 |   ✓    |
-| `aarch64-unknown-linux-musl`         | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `aarch64-unknown-linux-musl`         | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `arm-linux-androideabi` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabi`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabihf`        | 2.31   | 8.5.0   | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`       | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-musleabi`         | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`       | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `armv5te-unknown-linux-gnueabi`      | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`     | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`     | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `armv7-linux-androideabi` [1]        | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `armv7-unknown-linux-gnueabi`        | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
 | `armv7-unknown-linux-gnueabihf`      | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabi`       | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabi`       | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`     | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `i586-unknown-linux-gnu`             | 2.31   | 9.4.0   | ✓   | N/A   |   ✓    |
-| `i586-unknown-linux-musl`            | 1.1.24 | 9.2.0   | ✓   | N/A   |   ✓    |
+| `i586-unknown-linux-musl`            | 1.2.3 | 9.2.0   | ✓   | N/A   |   ✓    |
 | `i686-unknown-freebsd`               | 1.5    | 6.4.0   | ✓   | N/A   |       |
 | `i686-linux-android` [1]             | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
 | `i686-pc-windows-gnu`                | N/A    | 9.4     | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`             | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
 | `mips-unknown-linux-gnu`             | 2.30   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mips-unknown-linux-musl`            | 1.1.24  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `mips-unknown-linux-musl`            | 1.2.3  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `mips64-unknown-linux-gnuabi64`      | 2.30   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mips64-unknown-linux-muslabi64`     | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `mips64-unknown-linux-muslabi64`     | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `mips64el-unknown-linux-gnuabi64`    | 2.30   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mips64el-unknown-linux-muslabi64`   | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `mips64el-unknown-linux-muslabi64`   | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `mipsel-unknown-linux-gnu`           | 2.30   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mipsel-unknown-linux-musl`          | 1.1.24 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
+| `mipsel-unknown-linux-musl`          | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
 | `powerpc-unknown-linux-gnu`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
 | `powerpc64-unknown-linux-gnu`        | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
 | `powerpc64le-unknown-linux-gnu`      | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
@@ -380,7 +380,7 @@ terminate.
 | `x86_64-unknown-illumos`             | 1.20.4 | 8.4.0   | ✓   | N/A   |       |
 | `x86_64-unknown-linux-gnu`           | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
 | `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5   | ✓   | 4.2.1 |   ✓    |
-| `x86_64-unknown-linux-musl`          | 1.1.24 | 9.2.0   | ✓   | N/A   |   ✓    |
+| `x86_64-unknown-linux-musl`          | 1.2.3 | 9.2.0   | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [3]          | 9.2.0  | 9.4.0   | ✓   | N/A   |       |
 <!--| `asmjs-unknown-emscripten` [7]       | 3.1.14 | 15.0.0  | ✓   | N/A   |   ✓    |-->
 
