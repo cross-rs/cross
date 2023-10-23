@@ -1,0 +1,4 @@
+{
+    "description": "update cargo-zigbuild from 0.17.2 to 0.17.3",
+    "type": "changed"
+}

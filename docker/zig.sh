@@ -119,7 +119,7 @@ install_zig_source() {
 
 install_zigbuild() {
     local platform="${1}"
-    local version="0.17.2"
+    local version="0.17.3"
     local dst="/usr/local"
     local triple=
 
