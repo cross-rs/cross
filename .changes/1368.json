@@ -1,0 +1,11 @@
+[
+  {
+    "type": "fixed",
+    "description": "use proper location for freebsd installs",
+    "issues": [1367]
+  },
+  {
+    "type": "added",
+    "description": "expose `/freebsd-install` to install freebsd packages"
+  }
+]

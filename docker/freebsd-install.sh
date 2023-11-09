@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-set -euo pipefail
-
 # shellcheck disable=SC1091
 . freebsd-common.sh
 
@@ -120,8 +117,10 @@ setup_freebsd_packagesite() {
     fi
     pkg_source=$(freebsd_package_source "${url}")
 
+    printf "Setting up packagesite from %s\n" ${pkg_source} >&2
     mkdir -p "${FREEBSD_PACKAGEDIR}"
     curl --retry 3 -sSfL "${pkg_source}/packagesite.txz" -O
+    printf "Unpacking packagesite\n" >&2
     tar -C "${FREEBSD_PACKAGEDIR}" -xJf packagesite.txz
 
     rm packagesite.txz
@@ -143,9 +142,10 @@ install_freebsd_package() {
     pkg_source=$(freebsd_package_source "${url}")
 
     td="$(mktemp -d)"
-    pushd "${td}"
+    pushd "${td}" > /dev/null
 
     for name in "${@}"; do
+        printf "Installing package %s\n" ${name} >&2
         path=$(jq -c '. | select ( .name == "'"${name}"'" ) | .repopath' "${FREEBSD_PACKAGESITE}")
         if [[ -z "${path}" ]]; then
             echo "Unable to find package ${name}" >&2
@@ -156,7 +156,7 @@ install_freebsd_package() {
 
         mkdir "${td}"/package
         curl --retry 3 -sSfL "${pkg_source}/${path}" -O
-        tar -C "${td}/package" -xJf "${pkg}"
+        [ -n "${CROSS_DEBUG-}" ] && tar -C "${td}/package" -xJf "${pkg}" || tar -C "${td}/package" -xJf "${pkg}" 2>/dev/null
         cp -r "${td}/package"/* "${destdir}"/
 
         rm "${td:?}/${pkg}"
@@ -164,6 +164,6 @@ install_freebsd_package() {
     done
 
     # clean up
-    popd
+    popd > /dev/null
     rm -rf "${td:?}"
 }

@@ -21,6 +21,8 @@ COPY freebsd-install.sh /
 COPY freebsd-extras.sh /
 RUN /freebsd-extras.sh
 
+COPY freebsd-install /
+
 ENV CROSS_TOOLCHAIN_PREFIX=x86_64-unknown-freebsd12-
 ENV CROSS_SYSROOT=/usr/local/x86_64-unknown-freebsd12
 

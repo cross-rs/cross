@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ -n "${CROSS_DEBUG}" ]; then
+    set -x
+fi
+
+# shellcheck disable=SC1091
+. freebsd-common.sh
+# shellcheck disable=SC1091
+. freebsd-install.sh
+
+case "${FREEBSD_ARCH}" in
+    arm64) # extras mirrors are under https://pkg.freebsd.org/
+        FREEBSD_ARCH=aarch64 #  https://pkg.freebsd.org/FreeBSD:13:aarch64/
+        ;;
+esac
+
+url=""
+url=$(fetch_best_freebsd_mirror)
+FREEBSD_MIRROR="${url}" setup_freebsd_packagesite
+FREEBSD_MIRROR="${url}" install_freebsd_package "${@}"

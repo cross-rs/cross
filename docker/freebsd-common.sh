@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-set -euo pipefail
-
 # shellcheck disable=SC1091
 . freebsd-arch.sh
 
