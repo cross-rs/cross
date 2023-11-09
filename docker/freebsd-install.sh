@@ -157,7 +157,7 @@ install_freebsd_package() {
         mkdir "${td}"/package
         curl --retry 3 -sSfL "${pkg_source}/${path}" -O
         tar -C "${td}/package" -xJf "${pkg}"
-        cp -r "${td}/package/usr/local"/* "${destdir}"/
+        cp -r "${td}/package"/* "${destdir}"/
 
         rm "${td:?}/${pkg}"
         rm -rf "${td:?}/package"
