@@ -7,10 +7,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
 
-pub(crate) fn run(message: String, author: String, weekly: bool) -> Result<(), color_eyre::Report> {
+pub(crate) fn run(
+    message: String,
+    author: String,
+    weekly: bool,
+    merge_group: Option<String>,
+) -> Result<(), color_eyre::Report> {
     let mut matrix: Vec<CiTarget> = get_matrix().clone();
-    let (prs, mut app) = if author == "bors[bot]" {
-        process_bors_message(&message)?
+    let (prs, mut app) = if let Some(ref_) = merge_group {
+        panic!("{ref_}");
+        (vec![], TargetMatrixArgs::default())
     } else if weekly {
         let app = TargetMatrixArgs {
             target: std::env::var("TARGETS")
@@ -35,7 +41,7 @@ pub(crate) fn run(message: String, author: String, weekly: bool) -> Result<(), c
     };
 
     if !prs.is_empty()
-        && prs.iter().try_fold(true, |b, pr| {
+        && prs.iter().try_fold(true, |b, pr: &String| {
             Ok::<_, eyre::Report>(b && has_no_ci_target(pr)?)
         })?
     {
@@ -65,6 +71,7 @@ pub(crate) fn run(message: String, author: String, weekly: bool) -> Result<(), c
 
     let json = serde_json::to_string(&matrix)?;
     gha_print(&json);
+    panic!("oops!");
     gha_output("matrix", &json)?;
     Ok(())
 }
