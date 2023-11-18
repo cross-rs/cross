@@ -7,16 +7,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
 
-pub(crate) fn run(
-    message: String,
-    author: String,
-    weekly: bool,
-    merge_group: Option<String>,
-) -> Result<(), color_eyre::Report> {
+pub(crate) fn run(weekly: bool, merge_group: Option<String>) -> Result<(), color_eyre::Report> {
     let mut matrix: Vec<CiTarget> = get_matrix().clone();
-    let (prs, mut app) = if let Some(ref_) = merge_group {
-        panic!("{ref_}");
-        (vec![], TargetMatrixArgs::default())
+    let (prs, mut app) = if let Some(ref ref_) = merge_group {
+        (
+            vec![process_merge_group(ref_)?],
+            TargetMatrixArgs::default(),
+        )
     } else if weekly {
         let app = TargetMatrixArgs {
             target: std::env::var("TARGETS")
@@ -41,7 +38,7 @@ pub(crate) fn run(
     };
 
     if !prs.is_empty()
-        && prs.iter().try_fold(true, |b, pr: &String| {
+        && prs.iter().try_fold(true, |b, pr| {
             Ok::<_, eyre::Report>(b && has_no_ci_target(pr)?)
         })?
     {
@@ -101,8 +98,20 @@ fn has_no_ci_target(pr: &str) -> cross::Result<bool> {
     Ok(parse_gh_labels(pr)?.contains(&"no-ci-targets".to_owned()))
 }
 
+/// Convert a `GITHUB_REF` into it's merge group pr
+fn process_merge_group(ref_: &str) -> cross::Result<&str> {
+    ref_.split('/')
+        .last()
+        .unwrap_or_default()
+        .strip_prefix("pr-")
+        .ok_or_else(|| eyre::eyre!("merge group ref must start last / segment with \"pr-\""))?
+        .split('-')
+        .next()
+        .ok_or_else(|| eyre::eyre!("merge group ref must include \"pr-<num>-<sha>\""))
+}
+
 /// Returns the pr(s) associated with this bors commit and the app to use for processing
-fn process_bors_message(message: &str) -> cross::Result<(Vec<&str>, TargetMatrixArgs)> {
+fn _process_args(message: &str) -> cross::Result<(Vec<&str>, TargetMatrixArgs)> {
     if let Some(message) = message.strip_prefix("Try #") {
         let (pr, args) = message
             .split_once(':')
@@ -302,30 +311,19 @@ mod tests {
     }
 
     #[test]
-    fn prs() {
+    fn merge_group() {
         assert_eq!(
-            process_bors_message("Merge #1337\n1337: merge").unwrap().0,
-            vec!["1337"]
-        );
-        assert_eq!(
-            process_bors_message("Merge #1337 #42\n1337: merge\n42: merge 2")
-                .unwrap()
-                .0,
-            vec!["1337", "42"]
-        );
-        assert_eq!(
-            // the trailing space is intentional
-            process_bors_message("Try #1337: \n").unwrap().0,
-            vec!["1337"]
+            process_merge_group("refs/heads/gh-readonly-queue/main/pr-1375-44011c8854cb2eaac83b173cc323220ccdff18ea").unwrap(),
+            "1375"
         );
     }
 
     #[test]
     fn full_invocation() {
-        let (prs, app) = process_bors_message("Try #1337: ").unwrap();
+        let (prs, app) = _process_args("Try #1337: ").unwrap();
         assert_eq!(prs, vec!["1337"]);
         assert_eq!(app, TargetMatrixArgs::default());
-        let (prs, app) = process_bors_message("Try #1337: --std 1").unwrap();
+        let (prs, app) = _process_args("Try #1337: --std 1").unwrap();
         assert_eq!(prs, vec!["1337"]);
         assert_eq!(
             app,
