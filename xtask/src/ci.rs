@@ -36,7 +36,7 @@ pub enum CiJob {
         weekly: bool,
         // merge group that is being checked.
         #[clap(long)]
-        merge_group: Option<String>
+        merge_group: Option<String>,
     },
 }
 
