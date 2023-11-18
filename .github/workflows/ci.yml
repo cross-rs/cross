@@ -104,7 +104,7 @@ jobs:
     name: target (${{ matrix.pretty }},${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: [shellcheck, test, generate-matrix, check]
-    if: github.event_name == 'push' && needs.generate-matrix.outputs.matrix != '{}' && needs.generate-matrix.outputs.matrix != '[]' && needs.generate-matrix.outputs.matrix != ''
+    if: (github.event_name == 'push' || github.event_name == 'merge_group')  && needs.generate-matrix.outputs.matrix != '{}' && needs.generate-matrix.outputs.matrix != '[]' && needs.generate-matrix.outputs.matrix != ''
     strategy:
       fail-fast: false
       matrix:
