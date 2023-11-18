@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "fix wineboot silently failing on qemu",
+    "issues": [1372]
+}
