@@ -27,13 +27,12 @@ pub enum CiJob {
         ref_name: String,
     },
     TargetMatrix {
-        #[clap(long, env = "COMMIT_MESSAGE")]
-        message: String,
-        #[clap(long, env = "COMMIT_AUTHOR")]
-        author: String,
         // check is being run as part of a weekly check
         #[clap(long)]
         weekly: bool,
+        // merge group that is being checked.
+        #[clap(long)]
+        merge_group: Option<String>,
     },
 }
 
@@ -118,11 +117,10 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
             }
         }
         CiJob::TargetMatrix {
-            message,
-            author,
             weekly,
+            merge_group,
         } => {
-            target_matrix::run(message, author, weekly)?;
+            target_matrix::run(weekly, merge_group)?;
         }
     }
     Ok(())
