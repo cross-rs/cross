@@ -71,7 +71,11 @@ pub(crate) fn run(
 
     let json = serde_json::to_string(&matrix)?;
     gha_print(&json);
-    if !std::env::var("GITHUB_REF").unwrap().contains("refs/remotes/pull") {
+
+    if !dbg!(std::env::var("GITHUB_REF"))
+        .unwrap()
+        .contains("refs/remotes/pull")
+    {
         panic!("eee")
     }
     gha_output("matrix", &json)?;
