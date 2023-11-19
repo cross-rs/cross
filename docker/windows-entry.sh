@@ -9,7 +9,8 @@ mkdir -p "${HOME}"
 export WINEPREFIX=/tmp/wine
 mkdir -p "${WINEPREFIX}"
 # FIXME: Make the wine prefix initialization faster
-wineboot &> /dev/null
+# TODO: https://github.com/cross-rs/cross/issues/1372 wine fails on arm64 qemu
+wineboot &> /dev/null || true
 
 # Put libstdc++ and some other mingw dlls in WINEPATH
 # This must work for x86_64 and i686
