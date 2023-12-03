@@ -1104,7 +1104,23 @@ impl DockerCommandExt for Command {
                 "auto" => None,
                 b => Some(bool_from_envvar(b)),
             })
-            .unwrap_or_else(|| engine_type != EngineType::Docker);
+            .or_else(|| (!engine_type.is_docker()).then_some(true))
+            .unwrap_or_else(|| {
+                let Some(s) = Command::new("docker")
+                    .arg("builder")
+                    .arg("inspect")
+                    .output()
+                    .ok()
+                    .and_then(|cmd| String::from_utf8(cmd.stdout).ok())
+                else {
+                    return false;
+                };
+
+                s.split(char::is_whitespace)
+                    .skip_while(|x| *x != "Endpoint:")
+                    .nth(2)
+                    == Some("rootless")
+            });
         if !is_rootless {
             self.args(["--user", &format!("{}:{}", user_id(), group_id(),)]);
         }
