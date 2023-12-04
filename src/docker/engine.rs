@@ -155,19 +155,58 @@ fn is_rootless(ce: &Path, msg_info: &mut MessageInfo, kind: EngineType) -> bool 
             b => Some(bool_from_envvar(b)),
         })
         .or_else(|| (!kind.is_docker()).then_some(true))
-        .unwrap_or_else(|| {
-            let mut cmd = Command::new(ce);
-            cmd.args(["info", "-f", "{{.SecurityOptions}}"])
-                .run_and_get_output(msg_info)
-                .ok()
-                .and_then(|cmd| cmd.stdout().ok())
-                .map(|out| {
-                    out.to_lowercase()
-                        .replace([' ', '[', ']'], ",")
-                        .contains(",name=rootless,")
-                })
-                .unwrap_or_default()
+        .unwrap_or_else(|| is_docker_rootless(ce, msg_info))
+}
+
+fn is_docker_rootless(ce: &Path, msg_info: &mut MessageInfo) -> bool {
+    let mut cmd = Command::new(ce);
+    cmd.args(["info", "-f", "{{.SecurityOptions}}"])
+        .run_and_get_output(msg_info)
+        .ok()
+        .and_then(|cmd| cmd.stdout().ok())
+        .map(|out| {
+            out.to_lowercase()
+                .replace(['[', ' ', ']'], ",")
+                .contains(",name=rootless,")
         })
+        .unwrap_or_default()
+}
+
+#[test]
+fn various_is_rootless_configs() {
+    let ce = Path::new("docker");
+    let msg_info = &mut MessageInfo::default();
+    let var = "CROSS_ROOTLESS_CONTAINER_ENGINE";
+    let old = env::var(var);
+    env::remove_var(var);
+
+    assert!(is_rootless(ce, msg_info, EngineType::Docker));
+    assert!(is_rootless(ce, msg_info, EngineType::Podman));
+    assert!(is_rootless(ce, msg_info, EngineType::PodmanRemote));
+    assert!(is_rootless(ce, msg_info, EngineType::Other));
+
+    env::set_var(var, "0");
+    assert!(!is_rootless(ce, msg_info, EngineType::Docker));
+    assert!(!is_rootless(ce, msg_info, EngineType::Podman));
+    assert!(!is_rootless(ce, msg_info, EngineType::PodmanRemote));
+    assert!(!is_rootless(ce, msg_info, EngineType::Other));
+
+    env::set_var(var, "1");
+    assert!(is_rootless(ce, msg_info, EngineType::Docker));
+    assert!(is_rootless(ce, msg_info, EngineType::Podman));
+    assert!(is_rootless(ce, msg_info, EngineType::PodmanRemote));
+    assert!(is_rootless(ce, msg_info, EngineType::Other));
+
+    env::set_var(var, "auto");
+    assert!(is_rootless(ce, msg_info, EngineType::Docker));
+    assert!(is_rootless(ce, msg_info, EngineType::Podman));
+    assert!(is_rootless(ce, msg_info, EngineType::PodmanRemote));
+    assert!(is_rootless(ce, msg_info, EngineType::Other));
+
+    match old {
+        Ok(v) => env::set_var(var, v),
+        Err(_) => env::remove_var(var),
+    }
 }
 
 // determine if the container engine is docker. this fixes issues with

@@ -1505,53 +1505,25 @@ pub fn path_hash(path: &Path, count: usize) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use crate::id;
+    use crate::id;
 
     #[cfg(not(target_os = "windows"))]
     use crate::file::PathExt;
 
-    // #[test]
-    // fn test_is_rootless() {
-    //     let var = "CROSS_ROOTLESS_CONTAINER_ENGINE";
-    //     let old = env::var(var);
-    //     env::remove_var(var);
+    #[test]
+    fn test_docker_user_id() {
+        let rootful = format!("\"engine\" \"--user\" \"{}:{}\"", id::user(), id::group());
+        let rootless = "\"engine\"".to_owned();
 
-    //     let rootful = format!("\"engine\" \"--user\" \"{}:{}\"", id::user(), id::group());
-    //     let rootless = "\"engine\"".to_owned();
+        let test = |noroot, expected| {
+            let mut cmd = Command::new("engine");
+            cmd.add_user_id(noroot);
+            assert_eq!(expected, &format!("{cmd:?}"));
+        };
 
-    //     let test = |engine, expected| {
-    //         let mut cmd = Command::new("engine");
-    //         cmd.add_user_id(engine, );
-    //         assert_eq!(expected, &format!("{cmd:?}"));
-    //     };
-    //     test(EngineType::Docker, &rootful);
-    //     test(EngineType::Podman, &rootless);
-    //     test(EngineType::PodmanRemote, &rootless);
-    //     test(EngineType::Other, &rootless);
-
-    //     env::set_var(var, "0");
-    //     test(EngineType::Docker, &rootful);
-    //     test(EngineType::Podman, &rootful);
-    //     test(EngineType::PodmanRemote, &rootful);
-    //     test(EngineType::Other, &rootful);
-
-    //     env::set_var(var, "1");
-    //     test(EngineType::Docker, &rootless);
-    //     test(EngineType::Podman, &rootless);
-    //     test(EngineType::PodmanRemote, &rootless);
-    //     test(EngineType::Other, &rootless);
-
-    //     env::set_var(var, "auto");
-    //     test(EngineType::Docker, &rootful);
-    //     test(EngineType::Podman, &rootless);
-    //     test(EngineType::PodmanRemote, &rootless);
-    //     test(EngineType::Other, &rootless);
-
-    //     match old {
-    //         Ok(v) => env::set_var(var, v),
-    //         Err(_) => env::remove_var(var),
-    //     }
-    // }
+        test(false, &rootful);
+        test(true, &rootless);
+    }
 
     #[test]
     fn test_docker_userns() {
