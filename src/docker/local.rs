@@ -73,7 +73,7 @@ pub(crate) fn run(
     docker
         .add_seccomp(engine.kind, &options.target, &paths.metadata)
         .wrap_err("when copying seccomp profile")?;
-    docker.add_user_id(engine.kind);
+    docker.add_user_id(engine.is_rootless);
 
     docker
         .args([

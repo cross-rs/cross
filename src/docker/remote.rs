@@ -972,7 +972,7 @@ symlink_recurse \"${{prefix}}\"
 
     // 6. execute our cargo command inside the container
     let mut docker = engine.subcommand("exec");
-    docker.add_user_id(engine.kind);
+    docker.add_user_id(engine.is_rootless);
     docker.add_envvars(&options, toolchain_dirs, msg_info)?;
     docker.add_cwd(&paths)?;
     docker.arg(&container_id);

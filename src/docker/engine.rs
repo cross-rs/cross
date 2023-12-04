@@ -66,6 +66,7 @@ pub struct Engine {
     pub arch: Option<Architecture>,
     pub os: Option<ContainerOs>,
     pub is_remote: bool,
+    pub is_rootless: bool,
 }
 
 impl Engine {
@@ -94,6 +95,7 @@ impl Engine {
             None => Self::in_docker(msg_info)?,
         };
         let (kind, arch, os) = get_engine_info(&path, msg_info)?;
+        let is_rootless = is_rootless(&path, msg_info, kind);
         let is_remote = is_remote.unwrap_or_else(Self::is_remote);
         Ok(Engine {
             path,
@@ -102,6 +104,7 @@ impl Engine {
             arch,
             os,
             is_remote,
+            is_rootless,
         })
     }
 
@@ -141,6 +144,30 @@ impl Engine {
             .map(|x| bool_from_envvar(&x))
             .unwrap_or_default()
     }
+}
+
+#[must_use]
+fn is_rootless(ce: &Path, msg_info: &mut MessageInfo, kind: EngineType) -> bool {
+    env::var("CROSS_ROOTLESS_CONTAINER_ENGINE")
+        .ok()
+        .and_then(|s| match s.as_ref() {
+            "auto" => None,
+            b => Some(bool_from_envvar(b)),
+        })
+        .or_else(|| (!kind.is_docker()).then_some(true))
+        .unwrap_or_else(|| {
+            let mut cmd = Command::new(ce);
+            cmd.args(["info", "-f", "{{.SecurityOptions}}"])
+                .run_and_get_output(msg_info)
+                .ok()
+                .and_then(|cmd| cmd.stdout().ok())
+                .map(|out| {
+                    out.to_lowercase()
+                        .replace([' ', '[', ']'], ",")
+                        .contains(",name=rootless,")
+                })
+                .unwrap_or_default()
+        })
 }
 
 // determine if the container engine is docker. this fixes issues with
