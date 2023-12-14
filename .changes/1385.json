@@ -1,0 +1,6 @@
+{
+    "description": "Set PKG_CONFIG_PATH in the FreeBSD Dockerfile.",
+    "issues": [1384],
+    "type": "fixed"
+}
+
