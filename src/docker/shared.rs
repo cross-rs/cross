@@ -10,7 +10,7 @@ use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
 use crate::cargo::CargoMetadata;
-use crate::config::{bool_from_envvar, Config};
+use crate::config::Config;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
 use crate::file::{self, write_file, PathExt, ToUtf8};
@@ -947,7 +947,7 @@ pub(crate) trait DockerCommandExt {
     ) -> Result<()>;
     fn add_cwd(&mut self, paths: &DockerPaths) -> Result<()>;
     fn add_build_command(&mut self, dirs: &ToolchainDirectories, cmd: &SafeCommand) -> &mut Self;
-    fn add_user_id(&mut self, engine_type: EngineType);
+    fn add_user_id(&mut self, is_rootless: bool);
     fn add_userns(&mut self);
     fn add_seccomp(
         &mut self,
@@ -1094,17 +1094,10 @@ impl DockerCommandExt for Command {
         self.args(["sh", "-c", &build_command])
     }
 
-    fn add_user_id(&mut self, engine_type: EngineType) {
+    fn add_user_id(&mut self, is_rootless: bool) {
         // by default, docker runs as root so we need to specify the user
         // so the resulting file permissions are for the current user.
         // since we can have rootless docker, we provide an override.
-        let is_rootless = env::var("CROSS_ROOTLESS_CONTAINER_ENGINE")
-            .ok()
-            .and_then(|s| match s.as_ref() {
-                "auto" => None,
-                b => Some(bool_from_envvar(b)),
-            })
-            .unwrap_or_else(|| engine_type != EngineType::Docker);
         if !is_rootless {
             self.args(["--user", &format!("{}:{}", user_id(), group_id(),)]);
         }
@@ -1519,45 +1512,17 @@ mod tests {
 
     #[test]
     fn test_docker_user_id() {
-        let var = "CROSS_ROOTLESS_CONTAINER_ENGINE";
-        let old = env::var(var);
-        env::remove_var(var);
-
         let rootful = format!("\"engine\" \"--user\" \"{}:{}\"", id::user(), id::group());
         let rootless = "\"engine\"".to_owned();
 
-        let test = |engine, expected| {
+        let test = |noroot, expected| {
             let mut cmd = Command::new("engine");
-            cmd.add_user_id(engine);
+            cmd.add_user_id(noroot);
             assert_eq!(expected, &format!("{cmd:?}"));
         };
-        test(EngineType::Docker, &rootful);
-        test(EngineType::Podman, &rootless);
-        test(EngineType::PodmanRemote, &rootless);
-        test(EngineType::Other, &rootless);
 
-        env::set_var(var, "0");
-        test(EngineType::Docker, &rootful);
-        test(EngineType::Podman, &rootful);
-        test(EngineType::PodmanRemote, &rootful);
-        test(EngineType::Other, &rootful);
-
-        env::set_var(var, "1");
-        test(EngineType::Docker, &rootless);
-        test(EngineType::Podman, &rootless);
-        test(EngineType::PodmanRemote, &rootless);
-        test(EngineType::Other, &rootless);
-
-        env::set_var(var, "auto");
-        test(EngineType::Docker, &rootful);
-        test(EngineType::Podman, &rootless);
-        test(EngineType::PodmanRemote, &rootless);
-        test(EngineType::Other, &rootless);
-
-        match old {
-            Ok(v) => env::set_var(var, v),
-            Err(_) => env::remove_var(var),
-        }
+        test(false, &rootful);
+        test(true, &rootless);
     }
 
     #[test]
