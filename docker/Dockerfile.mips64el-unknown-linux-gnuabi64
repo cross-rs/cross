@@ -40,7 +40,7 @@ ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_GNUABI64_LINKER="$CROSS_TOOLCHAIN_PREFIX
     CC_mips64el_unknown_linux_gnuabi64="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_mips64el_unknown_linux_gnuabi64="$CROSS_TOOLCHAIN_PREFIX"g++ \
     CMAKE_TOOLCHAIN_FILE_mips64el_unknown_linux_gnuabi64=/opt/toolchain.cmake \
-    BINDGEN_EXTRA_CLANG_ARGS_mips64el_unknown_linux_gnuabi64="--sysroot=$CROSS_SYSROOT" \
+    BINDGEN_EXTRA_CLANG_ARGS_mips64el_unknown_linux_gnuabi64="--sysroot=$CROSS_SYSROOT -idirafter/usr/include" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/mips64el-linux-gnuabi64/pkgconfig/:${PKG_CONFIG_PATH}" \

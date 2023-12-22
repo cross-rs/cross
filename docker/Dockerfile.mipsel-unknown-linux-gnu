@@ -40,7 +40,7 @@ ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CC_mipsel_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_mipsel_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"g++ \
     CMAKE_TOOLCHAIN_FILE_mipsel_unknown_linux_gnu=/opt/toolchain.cmake \
-    BINDGEN_EXTRA_CLANG_ARGS_mipsel_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT" \
+    BINDGEN_EXTRA_CLANG_ARGS_mipsel_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT -idirafter/usr/include" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/mipsel-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}" \

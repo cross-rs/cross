@@ -34,7 +34,7 @@ ENV CARGO_TARGET_I586_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CC_i586_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_i586_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"g++ \
     CMAKE_TOOLCHAIN_FILE_i586_unknown_linux_gnu=/opt/toolchain.cmake \
-    BINDGEN_EXTRA_CLANG_ARGS_i586_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT" \
+    BINDGEN_EXTRA_CLANG_ARGS_i586_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT -idirafter/usr/include" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/i386-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}" \
