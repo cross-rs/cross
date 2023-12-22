@@ -25,7 +25,7 @@ jobs:
       - name: Generate matrix
         id: generate-matrix
         run: |
-          cargo xtask ci-job target-matrix --author "[gha]" --message "check" --weekly
+          cargo xtask ci-job target-matrix --weekly
         env:
           TARGETS: ${{ inputs.targets }}
   weekly:
