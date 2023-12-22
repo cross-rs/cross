@@ -115,6 +115,7 @@ main() {
             # archive.debian.org Release files are expired.
             echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
             echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
+            echo "Acquire::AllowInsecureRepositories True;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
 
             dropbear="dropbear"
             deps=(libcrypt1:"${arch}")
@@ -201,7 +202,7 @@ main() {
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11}.asc' -O
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11}-security.asc' -O
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11}.asc' -O
-    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022}.key' -O
+    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023}.key' -O
 
     for key in *.asc *.key; do
         apt-key add "${key}"
@@ -397,6 +398,9 @@ EOF
     mv -f /etc/apt/sources.list.d.bak /etc/apt/sources.list.d
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch.bak ]; then
         mv /etc/dpkg/dpkg.cfg.d/multiarch.bak /etc/dpkg/dpkg.cfg.d/multiarch
+    fi
+    if [ -f /etc/apt/apt.conf.d/10-nocheckvalid ]; then
+        rm /etc/apt/apt.conf.d/10-nocheckvalid
     fi
     # can fail if arch is used (image arch, such as amd64 and/or i386)
     dpkg --remove-architecture "${arch}" || true
