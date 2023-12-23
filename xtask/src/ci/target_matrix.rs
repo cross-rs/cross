@@ -45,6 +45,24 @@ pub(crate) fn run(weekly: bool, merge_group: Option<String>) -> Result<(), color
         app.none = true;
     }
 
+    // Find all `CI-` labels
+    let mut to_add = vec![];
+    'pr_loop: for pr in &prs {
+        let labels = parse_gh_labels(pr)?;
+        let targets = labels
+            .iter()
+            .filter_map(|label| label.strip_prefix("CI-"))
+            .collect::<Vec<_>>();
+        if targets.is_empty() {
+            // if a pr doesn't specify a target, assume it affects all targets
+            to_add.clear();
+            break 'pr_loop;
+        }
+        to_add.extend(targets.iter().map(|label| label.to_string()));
+    }
+
+    app.target.extend(to_add);
+
     app.filter(&mut matrix);
 
     let matrix = matrix
