@@ -40,6 +40,10 @@ main() {
         rustup toolchain add nightly
         CROSS_FLAGS="${CROSS_FLAGS} -Zbuild-std"
         CROSS+=("+nightly")
+        if [[ "${TARGET}" == *"mips"* ]]; then
+            # workaround for https://github.com/cross-rs/cross/issues/1322 & https://github.com/rust-lang/rust/issues/108835
+            [[ ! "$RUSTFLAGS" =~ opt-level ]] && export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C opt-level=1"
+        fi
     elif ! (( ${STD:-0} )); then
         # don't use xargo: should have native support just from rustc
         rustup toolchain add nightly
@@ -204,7 +208,7 @@ main() {
         pushd "${td}"
         cargo init --bin --name hello .
         retry cargo fetch
-        RUSTFLAGS="-C target-feature=-crt-static" \
+        RUSTFLAGS="$RUSTFLAGS -C target-feature=-crt-static" \
             cross_build --target "${TARGET}"
         popd
 

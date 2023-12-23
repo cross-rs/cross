@@ -122,6 +122,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user"
+build-std = true
 
 [[target]]
 target = "mipsel-unknown-linux-gnu"
@@ -131,6 +132,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user qemu-system"
+build-std = true
 
 [[target]]
 target = "mips64-unknown-linux-gnuabi64"
@@ -139,6 +141,7 @@ cpp = true
 dylib = true
 std = true
 run = true
+build-std = true
 
 [[target]]
 target = "mips64el-unknown-linux-gnuabi64"
@@ -148,6 +151,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user qemu-system"
+build-std = true
 
 [[target]]
 target = "mips64-unknown-linux-muslabi64"
@@ -156,6 +160,7 @@ cpp = true
 dylib = true
 std = true
 run = true
+build-std = true
 
 [[target]]
 target = "mips64el-unknown-linux-muslabi64"
@@ -164,6 +169,7 @@ os = "ubuntu-latest"
 cpp = true
 std = true
 run = true
+build-std = true
 
 [[target]]
 target = "powerpc-unknown-linux-gnu"
