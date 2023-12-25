@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:20.04 as base
 ARG DEBIAN_FRONTEND=noninteractive
 
 ARG TARGETARCH
