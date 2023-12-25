@@ -1,3 +1,4 @@
+mod release;
 mod target_matrix;
 
 use crate::util::gha_output;
@@ -34,6 +35,7 @@ pub enum CiJob {
         #[clap(long)]
         merge_group: Option<String>,
     },
+    Release(release::Release),
 }
 
 pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
@@ -121,6 +123,9 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
             merge_group,
         } => {
             target_matrix::run(weekly, merge_group)?;
+        }
+        CiJob::Release(r) => {
+            r.run(&mut cross::shell::Verbosity::Verbose(1).into())?;
         }
     }
     Ok(())

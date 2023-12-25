@@ -2,7 +2,7 @@ on:
   pull_request:
   merge_group:
   push:
-    branches: [main, staging, trying]
+    branches: [main, staging, trying, v*.*.*]
     tags:
       - "v*.*.*"
 
@@ -349,7 +349,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # fetch tags for publish
+          ssh-key: "${{ secrets.COMMIT_KEY }}" # use deploy key to trigger workflow
       - uses: ./.github/actions/setup-rust
+      - run: cargo xtask ci-job release
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       - uses: ./.github/actions/cargo-publish
         with:
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
