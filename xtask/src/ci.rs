@@ -27,7 +27,7 @@ pub enum CiJob {
         ref_name: String,
     },
     TargetMatrix {
-        // /check is being run as part of a weekly check
+        /// check is being run as part of a weekly check
         #[clap(long)]
         weekly: bool,
         /// merge group that is being checked.
