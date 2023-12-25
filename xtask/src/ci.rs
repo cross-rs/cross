@@ -19,18 +19,18 @@ pub enum CiJob {
     },
     /// Check workspace metadata.
     Check {
-        // tag, branch
+        /// tag, branch
         #[clap(long, env = "GITHUB_REF_TYPE")]
         ref_type: String,
-        // main, v0.1.0
+        /// main, v0.1.0
         #[clap(long, env = "GITHUB_REF_NAME")]
         ref_name: String,
     },
     TargetMatrix {
-        // check is being run as part of a weekly check
+        /// check is being run as part of a weekly check
         #[clap(long)]
         weekly: bool,
-        // merge group that is being checked.
+        /// merge group that is being checked.
         #[clap(long)]
         merge_group: Option<String>,
     },
