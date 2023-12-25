@@ -30,12 +30,13 @@ impl AvailableTargets {
 
 pub fn setup_rustup(
     toolchain: &QualifiedToolchain,
+    installed_toolchains: &[(String, ToolchainMode, PathBuf)],
     msg_info: &mut MessageInfo,
 ) -> Result<AvailableTargets, color_eyre::Report> {
     if !toolchain.is_custom
-        && !installed_toolchains(msg_info)?
-            .into_iter()
-            .any(|t| t == toolchain.to_string())
+        && !installed_toolchains
+            .iter()
+            .any(|(t, _, _)| t == &toolchain.to_string())
     {
         install_toolchain(toolchain, msg_info)?;
     }
@@ -83,18 +84,82 @@ pub fn active_toolchain(msg_info: &mut MessageInfo) -> Result<String> {
         .to_owned())
 }
 
-pub fn installed_toolchains(msg_info: &mut MessageInfo) -> Result<Vec<String>> {
+#[derive(Debug)]
+pub enum ToolchainMode {
+    Override,
+    Default,
+    DefaultOverride,
+    None,
+    Other,
+}
+
+impl ToolchainMode {
+    /// Returns `true` if the toolchain mode is [`Override`] or [`DefaultOverride`].
+    ///
+    /// [`Override`]: ToolchainMode::Override
+    /// [`DefaultOverride`]: ToolchainMode::DefaultOverride
+    #[must_use]
+    pub fn is_overriden(&self) -> bool {
+        matches!(self, Self::Override | Self::DefaultOverride)
+    }
+
+    /// Returns `true` if the toolchain mode is [`None`].
+    ///
+    /// [`None`]: ToolchainMode::None
+    #[must_use]
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
+    }
+
+    /// Returns `true` if the toolchain mode is [`Default`] or [`DefaultOverride`].
+    ///
+    /// [`Default`]: ToolchainMode::Default
+    /// [`DefaultOverride`]: ToolchainMode::DefaultOverride
+    #[must_use]
+    pub fn is_defaulted(&self) -> bool {
+        matches!(self, Self::Default)
+    }
+}
+
+pub fn installed_toolchains(
+    msg_info: &mut MessageInfo,
+) -> Result<Vec<(String, ToolchainMode, std::path::PathBuf)>> {
     let out = rustup_command(msg_info, true)
-        .args(["toolchain", "list"])
+        .args(["toolchain", "list", "-v"])
         .run_and_get_stdout(msg_info)?;
 
     Ok(out
         .lines()
         .map(|l| {
-            l.replace(" (default)", "")
-                .replace(" (override)", "")
-                .trim()
-                .to_owned()
+            let mut mode = ToolchainMode::None;
+            let mut l = if l.contains(" (override)") {
+                mode = ToolchainMode::Override;
+                l.replace(" (override)", "")
+            } else {
+                l.to_owned()
+            };
+            if l.contains(" (default)") {
+                if mode.is_overriden() {
+                    mode = ToolchainMode::DefaultOverride;
+                } else {
+                    mode = ToolchainMode::Default;
+                }
+                l = l.replace(" (default)", "");
+            }
+
+            (l, mode)
+        })
+        .map(|(l, mode)| {
+            let mut i = l.split_whitespace();
+            (
+                i.next()
+                    .map(|s| s.to_owned())
+                    .expect("rustup output should be consistent"),
+                mode,
+                i.next()
+                    .map(PathBuf::from)
+                    .expect("rustup output should be consistent"),
+            )
         })
         .collect())
 }

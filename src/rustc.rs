@@ -4,11 +4,11 @@ use std::process::Command;
 use rustc_version::{Version, VersionMeta};
 use serde::Deserialize;
 
-use crate::docker::ImagePlatform;
 use crate::errors::*;
 use crate::extensions::{env_program, CommandExt};
 use crate::shell::MessageInfo;
 use crate::TargetTriple;
+use crate::{docker::ImagePlatform, rustup::ToolchainMode};
 
 #[derive(Debug)]
 pub struct TargetList {
@@ -196,19 +196,30 @@ impl QualifiedToolchain {
     }
 
     /// Grab the current default toolchain
-    pub fn default(config: &crate::config::Config, msg_info: &mut MessageInfo) -> Result<Self> {
-        let sysroot = sysroot(msg_info)?;
-
-        let default_toolchain_name = sysroot
-            .file_name()
-            .ok_or_else(|| eyre::eyre!("couldn't get name of active toolchain"))?
-            .to_str()
-            .ok_or_else(|| eyre::eyre!("toolchain was not utf-8"))?;
+    pub fn default(
+        config: &crate::config::Config,
+        installed_toolchains: &[(String, ToolchainMode, PathBuf)],
+        msg_info: &mut MessageInfo,
+    ) -> Result<Self> {
+        let (toolchain_name, sysroot) = if let Some((toolchain_name, _, sysroot)) =
+            installed_toolchains
+                .iter()
+                .find(|(_, mode, _)| mode.is_overriden())
+        {
+            (toolchain_name, sysroot)
+        } else if let Some((toolchain_name, _, sysroot)) = installed_toolchains
+            .iter()
+            .find(|(_, mode, _)| mode.is_defaulted())
+        {
+            (toolchain_name, sysroot)
+        } else {
+            eyre::bail!("no default toolchain found");
+        };
 
         if !config.custom_toolchain() {
-            QualifiedToolchain::parse(sysroot.clone(), default_toolchain_name, config, msg_info)
+            QualifiedToolchain::parse(sysroot.clone(), toolchain_name, config, msg_info)
         } else {
-            QualifiedToolchain::custom(default_toolchain_name, &sysroot, config, msg_info)
+            QualifiedToolchain::custom(toolchain_name, sysroot, config, msg_info)
         }
     }
 
@@ -231,6 +242,26 @@ impl QualifiedToolchain {
 
     pub fn set_sysroot(&mut self, convert: impl Fn(&Path) -> PathBuf) {
         self.sysroot = convert(&self.sysroot);
+    }
+
+    pub fn ensure_sysroot(
+        &mut self,
+        installed_toolchains: Vec<(String, ToolchainMode, std::path::PathBuf)>,
+        msg_info: &mut MessageInfo,
+    ) -> Result<()> {
+        self.sysroot = if let Some((_, _, sysroot)) = installed_toolchains
+            .iter()
+            .find(|(name, _, _)| &self.full == name)
+        {
+            sysroot.clone()
+        } else {
+            let (_, _, sysroot) = crate::rustup::installed_toolchains(msg_info)?
+                .into_iter()
+                .find(|(name, _, _)| &self.full == name)
+                .ok_or_else(|| eyre::eyre!("toolchain not found"))?;
+            sysroot
+        };
+        Ok(())
     }
 }
 
@@ -362,15 +393,6 @@ pub fn target_list(msg_info: &mut MessageInfo) -> Result<TargetList> {
         .map(|s| TargetList {
             triples: s.lines().map(|l| l.to_owned()).collect(),
         })
-}
-
-pub fn sysroot(msg_info: &mut MessageInfo) -> Result<PathBuf> {
-    let stdout = rustc_command()
-        .args(["--print", "sysroot"])
-        .run_and_get_stdout(msg_info)?
-        .trim()
-        .to_owned();
-    Ok(PathBuf::from(stdout))
 }
 
 pub fn version_meta() -> Result<rustc_version::VersionMeta> {

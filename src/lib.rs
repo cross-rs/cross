@@ -55,6 +55,7 @@ use color_eyre::{Help, SectionExt};
 use config::Config;
 use rustc::{QualifiedToolchain, Toolchain};
 use rustc_version::Channel;
+use rustup::ToolchainMode;
 use serde::{Deserialize, Serialize, Serializer};
 
 pub use self::cargo::{cargo_command, cargo_metadata_with_args, CargoMetadata, Subcommand};
@@ -542,10 +543,11 @@ pub fn run(
             uses_zig,
             uses_build_std,
             zig_version,
-            toolchain,
+            mut toolchain,
             is_remote,
             engine,
             image,
+            installed_toolchains,
         } = match setup(&host_version_meta, &metadata, &args, target_list, msg_info)? {
             Some(setup) => setup,
             _ => {
@@ -564,6 +566,11 @@ pub fn run(
                     "toolchain `{toolchain}` may not run on image `{image}`"
                 ))?;
             }
+
+            let available_targets =
+                rustup::setup_rustup(&toolchain, &installed_toolchains, msg_info)?;
+            toolchain.ensure_sysroot(installed_toolchains, msg_info)?;
+
             let mut is_nightly = toolchain.channel.contains("nightly");
             let mut rustc_version = None;
             if let Some((version, channel, commit)) = toolchain.rustc_version()? {
@@ -579,8 +586,6 @@ pub fn run(
                 is_nightly = channel == Channel::Nightly;
                 rustc_version = Some(version);
             }
-
-            let available_targets = rustup::setup_rustup(&toolchain, msg_info)?;
 
             rustup::setup_components(
                 &target,
@@ -775,7 +780,9 @@ pub fn setup(
             return Ok(None);
         }
     };
-    let default_toolchain = QualifiedToolchain::default(&config, msg_info)?;
+    let installed_toolchains = rustup::installed_toolchains(msg_info)?;
+
+    let default_toolchain = QualifiedToolchain::default(&config, &installed_toolchains, msg_info)?;
     let mut toolchain = if let Some(channel) = &args.channel {
         let picked_toolchain: Toolchain = channel.parse()?;
 
@@ -810,6 +817,7 @@ To override the toolchain mounted in the image, set `target.{target}.image.toolc
         is_remote,
         engine,
         image,
+        installed_toolchains,
     }))
 }
 
@@ -825,6 +833,7 @@ pub struct CrossSetup {
     pub is_remote: bool,
     pub engine: docker::Engine,
     pub image: docker::Image,
+    pub installed_toolchains: Vec<(String, ToolchainMode, PathBuf)>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
