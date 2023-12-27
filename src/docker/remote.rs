@@ -983,9 +983,7 @@ symlink_recurse \"${{prefix}}\"
     }
 
     bail_container_exited!();
-    let status = docker
-        .run_and_get_status(msg_info, false)
-        .map_err(Into::into);
+    let status = docker.run_and_get_status(msg_info, false);
 
     // 7. copy data from our target dir back to host
     // this might not exist if we ran `clean`.

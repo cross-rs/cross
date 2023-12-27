@@ -894,7 +894,7 @@ impl Engine {
         docker.arg(UBUNTU_BASE);
         docker.args(["sh", "-c", cmd]);
 
-        docker.run(msg_info, false).map_err(Into::into)
+        docker.run(msg_info, false)
     }
 }
 

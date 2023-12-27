@@ -53,9 +53,7 @@ fn image_info(
     }
     command.arg(image);
     command.args(["bash", "-c", TARGET_INFO_SCRIPT]);
-    command
-        .run(msg_info, msg_info.is_verbose())
-        .map_err(Into::into)
+    command.run(msg_info, msg_info.is_verbose())
 }
 
 pub fn target_info(

@@ -245,7 +245,6 @@ pub fn has_nightly(msg_info: &mut MessageInfo) -> cross::Result<bool> {
         .arg("+nightly")
         .run_and_get_output(msg_info)
         .map(|o| o.status.success())
-        .map_err(Into::into)
 }
 
 pub fn get_channel_prefer_nightly<'a>(

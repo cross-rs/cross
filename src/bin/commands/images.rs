@@ -377,7 +377,7 @@ fn remove_images(
     if images.is_empty() {
         Ok(())
     } else if execute {
-        command.run(msg_info, false).map_err(Into::into)
+        command.run(msg_info, false)
     } else {
         msg_info.note("this is a dry run. to remove the images, pass the `--execute` flag.")?;
         command.print(msg_info)?;

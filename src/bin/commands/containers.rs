@@ -358,7 +358,7 @@ pub fn remove_all_volumes(
     if volumes.is_empty() {
         Ok(())
     } else if execute {
-        command.run(msg_info, false).map_err(Into::into)
+        command.run(msg_info, false)
     } else {
         msg_info.note("this is a dry run. to remove the volumes, pass the `--execute` flag.")?;
         command.print(msg_info)?;
@@ -374,7 +374,7 @@ pub fn prune_volumes(
     let mut command = engine.subcommand("volume");
     command.args(["prune", "--force"]);
     if execute {
-        command.run(msg_info, false).map_err(Into::into)
+        command.run(msg_info, false)
     } else {
         msg_info.note("this is a dry run. to prune the volumes, pass the `--execute` flag.")?;
         command.print(msg_info)?;
