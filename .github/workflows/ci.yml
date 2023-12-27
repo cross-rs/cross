@@ -105,6 +105,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: [shellcheck, test, generate-matrix, check]
     if: (github.event_name == 'push' || github.event_name == 'merge_group')  && needs.generate-matrix.outputs.matrix != '{}' && needs.generate-matrix.outputs.matrix != '[]' && needs.generate-matrix.outputs.matrix != ''
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.pretty }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
