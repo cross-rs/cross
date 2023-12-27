@@ -19,11 +19,11 @@ pub fn codegen(Codegen { .. }: Codegen) -> cross::Result<()> {
 
 pub fn docker_images() -> String {
     let mut images = String::from(
-        r##"#![doc = "*** AUTO-GENERATED, do not touch. Run `cargo xtask codegen` to update ***"]
+        r#"#![doc = "*** AUTO-GENERATED, do not touch. Run `cargo xtask codegen` to update ***"]
 use super::{ImagePlatform, ProvidedImage};
 
 #[rustfmt::skip]
-pub static PROVIDED_IMAGES: &[ProvidedImage] = &["##,
+pub static PROVIDED_IMAGES: &[ProvidedImage] = &["#,
     );
 
     for image_target in get_matrix()

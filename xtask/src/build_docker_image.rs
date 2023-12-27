@@ -350,6 +350,7 @@ pub fn build_docker_image(
         std::env::set_var("GITHUB_STEP_SUMMARY", job_summary(&results)?);
     }
     if results.iter().any(|r| r.is_err()) {
+        #[allow(clippy::manual_try_fold)]
         results
             .into_iter()
             .filter_map(Result::err)

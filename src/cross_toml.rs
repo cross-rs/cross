@@ -131,7 +131,7 @@ impl CrossToml {
         let (cross_toml, mut unused) = Self::parse_from_cross(cross_toml, msg_info)?;
 
         if let Some((cargo_toml, u_cargo)) = Self::parse_from_cargo(cargo_toml, msg_info)? {
-            unused.extend(u_cargo.into_iter());
+            unused.extend(u_cargo);
             Ok((cargo_toml.merge(cross_toml)?, unused))
         } else {
             Ok((cross_toml, unused))
