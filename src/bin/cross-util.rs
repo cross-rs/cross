@@ -11,12 +11,21 @@ static VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), cross::commit_info!())
 
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None, name = APP_NAME, version = VERSION)]
-struct Cli {
+pub struct Cli {
     /// Toolchain name/version to use (such as stable or 1.59.0).
     #[clap(value_parser = is_toolchain)]
     toolchain: Option<Toolchain>,
     #[clap(subcommand)]
     command: Commands,
+    /// Provide verbose diagnostic output.
+    #[clap(short, long, global = true)]
+    pub verbose: bool,
+    /// Do not print cross log messages.
+    #[clap(short, long, global = true)]
+    pub quiet: bool,
+    /// Coloring: auto, always, never
+    #[clap(long, global = true)]
+    pub color: Option<String>,
 }
 
 // hidden implied parser so we can get matches without recursion.
@@ -75,40 +84,30 @@ macro_rules! get_engine {
     }};
 }
 
-macro_rules! get_msg_info {
-    ($args:ident) => {{
-        MessageInfo::create($args.verbose(), $args.quiet(), $args.color())
-    }};
-}
-
 pub fn main() -> cross::Result<()> {
     cross::install_panic_hook()?;
     let cli = Cli::parse();
-    match cli.command {
+    let mut msg_info = MessageInfo::create(cli.verbose, cli.quiet, cli.color.as_deref())?;
+    match &cli.command {
         Commands::Images(args) => {
-            let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, false, msg_info)?;
             args.run(engine, &mut msg_info)?;
         }
         Commands::Volumes(args) => {
-            let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, args.docker_in_docker(), msg_info)?;
             args.run(engine, cli.toolchain.as_ref(), &mut msg_info)?;
         }
         Commands::Containers(args) => {
-            let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, false, msg_info)?;
             args.run(engine, &mut msg_info)?;
         }
         Commands::Clean(args) => {
-            let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, false, msg_info)?;
             args.run(engine, &mut msg_info)?;
         }
         Commands::Run(args) => {
-            let mut msg_info = get_msg_info!(args)?;
             let engine = get_engine!(args, false, msg_info)?;
-            args.run(engine, &mut msg_info)?;
+            args.run(&cli, engine, &mut msg_info)?;
         }
     }
 

@@ -9,15 +9,6 @@ use eyre::Context;
 
 #[derive(ClapArgs, Debug)]
 pub struct Run {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
@@ -33,7 +24,12 @@ pub struct Run {
 }
 
 impl Run {
-    pub fn run(&self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    pub fn run(
+        &self,
+        cli: &crate::Cli,
+        engine: docker::Engine,
+        msg_info: &mut MessageInfo,
+    ) -> cross::Result<()> {
         let target_list = rustc::target_list(&mut Verbosity::Quiet.into())?;
         let target = Target::from(&self.target, &target_list);
 
@@ -50,9 +46,9 @@ impl Run {
             target_dir: None,
             manifest_path: None,
             version: false,
-            verbose: if self.verbose { 1 } else { 0 },
-            quiet: self.quiet,
-            color: self.color.clone(),
+            verbose: if cli.verbose { 1 } else { 0 },
+            quiet: cli.quiet,
+            color: cli.color.clone(),
         };
 
         if let Some(metadata) = cargo_metadata_with_args(None, Some(&args), msg_info)? {
@@ -105,17 +101,5 @@ impl Run {
 
     pub fn engine(&self) -> Option<&str> {
         self.engine.as_deref()
-    }
-
-    pub fn verbose(&self) -> bool {
-        self.verbose
-    }
-
-    pub fn quiet(&self) -> bool {
-        self.quiet
-    }
-
-    pub fn color(&self) -> Option<&str> {
-        self.color.as_deref()
     }
 }

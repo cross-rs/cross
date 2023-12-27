@@ -7,15 +7,6 @@ use cross::shell::MessageInfo;
 
 #[derive(Args, Debug)]
 pub struct Clean {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Force removal of images.
     #[clap(short, long)]
     pub force: bool,
@@ -32,7 +23,7 @@ pub struct Clean {
 
 impl Clean {
     pub fn run(
-        self,
+        &self,
         engine: cross::docker::Engine,
         msg_info: &mut MessageInfo,
     ) -> cross::Result<()> {
@@ -51,9 +42,6 @@ impl Clean {
 
         // containers -> images -> volumes -> prune to ensure no conflicts.
         let remove_containers = RemoveAllContainers {
-            verbose: self.verbose,
-            quiet: self.quiet,
-            color: self.color.clone(),
             force: self.force,
             execute: self.execute,
             engine: None,
@@ -62,9 +50,6 @@ impl Clean {
 
         let remove_images = RemoveImages {
             targets: vec![],
-            verbose: self.verbose,
-            quiet: self.quiet,
-            color: self.color.clone(),
             force: self.force,
             local: self.local,
             execute: self.execute,
@@ -73,9 +58,6 @@ impl Clean {
         remove_images.run(engine.clone(), msg_info)?;
 
         let remove_volumes = RemoveAllVolumes {
-            verbose: self.verbose,
-            quiet: self.quiet,
-            color: self.color.clone(),
             force: self.force,
             execute: self.execute,
             engine: None,
@@ -83,9 +65,6 @@ impl Clean {
         remove_volumes.run(engine.clone(), msg_info)?;
 
         let prune_volumes = PruneVolumes {
-            verbose: self.verbose,
-            quiet: self.quiet,
-            color: self.color.clone(),
             execute: self.execute,
             engine: None,
         };
@@ -96,17 +75,5 @@ impl Clean {
 
     pub fn engine(&self) -> Option<&str> {
         self.engine.as_deref()
-    }
-
-    pub fn verbose(&self) -> bool {
-        self.verbose
-    }
-
-    pub fn quiet(&self) -> bool {
-        self.quiet
-    }
-
-    pub fn color(&self) -> Option<&str> {
-        self.color.as_deref()
     }
 }
