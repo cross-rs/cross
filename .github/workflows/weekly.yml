@@ -15,7 +15,7 @@ env:
 
 jobs:
   weekly:
-    uses: ./.github/workflows/CI.yml
+    uses: ./.github/workflows/ci.yml
     with:
       matrix-args: --weekly
   wiki:

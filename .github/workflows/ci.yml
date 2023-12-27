@@ -108,7 +108,7 @@ jobs:
     name: target (${{ matrix.pretty }},${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: [shellcheck, test, generate-matrix, check]
-    if: (github.event_name == 'push' || github.event_name == 'merge_group')  && needs.generate-matrix.outputs.matrix != '{}' && needs.generate-matrix.outputs.matrix != '[]' && needs.generate-matrix.outputs.matrix != ''
+    if: (github.event_name == 'push' || github.event_name == 'merge_group' || github.event_name == 'issue_comment')  && needs.generate-matrix.outputs.matrix != '{}' && needs.generate-matrix.outputs.matrix != '[]' && needs.generate-matrix.outputs.matrix != ''
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.pretty }}
       cancel-in-progress: false
@@ -316,7 +316,7 @@ jobs:
     name: podman
     runs-on: ubuntu-latest
     needs: [shellcheck, test, check]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'issue_comment'
     strategy:
       fail-fast: false
     outputs:
