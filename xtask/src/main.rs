@@ -32,6 +32,15 @@ struct Cli {
     toolchain: Option<String>,
     #[clap(subcommand)]
     command: Commands,
+    /// Provide verbose diagnostic output.
+    #[clap(short, long, global = true, action = clap::ArgAction::Count)]
+    pub verbose: u8,
+    /// Do not print cross log messages.
+    #[clap(short, long, global = true)]
+    pub quiet: bool,
+    /// Coloring: auto, always, never
+    #[clap(long, global = true)]
+    pub color: Option<String>,
 }
 
 // hidden implied parser so we can get matches without recursion.
@@ -82,36 +91,26 @@ macro_rules! get_engine {
     }};
 }
 
-macro_rules! get_msg_info {
-    ($args:ident, $verbose:expr) => {{
-        MessageInfo::create($verbose, $args.quiet, $args.color.as_deref())
-    }};
-}
-
 pub fn main() -> cross::Result<()> {
     cross::install_panic_hook()?;
     let cli = Cli::parse();
+    let mut msg_info = MessageInfo::create(cli.verbose, cli.quiet, cli.color.as_deref())?;
     match cli.command {
         Commands::TargetInfo(args) => {
-            let mut msg_info = get_msg_info!(args, args.verbose)?;
             let engine = get_engine!(args, msg_info)?;
             target_info::target_info(args, &engine, &mut msg_info)?;
         }
         Commands::BuildDockerImage(args) => {
-            let mut msg_info = get_msg_info!(args, args.verbose)?;
             let engine = get_engine!(args, msg_info)?;
             build_docker_image::build_docker_image(args, &engine, &mut msg_info)?;
         }
-        Commands::InstallGitHooks(args) => {
-            let mut msg_info = get_msg_info!(args, args.verbose)?;
+        Commands::InstallGitHooks(_) => {
             install_git_hooks::install_git_hooks(&mut msg_info)?;
         }
         Commands::Check(args) => {
-            let mut msg_info = get_msg_info!(args, args.verbose)?;
             hooks::check(args, cli.toolchain.as_deref(), &mut msg_info)?;
         }
         Commands::Test(args) => {
-            let mut msg_info = get_msg_info!(args, args.verbose)?;
             hooks::test(args, cli.toolchain.as_deref(), &mut msg_info)?;
         }
         Commands::CiJob(args) => {
@@ -119,15 +118,12 @@ pub fn main() -> cross::Result<()> {
             ci::ci(args, metadata)?;
         }
         Commands::ConfigureCrosstool(args) => {
-            let mut msg_info = get_msg_info!(args, args.verbose)?;
             crosstool::configure_crosstool(args, &mut msg_info)?;
         }
         Commands::BuildChangelog(args) => {
-            let mut msg_info = get_msg_info!(args, args.verbose)?;
             changelog::build_changelog(args, &mut msg_info)?;
         }
         Commands::ValidateChangelog(args) => {
-            let mut msg_info = get_msg_info!(args, args.verbose)?;
             changelog::validate_changelog(args, &mut msg_info)?;
         }
         Commands::Codegen(args) => codegen::codegen(args)?,

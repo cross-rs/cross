@@ -21,15 +21,6 @@ const CT_CONFIG: &str = "crosstool-config";
 
 #[derive(Args, Debug)]
 pub struct ConfigureCrosstool {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// The gcc version to configure for.
     #[clap(long, env = "GCC_VERSION")]
     pub gcc_version: Option<String>,

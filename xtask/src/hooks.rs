@@ -14,15 +14,6 @@ const CARGO_FLAGS: &[&str] = &["--all-features", "--all-targets", "--workspace"]
 
 #[derive(Args, Debug)]
 pub struct Check {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Run shellcheck on all files, not just staged files.
     #[clap(short, long)]
     all: bool,
@@ -36,15 +27,6 @@ pub struct Check {
 
 #[derive(Args, Debug)]
 pub struct Test {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Run Python test suite.
     #[clap(short, long, env = "PYTHON", value_parser = BoolishValueParser::new())]
     python: bool,

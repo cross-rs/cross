@@ -262,9 +262,12 @@ pub fn get_channel_prefer_nightly<'a>(
 }
 
 pub fn cargo(channel: Option<&str>) -> Command {
-    let mut command = cross::cargo_command();
+    let mut command;
     if let Some(channel) = channel {
-        command.arg(&format!("+{channel}"));
+        command = Command::new("rustup");
+        command.args(["run", channel, "cargo"]);
+    } else {
+        command = cross::cargo_command();
     }
     command
 }

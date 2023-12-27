@@ -29,17 +29,8 @@ pub struct BuildDockerImage {
     pub repository: String,
     /// Newline separated labels
     #[clap(long, env = "LABELS")]
-    pub labels: Option<String>,
-    /// Provide verbose diagnostic output.
-    #[clap(short, long, action = clap::ArgAction::Count)]
-    pub verbose: u8,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Print but do not execute the build commands.
+    pub labels: Option<String>,
     #[clap(long)]
     pub dry_run: bool,
     /// Force a push when `--push` is set, but not `--tag`
