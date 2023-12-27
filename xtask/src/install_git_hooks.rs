@@ -3,17 +3,7 @@ use clap::Args;
 use cross::shell::MessageInfo;
 
 #[derive(Args, Debug)]
-pub struct InstallGitHooks {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
-}
+pub struct InstallGitHooks {}
 
 pub fn install_git_hooks(msg_info: &mut MessageInfo) -> cross::Result<()> {
     let root = project_dir(msg_info)?;

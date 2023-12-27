@@ -120,6 +120,7 @@ impl CommandExt for Command {
         string
     }
 
+    #[track_caller]
     fn status_result(
         &self,
         msg_info: &mut MessageInfo,
@@ -140,10 +141,11 @@ impl CommandExt for Command {
     }
 
     /// Runs the command to completion
+    #[track_caller]
     fn run(&mut self, msg_info: &mut MessageInfo, silence_stdout: bool) -> Result<()> {
         let status = self.run_and_get_status(msg_info, silence_stdout)?;
-        self.status_result(msg_info, status, None)
-            .map_err(Into::into)
+        #[warn(clippy::nursery)]
+        Ok(self.status_result(msg_info, status, None)?)
     }
 
     /// Runs the command to completion
@@ -157,13 +159,10 @@ impl CommandExt for Command {
         if silence_stdout && !msg_info.is_verbose() {
             self.stdout(std::process::Stdio::null());
         }
-        self.status()
-            .map_err(|e| CommandError::CouldNotExecute {
-                source: Box::new(e),
-                command: self
-                    .command_pretty(msg_info, |cmd| STRIPPED_BINS.iter().any(|f| f == &cmd)),
-            })
-            .map_err(Into::into)
+        Ok(self.status().map_err(|e| CommandError::CouldNotExecute {
+            source: Box::new(e),
+            command: self.command_pretty(msg_info, |cmd| STRIPPED_BINS.iter().any(|f| f == &cmd)),
+        })?)
     }
 
     /// Runs the command to completion and returns its stdout
@@ -172,7 +171,7 @@ impl CommandExt for Command {
         let out = self.run_and_get_output(msg_info)?;
         self.status_result(msg_info, out.status, Some(&out))
             .map_err(CommandError::to_section_report)?;
-        out.stdout().map_err(Into::into)
+        Ok(out.stdout()?)
     }
 
     /// Runs the command to completion and returns the status and its [output](std::process::Output).

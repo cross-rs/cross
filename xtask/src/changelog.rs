@@ -14,15 +14,6 @@ use serde::Deserialize;
 
 #[derive(Args, Debug)]
 pub struct BuildChangelog {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long, env = "CARGO_TERM_VERBOSE")]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long, env = "CARGO_TERM_QUIET")]
-    pub quiet: bool,
-    /// Whether messages should use color output.
-    #[clap(long, env = "CARGO_TERM_COLOR")]
-    pub color: Option<String>,
     /// Build a release changelog.
     #[clap(long, env = "NEW_VERSION")]
     release: Option<String>,
@@ -35,15 +26,6 @@ pub struct BuildChangelog {
 pub struct ValidateChangelog {
     /// List of changelog entries to validate.
     files: Vec<String>,
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Whether messages should use color output.
-    #[clap(long)]
-    pub color: Option<String>,
 }
 
 // the type for the identifier: if it's a PR, sort

@@ -150,8 +150,7 @@ pub(crate) fn run(
     let status = docker
         .arg(&image_name)
         .add_build_command(toolchain_dirs, &cmd)
-        .run_and_get_status(msg_info, false)
-        .map_err(Into::into);
+        .run_and_get_status(msg_info, false);
 
     // `cargo` generally returns 0 or 101 on completion, but isn't guaranteed
     // to. `ExitStatus::code()` may be None if a signal caused the process to

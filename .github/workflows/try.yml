@@ -1,0 +1,11 @@
+name: Try
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  try:
+    if: github.event.issue.pull_request && github.event.comment.author_association == 'MEMBER' && (contains(github.event.comment.body, '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
+    uses: ./.github/workflows/CI.yml
+    with:
+      matrix-args: try --comment ${{ github.event.comment.body }} --pr ${{ github.event.issue.number }}

@@ -13,15 +13,6 @@ const TARGET_INFO_SCRIPT: &str = include_str!("target_info.sh");
 pub struct TargetInfo {
     /// If not provided, get info for all targets.
     pub targets: Vec<crate::ImageTarget>,
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Image registry.
     #[clap(long, default_value_t = String::from("ghcr.io"))]
     pub registry: String,
@@ -62,9 +53,7 @@ fn image_info(
     }
     command.arg(image);
     command.args(["bash", "-c", TARGET_INFO_SCRIPT]);
-    command
-        .run(msg_info, msg_info.is_verbose())
-        .map_err(Into::into)
+    command.run(msg_info, msg_info.is_verbose())
 }
 
 pub fn target_info(

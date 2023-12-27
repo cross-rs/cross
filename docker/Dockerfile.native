@@ -1,5 +1,5 @@
 # This dockerfile is used when the target matches the images platform in `build-docker-image`
-FROM ubuntu:20.04
+FROM ubuntu:20.04 as cross-base
 ARG DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
@@ -10,6 +10,8 @@ RUN /cmake.sh
 
 COPY xargo.sh /
 RUN /xargo.sh
+
+FROM cross-base as build
 
 ARG TARGETARCH
 ARG TARGETVARIANT

@@ -8,37 +8,19 @@ use cross::{docker, CommandExt, TargetTriple};
 
 #[derive(Args, Debug)]
 pub struct ListVolumes {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
 }
 
 impl ListVolumes {
-    pub fn run(self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    pub fn run(&self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
         list_volumes(&engine, msg_info)
     }
 }
 
 #[derive(Args, Debug)]
 pub struct RemoveAllVolumes {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Force removal of volumes.
     #[clap(short, long)]
     pub force: bool,
@@ -51,22 +33,13 @@ pub struct RemoveAllVolumes {
 }
 
 impl RemoveAllVolumes {
-    pub fn run(self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    pub fn run(&self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
         remove_all_volumes(self, &engine, msg_info)
     }
 }
 
 #[derive(Args, Debug)]
 pub struct PruneVolumes {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Remove volumes. Default is a dry run.
     #[clap(short, long)]
     pub execute: bool,
@@ -76,7 +49,7 @@ pub struct PruneVolumes {
 }
 
 impl PruneVolumes {
-    pub fn run(self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    pub fn run(&self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
         prune_volumes(self, &engine, msg_info)
     }
 }
@@ -89,15 +62,6 @@ pub struct CreateVolume {
     /// If we should copy the cargo registry to the volume.
     #[clap(short, long)]
     pub copy_registry: bool,
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
@@ -108,7 +72,7 @@ pub struct CreateVolume {
 
 impl CreateVolume {
     pub fn run(
-        self,
+        &self,
         engine: docker::Engine,
         channel: Option<&Toolchain>,
         msg_info: &mut MessageInfo,
@@ -125,15 +89,6 @@ pub struct RemoveVolume {
     /// If cross is running inside a container.
     #[clap(short, long)]
     pub docker_in_docker: bool,
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
@@ -144,7 +99,7 @@ pub struct RemoveVolume {
 
 impl RemoveVolume {
     pub fn run(
-        self,
+        &self,
         engine: docker::Engine,
         channel: Option<&Toolchain>,
         msg_info: &mut MessageInfo,
@@ -166,22 +121,9 @@ pub enum Volumes {
     /// Remove a persistent data volume for a given toolchain.
     Remove(RemoveVolume),
 }
-
-macro_rules! volumes_get_field {
-    ($self:ident, $field:ident $(.$cb:ident)?) => {{
-        match $self {
-            Volumes::List(l) => l.$field$(.$cb())?,
-            Volumes::RemoveAll(l) => l.$field$(.$cb())?,
-            Volumes::Prune(l) => l.$field$(.$cb())?,
-            Volumes::Create(l) => l.$field$(.$cb())?,
-            Volumes::Remove(l) => l.$field$(.$cb())?,
-        }
-    }};
-}
-
 impl Volumes {
     pub fn run(
-        self,
+        &self,
         engine: docker::Engine,
         channel: Option<&Toolchain>,
         msg_info: &mut MessageInfo,
@@ -196,7 +138,13 @@ impl Volumes {
     }
 
     pub fn engine(&self) -> Option<&str> {
-        volumes_get_field!(self, engine.as_deref)
+        match self {
+            Volumes::List(l) => l.engine.as_deref(),
+            Volumes::RemoveAll(l) => l.engine.as_deref(),
+            Volumes::Prune(l) => l.engine.as_deref(),
+            Volumes::Create(l) => l.engine.as_deref(),
+            Volumes::Remove(l) => l.engine.as_deref(),
+        }
     }
 
     // FIXME: remove this in v0.3.0.
@@ -209,53 +157,23 @@ impl Volumes {
             Volumes::Remove(l) => l.docker_in_docker,
         }
     }
-
-    pub fn verbose(&self) -> bool {
-        volumes_get_field!(self, verbose)
-    }
-
-    pub fn quiet(&self) -> bool {
-        volumes_get_field!(self, quiet)
-    }
-
-    pub fn color(&self) -> Option<&str> {
-        volumes_get_field!(self, color.as_deref)
-    }
 }
 
 #[derive(Args, Debug)]
 pub struct ListContainers {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Container engine (such as docker or podman).
     #[clap(long)]
     pub engine: Option<String>,
 }
 
 impl ListContainers {
-    pub fn run(self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    pub fn run(&self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
         list_containers(&engine, msg_info)
     }
 }
 
 #[derive(Args, Debug)]
 pub struct RemoveAllContainers {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Force removal of containers.
     #[clap(short, long)]
     pub force: bool,
@@ -268,7 +186,7 @@ pub struct RemoveAllContainers {
 }
 
 impl RemoveAllContainers {
-    pub fn run(self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    pub fn run(&self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
         remove_all_containers(self, &engine, msg_info)
     }
 }
@@ -281,17 +199,8 @@ pub enum Containers {
     RemoveAll(RemoveAllContainers),
 }
 
-macro_rules! containers_get_field {
-    ($self:ident, $field:ident $(.$cb:ident)?) => {{
-        match $self {
-            Containers::List(l) => l.$field$(.$cb())?,
-            Containers::RemoveAll(l) => l.$field$(.$cb())?,
-        }
-    }};
-}
-
 impl Containers {
-    pub fn run(self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    pub fn run(&self, engine: docker::Engine, msg_info: &mut MessageInfo) -> cross::Result<()> {
         match self {
             Containers::List(args) => args.run(engine, msg_info),
             Containers::RemoveAll(args) => args.run(engine, msg_info),
@@ -299,19 +208,10 @@ impl Containers {
     }
 
     pub fn engine(&self) -> Option<&str> {
-        containers_get_field!(self, engine.as_deref)
-    }
-
-    pub fn verbose(&self) -> bool {
-        containers_get_field!(self, verbose)
-    }
-
-    pub fn quiet(&self) -> bool {
-        containers_get_field!(self, quiet)
-    }
-
-    pub fn color(&self) -> Option<&str> {
-        containers_get_field!(self, color.as_deref)
+        match self {
+            Containers::List(l) => l.engine.as_deref(),
+            Containers::RemoveAll(l) => l.engine.as_deref(),
+        }
     }
 }
 
@@ -343,7 +243,7 @@ pub fn list_volumes(engine: &docker::Engine, msg_info: &mut MessageInfo) -> cros
 }
 
 pub fn remove_all_volumes(
-    RemoveAllVolumes { force, execute, .. }: RemoveAllVolumes,
+    RemoveAllVolumes { force, execute, .. }: &RemoveAllVolumes,
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
@@ -351,14 +251,14 @@ pub fn remove_all_volumes(
 
     let mut command = engine.subcommand("volume");
     command.arg("rm");
-    if force {
+    if *force {
         command.arg("--force");
     }
     command.args(&volumes);
     if volumes.is_empty() {
         Ok(())
-    } else if execute {
-        command.run(msg_info, false).map_err(Into::into)
+    } else if *execute {
+        command.run(msg_info, false)
     } else {
         msg_info.note("this is a dry run. to remove the volumes, pass the `--execute` flag.")?;
         command.print(msg_info)?;
@@ -367,14 +267,14 @@ pub fn remove_all_volumes(
 }
 
 pub fn prune_volumes(
-    PruneVolumes { execute, .. }: PruneVolumes,
+    PruneVolumes { execute, .. }: &PruneVolumes,
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
     let mut command = engine.subcommand("volume");
     command.args(["prune", "--force"]);
-    if execute {
-        command.run(msg_info, false).map_err(Into::into)
+    if *execute {
+        command.run(msg_info, false)
     } else {
         msg_info.note("this is a dry run. to prune the volumes, pass the `--execute` flag.")?;
         command.print(msg_info)?;
@@ -387,12 +287,12 @@ pub fn create_persistent_volume(
         copy_registry,
         toolchain,
         ..
-    }: CreateVolume,
+    }: &CreateVolume,
     engine: &docker::Engine,
     channel: Option<&Toolchain>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let mut toolchain = toolchain_or_target(&toolchain, msg_info)?;
+    let mut toolchain = toolchain_or_target(toolchain, msg_info)?;
     if let Some(channel) = channel {
         toolchain.channel = channel.channel.clone();
     };
@@ -446,7 +346,7 @@ pub fn create_persistent_volume(
 
     let data_volume = docker::ContainerDataVolume::new(engine, &container_id, &dirs);
     data_volume.copy_xargo(mount_prefix, msg_info)?;
-    data_volume.copy_cargo(mount_prefix, copy_registry, msg_info)?;
+    data_volume.copy_cargo(mount_prefix, *copy_registry, msg_info)?;
     data_volume.copy_rust(None, mount_prefix, msg_info)?;
 
     docker::ChildContainer::finish_static(is_tty, msg_info);
@@ -455,12 +355,12 @@ pub fn create_persistent_volume(
 }
 
 pub fn remove_persistent_volume(
-    RemoveVolume { toolchain, .. }: RemoveVolume,
+    RemoveVolume { toolchain, .. }: &RemoveVolume,
     engine: &docker::Engine,
     channel: Option<&Toolchain>,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    let mut toolchain = toolchain_or_target(&toolchain, msg_info)?;
+    let mut toolchain = toolchain_or_target(toolchain, msg_info)?;
     if let Some(channel) = channel {
         toolchain.channel = channel.channel.clone();
     };
@@ -506,7 +406,7 @@ pub fn list_containers(engine: &docker::Engine, msg_info: &mut MessageInfo) -> c
 }
 
 pub fn remove_all_containers(
-    RemoveAllContainers { force, execute, .. }: RemoveAllContainers,
+    RemoveAllContainers { force, execute, .. }: &RemoveAllContainers,
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
@@ -534,14 +434,14 @@ pub fn remove_all_containers(
 
     if !(stopped.is_empty() && running.is_empty()) {
         let mut rm = engine.subcommand("rm");
-        if force {
+        if *force {
             rm.arg("--force");
         }
         rm.args(&running);
         rm.args(&stopped);
         commands.push(rm);
     }
-    if execute {
+    if *execute {
         for mut command in commands {
             command.run(msg_info, false)?;
         }

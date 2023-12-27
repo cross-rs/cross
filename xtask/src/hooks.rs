@@ -14,15 +14,6 @@ const CARGO_FLAGS: &[&str] = &["--all-features", "--all-targets", "--workspace"]
 
 #[derive(Args, Debug)]
 pub struct Check {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Run shellcheck on all files, not just staged files.
     #[clap(short, long)]
     all: bool,
@@ -36,15 +27,6 @@ pub struct Check {
 
 #[derive(Args, Debug)]
 pub struct Test {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    pub verbose: bool,
-    /// Do not print cross log messages.
-    #[clap(short, long)]
-    pub quiet: bool,
-    /// Coloring: auto, always, never
-    #[clap(long)]
-    pub color: Option<String>,
     /// Run Python test suite.
     #[clap(short, long, env = "PYTHON", value_parser = BoolishValueParser::new())]
     python: bool,
@@ -53,28 +35,28 @@ pub struct Test {
     tox: Option<String>,
 }
 
+#[track_caller]
 fn cargo_fmt(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Result<()> {
     cargo(channel)
         .args(["fmt", "--", "--check"])
         .run(msg_info, false)
-        .map_err(Into::into)
 }
 
+#[track_caller]
 fn cargo_clippy(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Result<()> {
     cargo(channel)
         .arg("clippy")
         .args(CARGO_FLAGS)
         .args(["--", "--deny", "warnings"])
         .run(msg_info, false)
-        .map_err(Into::into)
 }
 
+#[track_caller]
 fn cargo_test(msg_info: &mut MessageInfo, channel: Option<&str>) -> cross::Result<()> {
     cargo(channel)
         .arg("test")
         .args(CARGO_FLAGS)
         .run(msg_info, false)
-        .map_err(Into::into)
 }
 
 fn splitlines(string: String) -> Vec<String> {
@@ -212,9 +194,9 @@ pub fn check(
     msg_info.info(format_args!("Running {} checks.", checks.join(", ")))?;
 
     let channel = get_channel_prefer_nightly(msg_info, toolchain)?;
-    cargo_fmt(msg_info, channel)?;
-    cargo_clippy(msg_info, channel)?;
-    shellcheck(all, msg_info)?;
+    cargo_fmt(msg_info, channel).wrap_err("fmt failed")?;
+    cargo_clippy(msg_info, channel).wrap_err("clippy failed")?;
+    shellcheck(all, msg_info).wrap_err("shellcheck failed")?;
     if python {
         python_lint(flake8.as_deref(), msg_info)?;
     }
