@@ -7,47 +7,118 @@ use serde::{Deserialize, Serialize};
 
 use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
 
-pub(crate) fn run(weekly: bool, merge_group: Option<String>) -> Result<(), color_eyre::Report> {
-    let mut matrix: Vec<CiTarget> = get_matrix().clone();
-    let (prs, mut app) = if let Some(ref ref_) = merge_group {
-        (
-            vec![process_merge_group(ref_)?],
-            TargetMatrixArgs::default(),
-        )
-    } else if weekly {
-        let app = TargetMatrixArgs {
-            target: std::env::var("TARGETS")
-                .unwrap_or_default()
-                .split(' ')
-                .flat_map(|s| s.split(','))
-                .filter(|s| !s.is_empty())
-                .map(|s| s.to_owned())
-                .collect(),
-            std: None,
-            cpp: None,
-            dylib: None,
-            run: None,
-            runners: vec![],
-            none: false,
-            has_image: true,
-            verbose: false,
+#[derive(Parser, Debug)]
+pub struct TargetMatrix {
+    /// check is being run as part of a weekly check
+    #[clap(long)]
+    pub weekly: bool,
+    /// merge group that is being checked.
+    #[clap(long)]
+    pub merge_group: Option<String>,
+    #[clap(subcommand)]
+    pub subcommand: Option<TargetMatrixSub>,
+}
+
+#[derive(Parser, Debug)]
+pub enum TargetMatrixSub {
+    Try {
+        /// pr to check
+        #[clap(long)]
+        pr: String,
+        /// comment to check
+        #[clap(long)]
+        comment: String,
+    },
+}
+
+impl TargetMatrix {
+    pub(crate) fn run(&self) -> Result<(), color_eyre::Report> {
+        let mut matrix: Vec<CiTarget> = get_matrix().clone();
+        let mut is_default_try = false;
+        let (prs, mut app) = match self {
+            TargetMatrix {
+                merge_group: Some(ref_),
+                ..
+            } => (
+                vec![process_merge_group(ref_)?],
+                TargetMatrixArgs::default(),
+            ),
+            TargetMatrix { weekly: true, .. } => (
+                vec![],
+                TargetMatrixArgs {
+                    target: std::env::var("TARGETS")
+                        .unwrap_or_default()
+                        .split(' ')
+                        .flat_map(|s| s.split(','))
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_owned())
+                        .collect(),
+                    std: None,
+                    cpp: None,
+                    dylib: None,
+                    run: None,
+                    runners: vec![],
+                    none: false,
+                    has_image: true,
+                    verbose: false,
+                },
+            ),
+            TargetMatrix {
+                subcommand: Some(TargetMatrixSub::Try { pr, comment }),
+                ..
+            } => {
+                let process_try_comment = process_try_comment(comment)?;
+                is_default_try = process_try_comment.0;
+                (vec![pr.as_ref()], process_try_comment.1)
+            }
+            _ => (vec![], TargetMatrixArgs::default()),
         };
-        (vec![], app)
-    } else {
-        (vec![], TargetMatrixArgs::default())
-    };
 
-    if !prs.is_empty()
-        && prs.iter().try_fold(true, |b, pr| {
-            Ok::<_, eyre::Report>(b && has_no_ci_target(pr)?)
-        })?
-    {
-        app.none = true;
+        if matches!(
+            self,
+            Self {
+                weekly: false,
+                merge_group: Some(_) | None,
+                subcommand: None,
+            }
+        ) || is_default_try
+        {
+            apply_ci_target_labels(&prs, &mut app)?
+        }
+
+        app.filter(&mut matrix);
+
+        let matrix = matrix
+            .iter()
+            .map(|target| TargetMatrixElement {
+                pretty: target.to_image_target().alt(),
+                platforms: target.platforms(),
+                target: &target.target,
+                sub: target.sub.as_deref(),
+                os: &target.os,
+                run: target.run.map(|b| b as u8),
+                deploy: target.deploy.map(|b| b as u8),
+                build_std: target.build_std.map(|b| b as u8),
+                cpp: target.cpp.map(|b| b as u8),
+                dylib: target.dylib.map(|b| b as u8),
+                runners: target.runners.as_deref(),
+                std: target.std.map(|b| b as u8),
+                verbose: app.verbose,
+            })
+            .collect::<Vec<_>>();
+
+        let json = serde_json::to_string(&matrix)?;
+        gha_print(&json);
+        gha_output("matrix", &json)?;
+        Ok(())
     }
+}
 
-    // Find all `CI-` labels
+fn apply_ci_target_labels(prs: &[&str], app: &mut TargetMatrixArgs) -> Result<(), eyre::Error> {
+    apply_has_no_ci_target(prs, app)?;
+
     let mut to_add = vec![];
-    'pr_loop: for pr in &prs {
+    'pr_loop: for pr in prs {
         let labels = parse_gh_labels(pr)?;
         let targets = labels
             .iter()
@@ -60,33 +131,18 @@ pub(crate) fn run(weekly: bool, merge_group: Option<String>) -> Result<(), color
         }
         to_add.extend(targets.iter().map(|label| label.to_string()));
     }
-
     app.target.extend(to_add);
+    Ok(())
+}
 
-    app.filter(&mut matrix);
-
-    let matrix = matrix
-        .iter()
-        .map(|target| TargetMatrixElement {
-            pretty: target.to_image_target().alt(),
-            platforms: target.platforms(),
-            target: &target.target,
-            sub: target.sub.as_deref(),
-            os: &target.os,
-            run: target.run.map(|b| b as u8),
-            deploy: target.deploy.map(|b| b as u8),
-            build_std: target.build_std.map(|b| b as u8),
-            cpp: target.cpp.map(|b| b as u8),
-            dylib: target.dylib.map(|b| b as u8),
-            runners: target.runners.as_deref(),
-            std: target.std.map(|b| b as u8),
-            verbose: app.verbose,
-        })
-        .collect::<Vec<_>>();
-
-    let json = serde_json::to_string(&matrix)?;
-    gha_print(&json);
-    gha_output("matrix", &json)?;
+fn apply_has_no_ci_target(prs: &[&str], app: &mut TargetMatrixArgs) -> Result<(), eyre::Error> {
+    if !prs.is_empty()
+        && prs.iter().try_fold(true, |b, pr| {
+            Ok::<_, eyre::Report>(b && has_no_ci_target(pr)?)
+        })?
+    {
+        app.none = true;
+    }
     Ok(())
 }
 
@@ -128,33 +184,21 @@ fn process_merge_group(ref_: &str) -> cross::Result<&str> {
         .ok_or_else(|| eyre::eyre!("merge group ref must include \"pr-<num>-<sha>\""))
 }
 
-/// Returns the pr(s) associated with this bors commit and the app to use for processing
-fn _process_args(message: &str) -> cross::Result<(Vec<&str>, TargetMatrixArgs)> {
-    if let Some(message) = message.strip_prefix("Try #") {
-        let (pr, args) = message
-            .split_once(':')
-            .ok_or_else(|| eyre::eyre!("bors message must start with \"Try #:\""))?;
-        let args = args.trim_start();
-        let app = if !args.is_empty() {
-            TargetMatrixArgs::parse_from(args.split(' '))
+/// Returns app to use for matrix on try comment, boolean is used to determine if its a try without arguments
+fn process_try_comment(message: &str) -> cross::Result<(bool, TargetMatrixArgs)> {
+    for line in message.lines() {
+        let command = if let Some(command) = line.strip_prefix("/ci try") {
+            command.trim()
         } else {
-            TargetMatrixArgs::default()
+            continue;
         };
-        Ok((vec![pr], app))
-    } else if let Some(message) = message.strip_prefix("Merge") {
-        Ok((
-            message
-                .lines()
-                .next()
-                .unwrap_or_default()
-                .split(" #")
-                .skip(1)
-                .collect(),
-            TargetMatrixArgs::default(),
-        ))
-    } else {
-        eyre::bail!("unexpected bors commit message encountered")
+        if command.is_empty() {
+            return Ok((true, TargetMatrixArgs::default()));
+        } else {
+            return Ok((false, TargetMatrixArgs::parse_from(command.split(' '))));
+        }
     }
+    eyre::bail!("no /ci try command found in comment")
 }
 
 #[derive(Serialize)]
@@ -333,22 +377,6 @@ mod tests {
         assert_eq!(
             process_merge_group("refs/heads/gh-readonly-queue/main/pr-1375-44011c8854cb2eaac83b173cc323220ccdff18ea").unwrap(),
             "1375"
-        );
-    }
-
-    #[test]
-    fn full_invocation() {
-        let (prs, app) = _process_args("Try #1337: ").unwrap();
-        assert_eq!(prs, vec!["1337"]);
-        assert_eq!(app, TargetMatrixArgs::default());
-        let (prs, app) = _process_args("Try #1337: --std 1").unwrap();
-        assert_eq!(prs, vec!["1337"]);
-        assert_eq!(
-            app,
-            TargetMatrixArgs {
-                std: Some(true),
-                ..TargetMatrixArgs::default()
-            }
         );
     }
 }

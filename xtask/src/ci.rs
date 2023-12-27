@@ -26,14 +26,7 @@ pub enum CiJob {
         #[clap(long, env = "GITHUB_REF_NAME")]
         ref_name: String,
     },
-    TargetMatrix {
-        /// check is being run as part of a weekly check
-        #[clap(long)]
-        weekly: bool,
-        /// merge group that is being checked.
-        #[clap(long)]
-        merge_group: Option<String>,
-    },
+    TargetMatrix(target_matrix::TargetMatrix),
 }
 
 pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
@@ -116,11 +109,8 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
                 }
             }
         }
-        CiJob::TargetMatrix {
-            weekly,
-            merge_group,
-        } => {
-            target_matrix::run(weekly, merge_group)?;
+        CiJob::TargetMatrix(target_matrix) => {
+            target_matrix.run()?;
         }
     }
     Ok(())
