@@ -14,7 +14,7 @@ jobs:
 
       - name: Get Changed Files
         id: files
-        uses: tj-actions/changed-files@v34
+        uses: tj-actions/changed-files@v41
         with:
           separator: ';'
           files: |
