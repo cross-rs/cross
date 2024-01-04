@@ -143,7 +143,7 @@ base_release=$(latest_freebsd "${mirror}")
 bsd_url="${mirror}/${FREEBSD_ARCH}/${base_release}-RELEASE"
 
 main() {
-    local binutils=2.32 \
+    local binutils=2.40 \
         gcc=6.4.0 \
         target="${ARCH}-unknown-freebsd${FREEBSD_MAJOR}"
 
@@ -152,6 +152,7 @@ main() {
         g++ \
         make \
         wget \
+        texinfo \
         xz-utils
 
     local td
