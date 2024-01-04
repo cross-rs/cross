@@ -21,8 +21,8 @@ COPY freebsd-install.sh /
 COPY freebsd-extras.sh /
 RUN /freebsd-extras.sh
 
-ENV CROSS_TOOLCHAIN_PREFIX=aarch64-unknown-freebsd12-
-ENV CROSS_SYSROOT=/usr/local/aarch64-unknown-freebsd12
+ENV CROSS_TOOLCHAIN_PREFIX=aarch64-unknown-freebsd13-
+ENV CROSS_SYSROOT=/usr/local/aarch64-unknown-freebsd13
 
 COPY freebsd-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
 COPY toolchain.cmake /opt/toolchain.cmake
