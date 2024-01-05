@@ -1,5 +1,5 @@
 FROM ubuntu:20.04 as cross-base
-ARG DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
 RUN /common.sh

@@ -1,5 +1,5 @@
 FROM ubuntu:20.04 as base
-ARG DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 ARG TARGETARCH
 ARG TARGETVARIANT

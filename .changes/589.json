@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "Ensure podman builds use non-interactive package installs.",
+    "issues": [589]
+}
