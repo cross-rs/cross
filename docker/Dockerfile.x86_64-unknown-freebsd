@@ -27,6 +27,10 @@ ENV CROSS_SYSROOT=/usr/local/x86_64-unknown-freebsd13
 COPY freebsd-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
 COPY toolchain.cmake /opt/toolchain.cmake
 
+COPY freebsd-fetch-best-mirror.sh /
+COPY freebsd-setup-packagesite.sh /
+COPY freebsd-install-package.sh /
+
 ENV CARGO_TARGET_X86_64_UNKNOWN_FREEBSD_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
     AR_x86_64_unknown_freebsd="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_x86_64_unknown_freebsd="$CROSS_TOOLCHAIN_PREFIX"gcc \
