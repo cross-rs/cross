@@ -308,6 +308,7 @@ cpp = true
 dylib = true
 std = true
 run = true
+build-std = true
 
 [[target]]
 target = "mipsel-unknown-linux-musl"
@@ -316,6 +317,7 @@ cpp = true
 dylib = true
 std = true
 run = true
+build-std = true
 
 [[target]]
 target = "aarch64-linux-android"
