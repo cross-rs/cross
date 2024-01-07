@@ -202,7 +202,7 @@ main() {
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11}.asc' -O
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11}-security.asc' -O
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11}.asc' -O
-    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023}.key' -O
+    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023,2024}.key' -O
 
     for key in *.asc *.key; do
         apt-key add "${key}"
@@ -287,19 +287,24 @@ main() {
 
     # initrd
     mkdir -p "${root}/modules"
+    if ls -d "${root}/usr/lib/modules"/*/kernel; then
+        prefix='/usr'
+    else
+        prefix=''
+    fi
     cp -v \
-        "${root}/lib/modules"/*/kernel/drivers/net/net_failover.ko \
-        "${root}/lib/modules"/*/kernel/drivers/net/virtio_net.ko \
-        "${root}/lib/modules"/*/kernel/drivers/virtio/* \
-        "${root}/lib/modules"/*/kernel/fs/netfs/netfs.ko \
-        "${root}/lib/modules"/*/kernel/fs/9p/9p.ko \
-        "${root}/lib/modules"/*/kernel/fs/fscache/fscache.ko \
-        "${root}/lib/modules"/*/kernel/net/9p/9pnet.ko \
-        "${root}/lib/modules"/*/kernel/net/9p/9pnet_virtio.ko \
-        "${root}/lib/modules"/*/kernel/net/core/failover.ko \
+        "${root}${prefix}/lib/modules"/*/kernel/drivers/net/net_failover.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/drivers/net/virtio_net.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/drivers/virtio/* \
+        "${root}${prefix}/lib/modules"/*/kernel/fs/netfs/netfs.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/fs/9p/9p.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/fs/fscache/fscache.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/net/9p/9pnet.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/net/9p/9pnet_virtio.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/net/core/failover.ko* \
         "${root}/modules" || true # some file may not exist
     rm -rf "${root:?}/boot"
-    rm -rf "${root:?}/lib/modules"
+    rm -rf "${root:?}${prefix}/lib/modules"
 
     cat <<'EOF' >"${root}/etc/hosts"
 127.0.0.1 localhost qemu
@@ -340,12 +345,17 @@ EOF
     # dropbear complains when this file is missing
     touch "${root}/var/log/lastlog"
 
-    cat <<'EOF' >"$root/init"
-#!/bin/busybox sh
+    if [[ -e "${root}/usr/bin/busybox" ]]; then
+        busybox='/usr/bin/busybox'
+    else
+        busybox='/bin/busybox'
+    fi
+    cat <<EOF >"${root}/init"
+#!${busybox} sh
 
 set -e
 
-/bin/busybox --install
+${busybox} --install
 
 mount -t devtmpfs devtmpfs /dev
 mount -t proc none /proc
@@ -354,20 +364,20 @@ mkdir /dev/pts
 mount -t devpts none /dev/pts/
 
 # some archs does not have virtio modules
-insmod /modules/failover.ko || true
-insmod /modules/net_failover.ko || true
-insmod /modules/virtio.ko || true
-insmod /modules/virtio_ring.ko || true
-insmod /modules/virtio_mmio.ko || true
-insmod /modules/virtio_pci_legacy_dev.ko || true
-insmod /modules/virtio_pci_modern_dev.ko || true
-insmod /modules/virtio_pci.ko || true
-insmod /modules/virtio_net.ko || true
-insmod /modules/netfs.ko || true
-insmod /modules/fscache.ko
-insmod /modules/9pnet.ko
-insmod /modules/9pnet_virtio.ko || true
-insmod /modules/9p.ko
+insmod /modules/failover.ko || insmod /modules/failover.ko.xz || true
+insmod /modules/net_failover.ko || insmod /modules/net_failover.ko.xz || true
+insmod /modules/virtio.ko || insmod /modules/virtio.ko.xz || true
+insmod /modules/virtio_ring.ko || insmod /modules/virtio_ring.ko.xz || true
+insmod /modules/virtio_mmio.ko || insmod /modules/virtio_mmio.ko.xz || true
+insmod /modules/virtio_pci_legacy_dev.ko || insmod /modules/virtio_pci_legacy_dev.ko.xz || true
+insmod /modules/virtio_pci_modern_dev.ko || insmod /modules/virtio_pci_modern_dev.ko.xz || true
+insmod /modules/virtio_pci.ko || insmod /modules/virtio_pci.ko.xz || true
+insmod /modules/virtio_net.ko || insmod /modules/virtio_net.ko.xz || true
+insmod /modules/netfs.ko || insmod /modules/netfs.ko.xz || true
+insmod /modules/fscache.ko || insmod /modules/fscache.ko.xz
+insmod /modules/9pnet.ko || insmod /modules/9pnet.ko.xz
+insmod /modules/9pnet_virtio.ko || insmod /modules/9pnet_virtio.ko.xz || true
+insmod /modules/9p.ko || insmod /modules/9p.ko.xz
 
 ifconfig lo 127.0.0.1
 ifconfig eth0 10.0.2.15
