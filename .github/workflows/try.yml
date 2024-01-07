@@ -5,7 +5,24 @@ on:
 
 jobs:
   try:
-    if: github.event.issue.pull_request && github.event.comment.author_association == 'MEMBER' && (contains(github.event.comment.body, '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
+    if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(github.event.comment.body, '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
     uses: ./.github/workflows/ci.yml
     with:
       matrix-args: try --comment "${{ github.event.comment.body }}" --pr ${{ github.event.issue.number }}
+  comment:
+    needs: try
+    if: always() && needs.try.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      # comment on the PR with the result and links to the logs using gh cli
+      # Something like `### Try build: [{result}]({link_to_logs})`
+      # the url to the logs are on jobs[name="try"].url gathered with `gh run view ${{ github.run_id }} --json jobs`
+      - name: Comment on PR
+        run: |
+          PR_ID=${{ github.event.issue.number }}
+          gh run view ${{ github.run_id }} --json jobs |\
+          jq -r '"Diff for [comment]("+$comment+")\n\n- [Run](" + (.jobs[] | select(.name == "try / generate-matrix") | .url) + ")\n" + ([.jobs[] | select(.name | startswith("try / target")) | select(.name | contains("matrix.pretty") | not ) | "- [" + (.name | capture("\\((?<name>[^,]+),.*") | .name) + "](" + .url + "?pr=" + $pr_id + "#step:7:45)"] | join("\n"))' --arg pr_id "$PR_ID" --arg comment "${{ github.event.comment.url }}"|\
+          gh pr comment "$PR_ID" --body "$(< /dev/stdin)"
+        env:
+          GH_TOKEN: ${{ github.token }}
