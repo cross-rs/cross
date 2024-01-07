@@ -1,0 +1,5 @@
+{
+  "description": "fix creating `initrd` when using debian `ports` mirror and compressed kernel modules",
+  "issues": [1399],
+  "type": "fixed"
+}
