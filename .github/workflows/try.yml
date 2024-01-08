@@ -6,15 +6,12 @@ jobs:
   acknowledge:
     runs-on: ubuntu-latest
     if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(github.event.comment.body, '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
-    outputs:
-      comment_id: ${{ steps.acknowledge.outputs.comment_id }}
     steps:
       - uses: actions/checkout@v3
       - name: Acknowledge command
         id: acknowledge
         run: |
-          COMMENT_ID=$(gh pr comment "${{ github.event.issue.number }}" --body "Starting try. [Link to run](https://github.com/Emilgardis/cross/actions/runs/$RUN_ID?pr=1)" --json | jq -r '.id')
-          echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
+          gh pr comment ${{ github.event.issue.number }} --body "<!--try-ack-comment-->\nStarting try run. [Link to action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}?pr=${{ github.event.issue.number }})"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
@@ -30,8 +27,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Delete existing ack comment
-        run: gh api -X DELETE /repos/${{ github.repository }}/issues/comments/${{ needs.acknowledge.outputs.comment_id }}
+      - name: Minimize existing comments
+        run: |
+          COMMENTS=$(gh pr view ${{ github.event.issue.number }} --json comments --jq '.comments[] | select((.body | contains("<!--try-conclusion-comment-->") or contains("<!--try-ack-comment-->")) and (.author.login == "github-actions") and (.isMinimized | not)) | .id')
+          while read -r comment_id; do
+            gh api graphql -f query='mutation { minimizeComment(input: { classifier: OUTDATED, subjectId: "'"$comment_id"'" }) { minimizedComment { isMinimized } } }'
+          done <<< "$COMMENTS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
@@ -52,7 +53,7 @@ jobs:
             else
               map(job_to_md) | join("\n") + "\n"
             end;
-          "## [Try](\(.jobs[] | select(.name == "try / generate-matrix") | .url + "#step:4:18")) run for [comment](\($comment))\n\n" +
+          "<!--try-conclusion-comment-->\n## [Try](\(.jobs[] | select(.name == "try / generate-matrix") | .url + "#step:4:18")) run for [comment](\($comment))\n\n" +
           "\(.jobs[] | select(.name == "try / conclusion") | job_to_md)\n\n" +
           ([.jobs[] | select(.name | startswith("try / target")) | select(.name | contains("matrix.pretty") | not ) | . as $job |
           {conclusion: $job.conclusion, name: ($job.name | capture("\\((?<name>[^,]+),.*") | .name), url: $job.url} ] |
