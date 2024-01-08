@@ -168,7 +168,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.1.15] - 2019-09-04
 
-- Images are now hosted at https://hub.docker.com/r/rustembedded/cross.
+- Images are now hosted at <https://hub.docker.com/r/rustembedded/cross>.
 - Bump OpenSSL version to 1.0.2p.
 - Bump musl version to 1.1.20.
 - Bump Ubuntu to 18.04 to all musl targets.

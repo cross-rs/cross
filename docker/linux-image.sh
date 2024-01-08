@@ -23,7 +23,7 @@ max_kernel_version() {
     local r
     local is_larger
 
-    read -r -d '' -a versions <<< "$1"
+    read -r -d '' -a versions <<<"$1"
     for i in "${!versions[@]}"; do
         version="${versions[$i]}"
         x=$(echo "$version" | cut -d '.' -f 1)
@@ -71,99 +71,100 @@ main() {
 
     # select debian arch and kernel version
     case "${arch}" in
-        aarch64)
-            arch=arm64
-            kernel="${kversion}-arm64"
-            deps=(libcrypt1:"${arch}")
-            ;;
-        armv7)
-            arch=armhf
-            kernel='5.*-armmp'
-            deps=(libcrypt1:"${arch}")
-            ;;
-        i686)
-            arch=i386
-            kernel="${kversion}-686"
-            deps=(libcrypt1:"${arch}")
-            ;;
-        mips)
-            # mips was discontinued in bullseye, so we have to use buster.
-            libgcc="libgcc1"
-            debsource="deb http://http.debian.net/debian/ buster main"
-            debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
-            kernel='4.*-4kc-malta'
-            ncurses="=6.1*"
-            ;;
-        mipsel)
-            kernel='5.*-4kc-malta'
-            deps=(libcrypt1:"${arch}")
-            ;;
-        mips64el)
-            kernel='5.*-5kc-malta'
-            deps=(libcrypt1:"${arch}")
-            ;;
-        powerpc)
-            # there is no buster powerpc port, so we use jessie
-            # use a more recent kernel from backports
-            kversion='4.9.0-0.bpo.6'
-            kernel="${kversion}-powerpc"
-            debsource="deb http://archive.debian.org/debian jessie main"
-            debsource="${debsource}\ndeb http://archive.debian.org/debian jessie-backports main"
-            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
-            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+    aarch64)
+        arch=arm64
+        kernel="${kversion}-arm64"
+        deps=(libcrypt1:"${arch}")
+        ;;
+    armv7)
+        arch=armhf
+        kernel='5.*-armmp'
+        deps=(libcrypt1:"${arch}")
+        ;;
+    i686)
+        arch=i386
+        kernel="${kversion}-686"
+        deps=(libcrypt1:"${arch}")
+        ;;
+    mips)
+        # mips was discontinued in bullseye, so we have to use buster.
+        libgcc="libgcc1"
+        debsource="deb http://http.debian.net/debian/ buster main"
+        debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
+        kernel='4.*-4kc-malta'
+        ncurses="=6.1*"
+        ;;
+    mipsel)
+        kernel='5.*-4kc-malta'
+        deps=(libcrypt1:"${arch}")
+        ;;
+    mips64el)
+        kernel='5.*-5kc-malta'
+        deps=(libcrypt1:"${arch}")
+        ;;
+    powerpc)
+        # there is no buster powerpc port, so we use jessie
+        # use a more recent kernel from backports
+        kversion='4.9.0-0.bpo.6'
+        kernel="${kversion}-powerpc"
+        debsource="deb http://archive.debian.org/debian jessie main"
+        debsource="${debsource}\ndeb http://archive.debian.org/debian jessie-backports main"
+        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
 
-            # archive.debian.org Release files are expired.
-            echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
-            echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
-            echo "Acquire::AllowInsecureRepositories True;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
+        # archive.debian.org Release files are expired.
+        echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
+        echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
+        echo "Acquire::AllowInsecureRepositories True;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
 
-            dropbear="dropbear"
-            deps=(libcrypt1:"${arch}")
-            ;;
-        powerpc64)
-            # there is no stable port
-            arch=ppc64
-            # https://packages.debian.org/en/sid/linux-image-powerpc64
-            kernel='6.*-powerpc64'
-            debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
-            # sid version of dropbear requires these dependencies
-            deps=(libcrypt1:"${arch}")
-            ;;
-        powerpc64le)
-            arch=ppc64el
-            kernel='5.*-powerpc64le'
-            deps=(libcrypt1:"${arch}")
-            ;;
-        riscv64)
-            kernel='6.*-riscv64'
-            debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
-            deps=(libcrypt1:"${arch}")
-            ;;
-        s390x)
-            arch=s390x
-            kernel='5.*-s390x'
-            deps=(libcrypt1:"${arch}")
-            ;;
-        sparc64)
-            # there is no stable port
-            # https://packages.debian.org/en/sid/linux-image-sparc64
-            kernel='6.*-sparc64'
-            debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-            debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
-            # sid version of dropbear requires these dependencies
-            deps=(libcrypt1:"${arch}")
-            ;;
-        x86_64)
-            arch=amd64
-            kernel="${kversion}-amd64"
-            deps=(libcrypt1:"${arch}")
-            ;;
-        *)
-            echo "Invalid arch: ${arch}"
-            exit 1
-            ;;
+        dropbear="dropbear"
+        deps=(libcrypt1:"${arch}")
+        ;;
+    powerpc64)
+        # there is no stable port
+        arch=ppc64
+        # https://packages.debian.org/en/sid/linux-image-powerpc64
+        kernel='6.*-powerpc64'
+        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+        # sid version of dropbear requires these dependencies
+        deps=(libcrypt1:"${arch}")
+        ;;
+    powerpc64le)
+        arch=ppc64el
+        kernel='5.*-powerpc64le'
+        deps=(libcrypt1:"${arch}")
+        ;;
+    riscv64)
+        kernel='6.*-riscv64'
+        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+        debsource="${debsource}\ndeb http://deb.debian.org/debian unstable main"
+        deps=(libcrypt1:"${arch}")
+        ;;
+    s390x)
+        arch=s390x
+        kernel='5.*-s390x'
+        deps=(libcrypt1:"${arch}")
+        ;;
+    sparc64)
+        # there is no stable port
+        # https://packages.debian.org/en/sid/linux-image-sparc64
+        kernel='6.*-sparc64'
+        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+        # sid version of dropbear requires these dependencies
+        deps=(libcrypt1:"${arch}")
+        ;;
+    x86_64)
+        arch=amd64
+        kernel="${kversion}-amd64"
+        deps=(libcrypt1:"${arch}")
+        ;;
+    *)
+        echo "Invalid arch: ${arch}"
+        exit 1
+        ;;
     esac
 
     install_packages ca-certificates \
@@ -190,19 +191,19 @@ main() {
     # Download packages
     mv /etc/apt/sources.list /etc/apt/sources.list.bak
     mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak
-    echo -e "${debsource}" > /etc/apt/sources.list
+    echo -e "${debsource}" >/etc/apt/sources.list
 
     # Old ubuntu does not support --add-architecture, so we directly change multiarch file
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch ]; then
         cp /etc/dpkg/dpkg.cfg.d/multiarch /etc/dpkg/dpkg.cfg.d/multiarch.bak
     fi
-    dpkg --add-architecture "${arch}" || echo "foreign-architecture ${arch}" > /etc/dpkg/dpkg.cfg.d/multiarch
+    dpkg --add-architecture "${arch}" || echo "foreign-architecture ${arch}" >/etc/dpkg/dpkg.cfg.d/multiarch
 
     # Add Debian keys.
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11}.asc' -O
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11}-security.asc' -O
     curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11}.asc' -O
-    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023}.key' -O
+    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023,2024}.key' -O
 
     for key in *.asc *.key; do
         apt-key add "${key}"
@@ -210,7 +211,7 @@ main() {
     done
 
     # allow apt-get to retry downloads
-    echo 'APT::Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
+    echo 'APT::Acquire::Retries "3";' >/etc/apt/apt.conf.d/80-retries
 
     apt-get update
 
@@ -287,33 +288,38 @@ main() {
 
     # initrd
     mkdir -p "${root}/modules"
+    if ls -d "${root}/usr/lib/modules"/*/kernel; then
+        prefix='/usr'
+    else
+        prefix=''
+    fi
     cp -v \
-        "${root}/lib/modules"/*/kernel/drivers/net/net_failover.ko \
-        "${root}/lib/modules"/*/kernel/drivers/net/virtio_net.ko \
-        "${root}/lib/modules"/*/kernel/drivers/virtio/* \
-        "${root}/lib/modules"/*/kernel/fs/netfs/netfs.ko \
-        "${root}/lib/modules"/*/kernel/fs/9p/9p.ko \
-        "${root}/lib/modules"/*/kernel/fs/fscache/fscache.ko \
-        "${root}/lib/modules"/*/kernel/net/9p/9pnet.ko \
-        "${root}/lib/modules"/*/kernel/net/9p/9pnet_virtio.ko \
-        "${root}/lib/modules"/*/kernel/net/core/failover.ko \
+        "${root}${prefix}/lib/modules"/*/kernel/drivers/net/net_failover.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/drivers/net/virtio_net.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/drivers/virtio/* \
+        "${root}${prefix}/lib/modules"/*/kernel/fs/netfs/netfs.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/fs/9p/9p.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/fs/fscache/fscache.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/net/9p/9pnet.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/net/9p/9pnet_virtio.ko* \
+        "${root}${prefix}/lib/modules"/*/kernel/net/core/failover.ko* \
         "${root}/modules" || true # some file may not exist
     rm -rf "${root:?}/boot"
-    rm -rf "${root:?}/lib/modules"
+    rm -rf "${root:?}${prefix}/lib/modules"
 
-    cat << 'EOF' > "${root}/etc/hosts"
+    cat <<'EOF' >"${root}/etc/hosts"
 127.0.0.1 localhost qemu
 EOF
 
-    cat << 'EOF' > $root/etc/hostname
+    cat <<'EOF' >"$root/etc/hostname"
 qemu
 EOF
 
-    cat << 'EOF' > $root/etc/passwd
+    cat <<'EOF' >"$root/etc/passwd"
 root::0:0:root:/root:/bin/sh
 EOF
 
-cat << 'EOF' | uudecode -o $root/etc/dropbear/dropbear_rsa_host_key
+    cat <<'EOF' | uudecode -o "$root/etc/dropbear/dropbear_rsa_host_key"
 begin 600 dropbear_rsa_host_key
 M````!W-S:"UR<V$````#`0`!```!`0"N!-<%K,3Z.!Z,OEMB2.N\O.$IWQ*F
 M#5%(_;(^2YKY_J_.RQW/7U@_MK&J#!Z0_\;EH#98ZW*E1\.<FF%P/*Y.W56-
@@ -340,12 +346,17 @@ EOF
     # dropbear complains when this file is missing
     touch "${root}/var/log/lastlog"
 
-    cat << 'EOF' > $root/init
-#!/bin/busybox sh
+    if [[ -e "${root}/usr/bin/busybox" ]]; then
+        busybox='/usr/bin/busybox'
+    else
+        busybox='/bin/busybox'
+    fi
+    cat <<EOF >"${root}/init"
+#!${busybox} sh
 
 set -e
 
-/bin/busybox --install
+${busybox} --install
 
 mount -t devtmpfs devtmpfs /dev
 mount -t proc none /proc
@@ -354,20 +365,20 @@ mkdir /dev/pts
 mount -t devpts none /dev/pts/
 
 # some archs does not have virtio modules
-insmod /modules/failover.ko || true
-insmod /modules/net_failover.ko || true
-insmod /modules/virtio.ko || true
-insmod /modules/virtio_ring.ko || true
-insmod /modules/virtio_mmio.ko || true
-insmod /modules/virtio_pci_legacy_dev.ko || true
-insmod /modules/virtio_pci_modern_dev.ko || true
-insmod /modules/virtio_pci.ko || true
-insmod /modules/virtio_net.ko || true
-insmod /modules/netfs.ko || true
-insmod /modules/fscache.ko
-insmod /modules/9pnet.ko
-insmod /modules/9pnet_virtio.ko || true
-insmod /modules/9p.ko
+insmod /modules/failover.ko || insmod /modules/failover.ko.xz || true
+insmod /modules/net_failover.ko || insmod /modules/net_failover.ko.xz || true
+insmod /modules/virtio.ko || insmod /modules/virtio.ko.xz || true
+insmod /modules/virtio_ring.ko || insmod /modules/virtio_ring.ko.xz || true
+insmod /modules/virtio_mmio.ko || insmod /modules/virtio_mmio.ko.xz || true
+insmod /modules/virtio_pci_legacy_dev.ko || insmod /modules/virtio_pci_legacy_dev.ko.xz || true
+insmod /modules/virtio_pci_modern_dev.ko || insmod /modules/virtio_pci_modern_dev.ko.xz || true
+insmod /modules/virtio_pci.ko || insmod /modules/virtio_pci.ko.xz || true
+insmod /modules/virtio_net.ko || insmod /modules/virtio_net.ko.xz || true
+insmod /modules/netfs.ko || insmod /modules/netfs.ko.xz || true
+insmod /modules/fscache.ko || insmod /modules/fscache.ko.xz
+insmod /modules/9pnet.ko || insmod /modules/9pnet.ko.xz
+insmod /modules/9pnet_virtio.ko || insmod /modules/9pnet_virtio.ko.xz || true
+insmod /modules/9p.ko || insmod /modules/9p.ko.xz
 
 ifconfig lo 127.0.0.1
 ifconfig eth0 10.0.2.15
@@ -381,7 +392,7 @@ EOF
 
     chmod +x "${root}/init"
     cd "${root}"
-    find . | cpio --create --format='newc' --quiet | gzip > ../initrd.gz
+    find . | cpio --create --format='newc' --quiet | gzip >../initrd.gz
     cd -
 
     if [[ "${arch}" == "${dpkg_arch}" ]]; then
