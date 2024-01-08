@@ -5,6 +5,10 @@ on:
         required: false
         type: string
         description: Arguments to pass to `cargo xtask ci-job target-matrix`
+      checkout-ref:
+        required: false
+        type: string
+        description: Used to checkout a specific ref, instead of the default ref with `actions/checkout` action
   pull_request:
   merge_group:
   push:
@@ -23,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Run ShellCheck
         uses: azohra/shell-linter@v0.6.0
@@ -31,12 +37,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.checkout-ref }}
     - uses: EmbarkStudios/cargo-deny-action@v1
 
   fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - uses: ./.github/actions/setup-rust
         with:
@@ -55,6 +65,8 @@ jobs:
           - windows-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - uses: ./.github/actions/setup-rust
         with:
@@ -72,6 +84,8 @@ jobs:
           - windows-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - uses: ./.github/actions/setup-rust
       - uses: ./.github/actions/cargo-llvm-cov
@@ -87,6 +101,8 @@ jobs:
       is-latest: ${{ steps.check.outputs.is-latest }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
       - run: cargo xtask ci-job check
         id: check
@@ -96,6 +112,8 @@ jobs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
 
       - name: Generate matrix
@@ -122,6 +140,8 @@ jobs:
       coverage-artifact: ${{ steps.cov.outputs.artifact-name }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - uses: ./.github/actions/setup-rust
 
@@ -238,6 +258,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
@@ -256,6 +278,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
@@ -274,6 +298,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
@@ -298,6 +324,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
 
       - name: LLVM instrument coverage
@@ -325,6 +353,8 @@ jobs:
       coverage-artifact: ${{ steps.cov.outputs.artifact-name }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - uses: ./.github/actions/setup-rust
 
@@ -356,6 +386,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
       - uses: ./.github/actions/cargo-publish
         with:
@@ -384,6 +416,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
       - uses: actions/download-artifact@v3
         with:
