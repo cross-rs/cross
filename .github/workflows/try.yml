@@ -9,6 +9,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       matrix-args: try --comment "${{ github.event.comment.body }}" --pr ${{ github.event.issue.number }}
+      checkout-ref: refs/pull/${{ github.event.issue.number }}/head
   comment:
     needs: try
     if: always() && needs.try.result != 'skipped'
@@ -22,7 +23,7 @@ jobs:
         run: |
           PR_ID=${{ github.event.issue.number }}
           gh run view ${{ github.run_id }} --json jobs |\
-          jq -r '"Diff for [comment]("+$comment+")\n\n- [Run](" + (.jobs[] | select(.name == "try / generate-matrix") | .url) + ")\n" + ([.jobs[] | select(.name | startswith("try / target")) | select(.name | contains("matrix.pretty") | not ) | "- [" + (.name | capture("\\((?<name>[^,]+),.*") | .name) + "](" + .url + "?pr=" + $pr_id + "#step:7:45)"] | join("\n"))' --arg pr_id "$PR_ID" --arg comment "${{ github.event.comment.url }}"|\
+          jq -r '"Diff for [comment]("+$comment+")\n\n- [Run](" + (.jobs[] | select(.name == "try / generate-matrix") | .url) + ")\n" + ([.jobs[] | select(.name | startswith("try / target")) | select(.name | contains("matrix.pretty") | not ) | "- [" + (.name | capture("\\((?<name>[^,]+),.*") | .name) + "](" + .url + "?pr=" + $pr_id + "#step:10:1)"] | join("\n"))' --arg pr_id "$PR_ID" --arg comment "${{ github.event.comment.url }}"|\
           gh pr comment "$PR_ID" --body "$(< /dev/stdin)"
         env:
           GH_TOKEN: ${{ github.token }}
