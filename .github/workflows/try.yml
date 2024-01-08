@@ -23,7 +23,21 @@ jobs:
         run: |
           PR_ID=${{ github.event.issue.number }}
           gh run view ${{ github.run_id }} --json jobs |\
-          jq -r '"Diff for [comment]("+$comment+")\n\n- [Run](" + (.jobs[] | select(.name == "try / generate-matrix") | .url) + ")\n" + ([.jobs[] | select(.name | startswith("try / target")) | select(.name | contains("matrix.pretty") | not ) | "- [" + (.name | capture("\\((?<name>[^,]+),.*") | .name) + "](" + .url + "?pr=" + $pr_id + "#step:10:1)"] | join("\n"))' --arg pr_id "$PR_ID" --arg comment "${{ github.event.comment.url }}"|\
+          jq -r --arg pr_id "$PR_ID" --arg comment "${{ github.event.comment.html_url }}" '
+          def job_to_md: . | "- [\(.name)](\(.url)?pr=\($pr_id)\(.conclusion | if . == "success" then "#step:10:1)" else "#)" end) - \(.box)";
+          def wrap_if_needed:
+            (.[0].conclusion | if . == "success" then "#### Successful Jobs\n\n" else "#### Failed Jobs\n\n" end) +
+            if length > 10 then
+              "<details>\n<summary>List</summary>\n\n\(map(job_to_md) | join("\n"))\n\n</details>\n"
+            else
+              map(job_to_md) | join("\n")
+            end;
+          "## [Try](\(.jobs[] | select(.name == "try / generate-matrix") | .url)) run for [comment](\($comment))\n\n" +
+          ([.jobs[] | select(.name | startswith("try / target")) | select(.name | contains("matrix.pretty") | not ) | . as $job |
+          {conclusion: $job.conclusion, box: ($job.conclusion | if . == "success" then "✔️ " elif . == "skipped" then "🛇 " else "❌ " end), name: ($job.name | capture("\\((?<name>[^,]+),.*") | .name), url: $job.url} ] |
+          group_by(if .conclusion == "success" then "success" else "failure" end) |
+          map(wrap_if_needed) |
+          join("\n"))' |\
           gh pr comment "$PR_ID" --body "$(< /dev/stdin)"
         env:
           GH_TOKEN: ${{ github.token }}
