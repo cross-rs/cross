@@ -2,8 +2,22 @@ name: Try
 on:
   issue_comment:
     types: [created]
-
 jobs:
+  acknowledge:
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(github.event.comment.body, '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
+    outputs:
+      comment_id: ${{ steps.acknowledge.outputs.comment_id }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Acknowledge command
+        id: acknowledge
+        run: |
+          COMMENT_ID=$(gh pr comment "${{ github.event.issue.number }}" --body "Starting try. [Link to run](https://github.com/Emilgardis/cross/actions/runs/$RUN_ID?pr=1)" --json | jq -r '.id')
+          echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
   try:
     if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(github.event.comment.body, '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
     uses: ./.github/workflows/ci.yml
@@ -11,11 +25,16 @@ jobs:
       matrix-args: try --comment "${{ github.event.comment.body }}" --pr ${{ github.event.issue.number }}
       checkout-ref: refs/pull/${{ github.event.issue.number }}/head
   comment:
-    needs: try
+    needs: [try, acknowledge]
     if: always() && needs.try.result != 'skipped'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Delete existing ack comment
+        run: gh api -X DELETE /repos/${{ github.repository }}/issues/comments/${{ needs.acknowledge.outputs.comment_id }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
       # comment on the PR with the result and links to the logs using gh cli
       # Something like `### Try build: [{result}]({link_to_logs})`
       # the url to the logs are on jobs[name="try"].url gathered with `gh run view ${{ github.run_id }} --json jobs`
@@ -33,7 +52,7 @@ jobs:
             else
               map(job_to_md) | join("\n") + "\n"
             end;
-          "## [Try](\(.jobs[] | select(.name == "try / generate-matrix") | .url)) run for [comment](\($comment))\n\n" +
+          "## [Try](\(.jobs[] | select(.name == "try / generate-matrix") | .url + "#step:4:18")) run for [comment](\($comment))\n\n" +
           "\(.jobs[] | select(.name == "try / conclusion") | job_to_md)\n\n" +
           ([.jobs[] | select(.name | startswith("try / target")) | select(.name | contains("matrix.pretty") | not ) | . as $job |
           {conclusion: $job.conclusion, name: ($job.name | capture("\\((?<name>[^,]+),.*") | .name), url: $job.url} ] |
