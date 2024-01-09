@@ -1278,7 +1278,7 @@ pub fn get_image_name(
     };
 
     Ok(compatible
-        .get(0)
+        .first()
         .expect("should not be empty")
         .image_name(CROSS_IMAGE, version))
 }
@@ -1316,7 +1316,7 @@ pub fn get_image(
 
     let pick = if compatible.len() == 1 {
         // If only one match, use that
-        compatible.get(0).expect("should not be empty")
+        compatible.first().expect("should not be empty")
     } else if compatible
         .iter()
         .filter(|provided| provided.sub.is_none())

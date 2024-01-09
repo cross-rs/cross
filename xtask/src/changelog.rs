@@ -96,7 +96,7 @@ impl IdType {
 
 impl cmp::PartialOrd for IdType {
     fn partial_cmp(&self, other: &IdType) -> Option<cmp::Ordering> {
-        self.max_number().partial_cmp(&other.max_number())
+        Some(self.cmp(other))
     }
 }
 
@@ -141,7 +141,7 @@ impl ChangelogType {
 
 impl cmp::PartialOrd for ChangelogType {
     fn partial_cmp(&self, other: &ChangelogType) -> Option<cmp::Ordering> {
-        self.sort_by().partial_cmp(&other.sort_by())
+        Some(self.cmp(other))
     }
 }
 
@@ -171,7 +171,7 @@ impl ChangelogContents {
 
 impl cmp::PartialOrd for ChangelogContents {
     fn partial_cmp(&self, other: &ChangelogContents) -> Option<cmp::Ordering> {
-        self.sort_by().partial_cmp(&other.sort_by())
+        Some(self.cmp(other))
     }
 }
 

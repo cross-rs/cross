@@ -35,7 +35,7 @@ impl PossibleImage {
             }
         } else {
             let platform = if self.toolchain.len() == 1 {
-                self.toolchain.get(0).expect("should contain at least one")
+                self.toolchain.first().expect("should contain at least one")
             } else {
                 let same_arch = self
                     .toolchain
@@ -48,7 +48,7 @@ impl PossibleImage {
 
                 if same_arch.len() == 1 {
                     // pick the platform with the same architecture
-                    same_arch.get(0).expect("should contain one element")
+                    same_arch.first().expect("should contain one element")
                 } else if let Some(platform) = same_arch
                     .iter()
                     .find(|platform| &platform.os == engine.os.as_ref().unwrap_or(&Os::Linux))
@@ -62,7 +62,7 @@ impl PossibleImage {
                 } else {
                     let platform = self
                         .toolchain
-                        .get(0)
+                        .first()
                         .expect("should be at least one platform");
                     // FIXME: Don't throw away
                     msg_info.warn(

@@ -140,7 +140,7 @@ fn python_lint(flake8: Option<&str>, msg_info: &mut MessageInfo) -> cross::Resul
         .map(parse_command)
         .unwrap_or_else(|| Ok(vec!["flake8".to_owned()]))?;
     let mut cmd = Command::new(
-        args.get(0)
+        args.first()
             .ok_or_else(|| eyre::eyre!("empty string provided for flake8 command"))?,
     );
     cmd.args(&args[1..]);
@@ -160,7 +160,7 @@ fn python_test(tox: Option<&str>, msg_info: &mut MessageInfo) -> cross::Result<(
         .map(parse_command)
         .unwrap_or_else(|| Ok(vec!["tox".to_owned()]))?;
     let mut cmd = Command::new(
-        args.get(0)
+        args.first()
             .ok_or_else(|| eyre::eyre!("empty string provided for tox command"))?,
     );
     cmd.args(&args[1..]);
