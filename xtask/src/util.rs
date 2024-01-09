@@ -118,6 +118,16 @@ pub fn get_matrix() -> &'static Vec<CiTarget> {
         .unwrap()
 }
 
+pub fn with_section_reports(
+    origin: eyre::Report,
+    iter: impl IntoIterator<Item = eyre::Report>,
+) -> eyre::Report {
+    use color_eyre::{Section as _, SectionExt as _};
+    iter.into_iter().fold(origin, |report, e| {
+        report.section(format!("{e:?}").header("Error:"))
+    })
+}
+
 pub fn format_repo(registry: &str, repository: &str) -> String {
     let mut output = String::new();
     if !repository.is_empty() {

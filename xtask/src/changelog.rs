@@ -5,9 +5,10 @@ use std::fs;
 use std::path::Path;
 
 use crate::util::{project_dir, write_to_string};
+use cross::shell::MessageInfo;
+
 use chrono::{Datelike, Utc};
 use clap::{Args, Subcommand};
-use cross::shell::MessageInfo;
 use cross::ToUtf8;
 use eyre::Context;
 use serde::Deserialize;
@@ -508,6 +509,7 @@ pub fn build_changelog(
     Ok(())
 }
 
+#[allow(clippy::disallowed_methods)]
 pub fn validate_changelog(
     ValidateChangelog { mut files, .. }: ValidateChangelog,
     msg_info: &mut MessageInfo,
@@ -532,19 +534,46 @@ pub fn validate_changelog(
             })
             .collect();
     }
+    let mut errors = vec![];
     for file in files {
         let file_name = Path::new(&file);
         let path = changes_dir.join(file_name);
         let stem = file_stem(&path)?;
-        let contents =
-            fs::read_to_string(&path).wrap_err_with(|| eyre::eyre!("cannot find file {file}"))?;
-        let id = IdType::parse_stem(stem)?;
-        let value = serde_json::from_str(&contents)
-            .wrap_err_with(|| format!("unable to parse JSON for \"{file}\""))?;
-        let _ = ChangelogEntry::from_value(id, value)
-            .wrap_err_with(|| format!("unable to extract changelog from \"{file}\""))?;
+        let contents = fs::read_to_string(&path)
+            .wrap_err_with(|| eyre::eyre!("cannot find file {}", path.display()))?;
+
+        let id = match IdType::parse_stem(stem)
+            .wrap_err_with(|| format!("unable to parse file stem for \"{}\"", path.display()))
+        {
+            Ok(id) => id,
+            Err(e) => {
+                errors.push(e);
+                continue;
+            }
+        };
+
+        let value = match serde_json::from_str(&contents)
+            .wrap_err_with(|| format!("unable to parse JSON for \"{}\"", path.display()))
+        {
+            Ok(value) => value,
+            Err(e) => {
+                errors.push(e);
+                continue;
+            }
+        };
+
+        let res = ChangelogEntry::from_value(id, value)
+            .wrap_err_with(|| format!("unable to extract changelog from \"{}\"", path.display()))
+            .map(|_| ());
+        errors.extend(res.err());
     }
 
+    if !errors.is_empty() {
+        return Err(crate::util::with_section_reports(
+            eyre::eyre!("some files were not validated"),
+            errors,
+        ));
+    }
     // also need to validate the existing changelog
     let _ = read_changelog(&root)?;
 

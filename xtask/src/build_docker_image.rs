@@ -342,10 +342,10 @@ pub fn build_docker_image(
     }
     if results.iter().any(|r| r.is_err()) {
         #[allow(unknown_lints, clippy::manual_try_fold)]
-        results
-            .into_iter()
-            .filter_map(Result::err)
-            .fold(Err(eyre::eyre!("encountered error(s)")), |_, e| Err(e.1))?;
+        return Err(crate::util::with_section_reports(
+            eyre::eyre!("some error(s) encountered"),
+            results.into_iter().filter_map(Result::err).map(|e| e.1),
+        ));
     }
     Ok(())
 }
