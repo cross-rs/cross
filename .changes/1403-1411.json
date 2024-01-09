@@ -1,0 +1,9 @@
+[{
+    "type": "fixed",
+    "description": "switch to freebsd 13.2 following 12.4 EoL",
+    "issues": [1390]
+},
+ {
+     "type": "added",
+     "description": "Added helper script `/freebsd-install-package.sh` and friends to install freebsd packages, see [wiki](https://github.com/cross-rs/cross/wiki/FAQ#custom-images)",
+ }]

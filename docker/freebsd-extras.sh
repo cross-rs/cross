@@ -4,11 +4,11 @@ set -x
 set -euo pipefail
 
 # shellcheck disable=SC1091
-. lib.sh
+. /lib.sh
 # shellcheck disable=SC1091
-. freebsd-common.sh
+. /freebsd-common.sh
 # shellcheck disable=SC1091
-. freebsd-install.sh
+. /freebsd-install.sh
 
 case "${FREEBSD_ARCH}" in
     arm64) # extras mirrors are under https://pkg.freebsd.org/
