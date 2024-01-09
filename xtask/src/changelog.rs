@@ -6,16 +6,31 @@ use std::path::Path;
 
 use crate::util::{project_dir, write_to_string};
 use chrono::{Datelike, Utc};
-use clap::Args;
+use clap::{Args, Subcommand};
 use cross::shell::MessageInfo;
 use cross::ToUtf8;
 use eyre::Context;
 use serde::Deserialize;
 
+pub fn changelog(args: Changelog, msg_info: &mut MessageInfo) -> cross::Result<()> {
+    match args {
+        Changelog::Build(args) => build_changelog(args, msg_info),
+        Changelog::Validate(args) => validate_changelog(args, msg_info),
+    }
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Changelog {
+    /// Build the changelog.
+    Build(BuildChangelog),
+    /// Validate changelog entries.
+    Validate(ValidateChangelog),
+}
+
 #[derive(Args, Debug)]
 pub struct BuildChangelog {
     /// Build a release changelog.
-    #[clap(long, env = "NEW_VERSION")]
+    #[clap(long, env = "NEW_VERSION", required = true)]
     release: Option<String>,
     /// Whether we're doing a dry run or not.
     #[clap(long, env = "DRY_RUN")]
@@ -485,7 +500,10 @@ pub fn build_changelog(
         }
         false => "CHANGELOG.md.draft",
     };
-    write_to_string(&root.join(filename), &output)?;
+    let path = root.join(filename);
+    write_to_string(&path, &output)?;
+    #[allow(clippy::disallowed_methods)]
+    msg_info.info(format_args!("Changelog written to `{}`", path.display()))?;
 
     Ok(())
 }

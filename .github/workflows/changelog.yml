@@ -38,6 +38,6 @@ jobs:
               for path in "${added_modified[@]}"; do
                 basenames+=($(basename "${path}"))
               done
-              cargo xtask validate-changelog "${basenames[@]}"
+              cargo xtask changelog validate "${basenames[@]}"
             fi
           fi
