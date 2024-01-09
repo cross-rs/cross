@@ -27,7 +27,7 @@ runs:
           ${{ runner.temp }}/artifacts
 
     - name: Log into crates.io
-      if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
+      if: github.event_name != 'pull_request' && github.event_name != 'merge_group' && github.event_name != 'issue_comment'
       run: cargo login -- ${{ inputs.cargo-registry-token }}
       shell: bash
 
