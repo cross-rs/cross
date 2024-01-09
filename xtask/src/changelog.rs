@@ -253,7 +253,7 @@ impl fmt::Display for ChangelogEntry {
                 prs.iter()
                     .map(|x| x.to_string())
                     .collect::<Vec<String>>()
-                    .join(",")
+                    .join(",#")
             ))?,
             IdType::Issue(_) => (),
         }
@@ -800,7 +800,7 @@ mod tests {
         let output = build_changelog_test(None)?;
         let lines: Vec<&str> = output.lines().collect();
 
-        assert_eq!(lines[10], "- #979,981 - this has 2 PRs associated.");
+        assert_eq!(lines[10], "- #979,#981 - this has 2 PRs associated.");
         assert_eq!(lines[11], "- #940 - this is one added entry.");
         assert_eq!(
             lines[36],
@@ -814,7 +814,7 @@ mod tests {
                 "",
                 "### Added",
                 "",
-                "- #979,981 - this has 2 PRs associated.",
+                "- #979,#981 - this has 2 PRs associated.",
                 "- #940 - this is one added entry.",
             ]
         );
@@ -834,7 +834,7 @@ mod tests {
                 "",
                 "### Added",
                 "",
-                "- #979,981 - this has 2 PRs associated.",
+                "- #979,#981 - this has 2 PRs associated.",
                 "- #940 - this is one added entry.",
             ]
         );
@@ -857,7 +857,7 @@ mod tests {
                 "",
                 "### Added",
                 "",
-                "- #979,981 - this has 2 PRs associated.",
+                "- #979,#981 - this has 2 PRs associated.",
                 "- #940 - this is one added entry.",
             ]
         );
