@@ -4,9 +4,9 @@ set -x
 set -euo pipefail
 
 # shellcheck disable=SC1091
-. freebsd-common.sh
+. /freebsd-common.sh
 # shellcheck disable=SC1091
-. lib.sh
+. /lib.sh
 
 # we prefer those closer in geography to the US. they're triaged in
 # order of ease of use, reliability, and then geography. the mirror

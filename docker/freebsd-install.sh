@@ -4,7 +4,7 @@ set -x
 set -euo pipefail
 
 # shellcheck disable=SC1091
-. freebsd-common.sh
+. /freebsd-common.sh
 
 # list of SRV records to query if the default mirror fails
 FREEBSD_HTTP_TCP_SOURCES=(
