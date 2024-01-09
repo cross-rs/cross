@@ -509,13 +509,29 @@ pub fn build_changelog(
 }
 
 pub fn validate_changelog(
-    ValidateChangelog { files, .. }: ValidateChangelog,
+    ValidateChangelog { mut files, .. }: ValidateChangelog,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
-    msg_info.info("Validating the changelog modifications.")?;
-
     let root = project_dir(msg_info)?;
     let changes_dir = root.join(".changes");
+    if files.is_empty() && std::env::var("GITHUB_ACTIONS").is_err() {
+        files = fs::read_dir(&changes_dir)?
+            .filter_map(|x| x.ok())
+            .filter(|x| x.file_type().map_or(false, |v| v.is_file()))
+            .filter_map(|x| {
+                if x.path()
+                    .extension()
+                    .and_then(|s: &std::ffi::OsStr| s.to_str())
+                    .unwrap_or_default()
+                    == "json"
+                {
+                    Some(x.file_name().to_utf8().unwrap().to_owned())
+                } else {
+                    None
+                }
+            })
+            .collect();
+    }
     for file in files {
         let file_name = Path::new(&file);
         let path = changes_dir.join(file_name);
