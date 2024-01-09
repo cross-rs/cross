@@ -19,4 +19,4 @@ case "${ARCH}" in
         ;;
 esac
 
-export FREEBSD_MAJOR=12
+export FREEBSD_MAJOR=13

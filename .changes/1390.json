@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "switch to freebsd 13.2 following 12.4 EoL",
+    "issues": [1390]
+}
