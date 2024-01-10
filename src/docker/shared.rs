@@ -1035,8 +1035,7 @@ impl DockerCommandExt for Command {
 
         let runner = options.config.runner(&options.target)?;
         let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
-        self.args(["-e", "PKG_CONFIG_ALLOW_CROSS=1"])
-            .args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
+        self.args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
             .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
             .args([
                 "-e",
