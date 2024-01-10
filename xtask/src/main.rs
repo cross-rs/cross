@@ -18,7 +18,7 @@ use cross::shell::{MessageInfo, Verbosity};
 use util::{cargo_metadata, ImageTarget};
 
 use self::build_docker_image::BuildDockerImage;
-use self::changelog::{BuildChangelog, ValidateChangelog};
+use self::changelog::Changelog;
 use self::crosstool::ConfigureCrosstool;
 use self::hooks::{Check, Test};
 use self::install_git_hooks::InstallGitHooks;
@@ -67,11 +67,9 @@ enum Commands {
     CiJob(CiJob),
     /// Configure crosstool config files.
     ConfigureCrosstool(ConfigureCrosstool),
-    /// Build the changelog.
-    BuildChangelog(BuildChangelog),
-    /// Validate changelog entries.
-    #[clap(hide = true)]
-    ValidateChangelog(ValidateChangelog),
+    /// Changelog related commands
+    #[clap(subcommand)]
+    Changelog(Changelog),
     /// Code generation
     Codegen(Codegen),
 }
@@ -120,11 +118,8 @@ pub fn main() -> cross::Result<()> {
         Commands::ConfigureCrosstool(args) => {
             crosstool::configure_crosstool(args, &mut msg_info)?;
         }
-        Commands::BuildChangelog(args) => {
-            changelog::build_changelog(args, &mut msg_info)?;
-        }
-        Commands::ValidateChangelog(args) => {
-            changelog::validate_changelog(args, &mut msg_info)?;
+        Commands::Changelog(args) => {
+            changelog::changelog(args, &mut msg_info)?;
         }
         Commands::Codegen(args) => codegen::codegen(args)?,
     }

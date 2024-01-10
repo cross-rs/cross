@@ -481,8 +481,9 @@ pub fn default_ident() -> usize {
 
 #[must_use]
 pub fn indent(message: &str, spaces: usize) -> String {
-    message
-        .lines()
-        .map(|s| format!("{:spaces$}{s}", ""))
-        .collect()
+    use std::fmt::Write as _;
+    message.lines().fold(String::new(), |mut string, line| {
+        let _ = write!(string, "{:spaces$}{line}", "");
+        string
+    })
 }

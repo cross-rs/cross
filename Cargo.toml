@@ -69,7 +69,8 @@ ignore = "0.4.20"
 push = false
 publish = false
 tag = false
-pre-release-hook = ["cargo", "xtask", "build-changelog"]
+consolidate-commits = false
+pre-release-hook = ["cargo", "xtask", "changelog", "build", "--release", "{{version}}"]
 pre-release-commit-message = "release version {{version}}"
 
 [[package.metadata.release.pre-release-replacements]]

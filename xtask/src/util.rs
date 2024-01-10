@@ -118,6 +118,16 @@ pub fn get_matrix() -> &'static Vec<CiTarget> {
         .unwrap()
 }
 
+pub fn with_section_reports(
+    origin: eyre::Report,
+    iter: impl IntoIterator<Item = eyre::Report>,
+) -> eyre::Report {
+    use color_eyre::{Section as _, SectionExt as _};
+    iter.into_iter().fold(origin, |report, e| {
+        report.section(format!("{e:?}").header("Error:"))
+    })
+}
+
 pub fn format_repo(registry: &str, repository: &str) -> String {
     let mut output = String::new();
     if !repository.is_empty() {
@@ -326,6 +336,32 @@ pub fn read_dockerfiles(msg_info: &mut MessageInfo) -> cross::Result<Vec<(PathBu
     Ok(dockerfiles)
 }
 
+pub fn write_to_string(path: &Path, contents: &str) -> cross::Result<()> {
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(path)?;
+    writeln!(file, "{}", contents)?;
+    Ok(())
+}
+
+// https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#environment-files
+pub fn write_to_gha_env_file(env_name: &str, contents: &str) -> cross::Result<()> {
+    let path = if let Ok(path) = env::var(env_name) {
+        PathBuf::from(path)
+    } else {
+        eyre::ensure!(
+            env::var("GITHUB_ACTIONS").is_err(),
+            "expected GHA envfile to exist"
+        );
+        return Ok(());
+    };
+    let mut file = fs::OpenOptions::new().append(true).open(path)?;
+    writeln!(file, "{}", contents)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -405,30 +441,4 @@ mod tests {
             Ok(())
         }
     }
-}
-
-pub fn write_to_string(path: &Path, contents: &str) -> cross::Result<()> {
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(path)?;
-    writeln!(file, "{}", contents)?;
-    Ok(())
-}
-
-// https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#environment-files
-pub fn write_to_gha_env_file(env_name: &str, contents: &str) -> cross::Result<()> {
-    let path = if let Ok(path) = env::var(env_name) {
-        PathBuf::from(path)
-    } else {
-        eyre::ensure!(
-            env::var("GITHUB_ACTIONS").is_err(),
-            "expected GHA envfile to exist"
-        );
-        return Ok(());
-    };
-    let mut file = fs::OpenOptions::new().append(true).open(path)?;
-    writeln!(file, "{}", contents)?;
-    Ok(())
 }

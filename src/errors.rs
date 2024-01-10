@@ -12,7 +12,7 @@ pub static mut TERMINATED: AtomicBool = AtomicBool::new(false);
 pub fn install_panic_hook() -> Result<()> {
     let is_dev = !crate::commit_info().is_empty() || std::env::var("CROSS_DEBUG").is_ok();
     color_eyre::config::HookBuilder::new()
-        .display_env_section(is_dev)
+        .display_env_section(false)
         .display_location_section(is_dev)
         .install()
 }
