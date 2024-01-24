@@ -1,0 +1,4 @@
+{
+  "description": "set the required environment variables in the runner",
+  "type": "fixed"
+}

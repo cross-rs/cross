@@ -24,6 +24,10 @@ if [[ -z "${CROSS_RUNNER}" ]]; then
     fi
 fi
 
+# Ensure that the correct prefix is set even if the user has cleared the env.
+# `@DEFAULT_QEMU_LD_PREFIX@` is replaced during image build.
+export QEMU_LD_PREFIX=${QEMU_LD_PREFIX:-@DEFAULT_QEMU_LD_PREFIX@}
+
 qarch=$(qemu_arch "${arch}")
 case "${CROSS_RUNNER}" in
     native)
