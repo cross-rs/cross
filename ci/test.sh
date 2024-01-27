@@ -243,6 +243,33 @@ main() {
     popd
 
     rm -rf "${td}"
+
+    # test running binaries with cleared environment
+    td="$(mkcargotemp -d)"
+    pushd "${td}"
+    cargo init --bin --name foo .
+    mkdir src/bin
+    upper_target=$(echo "${TARGET}" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+    cat <<EOF > src/bin/launch.rs
+fn main() {
+    let runner: Vec<_> = std::env::var("CARGO_TARGET_${upper_target}_RUNNER")
+        .unwrap()
+        .split(' ')
+        .map(str::to_string)
+        .collect();
+    let status = std::process::Command::new(&runner[0])
+        .args(&runner[1..])
+        .arg("/target/${TARGET}/debug/foo")
+        .env_clear()
+        .status()
+        .unwrap();
+    std::process::exit(status.code().unwrap());
+}
+EOF
+    cross_build --target "${TARGET}"
+    cross_run --target "${TARGET}" --bin launch
+    popd
+    rm -rf "${td}"
 }
 
 cross_build() {
