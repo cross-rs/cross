@@ -7,7 +7,7 @@ set -eo pipefail
 
 main() {
     local arch
-    arch=$(docker_to_linux_arch "${CROSS_TARGETARCH}" "${CROSS_TARGETVARIANT}")
+    arch=$(docker_to_linux_arch "${CROSS_TARGETARCH:-@DEFAULT_CROSS_TARGETARCH@}" "${CROSS_TARGETVARIANT:-@DEFAULT_CROSS_TARGETVARIANT@}")
 
     if [[ -z "${CROSS_RUNNER}" ]]; then
         export CROSS_RUNNER=native
