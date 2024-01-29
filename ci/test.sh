@@ -243,36 +243,37 @@ main() {
     popd
 
     rm -rf "${td}"
+
     # test running binaries with cleared environment
     if (( ${RUN:-0} )); then
-	    td="$(mkcargotemp -d)"
-	    pushd "${td}"
-	    cargo init --bin --name foo .
-	    mkdir src/bin
-	    upper_target=$(echo "${TARGET}" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
-	    cat <<EOF > src/bin/launch.rs
+        td="$(mkcargotemp -d)"
+        pushd "${td}"
+        cargo init --bin --name foo .
+        mkdir src/bin
+        upper_target=$(echo "${TARGET}" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+        cat <<EOF > src/bin/launch.rs
 fn main() {
-    let runner: Vec<_> = std::env::var("CARGO_TARGET_${upper_target}_RUNNER")
-        .unwrap()
-        .split(' ')
-        .map(str::to_string)
-        .collect();
-    let status = std::process::Command::new(&runner[0])
-        .args(&runner[1..])
-        .arg("/target/${TARGET}/debug/foo")
-        .env_clear()
-        .status()
-        .unwrap();
+    let runner = std::env::var("CARGO_TARGET_${upper_target}_RUNNER");
+    let mut command = if let Ok(runner) = runner {
+        runner.split(' ').map(str::to_string).collect()
+    } else {
+        vec![]
+    };
+    let executable = "/target/${TARGET}/debug/foo";
+    command.push(executable.to_string());
+    let status = dbg!(std::process::Command::new(&command[0])
+        .args(&command[1..])
+        .env_clear()) // drop all environment variables
+    .status()
+    .unwrap();
     std::process::exit(status.code().unwrap());
 }
 EOF
-	    cross_build --target "${TARGET}"
-	    # don't use cross_run here to not test with qemu-system
-	    echo > "${CARGO_TMP_DIR}"/Cross.toml
-	    "${CROSS[@]}" run --target "${TARGET}" --bin launch  ${CROSS_FLAGS}
-	    popd
-	    rm -rf "${td}"
-	fi
+        cross_build --target "${TARGET}"
+        cross_run --target "${TARGET}" --bin launch
+        popd
+        rm -rf "${td}"
+    fi
 }
 
 cross_build() {
