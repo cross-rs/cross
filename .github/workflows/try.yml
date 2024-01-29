@@ -11,7 +11,8 @@ jobs:
       - name: Acknowledge command
         id: acknowledge
         run: |
-          gh pr comment ${{ github.event.issue.number }} --body "<!--try-ack-comment-->\nStarting try run. [Link to action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}?pr=${{ github.event.issue.number }})"
+          gh pr comment ${{ github.event.issue.number }} --body "<!--try-ack-comment-->
+          Starting try run. [Link to action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}?pr=${{ github.event.issue.number }})"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
