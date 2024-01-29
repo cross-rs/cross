@@ -259,7 +259,7 @@ fn main() {
     } else {
         vec![]
     };
-    let executable = "/target/${TARGET}/debug/foo";
+    let executable = format!("/target/${TARGET}/debug/foo{}", std::env::consts::EXE_SUFFIX);
     command.push(executable.to_string());
     let status = dbg!(std::process::Command::new(&command[0])
         .args(&command[1..])
