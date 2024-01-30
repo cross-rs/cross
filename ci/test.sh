@@ -243,6 +243,38 @@ main() {
     popd
 
     rm -rf "${td}"
+
+    # test running binaries with cleared environment
+    # Command is not implemented for wasm32-unknown-emscripten
+    if (( ${RUN:-0} )) && [[ "${TARGET}" != "wasm32-unknown-emscripten" ]]; then
+        td="$(mkcargotemp -d)"
+        pushd "${td}"
+        cargo init --bin --name foo .
+        mkdir src/bin
+        upper_target=$(echo "${TARGET}" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+        cat <<EOF > src/bin/launch.rs
+fn main() {
+    let runner = std::env::var("CARGO_TARGET_${upper_target}_RUNNER");
+    let mut command = if let Ok(runner) = runner {
+        runner.split(' ').map(str::to_string).collect()
+    } else {
+        vec![]
+    };
+    let executable = format!("/target/${TARGET}/debug/foo{}", std::env::consts::EXE_SUFFIX);
+    command.push(executable.to_string());
+    let status = dbg!(std::process::Command::new(&command[0])
+        .args(&command[1..])
+        .env_clear()) // drop all environment variables
+    .status()
+    .unwrap();
+    std::process::exit(status.code().unwrap());
+}
+EOF
+        cross_build --target "${TARGET}"
+        cross_run --target "${TARGET}" --bin launch
+        popd
+        rm -rf "${td}"
+    fi
 }
 
 cross_build() {
