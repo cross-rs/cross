@@ -245,7 +245,8 @@ main() {
     rm -rf "${td}"
 
     # test running binaries with cleared environment
-    if (( ${RUN:-0} )); then
+    # Command is not implemented for wasm32-unknown-emscripten
+    if (( ${RUN:-0} )) && [[ "${TARGET}" != "wasm32-unknown-emscripten" ]]; then
         td="$(mkcargotemp -d)"
         pushd "${td}"
         cargo init --bin --name foo .
