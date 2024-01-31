@@ -76,6 +76,7 @@ pub struct CargoMetadata {
     pub target_directory: PathBuf,
     pub packages: Vec<Package>,
     pub workspace_members: Vec<String>,
+    pub metadata: Option<Box<serde_json::value::RawValue>>,
 }
 
 impl CargoMetadata {
@@ -105,6 +106,7 @@ pub struct Package {
     pub source: Option<String>,
     pub version: String,
     pub license: Option<String>,
+    pub metadata: Option<Box<serde_json::value::RawValue>>,
 }
 
 impl Package {
