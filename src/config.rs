@@ -603,7 +603,7 @@ mod tests {
 
         fn toml(content: &str) -> Result<crate::CrossToml> {
             Ok(
-                CrossToml::parse_from_cross(content, &mut MessageInfo::default())
+                CrossToml::parse_from_cross_str(content, None, &mut MessageInfo::default())
                     .wrap_err("couldn't parse toml")?
                     .0,
             )

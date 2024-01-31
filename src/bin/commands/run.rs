@@ -61,7 +61,7 @@ impl Run {
                 };
 
             let toml = toml(&metadata, msg_info)?;
-            let config = Config::new(toml);
+            let config = Config::new(Some(toml));
 
             let image = match docker::get_image(&config, &target, false) {
                 Ok(i) => i,
