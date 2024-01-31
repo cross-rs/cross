@@ -516,7 +516,7 @@ pub fn validate_changelog(
 ) -> cross::Result<()> {
     let root = project_dir(msg_info)?;
     let changes_dir = root.join(".changes");
-    if files.is_empty() && std::env::var("GITHUB_ACTIONS").is_err() {
+    if files.is_empty() {
         files = fs::read_dir(&changes_dir)?
             .filter_map(|x| x.ok())
             .filter(|x| x.file_type().map_or(false, |v| v.is_file()))
