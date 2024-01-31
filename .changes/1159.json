@@ -1,0 +1,4 @@
+{
+    "type": "changed",
+    "description": "use `[workspace.metadata.cross]` as an alternative to `Cross.toml`"
+}
