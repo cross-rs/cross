@@ -624,6 +624,10 @@ pub fn run(
                     false,
                 );
 
+                if msg_info.should_fail() {
+                    return Ok(None);
+                }
+
                 install_interpreter_if_needed(
                     &args,
                     host_version_meta,
@@ -631,14 +635,20 @@ pub fn run(
                     &options,
                     msg_info,
                 )?;
-                let status = docker::run(
+                let status = if let Some(status) = docker::run(
                     options,
                     paths,
                     &filtered_args,
                     args.subcommand.clone(),
                     msg_info,
                 )
-                .wrap_err("could not run container")?;
+                .wrap_err("could not run container")?
+                {
+                    status
+                } else {
+                    return Ok(None);
+                };
+
                 let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
                 if !status.success() {
                     warn_on_failure(&target, &toolchain, msg_info)?;
@@ -857,19 +867,19 @@ pub(crate) fn warn_host_version_mismatch(
         );
         if versions.is_lt() || (versions.is_eq() && dates.is_lt()) {
             if cfg!(not(test)) {
-                msg_info.warn(format_args!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"))?;
+                msg_info.info(format_args!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"))?;
             }
             return Ok(VersionMatch::OlderTarget);
         } else if versions.is_gt() || (versions.is_eq() && dates.is_gt()) {
             if cfg!(not(test)) {
-                msg_info.warn(format_args!(
+                msg_info.info(format_args!(
                     "using newer {rustc_warning}.\n > Update with `rustup update`"
                 ))?;
             }
             return Ok(VersionMatch::NewerTarget);
         } else {
             if cfg!(not(test)) {
-                msg_info.warn(format_args!("using {rustc_warning}."))?;
+                msg_info.info(format_args!("using {rustc_warning}."))?;
             }
             return Ok(VersionMatch::Different);
         }
