@@ -867,19 +867,19 @@ pub(crate) fn warn_host_version_mismatch(
         );
         if versions.is_lt() || (versions.is_eq() && dates.is_lt()) {
             if cfg!(not(test)) {
-                msg_info.warn(format_args!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"))?;
+                msg_info.info(format_args!("using older {rustc_warning}.\n > Update with `rustup update --force-non-host {toolchain}`"))?;
             }
             return Ok(VersionMatch::OlderTarget);
         } else if versions.is_gt() || (versions.is_eq() && dates.is_gt()) {
             if cfg!(not(test)) {
-                msg_info.warn(format_args!(
+                msg_info.info(format_args!(
                     "using newer {rustc_warning}.\n > Update with `rustup update`"
                 ))?;
             }
             return Ok(VersionMatch::NewerTarget);
         } else {
             if cfg!(not(test)) {
-                msg_info.warn(format_args!("using {rustc_warning}."))?;
+                msg_info.info(format_args!("using {rustc_warning}."))?;
             }
             return Ok(VersionMatch::Different);
         }
