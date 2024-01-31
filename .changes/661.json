@@ -1,0 +1,5 @@
+{
+    "description": "When cross has given a warning, it will now quit instead of continuing with `cargo` when run in CI or with `CROSS_NO_WARNINGS=1`",
+    "breaking": true,
+    "type": "changed"
+}
