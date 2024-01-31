@@ -48,7 +48,7 @@ ENV CARGO_TARGET_THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF_LINKER="$CROSS_TOOLCHAIN_PR
     STRINGS_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"strings \
     STRIP_thumbv7neon_unknown_linux_gnueabihf="$CROSS_TOOLCHAIN_PREFIX"strip \
     CMAKE_TOOLCHAIN_FILE_thumbv7neon_unknown_linux_gnueabihf=/opt/toolchain.cmake \
-    BINDGEN_EXTRA_CLANG_ARGS_thumbv7neon_unknown_linux_gnueabihf="--sysroot=$CROSS_SYSROOT" \
+    BINDGEN_EXTRA_CLANG_ARGS_thumbv7neon_unknown_linux_gnueabihf="--sysroot=$CROSS_SYSROOT -idirafter/usr/include" \
     QEMU_LD_PREFIX="$CROSS_SYSROOT" \
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/arm-linux-gnueabihf/pkgconfig/:${PKG_CONFIG_PATH}" \

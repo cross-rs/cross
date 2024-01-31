@@ -1,0 +1,5 @@
+{
+    "type": "fixed",
+    "description": "Add `-idirafter/usr/include` to bindgen's clang invocation on GNU/Linux",
+    "issues": [1389]
+}
