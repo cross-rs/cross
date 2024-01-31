@@ -5,5 +5,5 @@
 },
  {
      "type": "added",
-     "description": "Added helper script `/freebsd-install-package.sh` and friends to install freebsd packages, see [wiki](https://github.com/cross-rs/cross/wiki/FAQ#custom-images)",
+     "description": "Added helper script `/freebsd-install-package.sh` and friends to install freebsd packages, see [wiki](https://github.com/cross-rs/cross/wiki/FAQ#custom-images)"
  }]

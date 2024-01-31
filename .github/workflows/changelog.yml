@@ -20,7 +20,7 @@ jobs:
           files: |
             .changes/*.json
 
-      - name: Validate Changelog Files
+      - name: Validate Changelog
         id: changelog
         run: |
           set -x
@@ -34,10 +34,6 @@ jobs:
               echo "Must add or remove changes or add the 'no changelog' label"
               exit 1
             else
-              basenames=()
-              for path in "${added_modified[@]}"; do
-                basenames+=($(basename "${path}"))
-              done
-              cargo xtask changelog validate "${basenames[@]}"
+              cargo xtask changelog validate
             fi
           fi
