@@ -244,16 +244,6 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             sub: None
         },
         ProvidedImage {
-            name: "sparcv9-sun-solaris",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
-            sub: None
-        },
-        ProvidedImage {
-            name: "x86_64-sun-solaris",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
-            sub: None
-        },
-        ProvidedImage {
             name: "x86_64-unknown-illumos",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None

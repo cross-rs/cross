@@ -433,6 +433,7 @@ dylib = true
 std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1424
 target = "sparcv9-sun-solaris"
 os = "ubuntu-latest"
 cpp = true
@@ -440,6 +441,7 @@ dylib = true
 std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1424
 target = "x86_64-sun-solaris"
 os = "ubuntu-latest"
 cpp = true
