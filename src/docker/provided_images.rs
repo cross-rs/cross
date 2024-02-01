@@ -79,16 +79,6 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             sub: None
         },
         ProvidedImage {
-            name: "mips64-unknown-linux-muslabi64",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
-            sub: None
-        },
-        ProvidedImage {
-            name: "mips64el-unknown-linux-muslabi64",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
-            sub: None
-        },
-        ProvidedImage {
             name: "powerpc-unknown-linux-gnu",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
@@ -160,16 +150,6 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
         },
         ProvidedImage {
             name: "i686-unknown-linux-musl",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
-            sub: None
-        },
-        ProvidedImage {
-            name: "mips-unknown-linux-musl",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
-            sub: None
-        },
-        ProvidedImage {
-            name: "mipsel-unknown-linux-musl",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
         },

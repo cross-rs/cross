@@ -154,6 +154,7 @@ runners = "qemu-user qemu-system"
 build-std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1422
 target = "mips64-unknown-linux-muslabi64"
 os = "ubuntu-latest"
 cpp = true
@@ -163,6 +164,7 @@ run = true
 build-std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1422
 target = "mips64el-unknown-linux-muslabi64"
 os = "ubuntu-latest"
 # FIXME: Lacking partial C++ support due to missing compiler builtins.
@@ -302,6 +304,7 @@ run = true
 runners = "qemu-user"
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1422
 target = "mips-unknown-linux-musl"
 os = "ubuntu-latest"
 cpp = true
@@ -311,6 +314,7 @@ run = true
 build-std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1422
 target = "mipsel-unknown-linux-musl"
 os = "ubuntu-latest"
 cpp = true
