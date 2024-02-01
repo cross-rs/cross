@@ -75,6 +75,8 @@ impl TargetMatrix {
             _ => (vec![], TargetMatrixArgs::default()),
         };
 
+        // only apply ci labels on prs and `/ci try`,
+        // if the try command is not the default, we don't want to apply ci labels
         if matches!(
             self,
             Self {
@@ -362,13 +364,13 @@ impl TargetMatrixArgs {
                 map.end()
             }
         }
-        let tests = match (
+        let mut tests = match (
             self.tests.iter().any(|t| t == "all"),
             self.tests.iter().any(|t| t == "none"),
         ) {
             (_, true) => vec![],
             (true, false) => {
-                let mut possible: Vec<String> = Self::command()
+                let possible: Vec<String> = Self::command()
                     .get_arguments()
                     .find(|arg| arg.get_id() == "tests")
                     .expect("a `tests` argument should exist")
@@ -376,12 +378,13 @@ impl TargetMatrixArgs {
                     .into_iter()
                     .map(|p| p.get_name().to_owned())
                     .collect();
-                possible.retain(|p| p != "all");
-                possible.retain(|p| p != "none");
+
                 possible
             }
             _ => self.tests.clone(),
         };
+        tests.retain(|p| p != "all");
+        tests.retain(|p| p != "none");
         serde_json::to_value(Ser(tests))
     }
 }
