@@ -64,6 +64,12 @@ pub struct CiTarget {
     /// if `true` test no std support as if std does exists. If `false` build https://github.com/rust-lang/compiler-builtins
     #[serde(skip_serializing_if = "Option::is_none")]
     pub std: Option<bool>,
+    #[serde(skip_serializing_if = "is_false", default)]
+    pub disabled: bool,
+}
+
+pub fn is_false(b: &bool) -> bool {
+    !*b
 }
 
 impl CiTarget {

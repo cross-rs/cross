@@ -34,6 +34,7 @@ pub enum TargetMatrixSub {
 impl TargetMatrix {
     pub(crate) fn run(&self) -> Result<(), color_eyre::Report> {
         let mut matrix: Vec<CiTarget> = get_matrix().clone();
+        matrix.retain(|t| !t.disabled);
         let mut is_default_try = false;
         let pr: Option<String>;
         let (prs, mut app) = match self {
@@ -411,6 +412,7 @@ mod tests {
     #[track_caller]
     fn run<'a>(args: impl IntoIterator<Item = &'a str>) -> Vec<CiTarget> {
         let mut matrix = get_matrix().clone();
+        matrix.retain_mut(|t| !t.disabled);
         TargetMatrixArgs::try_parse_from(args)
             .unwrap()
             .filter(&mut matrix);
@@ -468,7 +470,9 @@ mod tests {
     #[test]
     fn all() {
         let matrix = run([]);
-        assert_eq!(get_matrix(), &matrix);
+        let mut all = get_matrix().clone();
+        all.retain(|t| !t.disabled);
+        assert_eq!(&all, &matrix);
     }
 
     #[test]
