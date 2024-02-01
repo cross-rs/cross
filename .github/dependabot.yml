@@ -1,7 +1,47 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github_actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/actions/cargo-install-upload-artifacts"
+    schedule:
+      interval: "weekly"
+    groups:
+      github_actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/actions/cargo-llvm-cov"
+    schedule:
+      interval: "weekly"
+    groups:
+      github_actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/actions/cargo-publish"
+    schedule:
+      interval: "weekly"
+    groups:
+      github_actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/actions/post"
+    schedule:
+      interval: "weekly"
+    groups:
+      github_actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/actions/setup-rust"
     schedule:
       interval: "weekly"
     groups:
