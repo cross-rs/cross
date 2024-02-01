@@ -50,7 +50,7 @@ main() {
         CROSS+=("+nightly")
     elif [[ "${TARGET}" == "riscv64gc-unknown-linux-gnu" ]]; then
         # FIXME: riscv64gc-unknown-linux-gnu is broken on rustc 1.75, see https://github.com/cross-rs/cross/issues/1423
-        rustup toolchain add 1.74
+        rustup toolchain add 1.70
         CROSS+=("+1.70")
     fi
 
