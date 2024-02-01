@@ -384,13 +384,14 @@ cpp = true
 std = true
 run = true
 
+[[target]]
 # Disabled for now, see https://github.com/rust-lang/rust/issues/98216 & https://github.com/cross-rs/cross/issues/634
-# [[target]]
-# target = "asmjs-unknown-emscripten"
-# os = "ubuntu-latest"
-# cpp = true
-# std = true
-# run = true
+disabled = true
+target = "asmjs-unknown-emscripten"
+os = "ubuntu-latest"
+cpp = true
+std = true
+run = true
 
 [[target]]
 target = "wasm32-unknown-emscripten"
