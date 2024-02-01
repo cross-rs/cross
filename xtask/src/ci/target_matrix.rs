@@ -35,6 +35,7 @@ impl TargetMatrix {
     pub(crate) fn run(&self) -> Result<(), color_eyre::Report> {
         let mut matrix: Vec<CiTarget> = get_matrix().clone();
         let mut is_default_try = false;
+        let pr: Option<String>;
         let (prs, mut app) = match self {
             TargetMatrix {
                 merge_group: Some(ref_),
@@ -72,7 +73,13 @@ impl TargetMatrix {
                 is_default_try = process_try_comment.0;
                 (vec![pr.as_ref()], process_try_comment.1)
             }
-            _ => (vec![], TargetMatrixArgs::default()),
+            _ => {
+                pr = current_pr();
+                (
+                    pr.iter().map(|s| s.as_str()).collect(),
+                    TargetMatrixArgs::default(),
+                )
+            }
         };
 
         // only apply ci labels on prs and `/ci try`,
@@ -147,7 +154,7 @@ fn apply_has_no_ci_tests(prs: &[&str], app: &mut TargetMatrixArgs) -> Result<(),
         })?
     {
         app.none = true;
-        app.tests.push("none".to_owned());
+        app.tests = vec!["none".to_owned()];
     }
     Ok(())
 }
@@ -203,6 +210,16 @@ fn process_merge_group(ref_: &str) -> cross::Result<&str> {
         .split('-')
         .next()
         .ok_or_else(|| eyre::eyre!("merge group ref must include \"pr-<num>-<sha>\""))
+}
+
+fn current_pr() -> Option<String> {
+    // gh pr view --json number --template "{{.number}}"
+    let stdout = Command::new("gh")
+        .args(["pr", "view", "--json", "number"])
+        .run_and_get_stdout(&mut Verbosity::Quiet.into())
+        .ok()?;
+    let pr_info: serde_json::Value = serde_json::from_str(&stdout).ok()?;
+    pr_info.get("number").map(|n| n.to_string())
 }
 
 /// Returns app to use for matrix on try comment, boolean is used to determine if its a try without arguments
@@ -384,7 +401,6 @@ impl TargetMatrixArgs {
             _ => self.tests.clone(),
         };
         tests.retain(|p| p != "all");
-        tests.retain(|p| p != "none");
         serde_json::to_value(Ser(tests))
     }
 }
