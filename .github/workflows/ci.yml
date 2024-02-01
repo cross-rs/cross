@@ -110,6 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
+      tests: ${{ steps.generate-matrix.outputs.tests }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -255,7 +256,8 @@ jobs:
 
   # we should always have an artifact from a previous build.
   remote:
-    needs: [test, check]
+    needs: [test, check, generate-matrix]
+    if: needs.generate-matrix.outputs.tests.remote
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -275,7 +277,8 @@ jobs:
         shell: bash
 
   bisect:
-    needs: [test, check]
+    needs: [test, check, generate-matrix]
+    if: needs.generate-matrix.outputs.tests.bisect
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -295,7 +298,8 @@ jobs:
         shell: bash
 
   foreign:
-    needs: [test, check]
+    needs: [test, check, generate-matrix]
+    if: needs.generate-matrix.outputs.tests.foreign
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -321,7 +325,8 @@ jobs:
         shell: bash
 
   docker-in-docker:
-    needs: [test, check]
+    needs: [test, check, generate-matrix]
+    if: needs.generate-matrix.outputs.tests.docker-in-docker
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -344,7 +349,8 @@ jobs:
   podman:
     name: podman
     runs-on: ubuntu-latest
-    needs: [shellcheck, test, check]
+    needs: [shellcheck, test, check, generate-matrix]
+    if: needs.generate-matrix.outputs.tests.podman
     strategy:
       fail-fast: false
     outputs:

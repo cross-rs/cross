@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use clap::builder::BoolishValueParser;
+use clap::builder::{BoolishValueParser, PossibleValuesParser};
 use clap::Parser;
 use cross::{shell::Verbosity, CommandExt};
 use serde::{Deserialize, Serialize};
@@ -61,6 +61,7 @@ impl TargetMatrix {
                     none: false,
                     has_image: true,
                     verbose: false,
+                    tests: vec!["all".to_owned()],
                 },
             ),
             TargetMatrix {
@@ -74,6 +75,8 @@ impl TargetMatrix {
             _ => (vec![], TargetMatrixArgs::default()),
         };
 
+        // only apply ci labels on prs and `/ci try`,
+        // if the try command is not the default, we don't want to apply ci labels
         if matches!(
             self,
             Self {
@@ -83,7 +86,7 @@ impl TargetMatrix {
             }
         ) || is_default_try
         {
-            apply_ci_target_labels(&prs, &mut app)?
+            apply_ci_labels(&prs, &mut app)?
         }
 
         app.filter(&mut matrix);
@@ -108,13 +111,15 @@ impl TargetMatrix {
             .collect::<Vec<_>>();
 
         let json = serde_json::to_string(&matrix)?;
-        gha_print(&json);
         gha_output("matrix", &json)?;
+        let tests = serde_json::to_string(&app.tests()?)?;
+        gha_output("tests", &tests)?;
         Ok(())
     }
 }
 
-fn apply_ci_target_labels(prs: &[&str], app: &mut TargetMatrixArgs) -> Result<(), eyre::Error> {
+fn apply_ci_labels(prs: &[&str], app: &mut TargetMatrixArgs) -> Result<(), eyre::Error> {
+    apply_has_no_ci_tests(prs, app)?;
     apply_has_no_ci_target(prs, app)?;
 
     let mut to_add = vec![];
@@ -135,10 +140,22 @@ fn apply_ci_target_labels(prs: &[&str], app: &mut TargetMatrixArgs) -> Result<()
     Ok(())
 }
 
+fn apply_has_no_ci_tests(prs: &[&str], app: &mut TargetMatrixArgs) -> Result<(), eyre::Error> {
+    if !prs.is_empty()
+        && prs.iter().try_fold(true, |b, pr| {
+            Ok::<_, eyre::Report>(b && has_no_ci_tests_label(pr)?)
+        })?
+    {
+        app.none = true;
+        app.tests.push("none".to_owned());
+    }
+    Ok(())
+}
+
 fn apply_has_no_ci_target(prs: &[&str], app: &mut TargetMatrixArgs) -> Result<(), eyre::Error> {
     if !prs.is_empty()
         && prs.iter().try_fold(true, |b, pr| {
-            Ok::<_, eyre::Report>(b && has_no_ci_target(pr)?)
+            Ok::<_, eyre::Report>(b && has_no_ci_target_label(pr)?)
         })?
     {
         app.none = true;
@@ -168,8 +185,12 @@ fn parse_gh_labels(pr: &str) -> cross::Result<Vec<String>> {
     Ok(pr_info.labels.into_iter().map(|l| l.name).collect())
 }
 
-fn has_no_ci_target(pr: &str) -> cross::Result<bool> {
+fn has_no_ci_target_label(pr: &str) -> cross::Result<bool> {
     Ok(parse_gh_labels(pr)?.contains(&"no-ci-targets".to_owned()))
+}
+
+fn has_no_ci_tests_label(pr: &str) -> cross::Result<bool> {
+    Ok(parse_gh_labels(pr)?.contains(&"no-ci-tests".to_owned()))
 }
 
 /// Convert a `GITHUB_REF` into it's merge group pr
@@ -227,7 +248,7 @@ struct TargetMatrixElement<'a> {
     verbose: bool,
 }
 
-#[derive(Parser, Debug, Default, PartialEq, Eq)]
+#[derive(Parser, Debug, PartialEq, Eq)]
 #[clap(no_binary_name = true)]
 struct TargetMatrixArgs {
     #[clap(long, short, num_args = 0..)]
@@ -248,6 +269,37 @@ struct TargetMatrixArgs {
     has_image: bool,
     #[clap(long, short)]
     verbose: bool,
+    #[clap(long, value_parser = PossibleValuesParser::new(&[
+            "remote",
+            "bisect",
+            "foreign",
+            "docker-in-docker",
+            "podman",
+            "none",
+            "all"
+        ]),
+        num_args = 0..,
+        value_delimiter = ',',
+        default_value = "all"
+    )]
+    tests: Vec<String>,
+}
+
+impl Default for TargetMatrixArgs {
+    fn default() -> Self {
+        Self {
+            target: Vec::new(),
+            std: None,
+            cpp: None,
+            dylib: None,
+            run: None,
+            runners: Vec::new(),
+            none: false,
+            has_image: false,
+            verbose: false,
+            tests: vec!["all".to_owned()],
+        }
+    }
 }
 
 impl TargetMatrixArgs {
@@ -297,6 +349,43 @@ impl TargetMatrixArgs {
                     .any(|runner| m.runners.as_deref().unwrap_or_default().contains(runner))
             });
         }
+    }
+
+    fn tests(&self) -> Result<serde_json::Value, serde_json::Error> {
+        use clap::CommandFactory;
+        use serde::ser::SerializeMap;
+        struct Ser(Vec<String>);
+        impl serde::Serialize for Ser {
+            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                let mut map = serializer.serialize_map(Some(self.0.len()))?;
+                for e in &self.0 {
+                    map.serialize_entry(&e, &true)?;
+                }
+                map.end()
+            }
+        }
+        let mut tests = match (
+            self.tests.iter().any(|t| t == "all"),
+            self.tests.iter().any(|t| t == "none"),
+        ) {
+            (_, true) => vec![],
+            (true, false) => {
+                let possible: Vec<String> = Self::command()
+                    .get_arguments()
+                    .find(|arg| arg.get_id() == "tests")
+                    .expect("a `tests` argument should exist")
+                    .get_possible_values()
+                    .into_iter()
+                    .map(|p| p.get_name().to_owned())
+                    .collect();
+
+                possible
+            }
+            _ => self.tests.clone(),
+        };
+        tests.retain(|p| p != "all");
+        tests.retain(|p| p != "none");
+        serde_json::to_value(Ser(tests))
     }
 }
 
