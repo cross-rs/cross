@@ -48,7 +48,7 @@ main() {
         # don't use xargo: should have native support just from rustc
         rustup toolchain add nightly
         CROSS+=("+nightly")
-    elif (( "${TARGET}" != "riscv64gc-unknown-linux-gnu" )); then
+    elif [[ "${TARGET}" == "riscv64gc-unknown-linux-gnu" ]]; then
         # FIXME: riscv64gc-unknown-linux-gnu is broken on rustc 1.75, see https://github.com/cross-rs/cross/issues/1423
         rustup toolchain add 1.74
         CROSS+=("+1.74")
