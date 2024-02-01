@@ -5,7 +5,7 @@ on:
 jobs:
   acknowledge:
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(github.event.comment.body, '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
+    if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(toJson(github.event.comment.body), '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
     steps:
       - uses: actions/checkout@v3
       - name: Acknowledge command
@@ -17,7 +17,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
   try:
-    if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(github.event.comment.body, '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
+    if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(toJson(github.event.comment.body), '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
     uses: ./.github/workflows/ci.yml
     with:
       matrix-args: try --comment "${{ github.event.comment.body }}" --pr ${{ github.event.issue.number }}
