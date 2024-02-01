@@ -348,6 +348,7 @@ pub fn write_to_string(path: &Path, contents: &str) -> cross::Result<()> {
 
 // https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#environment-files
 pub fn write_to_gha_env_file(env_name: &str, contents: &str) -> cross::Result<()> {
+    eprintln!("{contents}");
     let path = if let Ok(path) = env::var(env_name) {
         PathBuf::from(path)
     } else {
