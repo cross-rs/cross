@@ -449,5 +449,5 @@ jobs:
             ./codecov -F $name ${pr:+-P ${pr}} -f $file --sha ${sha_rev} -n $name;
           done
         env:
-          pr: ${{  steps.pr-number.outputs.pr || '' }}
+          pr: ${{  steps.pr-number.outputs.pr }}
           artifacts: ${{ runner.temp }}/artifacts
