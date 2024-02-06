@@ -260,14 +260,6 @@ passthrough = [
 
 For more detailed documentation on which environment variables are automatically passed to the build environment, see [Environment Variable Passthrough](https://github.com/cross-rs/cross/wiki/Configuration#environment-variable-passthrough) on our wiki.
 
-### Unstable Features
-
-Certain unstable features can enable additional functionality useful to
-cross-compiling. Note that these are unstable, and may be removed at any
-time (particularly if the feature is stabilized or removed), and will
-only be used on a nightly channel.
-
-- `CROSS_UNSTABLE_ENABLE_DOCTESTS=true`: also run doctests.
 
 ### Mounting volumes into the build environment
 
