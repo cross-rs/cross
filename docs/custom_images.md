@@ -1,5 +1,8 @@
 <!--toc:start-->
 - [Custom Images](#custom-images)
+  - [Adding Dependencies to Existing Images](#adding-dependencies-to-existing-images)
+  - [Custom Dockerfile](#custom-dockerfile)
+  - [Custom Image](#custom-image)
 - [Automatic Target Architecture on Debian](#automatic-target-architecture-on-debian)
 <!--toc:end-->
 
@@ -8,6 +11,8 @@
 `cross` provides default Docker images for the targets listed [in the
 README](../README.md#supported-targets). However, it can't cover every single
 use case out there.
+
+## Adding Dependencies to Existing Images
 
 If you simply need to install a dependency availaible in ubuntus package
 manager, see [`target.TARGET.pre-build`][config-target-pre-build]:
@@ -32,9 +37,11 @@ export FREEBSD_MIRROR=$(/freebsd-fetch-best-mirror.sh) &&
 """]
 ```
 
+## Custom Dockerfile
+
 For other targets, or when the default image is not enough, you can use the
 [`target.{{TARGET}}.dockerfile`][config_target_dockerfile] field
-in `Cross.toml` to use custom Docker image for a specific target:
+in `Cross.toml` to use a custom Docker image for a specific target:
 
 > *NOTE*: Refer to the [`build.dockerfile`][config_build_dockerfile] section of
 > the configuration for tips when writing your own `Dockerfile`.
@@ -44,16 +51,23 @@ in `Cross.toml` to use custom Docker image for a specific target:
 dockerfile = "Dockerfile"
 ```
 
-Or [`target.{{TARGET}}.image`][config_target_image] field in `Cross.toml` to
-use an already built image for the specific target:
+`cross` will build and use the image that was built instead of the default
+image.
+
+
+## Custom Image
+
+If there is a pre-built image for your specific target, you can use the
+[`target.{{TARGET}}.image`][config_target_image] field in `Cross.toml` to use
+that instead:
 
 ``` toml
 [target.aarch64-unknown-linux-gnu]
 image = "my/image:tag"
 ```
 
-In the later example, `cross` will use a image named `my/image:tag` instead of
-the default one. Normal Docker behavior applies, so:
+In thie case, `cross` will use a image named `my/image:tag` instead of the
+default one. Normal Docker behavior applies, so:
 
 - Docker will first look for a local image named `my/image:tag`
 - If it doesn't find a local image, then it will look in Docker Hub.
