@@ -170,34 +170,6 @@ environment variable.
 
 For example in case you want use [Podman], you can set `CROSS_CONTAINER_ENGINE=podman`.
 
-### Passing environment variables into the build environment
-
-By default, `cross` does not pass most environment variables into the build environment from the calling shell. This is chosen as a safe default as most use cases will not want the calling environment leaking into the inner execution environment. There are, however, some notable exceptions: most environment variables `cross` or [cargo reads](https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-reads) are passed through automatically to the build environment.
-
-In the instances that you do want to pass through environment variables, this
-can be done via `build.env.passthrough` in your `Cross.toml`:
-
-```toml
-[build.env]
-passthrough = [
-    "RUST_BACKTRACE",
-    "RUST_LOG",
-    "TRAVIS",
-]
-```
-
-To pass variables through for one target but not others, you can use
-this syntax instead:
-
-```toml
-[target.aarch64-unknown-linux-gnu.env]
-passthrough = [
-    "RUST_DEBUG",
-]
-```
-
-For more detailed documentation on which environment variables are automatically passed to the build environment, see [Environment Variable Passthrough](https://github.com/cross-rs/cross/wiki/Configuration#environment-variable-passthrough) on our wiki.
-
 
 ### Mounting volumes into the build environment
 

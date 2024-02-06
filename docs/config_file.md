@@ -1,6 +1,11 @@
 <!--toc:start-->
+- [`build.env`](#buildenv)
 - [`build.dockerfile`](#builddockerfile)
+- [`target.TARGET.env`](#targettargetenv)
 <!--toc:end-->
+
+> **Note**: Additional configuration is available through
+> [environment variables](./environment_variables.md)
 
 You can place a `Cross.toml` file in the root of your Cargo project or use a
 `CROSS_CONFIG` environment variable to tweak cross's behavior. You can also use
@@ -15,6 +20,25 @@ For example, the `[build]` table in `Cross.toml` is identical to setting
 
 The `cross` configuration in the `Cross.toml` file can contain the following
 elements:
+
+
+# `build.env`
+
+With the `build.env` key you can globally set volumes that should be mounted in
+the Docker container or environment variables that should be passed through.
+For example:
+
+```toml
+[build.env]
+volumes = ["VOL1_ARG", "VOL2_ARG=/path/to/volume"]
+passthrough = ["VAR1_ARG", "VAR2_ARG=VALUE"]
+```
+
+Note how in the environment variable passthrough, we can provide a definition
+for the variable as well. `VAR1_ARG` will be the value of the environment
+variable on the host, while `VAR2_ARG` will be `VALUE`. Likewise, the path to
+the volume for `VOL1_ARG` will be the value of the environment variable on the
+host, while `VOL2_ARG` will be `/path/to/volume`.
 
 
 # `build.dockerfile`
@@ -68,4 +92,17 @@ ARG CROSS_BASE_IMAGE
 FROM $CROSS_BASE_IMAGE
 RUN ...
 ```
+
+# `target.TARGET.env`
+
+The `env` key allows you to specify environment variables that should be used
+for a specific compilation target. This is similar to `build.env`, but allows
+you to be more specific per target:
+
+```toml
+[target.x86_64-unknown-linux-gnu.env]
+volumes = ["VOL1_ARG", "VOL2_ARG=/path/to/volume"]
+passthrough = ["VAR1_ARG", "VAR2_ARG=VALUE"]
+```
+
 
