@@ -40,19 +40,13 @@ See our [Getting Started](./docs/getting-started.md) guide for detailed
 installation instructions.
 
 - [rustup](https://rustup.rs/)
-
 - A Linux kernel with [binfmt_misc] support is required for cross testing.
-
-[binfmt_misc]: https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
 
 One of these container engines is required. If both are installed, `cross` will
 default to `docker`.
 
 - [Docker]. Note that on Linux non-sudo users need to be in the `docker` group or use rootless docker.
-  Read the container engine [install guide][install] for the required installation and post-installation steps. Requires version 20.10 (API 1.40) or later.
-
-[install]: https://github.com/cross-rs/cross/wiki/Getting-Started#installing-a-container-engine
-
+  Read the container engine [install guide][docker_install] for the required installation and post-installation steps. Requires version 20.10 (API 1.40) or later.
 - [Podman]. Requires version 3.4.0 or later.
 
 ## Installation
@@ -87,7 +81,8 @@ $ cross test --target mips64-unknown-linux-gnuabi64
 $ cross rustc --target powerpc-unknown-linux-gnu --release -- -C lto
 ```
 
-Additional documentation can be found on the [wiki](https://github.com/cross-rs/cross/wiki).
+Additional documentation can be found on the
+[wiki](https://github.com/cross-rs/cross/wiki) or the `docs/` subfolder.
 
 ## Configuration
 
@@ -141,11 +136,12 @@ $ docker run -v /var/run/docker.sock:/var/run/docker.sock -v .:/project \
 The image running `cross` requires the rust development tools to be installed.
 
 With this setup `cross` must find and mount the correct host paths into the
-container used for cross compilation. This includes the original project directory as
-well as the root path of the parent container to give access to the rust build
-tools.
+container used for cross compilation. This includes the original project
+directory as well as the root path of the parent container to give access to
+the rust build tools.
 
-To inform `cross` that it is running inside a container set `CROSS_CONTAINER_IN_CONTAINER=true`.
+To inform `cross` that it is running inside a container set
+`CROSS_CONTAINER_IN_CONTAINER=true`.
 
 A development or CI container can be created like this:
 
@@ -178,19 +174,6 @@ binary name (or path) using the `CROSS_CONTAINER_ENGINE`
 environment variable.
 
 For example in case you want use [Podman], you can set `CROSS_CONTAINER_ENGINE=podman`.
-
-
-### Mounting volumes into the build environment
-
-In addition to passing environment variables, you can also specify environment
-variables pointing to paths which should be mounted into the container:
-
-```toml
-[target.aarch64-unknown-linux-gnu.env]
-volumes = [
-    "BUILD_DIR",
-]
-```
 
 
 ## Supported targets
@@ -294,8 +277,10 @@ terminate.
 <!--[7] libc = emscripten and GCC = clang. The Docker images for these targets are currently not built automatically
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/98216), you will have to build them yourself for now.-->
 
-Additional Dockerfiles for other targets can be found in [cross-toolchains](https://github.com/cross-rs/cross-toolchains).
-These include MSVC and Apple Darwin targets, which we cannot ship pre-built images of.
+Additional Dockerfiles for other targets can be found in
+[cross-toolchains](https://github.com/cross-rs/cross-toolchains). These include
+MSVC and Apple Darwin targets, which we cannot ship pre-built images of.
+
 
 ## Debugging
 
@@ -353,3 +338,7 @@ to intervene to uphold that code of conduct.
 [Docker]: https://www.docker.com
 [Podman]: https://podman.io
 [Matrix room]: https://matrix.to/#/#cross-rs:matrix.org
+[docker_install]: https://github.com/cross-rs/cross/wiki/Getting-Started#installing-a-container-engine
+[binfmt_misc]: https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
+[config_file]: ./docs/config_file.md
+[docs_env_vars]: ./docs/environment_variables.md
