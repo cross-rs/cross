@@ -113,72 +113,10 @@ You can put your [configuration](docs/cross_toml.md) inside a `Cross.toml` file 
 
 By setting the `CROSS_CONFIG` environment variable, you can tell `cross` where it should search for the config file. This way you are not limited to a `Cross.toml` file in the project root.
 
-### Custom Docker images
-
-`cross` provides default Docker images for the targets listed below. However, it
-can't cover every single use case out there. For other targets, or when the
-default image is not enough, you can use the `target.{{TARGET}}.image` field in
-`Cross.toml` to use custom Docker image for a specific target:
-
-```toml
-[target.aarch64-unknown-linux-gnu]
-image = "my/image:tag"
-```
-
-In the example above, `cross` will use a image named `my/image:tag` instead of
-the default one. Normal Docker behavior applies, so:
-
-- Docker will first look for a local image named `my/image:tag`
-
-- If it doesn't find a local image, then it will look in Docker Hub.
-
-- If only `image:tag` is specified, then Docker won't look in Docker Hub.
-
-- If only `tag` is omitted, then Docker will use the `latest` tag.
-
-#### Dockerfiles
-
-If you're using a custom Dockerfile, you can use `target.{{TARGET}}.dockerfile` to automatically build it
-
-```toml
-[target.aarch64-unknown-linux-gnu]
-dockerfile = "./path/to/where/the/Dockerfile/resides"
-```
-
-`cross` will build and use the image that was built instead of the default image.
-
-It's recommended to base your custom image on the default Docker image that
-cross uses: `ghcr.io/cross-rs/{{TARGET}}:{{VERSION}}` (where `{{VERSION}}` is cross's version).
-This way you won't have to figure out how to install a cross C toolchain in your
-custom image.
 
 
-``` Dockerfile
-FROM ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest
 
-RUN dpkg --add-architecture arm64 && \
-    apt-get update && \
-    apt-get install --assume-yes libfoo:arm64
-```
 
-If you want cross to provide the `FROM` instruction, you can do the following
-
-``` Dockerfile
-ARG CROSS_BASE_IMAGE
-FROM $CROSS_BASE_IMAGE
-
-RUN ...
-```
-
-#### Pre-build hook
-
-`cross` enables you to add dependencies and run other necessary commands in the image before using it.
-This action will be added to the used image, so it won't be ran/built every time you use `cross`.
-
-```toml
-[target.aarch64-unknown-linux-gnu]
-pre-build = ["dpkg --add-architecture arm64 && apt-get update && apt-get install --assume-yes libfoo:arm64"]
-```
 
 ### Docker in Docker
 
