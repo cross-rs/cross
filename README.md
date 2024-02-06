@@ -91,12 +91,17 @@ Additional documentation can be found on the [wiki](https://github.com/cross-rs/
 
 ## Configuration
 
-You have three options to configure `cross`. All of these options use the TOML format for configuration and the possible configuration values are documented [here](docs/cross_toml.md).
+### Configuring cross behavior
 
-### Option 1: Configuring `cross` directly in your `Cargo.toml`
+You have four options to configure `cross`. All of these options use the TOML
+format for configuration and the possible configuration values are documented
+[here][config_file].
 
-You can directly set [configuration values](docs/cross_toml.md) in your `Cargo.toml` file, under the `[package.metadata.cross]` table, i.e. key prefix.
-An example config snippet would look like this:
+#### Option 1: Configuring `cross` directly in your `Cargo.toml`
+
+You can directly set [configuration values][config_file] in your `Cargo.toml`
+file, under the `[package.metadata.cross]` table, i.e. key prefix. An example
+config snippet would look like this:
 
 ```toml,cargo
 [package.metadata.cross.target.aarch64-unknown-linux-gnu]
@@ -105,17 +110,21 @@ image = "test-image"
 runner = "custom-runner"
 ```
 
-### Option 2: Configuring `cross` via a `Cross.toml` file
+#### Option 2: Configuring `cross` via a `Cross.toml` file
 
-You can put your [configuration](docs/cross_toml.md) inside a `Cross.toml` file in your project root directory.
+You can put your [configuration][config_file] inside a `Cross.toml` file
+in your project root directory.
 
-### Option 3: Using `CROSS_CONFIG` to specify the location of your configuration
+#### Option 3: Using `CROSS_CONFIG` to specify the location of your configuration
 
-By setting the `CROSS_CONFIG` environment variable, you can tell `cross` where it should search for the config file. This way you are not limited to a `Cross.toml` file in the project root.
+By setting the `CROSS_CONFIG` environment variable, you can tell `cross` where
+it should search for the config file. This way you are not limited to a
+`Cross.toml` file in the project root.
 
+#### Option 4: Configuring `cross` through environment variables
 
-
-
+Besides the TOML-based configuration files, config can be passed through
+[environment variables][docs_env_vars], too. 
 
 
 ### Docker in Docker
