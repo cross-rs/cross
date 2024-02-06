@@ -36,8 +36,8 @@ New contributors are welcome! Please join our [Matrix room] and say hi.
 
 ## Dependencies
 
-See our [Getting Started](https://github.com/cross-rs/cross/wiki/Getting-Started) guide
-for detailed installation instructions.
+See our [Getting Started](./docs/getting-started.md) guide for detailed
+installation instructions.
 
 - [rustup](https://rustup.rs/)
 
