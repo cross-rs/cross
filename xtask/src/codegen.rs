@@ -5,11 +5,7 @@ use std::fmt::Write;
 use crate::util::{get_cargo_workspace, get_matrix};
 
 #[derive(Args, Debug)]
-pub struct Codegen {
-    /// Provide verbose diagnostic output.
-    #[clap(short, long)]
-    verbose: bool,
-}
+pub struct Codegen {}
 
 pub fn codegen(Codegen { .. }: Codegen) -> cross::Result<()> {
     let path = get_cargo_workspace().join("src/docker/provided_images.rs");
@@ -28,7 +24,7 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &["#,
 
     for image_target in get_matrix()
         .iter()
-        .filter(|i| i.builds_image() && i.to_image_target().is_toolchain_image())
+        .filter(|i| i.builds_image() && i.to_image_target().is_toolchain_image() && !i.disabled)
     {
         write!(
             &mut images,

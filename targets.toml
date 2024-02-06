@@ -154,6 +154,7 @@ runners = "qemu-user qemu-system"
 build-std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1422
 target = "mips64-unknown-linux-muslabi64"
 os = "ubuntu-latest"
 cpp = true
@@ -163,6 +164,7 @@ run = true
 build-std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1422
 target = "mips64el-unknown-linux-muslabi64"
 os = "ubuntu-latest"
 # FIXME: Lacking partial C++ support due to missing compiler builtins.
@@ -302,6 +304,7 @@ run = true
 runners = "qemu-user"
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1422
 target = "mips-unknown-linux-musl"
 os = "ubuntu-latest"
 cpp = true
@@ -311,6 +314,7 @@ run = true
 build-std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1422
 target = "mipsel-unknown-linux-musl"
 os = "ubuntu-latest"
 cpp = true
@@ -380,13 +384,14 @@ cpp = true
 std = true
 run = true
 
+[[target]]
 # Disabled for now, see https://github.com/rust-lang/rust/issues/98216 & https://github.com/cross-rs/cross/issues/634
-# [[target]]
-# target = "asmjs-unknown-emscripten"
-# os = "ubuntu-latest"
-# cpp = true
-# std = true
-# run = true
+disabled = true
+target = "asmjs-unknown-emscripten"
+os = "ubuntu-latest"
+cpp = true
+std = true
+run = true
 
 [[target]]
 target = "wasm32-unknown-emscripten"
@@ -433,6 +438,7 @@ dylib = true
 std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1424
 target = "sparcv9-sun-solaris"
 os = "ubuntu-latest"
 cpp = true
@@ -440,6 +446,7 @@ dylib = true
 std = true
 
 [[target]]
+disabled = true # https://github.com/cross-rs/cross/issues/1424
 target = "x86_64-sun-solaris"
 os = "ubuntu-latest"
 cpp = true

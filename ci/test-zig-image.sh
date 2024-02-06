@@ -16,8 +16,9 @@ ci_dir=$(realpath "${ci_dir}")
 TARGETS=(
     "aarch64-unknown-linux-gnu"
     "aarch64-unknown-linux-musl"
-    "i586-unknown-linux-gnu"
-    "i586-unknown-linux-musl"
+    # disabled, see https://github.com/cross-rs/cross/issues/1425
+    #"i586-unknown-linux-gnu"
+    #"i586-unknown-linux-musl"
 )
 
 # on CI, it sets `CROSS_TARGET_ZIG_IMAGE` rather than `CROSS_BUILD_ZIG_IMAGE`

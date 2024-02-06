@@ -137,6 +137,7 @@ pub fn build_docker_image(
             targets = get_matrix()
                 .iter()
                 .filter(|m| m.os.starts_with("ubuntu"))
+                .filter(|m| !m.disabled)
                 .map(|m| m.to_image_target())
                 .collect();
         } else {
