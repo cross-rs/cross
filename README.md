@@ -95,14 +95,20 @@ format for configuration and the possible configuration values are documented
 #### Option 1: Configuring `cross` directly in your `Cargo.toml`
 
 You can directly set [configuration values][config_file] in your `Cargo.toml`
-file, under the `[package.metadata.cross]` table, i.e. key prefix. An example
+file, under the `[workspace.metadata.cross]` table, i.e. key prefix. An example
 config snippet would look like this:
 
 ```toml,cargo
-[package.metadata.cross.target.aarch64-unknown-linux-gnu]
-xargo = false
-image = "test-image"
-runner = "custom-runner"
+[workspace.metadata.cross.target.aarch64-unknown-linux-gnu]
+# Install libssl-dev:arm64, see <https://github.com/cross-rs/cross/blob/main/docs/custom_images.md#adding-dependencies-to-existing-images>
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH", 
+    "apt-get update && apt-get --assume-yes install libssl-dev:$CROSS_DEB_ARCH"
+]
+[workspace.metadata.cross.target.armv7-unknown-linux-gnueabi]
+image = "my/image:latest"
+[workspace.metadata.cross.build]
+env.volumes = ["A_DIRECTORY=/path/to/volume"]
 ```
 
 #### Option 2: Configuring `cross` via a `Cross.toml` file
@@ -268,17 +274,17 @@ terminate.
 
 [4] libc = newlib
 
-[5] Must change `image =
-    "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml`
-    for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible
-    target.
+[5] Must change 
+    `image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"` in
+    `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the
+    CentOS7-compatible target.
 
 [6] libc = emscripten and GCC = clang
 
-[7] Must change `image =
-    "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"` in `Cross.toml`
-    for `[target.aarch64-unknown-linux-gnu]` to use the CentOS7-compatible
-    target.
+[7] Must change 
+    `image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"` in
+    `Cross.toml` for `[target.aarch64-unknown-linux-gnu]` to use the
+    CentOS7-compatible target.
 
 <!--[7] libc = emscripten and GCC = clang. The Docker images for these targets are currently not built automatically
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/98216), you will have to build them yourself for now.-->
