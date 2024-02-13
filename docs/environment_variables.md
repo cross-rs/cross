@@ -49,6 +49,10 @@ In-depth documentation with examples can be found [here][env-examples].
   `cross` can convert it to a fully-qualified toolchain name.
 - `CROSS_CONTAINER_ENGINE_NO_BUILDKIT`: The container engine does not have
   `buildx` command (or BuildKit support) when building custom images.
+- `CROSS_NO_WARNINGS`: Set to `1` to panic on warnings from `cross`, before
+  building the executables.
+  Use `0` to disable this behaviour.
+  The no warnings behaviour is implicitly enabled in CI pipelines.
 
 All config file options can also be specified using environment variables. For
 example, setting `CROSS_BUILD_XARGO=1` is identical to setting `build.xargo =
