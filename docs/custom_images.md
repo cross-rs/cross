@@ -1,10 +1,19 @@
 <!--toc:start-->
+- [Automatic Target Architecture on Debian](#automatic-target-architecture-on-debian)
 - [Custom Images](#custom-images)
   - [Adding Dependencies to Existing Images](#adding-dependencies-to-existing-images)
   - [Custom Dockerfile](#custom-dockerfile)
   - [Custom Image](#custom-image)
-- [Automatic Target Architecture on Debian](#automatic-target-architecture-on-debian)
 <!--toc:end-->
+
+# Automatic Target Architecture on Debian
+
+Custom images generated from config `dockerfile` or `pre-build` keys will
+export `CROSS_DEB_ARCH`, which allows you to install packages from
+Ubuntu/Debian repositories without having to specify the exact architecture.
+You can find an
+[example of this here](#adding-dependencies-to-existing-images).
+
 
 # Custom Images
 
@@ -74,24 +83,6 @@ default one. Normal Docker behavior applies, so:
 - If only `image:tag` is specified, then Docker won't look in Docker Hub.
 - If only `tag` is omitted, then Docker will use the `latest` tag.
 
-
-# Automatic Target Architecture on Debian
-
-Custom images generated from config `dockerfile` or `pre-build` keys will
-export `CROSS_DEB_ARCH`, which allows you to install packages from
-Ubuntu/Debian repositories without having to specify the exact architecture.
-For example, to install `OpenSSL` for the target, you can do:
-
-```toml
-[target.aarch64-unknown-linux-gnu]
-pre-build = [
-  "dpkg --add-architecture $CROSS_DEB_ARCH", 
-  "apt-get update && apt-get --assume-yes install libssl-dev:$CROSS_DEB_ARCH"
-]
-```
-
-Here, `CROSS_DEB_ARCH` will automatically evaluate to `arm64`, without you
-having to explicitly provide it.
 
 
 [config-target-pre-build]: ./config.md#targettargetpre-build
