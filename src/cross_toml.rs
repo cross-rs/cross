@@ -1,4 +1,4 @@
-#![doc = include_str!("../docs/cross_toml.md")]
+#![doc = include_str!("../docs/config_file.md")]
 
 use crate::docker::custom::PreBuild;
 use crate::docker::PossibleImage;
