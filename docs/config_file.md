@@ -33,8 +33,8 @@ elements:
 
 The `build` key allows you to set global variables, e.g.:
 
-> *NOTE*: `$CROSS_DEB_ARCH` is automatically provided by cross, [see
-> here][custom_images_automatic_arch].
+> *NOTE*: `$CROSS_DEB_ARCH` is automatically provided by cross,
+> [see here][custom_images_automatic_arch].
 
 ```toml
 [build]
