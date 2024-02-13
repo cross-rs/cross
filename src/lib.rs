@@ -8,7 +8,8 @@
 //! <strong>⚠️ Warning:</strong> The cross library is for internal
 //! use only: only the command-line interface is stable. The library
 //! may change at any point for any reason. For documentation on the
-//! CLI, please see the repository <a href="https://github.com/cross-rs/cross">README</a>
+//! CLI, please see the repository <a href="https://github.com/cross-rs/cross">README</a>,
+//! <a href="https://github.com/cross-rs/cross/tree/main/docs">docs folder</a>
 //! or the <a href="https://github.com/cross-rs/cross/wiki">wiki</a>.
 //! </p>
 
@@ -33,7 +34,7 @@ mod tests;
 pub mod cargo;
 pub mod cli;
 pub mod config;
-mod cross_toml;
+pub mod cross_toml;
 pub mod docker;
 pub mod errors;
 mod extensions;

@@ -51,7 +51,7 @@ impl EngineType {
     /// Some container engines, especially podman, do not support the `type`
     /// key of `--cache-from` during the image build steps. They also do
     /// not support any tags for the `--cache-from` steps either. See:
-    /// https://docs.podman.io/en/latest/markdown/podman-build.1.html#cache-from
+    /// <https://docs.podman.io/en/latest/markdown/podman-build.1.html#cache-from>
     #[must_use]
     pub const fn supports_cache_from_type(&self) -> bool {
         matches!(self, Self::Docker | Self::Nerdctl)
