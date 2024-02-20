@@ -1,4 +1,9 @@
-#![doc = include_str!("../docs/cross_toml.md")]
+//! The `Cross.toml` configuration file.
+//!
+//! For a detailed user documentation of the file and the contents please refer to the [docs in the
+//! repo][1].
+//!
+//! [1]: https://github.com/cross-rs/cross/blob/main/docs/config_file.md
 
 use crate::docker::custom::PreBuild;
 use crate::docker::PossibleImage;

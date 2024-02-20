@@ -36,23 +36,17 @@ New contributors are welcome! Please join our [Matrix room] and say hi.
 
 ## Dependencies
 
-See our [Getting Started](https://github.com/cross-rs/cross/wiki/Getting-Started) guide
-for detailed installation instructions.
+See our [Getting Started](./docs/getting-started.md) guide for detailed
+installation instructions.
 
 - [rustup](https://rustup.rs/)
-
 - A Linux kernel with [binfmt_misc] support is required for cross testing.
-
-[binfmt_misc]: https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
 
 One of these container engines is required. If both are installed, `cross` will
 default to `docker`.
 
 - [Docker]. Note that on Linux non-sudo users need to be in the `docker` group or use rootless docker.
-  Read the container engine [install guide][install] for the required installation and post-installation steps. Requires version 20.10 (API 1.40) or later.
-
-[install]: https://github.com/cross-rs/cross/wiki/Getting-Started#installing-a-container-engine
-
+  Read the container engine [install guide][docker_install] for the required installation and post-installation steps. Requires version 20.10 (API 1.40) or later.
 - [Podman]. Requires version 3.4.0 or later.
 
 ## Installation
@@ -87,98 +81,52 @@ $ cross test --target mips64-unknown-linux-gnuabi64
 $ cross rustc --target powerpc-unknown-linux-gnu --release -- -C lto
 ```
 
-Additional documentation can be found on the [wiki](https://github.com/cross-rs/cross/wiki).
+Additional documentation can be found on the
+[wiki](https://github.com/cross-rs/cross/wiki) or the `docs/` subfolder.
 
 ## Configuration
 
-You have three options to configure `cross`. All of these options use the TOML format for configuration and the possible configuration values are documented [here](docs/cross_toml.md).
+### Configuring cross behavior
 
-### Option 1: Configuring `cross` directly in your `Cargo.toml`
+You have four options to configure `cross`. All of these options use the TOML
+format for configuration and the possible configuration values are documented
+[here][config_file].
 
-You can directly set [configuration values](docs/cross_toml.md) in your `Cargo.toml` file, under the `[package.metadata.cross]` table, i.e. key prefix.
-An example config snippet would look like this:
+#### Option 1: Configuring `cross` directly in your `Cargo.toml`
+
+You can directly set [configuration values][config_file] in your `Cargo.toml`
+file, under the `[workspace.metadata.cross]` table, i.e. key prefix. An example
+config snippet would look like this:
 
 ```toml,cargo
-[package.metadata.cross.target.aarch64-unknown-linux-gnu]
-xargo = false
-image = "test-image"
-runner = "custom-runner"
+[workspace.metadata.cross.target.aarch64-unknown-linux-gnu]
+# Install libssl-dev:arm64, see <https://github.com/cross-rs/cross/blob/main/docs/custom_images.md#adding-dependencies-to-existing-images>
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH", 
+    "apt-get update && apt-get --assume-yes install libssl-dev:$CROSS_DEB_ARCH"
+]
+[workspace.metadata.cross.target.armv7-unknown-linux-gnueabi]
+image = "my/image:latest"
+[workspace.metadata.cross.build]
+env.volumes = ["A_DIRECTORY=/path/to/volume"]
 ```
 
-### Option 2: Configuring `cross` via a `Cross.toml` file
+#### Option 2: Configuring `cross` via a `Cross.toml` file
 
-You can put your [configuration](docs/cross_toml.md) inside a `Cross.toml` file in your project root directory.
+You can put your [configuration][config_file] inside a `Cross.toml` file
+in your project root directory.
 
-### Option 3: Using `CROSS_CONFIG` to specify the location of your configuration
+#### Option 3: Using `CROSS_CONFIG` to specify the location of your configuration
 
-By setting the `CROSS_CONFIG` environment variable, you can tell `cross` where it should search for the config file. This way you are not limited to a `Cross.toml` file in the project root.
+By setting the `CROSS_CONFIG` environment variable, you can tell `cross` where
+it should search for the config file. This way you are not limited to a
+`Cross.toml` file in the project root.
 
-### Custom Docker images
+#### Option 4: Configuring `cross` through environment variables
 
-`cross` provides default Docker images for the targets listed below. However, it
-can't cover every single use case out there. For other targets, or when the
-default image is not enough, you can use the `target.{{TARGET}}.image` field in
-`Cross.toml` to use custom Docker image for a specific target:
+Besides the TOML-based configuration files, config can be passed through
+[environment variables][docs_env_vars], too. 
 
-```toml
-[target.aarch64-unknown-linux-gnu]
-image = "my/image:tag"
-```
-
-In the example above, `cross` will use a image named `my/image:tag` instead of
-the default one. Normal Docker behavior applies, so:
-
-- Docker will first look for a local image named `my/image:tag`
-
-- If it doesn't find a local image, then it will look in Docker Hub.
-
-- If only `image:tag` is specified, then Docker won't look in Docker Hub.
-
-- If only `tag` is omitted, then Docker will use the `latest` tag.
-
-#### Dockerfiles
-
-If you're using a custom Dockerfile, you can use `target.{{TARGET}}.dockerfile` to automatically build it
-
-```toml
-[target.aarch64-unknown-linux-gnu]
-dockerfile = "./path/to/where/the/Dockerfile/resides"
-```
-
-`cross` will build and use the image that was built instead of the default image.
-
-It's recommended to base your custom image on the default Docker image that
-cross uses: `ghcr.io/cross-rs/{{TARGET}}:{{VERSION}}` (where `{{VERSION}}` is cross's version).
-This way you won't have to figure out how to install a cross C toolchain in your
-custom image.
-
-
-``` Dockerfile
-FROM ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest
-
-RUN dpkg --add-architecture arm64 && \
-    apt-get update && \
-    apt-get install --assume-yes libfoo:arm64
-```
-
-If you want cross to provide the `FROM` instruction, you can do the following
-
-``` Dockerfile
-ARG CROSS_BASE_IMAGE
-FROM $CROSS_BASE_IMAGE
-
-RUN ...
-```
-
-#### Pre-build hook
-
-`cross` enables you to add dependencies and run other necessary commands in the image before using it.
-This action will be added to the used image, so it won't be ran/built every time you use `cross`.
-
-```toml
-[target.aarch64-unknown-linux-gnu]
-pre-build = ["dpkg --add-architecture arm64 && apt-get update && apt-get install --assume-yes libfoo:arm64"]
-```
 
 ### Docker in Docker
 
@@ -194,11 +142,12 @@ $ docker run -v /var/run/docker.sock:/var/run/docker.sock -v .:/project \
 The image running `cross` requires the rust development tools to be installed.
 
 With this setup `cross` must find and mount the correct host paths into the
-container used for cross compilation. This includes the original project directory as
-well as the root path of the parent container to give access to the rust build
-tools.
+container used for cross compilation. This includes the original project
+directory as well as the root path of the parent container to give access to
+the rust build tools.
 
-To inform `cross` that it is running inside a container set `CROSS_CONTAINER_IN_CONTAINER=true`.
+To inform `cross` that it is running inside a container set
+`CROSS_CONTAINER_IN_CONTAINER=true`.
 
 A development or CI container can be created like this:
 
@@ -232,78 +181,6 @@ environment variable.
 
 For example in case you want use [Podman], you can set `CROSS_CONTAINER_ENGINE=podman`.
 
-### Passing environment variables into the build environment
-
-By default, `cross` does not pass most environment variables into the build environment from the calling shell. This is chosen as a safe default as most use cases will not want the calling environment leaking into the inner execution environment. There are, however, some notable exceptions: most environment variables `cross` or [cargo reads](https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-reads) are passed through automatically to the build environment.
-
-In the instances that you do want to pass through environment variables, this
-can be done via `build.env.passthrough` in your `Cross.toml`:
-
-```toml
-[build.env]
-passthrough = [
-    "RUST_BACKTRACE",
-    "RUST_LOG",
-    "TRAVIS",
-]
-```
-
-To pass variables through for one target but not others, you can use
-this syntax instead:
-
-```toml
-[target.aarch64-unknown-linux-gnu.env]
-passthrough = [
-    "RUST_DEBUG",
-]
-```
-
-For more detailed documentation on which environment variables are automatically passed to the build environment, see [Environment Variable Passthrough](https://github.com/cross-rs/cross/wiki/Configuration#environment-variable-passthrough) on our wiki.
-
-### Unstable Features
-
-Certain unstable features can enable additional functionality useful to
-cross-compiling. Note that these are unstable, and may be removed at any
-time (particularly if the feature is stabilized or removed), and will
-only be used on a nightly channel.
-
-- `CROSS_UNSTABLE_ENABLE_DOCTESTS=true`: also run doctests.
-
-### Mounting volumes into the build environment
-
-In addition to passing environment variables, you can also specify environment
-variables pointing to paths which should be mounted into the container:
-
-```toml
-[target.aarch64-unknown-linux-gnu.env]
-volumes = [
-    "BUILD_DIR",
-]
-```
-
-### Use Xargo instead of Cargo
-
-By default, `cross` uses `xargo` to build your Cargo project only for all
-non-standard targets (i.e. something not reported by rustc/rustup). However,
-you can use the `build.xargo` or `target.{{TARGET}}.xargo` field in
-`Cross.toml` to force the use of `xargo`:
-
-```toml
-# all the targets will use `xargo`
-[build]
-xargo = true
-```
-
-Or,
-
-```toml
-# only this target will use `xargo`
-[target.aarch64-unknown-linux-gnu]
-xargo = true
-```
-
-`xargo = false` will work the opposite way (pick cargo always) and is useful
-when building for custom targets that you know to work with cargo.
 
 ## Supported targets
 
@@ -323,91 +200,99 @@ QEMU gets upset when you spawn multiple threads. This means that, if one of your
 unit tests spawns threads, then it's more likely to fail or, worst, never
 terminate.
 
-| Target                               |  libc  |   GCC   | C++ | QEMU  | `test` |
-|--------------------------------------|-------:|--------:|:---:|------:|:------:|
-| `aarch64-linux-android` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
-| `aarch64-unknown-linux-gnu`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `aarch64-unknown-linux-gnu:centos` [7] | 2.17   | 4.8.5   |     | 4.2.1 |   ✓    |
-| `aarch64-unknown-linux-musl`         | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `arm-linux-androideabi` [1]          | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabi`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabihf`        | 2.31   | 8.5.0   | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`       | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `armv5te-unknown-linux-gnueabi`      | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`     | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `armv7-linux-androideabi` [1]        | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-gnueabi`        | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-gnueabihf`      | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabi`       | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `i586-unknown-linux-gnu`             | 2.31   | 9.4.0   | ✓   | N/A   |   ✓    |
-| `i586-unknown-linux-musl`            | 1.2.3 | 9.2.0   | ✓   | N/A   |   ✓    |
-| `i686-unknown-freebsd`               | 1.5    | 6.4.0   | ✓   | N/A   |       |
-| `i686-linux-android` [1]             | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
-| `i686-pc-windows-gnu`                | N/A    | 9.4     | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-gnu`             | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mips-unknown-linux-gnu`             | 2.30   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mips-unknown-linux-musl`            | 1.2.3  | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `mips64-unknown-linux-gnuabi64`      | 2.30   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mips64-unknown-linux-muslabi64`     | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `mips64el-unknown-linux-gnuabi64`    | 2.30   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mips64el-unknown-linux-muslabi64`   | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `mipsel-unknown-linux-gnu`           | 2.30   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `mipsel-unknown-linux-musl`          | 1.2.3 | 9.2.0   | ✓   | 6.1.0 |   ✓    |
-| `powerpc-unknown-linux-gnu`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `powerpc64-unknown-linux-gnu`        | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `powerpc64le-unknown-linux-gnu`      | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `riscv64gc-unknown-linux-gnu`        | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `s390x-unknown-linux-gnu`            | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `sparc64-unknown-linux-gnu`          | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `sparcv9-sun-solaris`                | 1.22.7 | 8.4.0   | ✓   | N/A   |       |
-| `thumbv6m-none-eabi` [4]             | 3.3.0  | 9.2.1   |     | N/A   |       |
-| `thumbv7em-none-eabi` [4]            | 3.3.0  | 9.2.1   |     | N/A   |       |
-| `thumbv7em-none-eabihf` [4]          | 3.3.0  | 9.2.1   |     | N/A   |       |
-| `thumbv7m-none-eabi` [4]             | 3.3.0  | 9.2.1   |     | N/A   |       |
-| `thumbv7neon-linux-androideabi` [1]  | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
-| `thumbv7neon-unknown-linux-gnueabihf`| 2.31   | 9.4.0   | ✓   | N/A   |   ✓    |
-| `thumbv8m.base-none-eabi` [4]        | 3.3.0  | 9.2.1   |     | N/A   |       |
-| `thumbv8m.main-none-eabi` [4]        | 3.3.0  | 9.2.1   |     | N/A   |       |
-| `thumbv8m.main-none-eabihf` [4]      | 3.3.0  | 9.2.1   |     | N/A   |       |
-| `wasm32-unknown-emscripten` [6]        | 3.1.14 | 15.0.0  | ✓   | N/A   |   ✓    |
-| `x86_64-linux-android` [1]           | 9.0.8  | 9.0.8   | ✓   | 6.1.0 |   ✓    |
-| `x86_64-pc-windows-gnu`              | N/A    | 9.3     | ✓   | N/A   |   ✓    |
-| `x86_64-sun-solaris`                 | 1.22.7 | 8.4.0   | ✓   | N/A   |       |
-| `x86_64-unknown-freebsd`             | 1.5    | 6.4.0   | ✓   | N/A   |       |
-| `x86_64-unknown-dragonfly` [2] [3]   | 6.0.1  | 10.3.0  | ✓   | N/A   |       |
-| `x86_64-unknown-illumos`             | 1.20.4 | 8.4.0   | ✓   | N/A   |       |
-| `x86_64-unknown-linux-gnu`           | 2.31   | 9.4.0   | ✓   | 6.1.0 |   ✓    |
-| `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5   | ✓   | 4.2.1 |   ✓    |
-| `x86_64-unknown-linux-musl`          | 1.2.3 | 9.2.0   | ✓   | N/A   |   ✓    |
-| `x86_64-unknown-netbsd` [3]          | 9.2.0  | 9.4.0   | ✓   | N/A   |       |
+| Target                                 |  libc  |  GCC   | C++ | QEMU  | `test` |
+|----------------------------------------|-------:|-------:|:---:|------:|:------:|
+| `aarch64-linux-android` [1]            | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
+| `aarch64-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `aarch64-unknown-linux-gnu:centos` [7] | 2.17   | 4.8.5  |     | 4.2.1 |   ✓    |
+| `aarch64-unknown-linux-musl`           | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `arm-linux-androideabi` [1]            | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabi`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabihf`          | 2.31   | 8.5.0  | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-musleabi`           | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`         | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `armv5te-unknown-linux-gnueabi`        | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`       | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `armv7-linux-androideabi` [1]          | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabi`          | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabihf`        | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabi`         | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`       | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `i586-unknown-linux-gnu`               | 2.31   | 9.4.0  | ✓   | N/A   |   ✓    |
+| `i586-unknown-linux-musl`              | 1.2.3  | 9.2.0  | ✓   | N/A   |   ✓    |
+| `i686-unknown-freebsd`                 | 1.5    | 6.4.0  | ✓   | N/A   |        |
+| `i686-linux-android` [1]               | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
+| `i686-pc-windows-gnu`                  | N/A    | 9.4    | ✓   | N/A   |   ✓    |
+| `i686-unknown-linux-gnu`               | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `mips-unknown-linux-gnu`               | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `mips-unknown-linux-musl`              | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `mips64-unknown-linux-gnuabi64`        | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `mips64-unknown-linux-muslabi64`       | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `mips64el-unknown-linux-gnuabi64`      | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `mips64el-unknown-linux-muslabi64`     | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `mipsel-unknown-linux-gnu`             | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `mipsel-unknown-linux-musl`            | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
+| `powerpc-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `powerpc64-unknown-linux-gnu`          | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `powerpc64le-unknown-linux-gnu`        | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `riscv64gc-unknown-linux-gnu`          | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `s390x-unknown-linux-gnu`              | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `sparc64-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `sparcv9-sun-solaris`                  | 1.22.7 | 8.4.0  | ✓   | N/A   |        |
+| `thumbv6m-none-eabi` [4]               | 3.3.0  | 9.2.1  |     | N/A   |        |
+| `thumbv7em-none-eabi` [4]              | 3.3.0  | 9.2.1  |     | N/A   |        |
+| `thumbv7em-none-eabihf` [4]            | 3.3.0  | 9.2.1  |     | N/A   |        |
+| `thumbv7m-none-eabi` [4]               | 3.3.0  | 9.2.1  |     | N/A   |        |
+| `thumbv7neon-linux-androideabi` [1]    | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
+| `thumbv7neon-unknown-linux-gnueabihf`  | 2.31   | 9.4.0  | ✓   | N/A   |   ✓    |
+| `thumbv8m.base-none-eabi` [4]          | 3.3.0  | 9.2.1  |     | N/A   |        |
+| `thumbv8m.main-none-eabi` [4]          | 3.3.0  | 9.2.1  |     | N/A   |        |
+| `thumbv8m.main-none-eabihf` [4]        | 3.3.0  | 9.2.1  |     | N/A   |        |
+| `wasm32-unknown-emscripten` [6]        | 3.1.14 | 15.0.0 | ✓   | N/A   |   ✓    |
+| `x86_64-linux-android` [1]             | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
+| `x86_64-pc-windows-gnu`                | N/A    | 9.3    | ✓   | N/A   |   ✓    |
+| `x86_64-sun-solaris`                   | 1.22.7 | 8.4.0  | ✓   | N/A   |        |
+| `x86_64-unknown-freebsd`               | 1.5    | 6.4.0  | ✓   | N/A   |        |
+| `x86_64-unknown-dragonfly` [2] [3]     | 6.0.1  | 10.3.0 | ✓   | N/A   |        |
+| `x86_64-unknown-illumos`               | 1.20.4 | 8.4.0  | ✓   | N/A   |        |
+| `x86_64-unknown-linux-gnu`             | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5  | ✓   | 4.2.1 |   ✓    |
+| `x86_64-unknown-linux-musl`            | 1.2.3  | 9.2.0  | ✓   | N/A   |   ✓    |
+| `x86_64-unknown-netbsd` [3]            | 9.2.0  | 9.4.0  | ✓   | N/A   |        |
 <!--| `asmjs-unknown-emscripten` [7]       | 3.1.14 | 15.0.0  | ✓   | N/A   |   ✓    |-->
 
-[1] libc = bionic; Only works with native tests, that is, tests that do not depends on the
-    Android Runtime. For i686 some tests may fails with the error `assertion
-    failed: signal(libc::SIGPIPE, libc::SIG_IGN) != libc::SIG_ERR`, see
-    [issue #140](https://github.com/cross-rs/cross/issues/140) for more
-    information.
+[1] libc = bionic; Only works with native tests, that is, tests that do not
+    depends on the Android Runtime. For i686 some tests may fails with the
+    error `assertion failed: signal(libc::SIGPIPE, libc::SIG_IGN) !=
+    libc::SIG_ERR`, see [issue
+    #140](https://github.com/cross-rs/cross/issues/140) for more information.
 
 [2] No `std` component available.
 
-[3] For some \*BSD and Solaris targets, the libc column indicates the OS release version
-    from which libc was extracted.
+[3] For some \*BSD and Solaris targets, the libc column indicates the OS
+    release version from which libc was extracted.
 
 [4] libc = newlib
 
-[5] Must change `image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the CentOS7-compatible target.
+[5] Must change 
+    `image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"` in
+    `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the
+    CentOS7-compatible target.
 
 [6] libc = emscripten and GCC = clang
 
-[7] Must change `image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"` in `Cross.toml` for `[target.aarch64-unknown-linux-gnu]` to use the CentOS7-compatible target.
+[7] Must change 
+    `image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"` in
+    `Cross.toml` for `[target.aarch64-unknown-linux-gnu]` to use the
+    CentOS7-compatible target.
 
 <!--[7] libc = emscripten and GCC = clang. The Docker images for these targets are currently not built automatically
 due to a [compiler bug](https://github.com/rust-lang/rust/issues/98216), you will have to build them yourself for now.-->
 
-Additional Dockerfiles for other targets can be found in [cross-toolchains](https://github.com/cross-rs/cross-toolchains).
-These include MSVC and Apple Darwin targets, which we cannot ship pre-built images of.
+Additional Dockerfiles for other targets can be found in
+[cross-toolchains](https://github.com/cross-rs/cross-toolchains). These include
+MSVC and Apple Darwin targets, which we cannot ship pre-built images of.
+
 
 ## Debugging
 
@@ -465,3 +350,7 @@ to intervene to uphold that code of conduct.
 [Docker]: https://www.docker.com
 [Podman]: https://podman.io
 [Matrix room]: https://matrix.to/#/#cross-rs:matrix.org
+[docker_install]: https://github.com/cross-rs/cross/wiki/Getting-Started#installing-a-container-engine
+[binfmt_misc]: https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
+[config_file]: ./docs/config_file.md
+[docs_env_vars]: ./docs/environment_variables.md
