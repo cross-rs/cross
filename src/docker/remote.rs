@@ -758,6 +758,9 @@ pub(crate) fn run(
             msg_info,
         )
         .wrap_err("could not determine mount points")?;
+    docker
+        .add_extra_args(&options)
+        .wrap_err("could not determine additional container arguments")?;
 
     docker
         .add_seccomp(engine.kind, target, &paths.metadata)
