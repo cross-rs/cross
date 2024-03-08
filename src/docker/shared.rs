@@ -140,7 +140,7 @@ impl DockerOptions {
                 ARG CROSS_TARGET
                 COPY $CROSS_SCRIPT /pre-build-script
                 RUN chmod +x /pre-build-script
-                RUN ./pre-build-script $CROSS_TARGET"#
+                RUN /pre-build-script $CROSS_TARGET"#
                         ),
                         runs_with: &image.platform,
                     };
