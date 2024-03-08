@@ -85,7 +85,7 @@ default one. Normal Docker behavior applies, so:
 
 
 
-[config-target-pre-build]: ./config.md#targettargetpre-build
-[config_target_dockerfile]: ./config.md#targettargetdockerfile
-[config_target_image]: ./config.md#targettargetimage
-[config_build_dockerfile]: ./config.md#builddockerfile
+[config-target-pre-build]: ./config_file.md#targettargetpre-build
+[config_target_dockerfile]: ./config_file.md#targettargetdockerfile
+[config_target_image]: ./config_file.md#targettargetimage
+[config_build_dockerfile]: ./config_file.md#builddockerfile
