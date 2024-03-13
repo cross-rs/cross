@@ -105,7 +105,7 @@ main() {
         --disable-lto \
         --disable-multilib \
         --disable-nls \
-        --enable-languages=c,c++ \
+        --enable-languages=c,c++,fortran \
         --target="${target}"
     make "-j$(nproc)"
     make install

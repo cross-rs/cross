@@ -14,6 +14,7 @@ FROM cross-base as build
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-arm-linux-gnueabihf \
+    gfortran-arm-linux-gnueabihf \
     libc6-dev-armhf-cross
 
 COPY deny-debian-packages.sh /
