@@ -14,7 +14,7 @@ FROM cross-base as build
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-sparc64-linux-gnu \
-    g++-sparc64-linux-gfortran \
+    gfortran-sparc64-linux-gnu \
     libc6-dev-sparc64-cross
 
 COPY deny-debian-packages.sh /
