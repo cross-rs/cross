@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.issue.pull_request && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER') && (contains(toJson(github.event.comment.body), '\n/ci try') || startsWith(github.event.comment.body, '/ci try'))
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Acknowledge command
         id: acknowledge
         run: |
@@ -27,7 +27,7 @@ jobs:
     if: always() && needs.try.result != 'skipped'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Minimize existing comments
         run: |
           COMMENTS=$(gh pr view ${{ github.event.issue.number }} --json comments --jq '.comments[] | select((.body | contains("<!--try-conclusion-comment-->") or contains("<!--try-ack-comment-->")) and (.author.login == "github-actions") and (.isMinimized | not)) | .id')

@@ -9,12 +9,12 @@ jobs:
     name: Changelog check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-rust
 
       - name: Get Changed Files
         id: files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v43
         with:
           separator: ';'
           files: |
