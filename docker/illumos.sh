@@ -104,7 +104,7 @@ main() {
         --target="${build_target}" \
         --program-prefix="${target}-" \
         --with-sysroot="${sysroot_dir}" \
-        --enable-languages=c,c++ \
+        --enable-languages=c,c++,fortran \
         --disable-libada \
         --disable-libcilkrts \
         --disable-libgomp \

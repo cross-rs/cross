@@ -30,11 +30,13 @@ install_packages \
 if_centos install_packages \
     clang-devel \
     gcc-c++ \
+    gcc-gfortran \
     glibc-devel \
     pkgconfig
 
 if_ubuntu install_packages \
     g++ \
+    gfortran \
     libc6-dev \
     libclang-dev \
     pkg-config
