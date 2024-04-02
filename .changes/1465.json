@@ -1,0 +1,5 @@
+{
+    "type": "added",
+    "description": "add loongarch64 support",
+    "issues": [1404]
+}

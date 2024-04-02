@@ -115,6 +115,13 @@ run = true
 runners = "native qemu-user qemu-system"
 
 [[target]]
+target = "loongarch64-unknown-linux-gnu"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+
+[[target]]
 target = "mips-unknown-linux-gnu"
 os = "ubuntu-latest"
 cpp = true

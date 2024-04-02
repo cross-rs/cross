@@ -59,6 +59,11 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             sub: None
         },
         ProvidedImage {
+            name: "loongarch64-unknown-linux-gnu",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
             name: "mips-unknown-linux-gnu",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
