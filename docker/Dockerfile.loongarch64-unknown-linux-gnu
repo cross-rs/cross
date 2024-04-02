@@ -1,0 +1,33 @@
+FROM ubuntu:20.04 as cross-base
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+FROM cross-base as build
+
+ARG VERBOSE
+COPY crosstool-ng.sh /
+COPY crosstool-config/loongarch64-unknown-linux-gnu.config /
+RUN /crosstool-ng.sh loongarch64-unknown-linux-gnu.config 5
+
+ENV PATH /x-tools/loongarch64-unknown-linux-gnu/bin/:$PATH
+
+COPY toolchain.cmake /opt/toolchain.cmake
+
+ENV CROSS_TOOLCHAIN_PREFIX=loongarch64-unknown-linux-gnu-
+ENV CARGO_TARGET_LOONGARCH64_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    AR_loongarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"ar \
+    CC_loongarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_loongarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_loongarch64_unknown_linux_gnu=/opt/toolchain.cmake \
+    CROSS_CMAKE_SYSTEM_NAME=Linux \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=loongarch64 \
+    CROSS_CMAKE_CRT=gnu \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC"
