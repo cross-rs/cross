@@ -1,0 +1,5 @@
+{
+    "type": "added",
+    "description": "Upgrade qemu and integrate qemu-user runners for loongarch64-linux-gnu",
+    "issues": [1467]
+}
