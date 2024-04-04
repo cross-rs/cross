@@ -109,6 +109,25 @@ build_static_pixman() {
     rm -rf "${td}"
 }
 
+build_static_slirp() {
+    local version=4.1.0
+
+    local td
+    td="$(mktemp -d)"
+
+    pushd "${td}"
+
+    curl --retry 3 -sSfL "https://gitlab.freedesktop.org/slirp/libslirp//-/archive/v${version}/libslirp-v${version}.tar.gz" -O
+    tar -xzf "libslirp-v${version}.tar.gz"
+    meson setup -Ddefault_library=static libslirp-v${version} build
+    ninja -C build
+    install -m 644 ./build/libslirp.a /usr/lib64/
+
+    popd
+
+    rm -rf "${td}"
+}
+
 main() {
     local version=5.1.0
 
@@ -178,6 +197,16 @@ main() {
     if [[ "${is_ge_python36}" == "1" ]]; then
         if_ubuntu version=7.0.0
         if_ubuntu install_packages ninja-build
+    fi
+
+    # if we have python3.8+, we can install qemu 8.2.2, which needs ninja-build,
+    # meson, python3-pip and libslirp-dev.
+    # ubuntu 16.04 only provides python3.5, so remove when we have a newer qemu.
+    is_ge_python38=$(python3 -c "import sys; print(int(sys.version_info >= (3, 8)))")
+    if [[ "${is_ge_python38}" == "1" ]]; then
+        if_ubuntu version=8.2.2
+        if_ubuntu install_packages ninja-build meson python3-pip libslirp-dev
+        if_ubuntu build_static_slirp
     fi
 
     local td
