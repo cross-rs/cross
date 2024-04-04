@@ -71,6 +71,7 @@ main() {
     pushd "${buildir}"
     cp /"${config}" .config
     chown "${username}":"${username}" .config
+    su "${username}" -c "${crosstooldir}/bin/ct-ng olddefconfig"
 
     # the download steps can stall indefinitely, so we want to set a timeout to
     # ensure it always completes. we therefore attempt to  download until
