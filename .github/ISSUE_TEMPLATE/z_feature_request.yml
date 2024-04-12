@@ -10,7 +10,7 @@ body:
         options:
             - label: I've looked through the [issues and pull requests](https://github.com/cross-rs/cross/issues?q=) for similar request
               required: true
-            - label: This feature could be solved with a [custom docker image](https://github.com/cross-rs/cross#custom-docker-images) (optional)
+            - label: This feature could be solved with a [custom image](https://github.com/cross-rs/cross/blob/main/docs/custom_images.md#custom-images) (optional)
   - type: textarea
     id: description
     validations:
