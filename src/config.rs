@@ -763,7 +763,7 @@ mod tests {
             map.insert("CROSS_BUILD_ENV_VOLUMES", "VOLUME1 VOLUME2");
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
-            let expected = vec![s!("VOLUME1"), s!("VOLUME2")];
+            let expected = [s!("VOLUME1"), s!("VOLUME2")];
 
             let result = config.env_volumes(&target()).unwrap().unwrap_or_default();
             dbg!(&result);
@@ -779,7 +779,7 @@ mod tests {
             let map = HashMap::new();
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
-            let expected = vec![s!("VOLUME3"), s!("VOLUME4")];
+            let expected = [s!("VOLUME3"), s!("VOLUME4")];
 
             let result = config.env_volumes(&target()).unwrap().unwrap_or_default();
             dbg!(&result);

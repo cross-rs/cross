@@ -1,6 +1,0 @@
-[
-    {
-        "description": "bump MSRV to 1.64",
-        "type": "internal"
-    }
-]
