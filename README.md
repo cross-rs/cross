@@ -102,7 +102,7 @@ config snippet would look like this:
 [workspace.metadata.cross.target.aarch64-unknown-linux-gnu]
 # Install libssl-dev:arm64, see <https://github.com/cross-rs/cross/blob/main/docs/custom_images.md#adding-dependencies-to-existing-images>
 pre-build = [
-    "dpkg --add-architecture $CROSS_DEB_ARCH", 
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
     "apt-get update && apt-get --assume-yes install libssl-dev:$CROSS_DEB_ARCH"
 ]
 [workspace.metadata.cross.target.armv7-unknown-linux-gnueabi]
@@ -125,7 +125,7 @@ it should search for the config file. This way you are not limited to a
 #### Option 4: Configuring `cross` through environment variables
 
 Besides the TOML-based configuration files, config can be passed through
-[environment variables][docs_env_vars], too. 
+[environment variables][docs_env_vars], too.
 
 
 ### Docker in Docker
@@ -275,14 +275,14 @@ terminate.
 
 [4] libc = newlib
 
-[5] Must change 
+[5] Must change
     `image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"` in
     `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the
     CentOS7-compatible target.
 
 [6] libc = emscripten and GCC = clang
 
-[7] Must change 
+[7] Must change
     `image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"` in
     `Cross.toml` for `[target.aarch64-unknown-linux-gnu]` to use the
     CentOS7-compatible target.
@@ -318,7 +318,7 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 
 ## Minimum Supported Rust Version (MSRV)
 
-This crate is guaranteed to compile on stable Rust 1.64.0 and up. It *might*
+This crate is guaranteed to compile on stable Rust 1.77.2 and up. It *might*
 compile with older versions but that may change in any new patch release.
 
 Some cross-compilation targets require a later Rust version, and using Xargo

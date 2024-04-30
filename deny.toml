@@ -1,4 +1,4 @@
-
+[graph]
 # only check for the targets we currently publish
 targets = [
   { triple = "x86_64-apple-darwin" },
@@ -8,10 +8,7 @@ targets = [
 ]
 
 [advisories]
-vulnerability = "deny"
-unmaintained = "deny"
-notice = "deny"
-unsound = "deny"
+version = 2
 # FIXME: remove this if/when clap changes to is-terminal, atty is
 # patched, or we migrated to an MSRV of 1.66.0.
 ignore = [
@@ -22,7 +19,7 @@ ignore = [
 multiple-versions = "deny"
 deny = []
 skip-tree = [
-    { name = "tempfile", version = "=3.4.0", depth = 2 },
+    { name = "nix", version = "=0.26.4", depth = 2 },
 ]
 
 [sources]
@@ -31,11 +28,9 @@ unknown-git = "deny"
 allow-git = []
 
 [licenses]
+version = 2
 # need this since to suppress errors in case we add crates with these allowed licenses
 unused-allowed-license = "allow"
-unlicensed = "deny"
-allow-osi-fsf-free = "neither"
-copyleft = "deny"
 confidence-threshold = 0.93
 allow = [
   "Apache-2.0",
