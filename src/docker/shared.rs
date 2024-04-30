@@ -914,7 +914,7 @@ fn validate_env_var<'a>(
         && !*warned
         && !var
             .chars()
-            .all(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '_' ))
+            .all(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9'))
     {
         msg_info.warn(format_args!(
             "got {var_type} of \"{var}\" which is not a valid environment variable name. the proper syntax is {var_syntax}"
