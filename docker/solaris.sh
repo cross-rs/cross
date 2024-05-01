@@ -121,7 +121,7 @@ EOF
         --disable-lto \
         --disable-multilib \
         --disable-nls \
-        --enable-languages=c,c++ \
+        --enable-languages=c,c++,fortran \
         --with-gnu-as \
         --with-gnu-ld \
         --target="${target}"

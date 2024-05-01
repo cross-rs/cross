@@ -51,7 +51,7 @@ main() {
         LINUX_HEADERS_SITE="${linux_headers_site}" \
         LINUX_VER="${linux_ver}" \
         OUTPUT=/usr/local/ \
-        "GCC_CONFIG += --enable-default-pie" \
+        "GCC_CONFIG += --enable-default-pie --enable-languages=c,c++,fortran" \
         "${@}"
 
     purge_packages

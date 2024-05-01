@@ -1,0 +1,6 @@
+{
+  "description": "add gfortran for target *-gnu*, *-musl*, *-freebsd*, *-solaris*, *-dragonfly*, *-illumos*, *-netbsd*",
+  "issues": [1457],
+  "type": "added"
+
+}

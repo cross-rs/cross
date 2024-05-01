@@ -14,6 +14,7 @@ FROM cross-base as build
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-i686-linux-gnu \
+    gfortran-i686-linux-gnu \
     libc6-dev-i386-cross
 
 COPY deny-debian-packages.sh /
