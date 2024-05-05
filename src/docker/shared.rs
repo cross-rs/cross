@@ -263,7 +263,7 @@ pub struct ToolchainDirectories {
 }
 
 impl ToolchainDirectories {
-    pub fn assemble(mount_finder: &MountFinder, mut toolchain: QualifiedToolchain) -> Result<Self> {
+    pub fn assemble(mount_finder: &MountFinder, toolchain: QualifiedToolchain) -> Result<Self> {
         let home_dir =
             home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
         let cargo = home::cargo_home()?;
@@ -310,8 +310,6 @@ impl ToolchainDirectories {
 
         let cargo = mount_finder.find_mount_path(cargo);
         let xargo = mount_finder.find_mount_path(xargo);
-
-        toolchain.set_sysroot(|p| mount_finder.find_mount_path(p));
 
         // canonicalize these once to avoid syscalls
         let sysroot_mount_path = toolchain.get_sysroot().as_posix_absolute()?;
@@ -413,30 +411,29 @@ pub struct PackageDirectories {
 impl PackageDirectories {
     pub fn assemble(
         mount_finder: &MountFinder,
-        mut metadata: CargoMetadata,
+        metadata: CargoMetadata,
         cwd: &Path,
     ) -> Result<(Self, CargoMetadata)> {
         let target = &metadata.target_directory;
         // see ToolchainDirectories::assemble for creating directories
         create_target_dir(target)?;
 
-        metadata.target_directory = mount_finder.find_mount_path(target);
-
         // root is either workspace_root, or, if we're outside the workspace root, the current directory
-        let host_root = mount_finder.find_mount_path(if metadata.workspace_root.starts_with(cwd) {
+        let host_root = if metadata.workspace_root.starts_with(cwd) {
             cwd
         } else {
             &metadata.workspace_root
-        });
+        }
+        .to_path_buf();
 
         // on Windows, we can not mount the directory name directly. Instead, we use wslpath to convert the path to a linux compatible path.
         // NOTE: on unix, host root has already found the mount path
         let mount_root = host_root.as_posix_absolute()?;
-        let mount_cwd = mount_finder.find_path(cwd, false)?;
+        let mount_cwd = cwd.as_posix_absolute()?;
 
         Ok((
             PackageDirectories {
-                target: metadata.target_directory.clone(),
+                target: mount_finder.find_mount_path(target),
                 host_root,
                 mount_root,
                 mount_cwd,
@@ -1193,10 +1190,7 @@ impl DockerCommandExt for Command {
             if let Ok(val) = value {
                 let canonical_path = file::canonicalize(&val)?;
                 let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
-                let absolute_path = Path::new(&val).as_posix_absolute()?;
-                let mount_path = paths
-                    .mount_finder
-                    .find_path(Path::new(&absolute_path), true)?;
+                let mount_path = Path::new(&val).as_posix_absolute()?;
                 mount_cb(self, host_path.as_ref(), mount_path.as_ref())?;
                 self.args(["-e", &format!("{}={}", var, mount_path)]);
                 store_cb((val, mount_path));
@@ -1209,10 +1203,7 @@ impl DockerCommandExt for Command {
             // to the mounted project directory.
             let canonical_path = file::canonicalize(path)?;
             let host_path = paths.mount_finder.find_path(&canonical_path, true)?;
-            let absolute_path = Path::new(path).as_posix_absolute()?;
-            let mount_path = paths
-                .mount_finder
-                .find_path(Path::new(&absolute_path), true)?;
+            let mount_path = path.as_posix_absolute()?;
             mount_cb(self, host_path.as_ref(), mount_path.as_ref())?;
             store_cb((path.to_utf8()?.to_owned(), mount_path));
         }
@@ -1716,15 +1707,9 @@ mod tests {
 
             paths_equal(toolchain_dirs.cargo(), &mount_path(home()?.join(".cargo")))?;
             paths_equal(toolchain_dirs.xargo(), &mount_path(home()?.join(".xargo")))?;
-            paths_equal(package_dirs.host_root(), &mount_path(get_cwd()?))?;
-            assert_eq!(
-                package_dirs.mount_root(),
-                &mount_path(get_cwd()?).as_posix_absolute()?
-            );
-            assert_eq!(
-                package_dirs.mount_cwd(),
-                &mount_path(get_cwd()?).as_posix_absolute()?
-            );
+            paths_equal(package_dirs.host_root(), &get_cwd()?)?;
+            assert_eq!(package_dirs.mount_root(), &get_cwd()?.as_posix_absolute()?);
+            assert_eq!(package_dirs.mount_cwd(), &get_cwd()?.as_posix_absolute()?);
 
             reset_env(vars);
             Ok(())
