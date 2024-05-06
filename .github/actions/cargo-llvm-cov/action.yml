@@ -12,9 +12,9 @@ runs:
   using: composite
   steps:
     - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@v1
+      uses: taiki-e/install-action@v2
       with:
-        tool: cargo-llvm-cov
+        tool: cargo-llvm-cov@0.5.3
     - run: rustup component add llvm-tools-preview
       shell: bash
     - name: LLVM instrument coverage
