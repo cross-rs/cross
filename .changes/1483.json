@@ -1,0 +1,4 @@
+{
+    "description": "Fix paths when using `CROSS_CONTAINER_IN_CONTAINER`",
+    "type": "fixed"
+}

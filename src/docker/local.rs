@@ -95,20 +95,25 @@ pub(crate) fn run(
         // Prevent `bin` from being mounted inside the Docker container.
         .args(["-v", &format!("{}/bin", toolchain_dirs.cargo_mount_path())]);
 
+    let host_root = paths.mount_finder.find_mount_path(package_dirs.host_root());
     docker.args([
         "-v",
         &format!(
             "{}:{}{selinux}",
-            package_dirs.host_root().to_utf8()?,
+            host_root.to_utf8()?,
             package_dirs.mount_root()
         ),
     ]);
+
+    let sysroot = paths
+        .mount_finder
+        .find_mount_path(toolchain_dirs.get_sysroot());
     docker
         .args([
             "-v",
             &format!(
                 "{}:{}{selinux_ro}",
-                toolchain_dirs.get_sysroot().to_utf8()?,
+                sysroot.to_utf8()?,
                 toolchain_dirs.sysroot_mount_path()
             ),
         ])
