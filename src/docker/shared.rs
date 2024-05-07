@@ -1351,19 +1351,76 @@ pub fn get_image(
     Ok(image)
 }
 
+fn docker_inspect_self_mountinfo(engine: &Engine, msg_info: &mut MessageInfo) -> Result<String> {
+    if cfg!(not(target_os = "linux")) {
+        eyre::bail!("/proc/self/mountinfo is unavailable when target_os != linux");
+    }
+
+    // The ID for the current Docker container might be in mountinfo,
+    // somewhere in a mount root. Full IDs are 64-char hexadecimal
+    // strings, so the first matching path segment in a mount root
+    // containing /docker/ is likely to be what we're looking for. See:
+    // https://www.kernel.org/doc/Documentation/filesystems/proc.txt
+    // https://community.toradex.com/t/15240/4
+    let mountinfo = file::read("/proc/self/mountinfo")?;
+    let container_id = mountinfo
+        .lines()
+        .filter_map(|s| s.split(' ').nth(3))
+        .filter(|s| s.contains("/docker/"))
+        .flat_map(|s| s.split('/'))
+        .find(|s| s.len() == 64 && s.as_bytes().iter().all(u8::is_ascii_hexdigit))
+        .ok_or_else(|| eyre::eyre!("couldn't find container id in mountinfo"))?;
+
+    engine
+        .subcommand("inspect")
+        .arg(container_id)
+        .run_and_get_stdout(msg_info)
+}
+
+fn docker_inspect_self(engine: &Engine, msg_info: &mut MessageInfo) -> Result<String> {
+    // Try to find the container ID by looking at HOSTNAME, and fallback to
+    // parsing `/proc/self/mountinfo` if HOSTNAME is unset or if there's no
+    // container that matches it (necessary e.g. when the container uses
+    // `--network=host`, which is act's default, see issue #1321).
+    // If `docker inspect` fails with unexpected output, skip the fallback
+    // and fail instantly.
+    if let Ok(hostname) = env::var("HOSTNAME") {
+        let mut command = engine.subcommand("inspect");
+        command.arg(hostname);
+        let out = command.run_and_get_output(msg_info)?;
+
+        if out.status.success() {
+            Ok(out.stdout()?)
+        } else {
+            let val = serde_json::from_slice::<serde_json::Value>(&out.stdout);
+            if let Ok(val) = val {
+                if let Some(array) = val.as_array() {
+                    // `docker inspect` completed but returned an empty array, most
+                    // likely indicating that the hostname isn't a valid container ID.
+                    if array.is_empty() {
+                        msg_info.debug("docker inspect found no containers matching HOSTNAME, retrying using mountinfo")?;
+                        return docker_inspect_self_mountinfo(engine, msg_info);
+                    }
+                }
+            }
+
+            let report = command
+                .status_result(msg_info, out.status, Some(&out))
+                .expect_err("we know the command failed")
+                .to_section_report();
+            Err(report)
+        }
+    } else {
+        msg_info.debug("HOSTNAME environment variable is unset")?;
+        docker_inspect_self_mountinfo(engine, msg_info)
+    }
+}
+
 fn docker_read_mount_paths(
     engine: &Engine,
     msg_info: &mut MessageInfo,
 ) -> Result<Vec<MountDetail>> {
-    let hostname = env::var("HOSTNAME").wrap_err("HOSTNAME environment variable not found")?;
-
-    let mut docker: Command = {
-        let mut command = engine.subcommand("inspect");
-        command.arg(hostname);
-        command
-    };
-
-    let output = docker.run_and_get_stdout(msg_info)?;
+    let output = docker_inspect_self(engine, msg_info)?;
     let info = serde_json::from_str(&output).wrap_err("failed to parse docker inspect output")?;
     dockerinfo_parse_mounts(&info)
 }
@@ -1674,9 +1731,8 @@ mod tests {
 
             let mut msg_info = MessageInfo::default();
             let engine = create_engine(&mut msg_info);
-            let hostname = env::var("HOSTNAME");
-            if engine.is_err() || hostname.is_err() {
-                eprintln!("could not get container engine or no hostname found");
+            if engine.is_err() {
+                eprintln!("could not get container engine");
                 reset_env(vars);
                 return Ok(());
             }
@@ -1686,12 +1742,8 @@ mod tests {
                 reset_env(vars);
                 return Ok(());
             }
-            let hostname = hostname.unwrap();
-            let output = engine
-                .subcommand("inspect")
-                .arg(hostname)
-                .run_and_get_output(&mut msg_info)?;
-            if !output.status.success() {
+            let output = docker_inspect_self(&engine, &mut msg_info);
+            if output.is_err() {
                 eprintln!("inspect failed");
                 reset_env(vars);
                 return Ok(());
