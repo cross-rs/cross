@@ -29,7 +29,7 @@ pub struct CrossBuildConfig {
     #[serde(default)]
     env: CrossEnvConfig,
     xargo: Option<bool>,
-    build_std: Option<bool>,
+    build_std: Option<BuildStd>,
     #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
     zig: Option<CrossZigConfig>,
     default_target: Option<String>,
@@ -44,7 +44,7 @@ pub struct CrossBuildConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct CrossTargetConfig {
     xargo: Option<bool>,
-    build_std: Option<bool>,
+    build_std: Option<BuildStd>,
     #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
     zig: Option<CrossZigConfig>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
@@ -56,6 +56,28 @@ pub struct CrossTargetConfig {
     runner: Option<String>,
     #[serde(default)]
     env: CrossEnvConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[serde(untagged, rename_all = "kebab-case")]
+pub enum BuildStd {
+    Bool(bool),
+    Crates(Vec<String>),
+}
+
+impl Default for BuildStd {
+    fn default() -> Self {
+        Self::Bool(false)
+    }
+}
+
+impl BuildStd {
+    pub fn enabled(&self) -> bool {
+        match self {
+            Self::Bool(enabled) => *enabled,
+            Self::Crates(arr) => !arr.is_empty(),
+        }
+    }
 }
 
 /// Dockerfile configuration
@@ -306,8 +328,8 @@ impl CrossToml {
     }
 
     /// Returns the `build.build-std` or the `target.{}.build-std` part of `Cross.toml`
-    pub fn build_std(&self, target: &Target) -> (Option<bool>, Option<bool>) {
-        self.get_value(target, |b| b.build_std, |t| t.build_std)
+    pub fn build_std(&self, target: &Target) -> (Option<&BuildStd>, Option<&BuildStd>) {
+        self.get_ref(target, |b| b.build_std.as_ref(), |t| t.build_std.as_ref())
     }
 
     /// Returns the `{}.zig` or `{}.zig.version` part of `Cross.toml`
@@ -647,7 +669,7 @@ mod tests {
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                 },
                 xargo: Some(false),
-                build_std: Some(true),
+                build_std: Some(BuildStd::Bool(true)),
                 zig: None,
                 image: Some("test-image".into()),
                 runner: None,
@@ -923,7 +945,7 @@ mod tests {
             passthrough = ["VAR3"]
 
             [build]
-            build-std = true
+            build-std = ["core", "alloc"]
             xargo = false
             default-target = "aarch64-unknown-linux-gnu"
 
@@ -962,7 +984,7 @@ mod tests {
             passthrough = ["VAR3"]
 
             [build]
-            build-std = true
+            build-std = ["core", "alloc"]
             xargo = false
             default-target = "aarch64-unknown-linux-gnu"
 
@@ -983,7 +1005,13 @@ mod tests {
         // need to test individual values. i've broken this down into
         // tests on values for better error reporting
         let build = &cfg_expected.build;
-        assert_eq!(build.build_std, Some(true));
+        assert_eq!(
+            build.build_std,
+            Some(BuildStd::Crates(vec![
+                "core".to_owned(),
+                "alloc".to_owned()
+            ]))
+        );
         assert_eq!(build.xargo, Some(false));
         assert_eq!(build.default_target, Some(p!("aarch64-unknown-linux-gnu")));
         assert_eq!(build.pre_build, None);
@@ -993,7 +1021,7 @@ mod tests {
 
         let targets = &cfg_expected.targets;
         let aarch64 = &targets[&Target::new_built_in("aarch64-unknown-linux-gnu")];
-        assert_eq!(aarch64.build_std, Some(true));
+        assert_eq!(aarch64.build_std, Some(BuildStd::Bool(true)));
         assert_eq!(aarch64.xargo, Some(false));
         assert_eq!(aarch64.image, Some(p!("test-image1")));
         assert_eq!(aarch64.pre_build, None);
@@ -1002,7 +1030,7 @@ mod tests {
         assert_eq!(aarch64.env.volumes, Some(vec![p!("VOL1_ARG")]));
 
         let target2 = &targets[&Target::new_custom("target2")];
-        assert_eq!(target2.build_std, Some(false));
+        assert_eq!(target2.build_std, Some(BuildStd::Bool(false)));
         assert_eq!(target2.xargo, Some(false));
         assert_eq!(target2.image, Some(p!("test-image2-precedence")));
         assert_eq!(target2.pre_build, None);
@@ -1011,7 +1039,7 @@ mod tests {
         assert_eq!(target2.env.volumes, Some(vec![p!("VOL2_ARG_PRECEDENCE")]));
 
         let target3 = &targets[&Target::new_custom("target3")];
-        assert_eq!(target3.build_std, Some(true));
+        assert_eq!(target3.build_std, Some(BuildStd::Bool(true)));
         assert_eq!(target3.xargo, Some(false));
         assert_eq!(target3.image, Some(p!("test-image3")));
         assert_eq!(target3.pre_build, None);

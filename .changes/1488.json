@@ -1,0 +1,6 @@
+{
+    "description": "Allow `build-std` to take an array of crate names",
+    "issues": [896],
+    "type": "changed",
+	"breaking": true
+}
