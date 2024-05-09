@@ -161,10 +161,10 @@ targets:
 
 ```toml
 [target.aarch64-unknown-linux-gnu]
-build-std = false          # always build the std library. has precedence over xargo
-xargo = false              # disable the use of xargo
-image = "test-image"       # use a different image for the target
-runner = "qemu-user"       # wrapper to run the binary (must be `qemu-system`, `qemu-user`, or `native`).
+build-std = ["core", "alloc"]   # always build the `core` and `alloc` crates from the std library. has precedence over xargo
+xargo = false                   # disable the use of xargo
+image = "test-image"            # use a different image for the target
+runner = "qemu-user"            # wrapper to run the binary (must be `qemu-system`, `qemu-user`, or `native`).
 ```
 
 

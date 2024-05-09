@@ -1,3 +1,4 @@
+use crate::cross_toml::BuildStd;
 use crate::docker::custom::PreBuild;
 use crate::docker::{ImagePlatform, PossibleImage};
 use crate::shell::MessageInfo;
@@ -63,8 +64,14 @@ impl Environment {
         self.get_values_for("XARGO", target, bool_from_envvar)
     }
 
-    fn build_std(&self, target: &Target) -> (Option<bool>, Option<bool>) {
-        self.get_values_for("BUILD_STD", target, bool_from_envvar)
+    fn build_std(&self, target: &Target) -> (Option<BuildStd>, Option<BuildStd>) {
+        self.get_values_for("BUILD_STD", target, |v| {
+            if let Some(value) = try_bool_from_envvar(v) {
+                BuildStd::Bool(value)
+            } else {
+                BuildStd::Crates(v.split(',').map(str::to_owned).collect())
+            }
+        })
     }
 
     fn zig(&self, target: &Target) -> (Option<bool>, Option<bool>) {
@@ -189,12 +196,16 @@ fn split_to_cloned_by_ws(string: &str) -> Vec<String> {
 /// this takes the value of the environment variable,
 /// so you should call `bool_from_envvar(env::var("FOO"))`
 pub fn bool_from_envvar(envvar: &str) -> bool {
+    try_bool_from_envvar(envvar).unwrap_or(!envvar.is_empty())
+}
+
+pub fn try_bool_from_envvar(envvar: &str) -> Option<bool> {
     if let Ok(value) = bool::from_str(envvar) {
-        value
+        Some(value)
     } else if let Ok(value) = i32::from_str(envvar) {
-        value != 0
+        Some(value != 0)
     } else {
-        !envvar.is_empty()
+        None
     }
 }
 
@@ -350,8 +361,8 @@ impl Config {
         self.bool_from_config(target, Environment::xargo, CrossToml::xargo)
     }
 
-    pub fn build_std(&self, target: &Target) -> Option<bool> {
-        self.bool_from_config(target, Environment::build_std, CrossToml::build_std)
+    pub fn build_std(&self, target: &Target) -> Result<Option<BuildStd>> {
+        self.get_from_ref(target, Environment::build_std, CrossToml::build_std)
     }
 
     pub fn zig(&self, target: &Target) -> Option<bool> {
@@ -531,7 +542,10 @@ mod tests {
 
             let env = Environment::new(Some(map));
             assert_eq!(env.xargo(&target()), (Some(true), None));
-            assert_eq!(env.build_std(&target()), (Some(false), None));
+            assert_eq!(
+                env.build_std(&target()),
+                (Some(BuildStd::Bool(false)), None)
+            );
             assert_eq!(env.zig(&target()), (None, None));
             assert_eq!(env.zig_version(&target()), (None, None));
             assert_eq!(env.zig_image(&target())?, (Some("zig:local".into()), None));
@@ -621,7 +635,7 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
             assert_eq!(config.xargo(&target()), Some(true));
-            assert_eq!(config.build_std(&target()), None);
+            assert_eq!(config.build_std(&target())?, None);
             assert_eq!(
                 config.pre_build(&target())?,
                 Some(PreBuild::Lines(vec![
@@ -637,12 +651,15 @@ mod tests {
         pub fn env_target_and_toml_target_xargo_target_then_use_env() -> Result<()> {
             let mut map = HashMap::new();
             map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
-            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_BUILD_STD", "true");
+            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_BUILD_STD", "core");
             let env = Environment::new(Some(map));
 
             let config = Config::new_with(Some(toml(TOML_TARGET_XARGO_FALSE)?), env);
             assert_eq!(config.xargo(&target()), Some(true));
-            assert_eq!(config.build_std(&target()), Some(true));
+            assert_eq!(
+                config.build_std(&target())?,
+                Some(BuildStd::Crates(vec!["core".to_owned()]))
+            );
             assert_eq!(config.pre_build(&target())?, None);
 
             Ok(())
@@ -656,7 +673,7 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
             assert_eq!(config.xargo(&target()), Some(true));
-            assert_eq!(config.build_std(&target()), None);
+            assert_eq!(config.build_std(&target())?, None);
             assert_eq!(config.pre_build(&target())?, None);
 
             Ok(())
