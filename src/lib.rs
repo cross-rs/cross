@@ -771,14 +771,14 @@ pub fn setup(
         .clone()
         .or_else(|| config.target(&target_list))
         .unwrap_or_else(|| Target::from(host.triple(), &target_list));
-    let build_std = config.build_std(&target)?.unwrap_or_default();
+    let build_std = config.build_std(&target).unwrap_or_default();
     let uses_xargo = !build_std.enabled() && config.xargo(&target).unwrap_or(!target.is_builtin());
     let uses_zig = config.zig(&target).unwrap_or(false);
-    let zig_version = config.zig_version(&target)?;
+    let zig_version = config.zig_version(&target);
     let image = match docker::get_image(&config, &target, uses_zig) {
         Ok(i) => i,
         Err(docker::GetImageError::NoCompatibleImages(..))
-            if config.dockerfile(&target)?.is_some() =>
+            if config.dockerfile(&target).is_some() =>
         {
             "scratch".into()
         }

@@ -277,7 +277,7 @@ impl Config {
         env: impl for<'a> Fn(&'a Environment, &Target) -> (Option<Vec<String>>, Option<Vec<String>>),
         config: impl for<'a> Fn(&'a CrossToml, &Target) -> (Option<&'a [String]>, Option<&'a [String]>),
         sum: bool,
-    ) -> Result<Option<Vec<String>>> {
+    ) -> Option<Vec<String>> {
         if sum {
             let (mut env_build, env_target) = env(&self.env, target);
             env_build
@@ -294,14 +294,14 @@ impl Config {
         target: &Target,
         env: impl for<'a> Fn(&'a Environment, &Target) -> (Option<T>, Option<T>),
         config: impl for<'a> Fn(&'a CrossToml, &Target) -> (Option<&'a U>, Option<&'a U>),
-    ) -> Result<Option<T>>
+    ) -> Option<T>
     where
         U: ToOwned<Owned = T> + ?Sized,
     {
         let (env_build, env_target) = env(&self.env, target);
 
         if let Some(env_target) = env_target {
-            return Ok(Some(env_target));
+            return Some(env_target);
         }
 
         let (build, target) = self
@@ -312,13 +312,13 @@ impl Config {
 
         // FIXME: let expression
         if target.is_none() && env_build.is_some() {
-            return Ok(env_build);
+            return env_build;
         }
 
         if target.is_none() {
-            Ok(build.map(ToOwned::to_owned))
+            build.map(ToOwned::to_owned)
         } else {
-            Ok(target.map(ToOwned::to_owned))
+            target.map(ToOwned::to_owned)
         }
     }
 
@@ -327,11 +327,11 @@ impl Config {
         target: &Target,
         env: impl Fn(&Environment, &Target) -> (Option<T>, Option<T>),
         config: impl Fn(&CrossToml, &Target) -> (Option<T>, Option<T>),
-    ) -> Result<Option<T>> {
+    ) -> Option<T> {
         let (env_build, env_target) = env(&self.env, target);
 
         if let Some(env_target) = env_target {
-            return Ok(Some(env_target));
+            return Some(env_target);
         }
 
         let (build, target) = self
@@ -342,13 +342,13 @@ impl Config {
 
         // FIXME: let expression
         if target.is_none() && env_build.is_some() {
-            return Ok(env_build);
+            return env_build;
         }
 
         if target.is_none() {
-            Ok(build)
+            build
         } else {
-            Ok(target)
+            target
         }
     }
 
@@ -361,7 +361,7 @@ impl Config {
         self.bool_from_config(target, Environment::xargo, CrossToml::xargo)
     }
 
-    pub fn build_std(&self, target: &Target) -> Result<Option<BuildStd>> {
+    pub fn build_std(&self, target: &Target) -> Option<BuildStd> {
         self.get_from_ref(target, Environment::build_std, CrossToml::build_std)
     }
 
@@ -369,25 +369,25 @@ impl Config {
         self.bool_from_config(target, Environment::zig, CrossToml::zig)
     }
 
-    pub fn zig_version(&self, target: &Target) -> Result<Option<String>> {
+    pub fn zig_version(&self, target: &Target) -> Option<String> {
         self.get_from_value(target, Environment::zig_version, CrossToml::zig_version)
     }
 
     pub fn zig_image(&self, target: &Target) -> Result<Option<PossibleImage>> {
         let (b, t) = self.env.zig_image(target)?;
-        self.get_from_value(target, |_, _| (b.clone(), t.clone()), CrossToml::zig_image)
+        Ok(self.get_from_value(target, |_, _| (b.clone(), t.clone()), CrossToml::zig_image))
     }
 
     pub fn image(&self, target: &Target) -> Result<Option<PossibleImage>> {
         let env = self.env.image(target)?;
-        self.get_from_ref(
+        Ok(self.get_from_ref(
             target,
             move |_, _| (None, env.clone()),
             |toml, target| (None, toml.image(target)),
-        )
+        ))
     }
 
-    pub fn runner(&self, target: &Target) -> Result<Option<String>> {
+    pub fn runner(&self, target: &Target) -> Option<String> {
         self.get_from_ref(
             target,
             |env, target| (None, env.runner(target)),
@@ -411,7 +411,7 @@ impl Config {
         self.env.build_opts()
     }
 
-    pub fn env_passthrough(&self, target: &Target) -> Result<Option<Vec<String>>> {
+    pub fn env_passthrough(&self, target: &Target) -> Option<Vec<String>> {
         self.vec_from_config(
             target,
             Environment::passthrough,
@@ -420,7 +420,7 @@ impl Config {
         )
     }
 
-    pub fn env_volumes(&self, target: &Target) -> Result<Option<Vec<String>>> {
+    pub fn env_volumes(&self, target: &Target) -> Option<Vec<String>> {
         self.get_from_ref(target, Environment::volumes, CrossToml::env_volumes)
     }
 
@@ -433,11 +433,11 @@ impl Config {
             .and_then(|t| t.default_target(target_list))
     }
 
-    pub fn dockerfile(&self, target: &Target) -> Result<Option<String>> {
+    pub fn dockerfile(&self, target: &Target) -> Option<String> {
         self.get_from_ref(target, Environment::dockerfile, CrossToml::dockerfile)
     }
 
-    pub fn dockerfile_context(&self, target: &Target) -> Result<Option<String>> {
+    pub fn dockerfile_context(&self, target: &Target) -> Option<String> {
         self.get_from_ref(
             target,
             Environment::dockerfile_context,
@@ -445,17 +445,14 @@ impl Config {
         )
     }
 
-    pub fn dockerfile_build_args(
-        &self,
-        target: &Target,
-    ) -> Result<Option<HashMap<String, String>>> {
+    pub fn dockerfile_build_args(&self, target: &Target) -> Option<HashMap<String, String>> {
         // This value does not support env variables
         self.toml
             .as_ref()
-            .map_or(Ok(None), |t| Ok(t.dockerfile_build_args(target)))
+            .and_then(|t| t.dockerfile_build_args(target))
     }
 
-    pub fn pre_build(&self, target: &Target) -> Result<Option<PreBuild>> {
+    pub fn pre_build(&self, target: &Target) -> Option<PreBuild> {
         self.get_from_ref(target, Environment::pre_build, CrossToml::pre_build)
     }
 
@@ -464,7 +461,7 @@ impl Config {
         &'a self,
         env_values: Option<impl AsRef<[String]>>,
         toml_getter: impl FnOnce(&'a CrossToml) -> (Option<&'a [String]>, Option<&'a [String]>),
-    ) -> Result<Option<Vec<String>>> {
+    ) -> Option<Vec<String>> {
         let mut defined = false;
         let mut collect = vec![];
         if let Some(vars) = env_values {
@@ -481,9 +478,9 @@ impl Config {
             }
         }
         if !defined {
-            Ok(None)
+            None
         } else {
-            Ok(Some(collect))
+            Some(collect)
         }
     }
 }
@@ -635,9 +632,9 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
             assert_eq!(config.xargo(&target()), Some(true));
-            assert_eq!(config.build_std(&target())?, None);
+            assert_eq!(config.build_std(&target()), None);
             assert_eq!(
-                config.pre_build(&target())?,
+                config.pre_build(&target()),
                 Some(PreBuild::Lines(vec![
                     s!("apt-get update"),
                     s!("apt-get install zlib-dev")
@@ -657,10 +654,10 @@ mod tests {
             let config = Config::new_with(Some(toml(TOML_TARGET_XARGO_FALSE)?), env);
             assert_eq!(config.xargo(&target()), Some(true));
             assert_eq!(
-                config.build_std(&target())?,
+                config.build_std(&target()),
                 Some(BuildStd::Crates(vec!["core".to_owned()]))
             );
-            assert_eq!(config.pre_build(&target())?, None);
+            assert_eq!(config.pre_build(&target()), None);
 
             Ok(())
         }
@@ -673,8 +670,8 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
             assert_eq!(config.xargo(&target()), Some(true));
-            assert_eq!(config.build_std(&target())?, None);
-            assert_eq!(config.pre_build(&target())?, None);
+            assert_eq!(config.build_std(&target()), None);
+            assert_eq!(config.pre_build(&target()), None);
 
             Ok(())
         }
@@ -690,7 +687,7 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_PRE_BUILD)?), env);
             assert_eq!(
-                config.pre_build(&target())?,
+                config.pre_build(&target()),
                 Some(PreBuild::Single {
                     line: s!("dpkg --add-architecture arm64"),
                     env: true
@@ -711,14 +708,14 @@ mod tests {
 
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_DOCKERFILE)?), env);
-            assert_eq!(config.dockerfile(&target())?, Some(s!("Dockerfile4")));
-            assert_eq!(config.dockerfile(&target2())?, Some(s!("Dockerfile3")));
+            assert_eq!(config.dockerfile(&target()), Some(s!("Dockerfile4")));
+            assert_eq!(config.dockerfile(&target2()), Some(s!("Dockerfile3")));
 
             let map = HashMap::new();
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_BUILD_DOCKERFILE)?), env);
-            assert_eq!(config.dockerfile(&target())?, Some(s!("Dockerfile2")));
-            assert_eq!(config.dockerfile(&target2())?, Some(s!("Dockerfile1")));
+            assert_eq!(config.dockerfile(&target()), Some(s!("Dockerfile2")));
+            assert_eq!(config.dockerfile(&target2()), Some(s!("Dockerfile1")));
 
             Ok(())
         }
@@ -729,11 +726,11 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_ARRAYS_BOTH)?), env);
             assert_eq!(
-                config.env_passthrough(&target())?,
+                config.env_passthrough(&target()),
                 Some(vec![s!("VAR1"), s!("VAR2"), s!("VAR3"), s!("VAR4")])
             );
             assert_eq!(
-                config.env_volumes(&target())?,
+                config.env_volumes(&target()),
                 Some(vec![s!("VOLUME3"), s!("VOLUME4")])
             );
 
@@ -746,11 +743,11 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_ARRAYS_BUILD)?), env);
             assert_eq!(
-                config.env_passthrough(&target())?,
+                config.env_passthrough(&target()),
                 Some(vec![s!("VAR1"), s!("VAR2")])
             );
             assert_eq!(
-                config.env_volumes(&target())?,
+                config.env_volumes(&target()),
                 Some(vec![s!("VOLUME1"), s!("VOLUME2")])
             );
 
@@ -763,11 +760,11 @@ mod tests {
             let env = Environment::new(Some(map));
             let config = Config::new_with(Some(toml(TOML_ARRAYS_TARGET)?), env);
             assert_eq!(
-                config.env_passthrough(&target())?,
+                config.env_passthrough(&target()),
                 Some(vec![s!("VAR3"), s!("VAR4")])
             );
             assert_eq!(
-                config.env_volumes(&target())?,
+                config.env_volumes(&target()),
                 Some(vec![s!("VOLUME3"), s!("VOLUME4")])
             );
 
@@ -782,7 +779,7 @@ mod tests {
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
             let expected = [s!("VOLUME1"), s!("VOLUME2")];
 
-            let result = config.env_volumes(&target()).unwrap().unwrap_or_default();
+            let result = config.env_volumes(&target()).unwrap_or_default();
             dbg!(&result);
             assert!(result.len() == 2);
             assert!(result.contains(&expected[0]));
@@ -798,7 +795,7 @@ mod tests {
             let config = Config::new_with(Some(toml(TOML_BUILD_VOLUMES)?), env);
             let expected = [s!("VOLUME3"), s!("VOLUME4")];
 
-            let result = config.env_volumes(&target()).unwrap().unwrap_or_default();
+            let result = config.env_volumes(&target()).unwrap_or_default();
             dbg!(&result);
             assert!(result.len() == 2);
             assert!(result.contains(&expected[0]));
