@@ -7,7 +7,7 @@ set -euo pipefail
 . lib.sh
 
 main() {
-    local version="8.0.2~focal-1"
+    local version="9.0.0.0~focal-1"
     install_packages wget
 
     dpkg --add-architecture i386
