@@ -41,6 +41,7 @@ pub(crate) fn run(
 
     let mut docker = engine.subcommand("run");
     docker.add_userns();
+    docker.add_extra_args(&options)?;
 
     // Podman on macOS doesn't support selinux labels, see issue #756
     #[cfg(target_os = "macos")]

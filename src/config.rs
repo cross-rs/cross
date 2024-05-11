@@ -108,6 +108,10 @@ impl Environment {
         get_possible_image(self, "IMAGE", "IMAGE_TOOLCHAIN", get_target, get_target)
     }
 
+    fn extra_args(&self, target: &Target) -> (Option<Vec<String>>, Option<Vec<String>>) {
+        self.get_values_for("EXTRA_ARGS", target, split_to_cloned_by_ws)
+    }
+
     fn dockerfile(&self, target: &Target) -> (Option<String>, Option<String>) {
         self.get_values_for("DOCKERFILE", target, ToOwned::to_owned)
     }
@@ -418,6 +422,10 @@ impl Config {
             CrossToml::env_passthrough,
             true,
         )
+    }
+
+    pub fn extra_args(&self, target: &Target) -> Result<Option<Vec<String>>> {
+        self.get_from_ref(target, Environment::extra_args, CrossToml::extra_args)
     }
 
     pub fn env_volumes(&self, target: &Target) -> Result<Option<Vec<String>>> {

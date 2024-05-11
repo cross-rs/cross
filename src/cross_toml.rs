@@ -20,6 +20,8 @@ use std::str::FromStr;
 pub struct CrossEnvConfig {
     volumes: Option<Vec<String>>,
     passthrough: Option<Vec<String>>,
+    /// Additional arguments to the underlying container engine
+    extra_args: Option<Vec<String>>,
 }
 
 /// Build configuration
@@ -377,6 +379,14 @@ impl CrossToml {
         )
     }
 
+    pub fn extra_args(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+        self.get_ref(
+            target,
+            |build| build.env.extra_args.as_deref(),
+            |t| t.env.extra_args.as_deref(),
+        )
+    }
+
     /// Returns the default target to build,
     pub fn default_target(&self, target_list: &TargetList) -> Option<Target> {
         self.build
@@ -629,6 +639,7 @@ mod tests {
                 env: CrossEnvConfig {
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                     passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
+                    extra_args: None,
                 },
                 xargo: Some(true),
                 build_std: None,
@@ -667,6 +678,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
+                    extra_args: None,
                 },
                 xargo: Some(false),
                 build_std: Some(BuildStd::Bool(true)),
@@ -685,6 +697,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: None,
                     volumes: None,
+                    extra_args: None,
                 },
                 xargo: None,
                 build_std: None,
@@ -755,6 +768,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: None,
                     volumes: Some(vec![p!("VOL")]),
+                    extra_args: None,
                 },
             },
         );
@@ -765,6 +779,7 @@ mod tests {
                 env: CrossEnvConfig {
                     volumes: None,
                     passthrough: Some(vec![]),
+                    extra_args: None,
                 },
                 xargo: Some(true),
                 build_std: None,
@@ -839,6 +854,7 @@ mod tests {
                 env: CrossEnvConfig {
                     passthrough: None,
                     volumes: None,
+                    extra_args: None,
                 },
                 build_std: None,
                 xargo: Some(true),
