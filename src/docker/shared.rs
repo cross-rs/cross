@@ -72,15 +72,8 @@ impl DockerOptions {
 
     #[must_use]
     pub fn needs_custom_image(&self) -> bool {
-        self.config
-            .dockerfile(&self.target)
-            .unwrap_or_default()
-            .is_some()
-            || self
-                .config
-                .pre_build(&self.target)
-                .unwrap_or_default()
-                .is_some()
+        self.config.dockerfile(&self.target).is_some()
+            || self.config.pre_build(&self.target).is_some()
     }
 
     pub(crate) fn custom_image_build(
@@ -93,8 +86,8 @@ impl DockerOptions {
             msg_info.note("cannot install armhf system packages via apt for `arm-unknown-linux-gnueabihf`, since they are for ARMv7a targets but this target is ARMv6. installation of all packages for the armhf architecture has been blocked.")?;
         }
 
-        if let Some(path) = self.config.dockerfile(&self.target)? {
-            let context = self.config.dockerfile_context(&self.target)?;
+        if let Some(path) = self.config.dockerfile(&self.target) {
+            let context = self.config.dockerfile_context(&self.target);
 
             let is_custom_image = self.config.image(&self.target)?.is_some();
 
@@ -114,13 +107,13 @@ impl DockerOptions {
                     self,
                     paths,
                     self.config
-                        .dockerfile_build_args(&self.target)?
+                        .dockerfile_build_args(&self.target)
                         .unwrap_or_default(),
                     msg_info,
                 )
                 .wrap_err("when building dockerfile")?;
         }
-        let pre_build = self.config.pre_build(&self.target)?;
+        let pre_build = self.config.pre_build(&self.target);
 
         if let Some(pre_build) = pre_build {
             match pre_build {
@@ -1014,7 +1007,7 @@ impl DockerCommandExt for Command {
         let mut warned = false;
         for ref var in options
             .config
-            .env_passthrough(&options.target)?
+            .env_passthrough(&options.target)
             .unwrap_or_default()
         {
             validate_env_var(
@@ -1030,7 +1023,7 @@ impl DockerCommandExt for Command {
             self.args(["-e", var]);
         }
 
-        let runner = options.config.runner(&options.target)?;
+        let runner = options.config.runner(&options.target);
         let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
         self.args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
             .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
@@ -1164,7 +1157,7 @@ impl DockerCommandExt for Command {
         let mut warned = false;
         for ref var in options
             .config
-            .env_volumes(&options.target)?
+            .env_volumes(&options.target)
             .unwrap_or_default()
         {
             let (var, value) = validate_env_var(

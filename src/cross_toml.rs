@@ -5,6 +5,7 @@
 //!
 //! [1]: https://github.com/cross-rs/cross/blob/main/docs/config_file.md
 
+use crate::config::ConfVal;
 use crate::docker::custom::PreBuild;
 use crate::docker::PossibleImage;
 use crate::shell::MessageInfo;
@@ -279,7 +280,7 @@ impl CrossToml {
     }
 
     /// Returns the `{}.dockerfile` or `{}.dockerfile.file` part of `Cross.toml`
-    pub fn dockerfile(&self, target: &Target) -> (Option<&String>, Option<&String>) {
+    pub fn dockerfile(&self, target: &Target) -> ConfVal<&String> {
         self.get_ref(
             target,
             |b| b.dockerfile.as_ref().map(|c| &c.file),
@@ -288,7 +289,7 @@ impl CrossToml {
     }
 
     /// Returns the `target.{}.dockerfile.context` part of `Cross.toml`
-    pub fn dockerfile_context(&self, target: &Target) -> (Option<&String>, Option<&String>) {
+    pub fn dockerfile_context(&self, target: &Target) -> ConfVal<&String> {
         self.get_ref(
             target,
             |b| b.dockerfile.as_ref().and_then(|c| c.context.as_ref()),
@@ -313,7 +314,7 @@ impl CrossToml {
     }
 
     /// Returns the `build.dockerfile.pre-build` and `target.{}.dockerfile.pre-build` part of `Cross.toml`
-    pub fn pre_build(&self, target: &Target) -> (Option<&PreBuild>, Option<&PreBuild>) {
+    pub fn pre_build(&self, target: &Target) -> ConfVal<&PreBuild> {
         self.get_ref(target, |b| b.pre_build.as_ref(), |t| t.pre_build.as_ref())
     }
 
@@ -323,17 +324,17 @@ impl CrossToml {
     }
 
     /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
-    pub fn xargo(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+    pub fn xargo(&self, target: &Target) -> ConfVal<bool> {
         self.get_value(target, |b| b.xargo, |t| t.xargo)
     }
 
     /// Returns the `build.build-std` or the `target.{}.build-std` part of `Cross.toml`
-    pub fn build_std(&self, target: &Target) -> (Option<&BuildStd>, Option<&BuildStd>) {
+    pub fn build_std(&self, target: &Target) -> ConfVal<&BuildStd> {
         self.get_ref(target, |b| b.build_std.as_ref(), |t| t.build_std.as_ref())
     }
 
     /// Returns the `{}.zig` or `{}.zig.version` part of `Cross.toml`
-    pub fn zig(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+    pub fn zig(&self, target: &Target) -> ConfVal<bool> {
         self.get_value(
             target,
             |b| b.zig.as_ref().and_then(|z| z.enable),
@@ -342,7 +343,7 @@ impl CrossToml {
     }
 
     /// Returns the `{}.zig` or `{}.zig.version` part of `Cross.toml`
-    pub fn zig_version(&self, target: &Target) -> (Option<String>, Option<String>) {
+    pub fn zig_version(&self, target: &Target) -> ConfVal<String> {
         self.get_value(
             target,
             |b| b.zig.as_ref().and_then(|c| c.version.clone()),
@@ -351,7 +352,7 @@ impl CrossToml {
     }
 
     /// Returns the  `{}.zig.image` part of `Cross.toml`
-    pub fn zig_image(&self, target: &Target) -> (Option<PossibleImage>, Option<PossibleImage>) {
+    pub fn zig_image(&self, target: &Target) -> ConfVal<PossibleImage> {
         self.get_value(
             target,
             |b| b.zig.as_ref().and_then(|c| c.image.clone()),
@@ -360,7 +361,7 @@ impl CrossToml {
     }
 
     /// Returns the list of environment variables to pass through for `build` and `target`
-    pub fn env_passthrough(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+    pub fn env_passthrough(&self, target: &Target) -> ConfVal<&[String]> {
         self.get_ref(
             target,
             |build| build.env.passthrough.as_deref(),
@@ -369,7 +370,7 @@ impl CrossToml {
     }
 
     /// Returns the list of environment variables to pass through for `build` and `target`
-    pub fn env_volumes(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+    pub fn env_volumes(&self, target: &Target) -> ConfVal<&[String]> {
         self.get_ref(
             target,
             |build| build.env.volumes.as_deref(),
@@ -395,10 +396,10 @@ impl CrossToml {
         target_triple: &Target,
         get_build: impl Fn(&CrossBuildConfig) -> Option<T>,
         get_target: impl Fn(&CrossTargetConfig) -> Option<T>,
-    ) -> (Option<T>, Option<T>) {
+    ) -> ConfVal<T> {
         let build = get_build(&self.build);
         let target = self.get_target(target_triple).and_then(get_target);
-        (build, target)
+        ConfVal::new(build, target)
     }
 
     fn get_ref<T: ?Sized>(
@@ -406,10 +407,10 @@ impl CrossToml {
         target_triple: &Target,
         get_build: impl Fn(&CrossBuildConfig) -> Option<&T>,
         get_target: impl Fn(&CrossTargetConfig) -> Option<&T>,
-    ) -> (Option<&T>, Option<&T>) {
+    ) -> ConfVal<&T> {
         let build = get_build(&self.build);
         let target = self.get_target(target_triple).and_then(get_target);
-        (build, target)
+        ConfVal::new(build, target)
     }
 }
 
@@ -1063,7 +1064,10 @@ mod tests {
         assert!(unused.is_empty());
         assert!(matches!(
             toml.pre_build(&Target::new_built_in("aarch64-unknown-linux-gnu")),
-            (Some(&PreBuild::Lines(_)), Some(&PreBuild::Single { .. }))
+            ConfVal {
+                build: Some(&PreBuild::Lines(_)),
+                target: Some(&PreBuild::Single { .. }),
+            },
         ));
         Ok(())
     }
