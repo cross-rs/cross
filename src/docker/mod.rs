@@ -31,6 +31,10 @@ impl ProvidedImage {
     pub fn image_name(&self, repository: &str, tag: &str) -> String {
         image_name(self.name, self.sub, repository, tag)
     }
+
+    pub fn default_image_name(&self) -> String {
+        self.image_name(CROSS_IMAGE, DEFAULT_IMAGE_VERSION)
+    }
 }
 
 pub fn image_name(target: &str, sub: Option<&str>, repository: &str, tag: &str) -> String {
