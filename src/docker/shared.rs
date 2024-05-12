@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{env, fs, time};
 
 use super::custom::{Dockerfile, PreBuild};
-use super::image::PossibleImage;
+use super::image::{ImageReference, PossibleImage};
 use super::Image;
 use super::PROVIDED_IMAGES;
 use super::{engine::*, ProvidedImage};
@@ -1251,6 +1251,13 @@ fn get_user_image(
         image = config.zig_image(target).map_err(GetImageError::Other)?;
     }
 
+    if let Some(image) = &mut image {
+        if let ImageReference::Identifier(id) = &image.reference {
+            let target_name = get_target_name(target, uses_zig);
+            image.reference = ImageReference::Name(format!("{CROSS_IMAGE}/{target_name}{id}"));
+        }
+    }
+
     Ok(image)
 }
 
@@ -1276,7 +1283,7 @@ pub fn get_image_name(
     uses_zig: bool,
 ) -> Result<String, GetImageError> {
     if let Some(image) = get_user_image(config, target, uses_zig)? {
-        return Ok(image.name);
+        return Ok(image.reference.get().to_owned());
     }
 
     let target_name = get_target_name(target, uses_zig);
@@ -1542,8 +1549,10 @@ pub fn path_hash(path: &Path, count: usize) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
-    use crate::id;
+    use crate::{config::Environment, id};
 
     #[cfg(not(target_os = "windows"))]
     use crate::file::PathExt;
@@ -1596,6 +1605,48 @@ mod tests {
             Ok(v) => env::set_var(var, v),
             Err(_) => env::remove_var(var),
         }
+    }
+
+    #[test]
+    fn test_tag_only_image() -> Result<()> {
+        let target: Target = TargetTriple::X86_64UnknownLinuxGnu.into();
+        let test = |map, expected_ver: &str, expected_ver_zig: &str| -> Result<()> {
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(None, env);
+            for (uses_zig, expected_ver) in [(false, expected_ver), (true, expected_ver_zig)] {
+                let expected_image_target = if uses_zig {
+                    "zig"
+                } else {
+                    "x86_64-unknown-linux-gnu"
+                };
+                let expected = format!("ghcr.io/cross-rs/{expected_image_target}{expected_ver}");
+
+                let image = get_image(&config, &target, uses_zig)?;
+                assert_eq!(image.reference.get(), expected);
+                let image_name = get_image_name(&config, &target, uses_zig)?;
+                assert_eq!(image_name, expected);
+            }
+            Ok(())
+        };
+
+        let default_ver = format!(":{DEFAULT_IMAGE_VERSION}");
+        let mut map = HashMap::new();
+        test(map.clone(), &default_ver, &default_ver)?;
+
+        map.insert("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE", ":edge");
+        test(map.clone(), ":edge", ":edge")?;
+
+        // `image` always takes precedence over `zig.image`, even when `uses_zig` is `true`
+        map.insert(
+            "CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_ZIG_IMAGE",
+            "@sha256:foobar",
+        );
+        test(map.clone(), ":edge", ":edge")?;
+
+        map.remove("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE");
+        test(map.clone(), &default_ver, "@sha256:foobar")?;
+
+        Ok(())
     }
 
     mod directories {

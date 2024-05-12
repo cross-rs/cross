@@ -810,7 +810,7 @@ To override the toolchain mounted in the image, set `target.{target}.image.toolc
     };
     let is_remote = docker::Engine::is_remote();
     let engine = docker::Engine::new(None, Some(is_remote), msg_info)?;
-    let image = image.to_definite_with(&engine, msg_info);
+    let image = image.to_definite_with(&engine, msg_info)?;
     toolchain.replace_host(&image.platform);
     Ok(Some(CrossSetup {
         config,
