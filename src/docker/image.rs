@@ -2,7 +2,12 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::*, shell::MessageInfo, TargetTriple};
+use crate::{
+    docker::{CROSS_IMAGE, DEFAULT_IMAGE_VERSION},
+    errors::*,
+    shell::MessageInfo,
+    TargetTriple,
+};
 
 use super::Engine;
 
@@ -114,6 +119,8 @@ pub enum ImageReference {
     Name(String),
     /// Unqualified reference, only a tag or digest
     Identifier(String),
+    /// Unqualified reference, only a subtarget
+    Subtarget(String),
 }
 
 impl ImageReference {
@@ -121,13 +128,30 @@ impl ImageReference {
         match self {
             Self::Name(s) => s,
             Self::Identifier(s) => s,
+            Self::Subtarget(s) => s,
         }
+    }
+
+    pub fn ensure_qualified(&mut self, target_name: &str) {
+        let image_name = match self {
+            Self::Name(_) => return,
+            Self::Identifier(id) => {
+                format!("{CROSS_IMAGE}/{target_name}{id}")
+            }
+            Self::Subtarget(sub) => {
+                format!("{CROSS_IMAGE}/{target_name}:{DEFAULT_IMAGE_VERSION}{sub}")
+            }
+        };
+
+        *self = Self::Name(image_name);
     }
 }
 
 impl From<String> for ImageReference {
     fn from(s: String) -> Self {
-        if s.starts_with(':') || s.starts_with('@') {
+        if s.starts_with('-') {
+            Self::Subtarget(s)
+        } else if s.starts_with(':') || s.starts_with('@') {
             Self::Identifier(s)
         } else {
             Self::Name(s)

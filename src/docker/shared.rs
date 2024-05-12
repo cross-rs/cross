@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{env, fs, time};
 
 use super::custom::{Dockerfile, PreBuild};
-use super::image::{ImageReference, PossibleImage};
+use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
 use super::{engine::*, ProvidedImage};
@@ -1252,10 +1252,8 @@ fn get_user_image(
     }
 
     if let Some(image) = &mut image {
-        if let ImageReference::Identifier(id) = &image.reference {
-            let target_name = get_target_name(target, uses_zig);
-            image.reference = ImageReference::Name(format!("{CROSS_IMAGE}/{target_name}{id}"));
-        }
+        let target_name = get_target_name(target, uses_zig);
+        image.reference.ensure_qualified(target_name);
     }
 
     Ok(image)
@@ -1632,6 +1630,10 @@ mod tests {
         let default_ver = format!(":{DEFAULT_IMAGE_VERSION}");
         let mut map = HashMap::new();
         test(map.clone(), &default_ver, &default_ver)?;
+
+        map.insert("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE", "-centos");
+        let centos_tag = format!("{default_ver}-centos");
+        test(map.clone(), &centos_tag, &centos_tag)?;
 
         map.insert("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE", ":edge");
         test(map.clone(), ":edge", ":edge")?;
