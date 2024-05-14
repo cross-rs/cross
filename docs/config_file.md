@@ -221,6 +221,27 @@ the default one. Normal Docker behavior applies, so:
 - If only `image:latest` is specified, then Docker won't look in Docker Hub.
 - If the tag is omitted, then Docker will use the `latest` tag.
 
+If you specify a tag but no image name, `cross` will use the default image with
+the tag you provided:
+
+```toml
+[target.aarch64-unknown-linux-gnu]
+# Translates to `ghcr.io/cross-rs/aarch64-unknown-linux-gnu:edge`
+image = ":edge"
+
+[target.x86_64-unknown-linux-musl]
+# Translates to `ghcr.io/cross-rs/x86_64-unknown-linux-musl@sha256:77db671d8356a64ae72a3e1415e63f547f26d374fbe3c4762c1cd36c7eac7b99`
+image = "@sha256:77db671d8356a64ae72a3e1415e63f547f26d374fbe3c4762c1cd36c7eac7b99"
+```
+
+You can also specify a subtarget with no tag nor image name:
+
+```toml
+[target.x86_64-unknown-linux-gnu]
+# Translates to `ghcr.io/cross-rs/x86_64-unknown-linux-gnu:0.3.0-centos`
+image = "-centos"
+```
+
 The `image` key can also take the toolchains/platforms supported by the image:
 
 ```toml

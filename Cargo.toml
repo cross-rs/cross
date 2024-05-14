@@ -86,6 +86,12 @@ search = "<!-- next-url -->"
 replace = "<!-- next-url -->\n\n[Unreleased]: https://github.com/cross-rs/{{crate_name}}/compare/v{{version}}...HEAD"
 exactly = 1
 
+[[package.metadata.release.pre-release-replacements]]
+file = "docs/config_file.md"
+search = "(# Translates to `.*?:).*?(-centos`)"
+replace = "${1}{{version}}$2"
+exactly = 1
+
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.tar.gz"
 bin-dir = "{ bin }{ binary-ext }"

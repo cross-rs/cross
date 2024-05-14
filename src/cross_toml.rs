@@ -591,7 +591,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::docker::ImagePlatform;
+    use crate::docker::{ImagePlatform, ImageReference};
 
     use super::*;
     use crate::shell;
@@ -741,7 +741,7 @@ mod tests {
                 build_std: None,
                 zig: None,
                 image: Some(PossibleImage {
-                    name: "test-image".to_owned(),
+                    reference: ImageReference::Name("test-image".to_owned()),
                     toolchain: vec![ImagePlatform::from_target(
                         "aarch64-unknown-linux-musl".into(),
                     )?],
@@ -773,7 +773,7 @@ mod tests {
                     enable: None,
                     version: None,
                     image: Some(PossibleImage {
-                        name: "zig:local".to_owned(),
+                        reference: ImageReference::Name("zig:local".to_owned()),
                         toolchain: vec![ImagePlatform::from_target(
                             "aarch64-unknown-linux-gnu".into(),
                         )?],
@@ -939,7 +939,7 @@ mod tests {
             [target.target3]
             xargo = false
             build-std = true
-            image = "test-image3"
+            image = "@sha256:test-image3"
 
             [target.target3.env]
             volumes = ["VOL3_ARG"]
@@ -978,7 +978,7 @@ mod tests {
             [target.target3]
             xargo = false
             build-std = true
-            image = "test-image3"
+            image = "@sha256:test-image3"
 
             [target.target3.env]
             volumes = ["VOL3_ARG"]
@@ -1042,7 +1042,7 @@ mod tests {
         let target3 = &targets[&Target::new_custom("target3")];
         assert_eq!(target3.build_std, Some(BuildStd::Bool(true)));
         assert_eq!(target3.xargo, Some(false));
-        assert_eq!(target3.image, Some(p!("test-image3")));
+        assert_eq!(target3.image, Some(p!("@sha256:test-image3")));
         assert_eq!(target3.pre_build, None);
         assert_eq!(target3.dockerfile, None);
         assert_eq!(target3.env.passthrough, Some(vec![p!("VAR3")]));

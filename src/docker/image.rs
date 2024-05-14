@@ -2,7 +2,12 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::*, shell::MessageInfo, TargetTriple};
+use crate::{
+    docker::{CROSS_IMAGE, DEFAULT_IMAGE_VERSION},
+    errors::*,
+    shell::MessageInfo,
+    TargetTriple,
+};
 
 use super::Engine;
 
@@ -21,18 +26,23 @@ impl std::fmt::Display for Image {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct PossibleImage {
-    pub name: String,
+    #[serde(rename = "name")]
+    pub reference: ImageReference,
     // The toolchain triple the image is built for
     pub toolchain: Vec<ImagePlatform>,
 }
 
 impl PossibleImage {
-    pub fn to_definite_with(&self, engine: &Engine, msg_info: &mut MessageInfo) -> Image {
+    pub fn to_definite_with(&self, engine: &Engine, msg_info: &mut MessageInfo) -> Result<Image> {
+        let ImageReference::Name(name) = self.reference.clone() else {
+            eyre::bail!("cannot make definite Image from unqualified PossibleImage");
+        };
+
         if self.toolchain.is_empty() {
-            Image {
-                name: self.name.clone(),
+            Ok(Image {
+                name,
                 platform: ImagePlatform::DEFAULT,
-            }
+            })
         } else {
             let platform = if self.toolchain.len() == 1 {
                 self.toolchain.first().expect("should contain at least one")
@@ -71,10 +81,10 @@ impl PossibleImage {
                     platform
                 }
             };
-            Image {
+            Ok(Image {
                 platform: platform.clone(),
-                name: self.name.clone(),
-            }
+                name,
+            })
         }
     }
 }
@@ -82,7 +92,7 @@ impl PossibleImage {
 impl<T: AsRef<str>> From<T> for PossibleImage {
     fn from(s: T) -> Self {
         PossibleImage {
-            name: s.as_ref().to_owned(),
+            reference: s.as_ref().to_owned().into(),
             toolchain: vec![],
         }
     }
@@ -98,9 +108,57 @@ impl FromStr for PossibleImage {
 
 impl std::fmt::Display for PossibleImage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.name)
+        f.write_str(self.reference.get())
     }
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(from = "String", untagged)]
+pub enum ImageReference {
+    /// Partially qualified reference, with or without tag/digest
+    Name(String),
+    /// Unqualified reference, only a tag or digest
+    Identifier(String),
+    /// Unqualified reference, only a subtarget
+    Subtarget(String),
+}
+
+impl ImageReference {
+    pub fn get(&self) -> &str {
+        match self {
+            Self::Name(s) => s,
+            Self::Identifier(s) => s,
+            Self::Subtarget(s) => s,
+        }
+    }
+
+    pub fn ensure_qualified(&mut self, target_name: &str) {
+        let image_name = match self {
+            Self::Name(_) => return,
+            Self::Identifier(id) => {
+                format!("{CROSS_IMAGE}/{target_name}{id}")
+            }
+            Self::Subtarget(sub) => {
+                format!("{CROSS_IMAGE}/{target_name}:{DEFAULT_IMAGE_VERSION}{sub}")
+            }
+        };
+
+        *self = Self::Name(image_name);
+    }
+}
+
+impl From<String> for ImageReference {
+    fn from(s: String) -> Self {
+        if s.starts_with('-') {
+            Self::Subtarget(s)
+        } else if s.starts_with(':') || s.starts_with('@') {
+            Self::Identifier(s)
+        } else {
+            Self::Name(s)
+        }
+    }
+}
+
 /// The architecture/platform to use in the image
 ///
 /// <https://github.com/containerd/containerd/blob/release/1.6/platforms/platforms.go#L63>

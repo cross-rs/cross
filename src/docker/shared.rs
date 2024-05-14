@@ -5,10 +5,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{env, fs, time};
 
 use super::custom::{Dockerfile, PreBuild};
-use super::engine::*;
 use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
+use super::{engine::*, ProvidedImage};
 use crate::cargo::CargoMetadata;
 use crate::config::Config;
 use crate::errors::*;
@@ -26,6 +26,11 @@ pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:20.04";
+pub const DEFAULT_IMAGE_VERSION: &str = if crate::commit_info().is_empty() {
+    env!("CARGO_PKG_VERSION")
+} else {
+    "main"
+};
 
 #[derive(Debug)]
 pub struct DockerOptions {
@@ -1228,23 +1233,35 @@ pub enum GetImageError {
     Other(eyre::Report),
 }
 
-/// Simpler version of [get_image]
-pub fn get_image_name(
+fn get_target_name(target: &Target, uses_zig: bool) -> &str {
+    if uses_zig {
+        "zig"
+    } else {
+        target.triple()
+    }
+}
+
+fn get_user_image(
     config: &Config,
     target: &Target,
     uses_zig: bool,
-) -> Result<String, GetImageError> {
-    if let Some(image) = config.image(target).map_err(GetImageError::Other)? {
-        return Ok(image.name);
+) -> Result<Option<PossibleImage>, GetImageError> {
+    let mut image = config.image(target).map_err(GetImageError::Other)?;
+    if image.is_none() && uses_zig {
+        image = config.zig_image(target).map_err(GetImageError::Other)?;
     }
 
-    let target_name = match uses_zig {
-        true => match config.zig_image(target).map_err(GetImageError::Other)? {
-            Some(image) => return Ok(image.name),
-            None => "zig",
-        },
-        false => target.triple(),
-    };
+    if let Some(image) = &mut image {
+        let target_name = get_target_name(target, uses_zig);
+        image.reference.ensure_qualified(target_name);
+    }
+
+    Ok(image)
+}
+
+fn get_provided_images_for_target(
+    target_name: &str,
+) -> Result<Vec<&'static ProvidedImage>, GetImageError> {
     let compatible = PROVIDED_IMAGES
         .iter()
         .filter(|p| p.name == target_name)
@@ -1254,16 +1271,25 @@ pub fn get_image_name(
         return Err(GetImageError::NoCompatibleImages(target_name.to_owned()));
     }
 
-    let version = if crate::commit_info().is_empty() {
-        env!("CARGO_PKG_VERSION")
-    } else {
-        "main"
-    };
+    Ok(compatible)
+}
 
+/// Simpler version of [get_image]
+pub fn get_image_name(
+    config: &Config,
+    target: &Target,
+    uses_zig: bool,
+) -> Result<String, GetImageError> {
+    if let Some(image) = get_user_image(config, target, uses_zig)? {
+        return Ok(image.reference.get().to_owned());
+    }
+
+    let target_name = get_target_name(target, uses_zig);
+    let compatible = get_provided_images_for_target(target_name)?;
     Ok(compatible
         .first()
         .expect("should not be empty")
-        .image_name(CROSS_IMAGE, version))
+        .default_image_name())
 }
 
 pub fn get_image(
@@ -1271,35 +1297,15 @@ pub fn get_image(
     target: &Target,
     uses_zig: bool,
 ) -> Result<PossibleImage, GetImageError> {
-    if let Some(image) = config.image(target).map_err(GetImageError::Other)? {
+    if let Some(image) = get_user_image(config, target, uses_zig)? {
         return Ok(image);
     }
 
-    let target_name = match uses_zig {
-        true => match config.zig_image(target).map_err(GetImageError::Other)? {
-            Some(image) => return Ok(image),
-            None => "zig",
-        },
-        false => target.triple(),
-    };
-    let compatible = PROVIDED_IMAGES
-        .iter()
-        .filter(|p| p.name == target_name)
-        .collect::<Vec<_>>();
-
-    if compatible.is_empty() {
-        return Err(GetImageError::NoCompatibleImages(target_name.to_owned()));
-    }
-
-    let version = if crate::commit_info().is_empty() {
-        env!("CARGO_PKG_VERSION")
-    } else {
-        "main"
-    };
-
-    let pick = if compatible.len() == 1 {
+    let target_name = get_target_name(target, uses_zig);
+    let compatible = get_provided_images_for_target(target_name)?;
+    let pick = if let [first] = compatible[..] {
         // If only one match, use that
-        compatible.first().expect("should not be empty")
+        first
     } else if compatible
         .iter()
         .filter(|provided| provided.sub.is_none())
@@ -1323,10 +1329,7 @@ pub fn get_image(
                     "candidates: {}",
                     compatible
                         .iter()
-                        .map(|provided| format!(
-                            "\"{}\"",
-                            provided.image_name(CROSS_IMAGE, version)
-                        ))
+                        .map(|provided| format!("\"{}\"", provided.default_image_name()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 )
@@ -1334,12 +1337,12 @@ pub fn get_image(
         ));
     };
 
-    let mut image: PossibleImage = pick.image_name(CROSS_IMAGE, version).into();
-
+    let image_name = pick.default_image_name();
     if pick.platforms.is_empty() {
-        return Err(GetImageError::SpecifiedImageNoPlatform(image.to_string()));
-    };
+        return Err(GetImageError::SpecifiedImageNoPlatform(image_name));
+    }
 
+    let mut image: PossibleImage = image_name.into();
     image.toolchain = pick.platforms.to_vec();
     Ok(image)
 }
@@ -1544,8 +1547,10 @@ pub fn path_hash(path: &Path, count: usize) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
-    use crate::id;
+    use crate::{config::Environment, id};
 
     #[cfg(not(target_os = "windows"))]
     use crate::file::PathExt;
@@ -1598,6 +1603,52 @@ mod tests {
             Ok(v) => env::set_var(var, v),
             Err(_) => env::remove_var(var),
         }
+    }
+
+    #[test]
+    fn test_tag_only_image() -> Result<()> {
+        let target: Target = TargetTriple::X86_64UnknownLinuxGnu.into();
+        let test = |map, expected_ver: &str, expected_ver_zig: &str| -> Result<()> {
+            let env = Environment::new(Some(map));
+            let config = Config::new_with(None, env);
+            for (uses_zig, expected_ver) in [(false, expected_ver), (true, expected_ver_zig)] {
+                let expected_image_target = if uses_zig {
+                    "zig"
+                } else {
+                    "x86_64-unknown-linux-gnu"
+                };
+                let expected = format!("ghcr.io/cross-rs/{expected_image_target}{expected_ver}");
+
+                let image = get_image(&config, &target, uses_zig)?;
+                assert_eq!(image.reference.get(), expected);
+                let image_name = get_image_name(&config, &target, uses_zig)?;
+                assert_eq!(image_name, expected);
+            }
+            Ok(())
+        };
+
+        let default_ver = format!(":{DEFAULT_IMAGE_VERSION}");
+        let mut map = HashMap::new();
+        test(map.clone(), &default_ver, &default_ver)?;
+
+        map.insert("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE", "-centos");
+        let centos_tag = format!("{default_ver}-centos");
+        test(map.clone(), &centos_tag, &centos_tag)?;
+
+        map.insert("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE", ":edge");
+        test(map.clone(), ":edge", ":edge")?;
+
+        // `image` always takes precedence over `zig.image`, even when `uses_zig` is `true`
+        map.insert(
+            "CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_ZIG_IMAGE",
+            "@sha256:foobar",
+        );
+        test(map.clone(), ":edge", ":edge")?;
+
+        map.remove("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE");
+        test(map.clone(), &default_ver, "@sha256:foobar")?;
+
+        Ok(())
     }
 
     mod directories {

@@ -41,10 +41,10 @@ impl<T: PartialEq> PartialEq<(Option<T>, Option<T>)> for ConfVal<T> {
 }
 
 #[derive(Debug)]
-struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
+pub(crate) struct Environment(&'static str, Option<HashMap<&'static str, &'static str>>);
 
 impl Environment {
-    fn new(map: Option<HashMap<&'static str, &'static str>>) -> Self {
+    pub(crate) fn new(map: Option<HashMap<&'static str, &'static str>>) -> Self {
         Environment("CROSS", map)
     }
 
@@ -352,7 +352,7 @@ impl Config {
     }
 
     #[cfg(test)]
-    fn new_with(toml: Option<CrossToml>, env: Environment) -> Self {
+    pub(crate) fn new_with(toml: Option<CrossToml>, env: Environment) -> Self {
         Config { toml, env }
     }
 
