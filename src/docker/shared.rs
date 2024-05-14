@@ -1246,10 +1246,12 @@ fn get_user_image(
     target: &Target,
     uses_zig: bool,
 ) -> Result<Option<PossibleImage>, GetImageError> {
-    let mut image = config.image(target).map_err(GetImageError::Other)?;
-    if image.is_none() && uses_zig {
-        image = config.zig_image(target).map_err(GetImageError::Other)?;
+    let mut image = if uses_zig {
+        config.zig_image(target)
+    } else {
+        config.image(target)
     }
+    .map_err(GetImageError::Other)?;
 
     if let Some(image) = &mut image {
         let target_name = get_target_name(target, uses_zig);
@@ -1632,18 +1634,16 @@ mod tests {
         test(map.clone(), &default_ver, &default_ver)?;
 
         map.insert("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE", "-centos");
-        let centos_tag = format!("{default_ver}-centos");
-        test(map.clone(), &centos_tag, &centos_tag)?;
+        test(map.clone(), &format!("{default_ver}-centos"), &default_ver)?;
 
         map.insert("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE", ":edge");
-        test(map.clone(), ":edge", ":edge")?;
+        test(map.clone(), ":edge", &default_ver)?;
 
-        // `image` always takes precedence over `zig.image`, even when `uses_zig` is `true`
         map.insert(
             "CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_ZIG_IMAGE",
             "@sha256:foobar",
         );
-        test(map.clone(), ":edge", ":edge")?;
+        test(map.clone(), ":edge", "@sha256:foobar")?;
 
         map.remove("CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE");
         test(map.clone(), &default_ver, "@sha256:foobar")?;
