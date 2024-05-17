@@ -1,0 +1,31 @@
+FROM ubuntu:20.04 as cross-base
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+FROM cross-base as build
+
+COPY solaris.sh /
+RUN /solaris.sh x86_64 pc
+
+COPY toolchain.cmake /opt/toolchain.cmake
+
+ENV CROSS_TOOLCHAIN_PREFIX=x86_64-pc-solaris2.10-
+ENV CROSS_SYSROOT=/usr/local/x86_64-pc-solaris2.10
+ENV CARGO_TARGET_X86_64_PC_SOLARIS_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    AR_x86_64_pc_solaris="$CROSS_TOOLCHAIN_PREFIX"ar \
+    CC_x86_64_pc_solaris="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_x86_64_pc_solaris="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_x86_64_pc_solaris=/opt/toolchain.cmake \
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_solaris="--sysroot=$CROSS_SYSROOT" \
+    CROSS_CMAKE_SYSTEM_NAME=SunOS \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=x86_64 \
+    CROSS_CMAKE_CRT=solaris \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m64"

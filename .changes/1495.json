@@ -1,0 +1,6 @@
+{
+    "description": "Fix `*-solaris` targets",
+    "issues": [1424],
+    "type": "fixed",
+    "breaking": true
+}
