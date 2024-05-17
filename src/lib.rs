@@ -160,7 +160,7 @@ impl TargetTriple {
             "aarch64-unknown-freebsd" => Some("freebsd-arm64"),
             "x86_64-unknown-netbsd" => Some("netbsd-amd64"),
             "sparcv9-sun-solaris" => Some("solaris-sparc"),
-            "x86_64-sun-solaris" => Some("solaris-amd64"),
+            "x86_64-pc-solaris" => Some("solaris-amd64"),
             "thumbv6m-none-eabi" => Some("arm"),
             "thumbv7em-none-eabi" => Some("arm"),
             "thumbv7em-none-eabihf" => Some("armhf"),

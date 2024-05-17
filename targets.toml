@@ -456,7 +456,7 @@ std = true
 
 [[target]]
 disabled = true # https://github.com/cross-rs/cross/issues/1424
-target = "x86_64-sun-solaris"
+target = "x86_64-pc-solaris"
 os = "ubuntu-latest"
 cpp = true
 dylib = true

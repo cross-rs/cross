@@ -8,10 +8,11 @@ set -euo pipefail
 
 main() {
     local arch="${1}"
+    local manufacturer="${2}"
 
     local binutils=2.28.1 \
         gcc=8.4.0 \
-        target="${arch}-sun-solaris2.10"
+        target="${arch}-${manufacturer}-solaris2.10"
 
     install_packages bzip2 \
         ca-certificates \
