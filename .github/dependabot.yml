@@ -48,3 +48,35 @@ updates:
       github_actions:
         patterns:
           - "*"
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      rust_dependencies:
+        patterns:
+          - "*"
+  - package-ecosystem: "cargo"
+    directory: "/xtask"
+    schedule:
+      interval: "weekly"
+    groups:
+      rust_dependencies:
+        patterns:
+          - "*"
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      build_dependencies:
+        patterns:
+          - "*"
+  - package-ecosystem: "pip"
+    directory: "/docker/android"
+    schedule:
+      interval: "weekly"
+    groups:
+      python_dependencies:
+        patterns:
+          - "*"

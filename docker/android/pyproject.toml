@@ -2,7 +2,10 @@
 name = "android"
 version = "0.0.0-dev.0"
 license = { text = "MIT OR Apache-2.0" }
-dependencies = ["sly==0.4", "google-re2==1.0"]
+dependencies = [
+    "sly==0.5",
+    "google-re2==1.1.20240601"
+]
 
 [build-system]
 requires = [
