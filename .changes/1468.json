@@ -1,0 +1,5 @@
+{
+    "type": "changed",
+    "description": "use defconfig for ct-ng, minimizing the config",
+    "issues": [1335]
+}

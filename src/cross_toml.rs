@@ -5,6 +5,7 @@
 //!
 //! [1]: https://github.com/cross-rs/cross/blob/main/docs/config_file.md
 
+use crate::config::ConfVal;
 use crate::docker::custom::PreBuild;
 use crate::docker::PossibleImage;
 use crate::shell::MessageInfo;
@@ -29,7 +30,7 @@ pub struct CrossBuildConfig {
     #[serde(default)]
     env: CrossEnvConfig,
     xargo: Option<bool>,
-    build_std: Option<bool>,
+    build_std: Option<BuildStd>,
     #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
     zig: Option<CrossZigConfig>,
     default_target: Option<String>,
@@ -44,7 +45,7 @@ pub struct CrossBuildConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct CrossTargetConfig {
     xargo: Option<bool>,
-    build_std: Option<bool>,
+    build_std: Option<BuildStd>,
     #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
     zig: Option<CrossZigConfig>,
     #[serde(default, deserialize_with = "opt_string_or_struct")]
@@ -56,6 +57,28 @@ pub struct CrossTargetConfig {
     runner: Option<String>,
     #[serde(default)]
     env: CrossEnvConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[serde(untagged, rename_all = "kebab-case")]
+pub enum BuildStd {
+    Bool(bool),
+    Crates(Vec<String>),
+}
+
+impl Default for BuildStd {
+    fn default() -> Self {
+        Self::Bool(false)
+    }
+}
+
+impl BuildStd {
+    pub fn enabled(&self) -> bool {
+        match self {
+            Self::Bool(enabled) => *enabled,
+            Self::Crates(arr) => !arr.is_empty(),
+        }
+    }
 }
 
 /// Dockerfile configuration
@@ -257,7 +280,7 @@ impl CrossToml {
     }
 
     /// Returns the `{}.dockerfile` or `{}.dockerfile.file` part of `Cross.toml`
-    pub fn dockerfile(&self, target: &Target) -> (Option<&String>, Option<&String>) {
+    pub fn dockerfile(&self, target: &Target) -> ConfVal<&String> {
         self.get_ref(
             target,
             |b| b.dockerfile.as_ref().map(|c| &c.file),
@@ -266,7 +289,7 @@ impl CrossToml {
     }
 
     /// Returns the `target.{}.dockerfile.context` part of `Cross.toml`
-    pub fn dockerfile_context(&self, target: &Target) -> (Option<&String>, Option<&String>) {
+    pub fn dockerfile_context(&self, target: &Target) -> ConfVal<&String> {
         self.get_ref(
             target,
             |b| b.dockerfile.as_ref().and_then(|c| c.context.as_ref()),
@@ -291,7 +314,7 @@ impl CrossToml {
     }
 
     /// Returns the `build.dockerfile.pre-build` and `target.{}.dockerfile.pre-build` part of `Cross.toml`
-    pub fn pre_build(&self, target: &Target) -> (Option<&PreBuild>, Option<&PreBuild>) {
+    pub fn pre_build(&self, target: &Target) -> ConfVal<&PreBuild> {
         self.get_ref(target, |b| b.pre_build.as_ref(), |t| t.pre_build.as_ref())
     }
 
@@ -301,17 +324,17 @@ impl CrossToml {
     }
 
     /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
-    pub fn xargo(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+    pub fn xargo(&self, target: &Target) -> ConfVal<bool> {
         self.get_value(target, |b| b.xargo, |t| t.xargo)
     }
 
     /// Returns the `build.build-std` or the `target.{}.build-std` part of `Cross.toml`
-    pub fn build_std(&self, target: &Target) -> (Option<bool>, Option<bool>) {
-        self.get_value(target, |b| b.build_std, |t| t.build_std)
+    pub fn build_std(&self, target: &Target) -> ConfVal<&BuildStd> {
+        self.get_ref(target, |b| b.build_std.as_ref(), |t| t.build_std.as_ref())
     }
 
     /// Returns the `{}.zig` or `{}.zig.version` part of `Cross.toml`
-    pub fn zig(&self, target: &Target) -> (Option<bool>, Option<bool>) {
+    pub fn zig(&self, target: &Target) -> ConfVal<bool> {
         self.get_value(
             target,
             |b| b.zig.as_ref().and_then(|z| z.enable),
@@ -320,7 +343,7 @@ impl CrossToml {
     }
 
     /// Returns the `{}.zig` or `{}.zig.version` part of `Cross.toml`
-    pub fn zig_version(&self, target: &Target) -> (Option<String>, Option<String>) {
+    pub fn zig_version(&self, target: &Target) -> ConfVal<String> {
         self.get_value(
             target,
             |b| b.zig.as_ref().and_then(|c| c.version.clone()),
@@ -329,7 +352,7 @@ impl CrossToml {
     }
 
     /// Returns the  `{}.zig.image` part of `Cross.toml`
-    pub fn zig_image(&self, target: &Target) -> (Option<PossibleImage>, Option<PossibleImage>) {
+    pub fn zig_image(&self, target: &Target) -> ConfVal<PossibleImage> {
         self.get_value(
             target,
             |b| b.zig.as_ref().and_then(|c| c.image.clone()),
@@ -338,7 +361,7 @@ impl CrossToml {
     }
 
     /// Returns the list of environment variables to pass through for `build` and `target`
-    pub fn env_passthrough(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+    pub fn env_passthrough(&self, target: &Target) -> ConfVal<&[String]> {
         self.get_ref(
             target,
             |build| build.env.passthrough.as_deref(),
@@ -347,7 +370,7 @@ impl CrossToml {
     }
 
     /// Returns the list of environment variables to pass through for `build` and `target`
-    pub fn env_volumes(&self, target: &Target) -> (Option<&[String]>, Option<&[String]>) {
+    pub fn env_volumes(&self, target: &Target) -> ConfVal<&[String]> {
         self.get_ref(
             target,
             |build| build.env.volumes.as_deref(),
@@ -373,10 +396,10 @@ impl CrossToml {
         target_triple: &Target,
         get_build: impl Fn(&CrossBuildConfig) -> Option<T>,
         get_target: impl Fn(&CrossTargetConfig) -> Option<T>,
-    ) -> (Option<T>, Option<T>) {
+    ) -> ConfVal<T> {
         let build = get_build(&self.build);
         let target = self.get_target(target_triple).and_then(get_target);
-        (build, target)
+        ConfVal::new(build, target)
     }
 
     fn get_ref<T: ?Sized>(
@@ -384,10 +407,10 @@ impl CrossToml {
         target_triple: &Target,
         get_build: impl Fn(&CrossBuildConfig) -> Option<&T>,
         get_target: impl Fn(&CrossTargetConfig) -> Option<&T>,
-    ) -> (Option<&T>, Option<&T>) {
+    ) -> ConfVal<&T> {
         let build = get_build(&self.build);
         let target = self.get_target(target_triple).and_then(get_target);
-        (build, target)
+        ConfVal::new(build, target)
     }
 }
 
@@ -568,7 +591,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::docker::ImagePlatform;
+    use crate::docker::{ImagePlatform, ImageReference};
 
     use super::*;
     use crate::shell;
@@ -647,7 +670,7 @@ mod tests {
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                 },
                 xargo: Some(false),
-                build_std: Some(true),
+                build_std: Some(BuildStd::Bool(true)),
                 zig: None,
                 image: Some("test-image".into()),
                 runner: None,
@@ -718,7 +741,7 @@ mod tests {
                 build_std: None,
                 zig: None,
                 image: Some(PossibleImage {
-                    name: "test-image".to_owned(),
+                    reference: ImageReference::Name("test-image".to_owned()),
                     toolchain: vec![ImagePlatform::from_target(
                         "aarch64-unknown-linux-musl".into(),
                     )?],
@@ -750,7 +773,7 @@ mod tests {
                     enable: None,
                     version: None,
                     image: Some(PossibleImage {
-                        name: "zig:local".to_owned(),
+                        reference: ImageReference::Name("zig:local".to_owned()),
                         toolchain: vec![ImagePlatform::from_target(
                             "aarch64-unknown-linux-gnu".into(),
                         )?],
@@ -916,14 +939,14 @@ mod tests {
             [target.target3]
             xargo = false
             build-std = true
-            image = "test-image3"
+            image = "@sha256:test-image3"
 
             [target.target3.env]
             volumes = ["VOL3_ARG"]
             passthrough = ["VAR3"]
 
             [build]
-            build-std = true
+            build-std = ["core", "alloc"]
             xargo = false
             default-target = "aarch64-unknown-linux-gnu"
 
@@ -955,14 +978,14 @@ mod tests {
             [target.target3]
             xargo = false
             build-std = true
-            image = "test-image3"
+            image = "@sha256:test-image3"
 
             [target.target3.env]
             volumes = ["VOL3_ARG"]
             passthrough = ["VAR3"]
 
             [build]
-            build-std = true
+            build-std = ["core", "alloc"]
             xargo = false
             default-target = "aarch64-unknown-linux-gnu"
 
@@ -983,7 +1006,13 @@ mod tests {
         // need to test individual values. i've broken this down into
         // tests on values for better error reporting
         let build = &cfg_expected.build;
-        assert_eq!(build.build_std, Some(true));
+        assert_eq!(
+            build.build_std,
+            Some(BuildStd::Crates(vec![
+                "core".to_owned(),
+                "alloc".to_owned()
+            ]))
+        );
         assert_eq!(build.xargo, Some(false));
         assert_eq!(build.default_target, Some(p!("aarch64-unknown-linux-gnu")));
         assert_eq!(build.pre_build, None);
@@ -993,7 +1022,7 @@ mod tests {
 
         let targets = &cfg_expected.targets;
         let aarch64 = &targets[&Target::new_built_in("aarch64-unknown-linux-gnu")];
-        assert_eq!(aarch64.build_std, Some(true));
+        assert_eq!(aarch64.build_std, Some(BuildStd::Bool(true)));
         assert_eq!(aarch64.xargo, Some(false));
         assert_eq!(aarch64.image, Some(p!("test-image1")));
         assert_eq!(aarch64.pre_build, None);
@@ -1002,7 +1031,7 @@ mod tests {
         assert_eq!(aarch64.env.volumes, Some(vec![p!("VOL1_ARG")]));
 
         let target2 = &targets[&Target::new_custom("target2")];
-        assert_eq!(target2.build_std, Some(false));
+        assert_eq!(target2.build_std, Some(BuildStd::Bool(false)));
         assert_eq!(target2.xargo, Some(false));
         assert_eq!(target2.image, Some(p!("test-image2-precedence")));
         assert_eq!(target2.pre_build, None);
@@ -1011,9 +1040,9 @@ mod tests {
         assert_eq!(target2.env.volumes, Some(vec![p!("VOL2_ARG_PRECEDENCE")]));
 
         let target3 = &targets[&Target::new_custom("target3")];
-        assert_eq!(target3.build_std, Some(true));
+        assert_eq!(target3.build_std, Some(BuildStd::Bool(true)));
         assert_eq!(target3.xargo, Some(false));
-        assert_eq!(target3.image, Some(p!("test-image3")));
+        assert_eq!(target3.image, Some(p!("@sha256:test-image3")));
         assert_eq!(target3.pre_build, None);
         assert_eq!(target3.dockerfile, None);
         assert_eq!(target3.env.passthrough, Some(vec![p!("VAR3")]));
@@ -1035,7 +1064,10 @@ mod tests {
         assert!(unused.is_empty());
         assert!(matches!(
             toml.pre_build(&Target::new_built_in("aarch64-unknown-linux-gnu")),
-            (Some(&PreBuild::Lines(_)), Some(&PreBuild::Single { .. }))
+            ConfVal {
+                build: Some(&PreBuild::Lines(_)),
+                target: Some(&PreBuild::Single { .. }),
+            },
         ));
         Ok(())
     }

@@ -1,0 +1,4 @@
+{
+    "description": "allow pass-through environment variables to contain numbers",
+    "type": "fixed"
+}

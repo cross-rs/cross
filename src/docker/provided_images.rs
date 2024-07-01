@@ -59,6 +59,11 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             sub: None
         },
         ProvidedImage {
+            name: "loongarch64-unknown-linux-gnu",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
             name: "mips-unknown-linux-gnu",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
@@ -220,6 +225,16 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
         },
         ProvidedImage {
             name: "x86_64-unknown-netbsd",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
+            name: "sparcv9-sun-solaris",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
+            name: "x86_64-pc-solaris",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
         },

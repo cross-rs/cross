@@ -17,7 +17,7 @@ include = [
   "README.md",
   "assets/*",
 ]
-rust-version = "1.64"
+rust-version = "1.77.2"
 
 [features]
 default = []
@@ -84,6 +84,12 @@ exactly = 1
 file = "CHANGELOG.md"
 search = "<!-- next-url -->"
 replace = "<!-- next-url -->\n\n[Unreleased]: https://github.com/cross-rs/{{crate_name}}/compare/v{{version}}...HEAD"
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "docs/config_file.md"
+search = "(# Translates to `.*?:).*?(-centos`)"
+replace = "${1}{{version}}$2"
 exactly = 1
 
 [package.metadata.binstall]

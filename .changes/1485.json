@@ -1,0 +1,5 @@
+{
+    "description": "Use `/proc/self/mountinfo` as a fallback for `docker inspect` if using `HOSTNAME` fails",
+    "issues": [1321],
+    "type": "changed"
+}

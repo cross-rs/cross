@@ -66,7 +66,7 @@ impl Run {
             let image = match docker::get_image(&config, &target, false) {
                 Ok(i) => i,
                 Err(docker::GetImageError::NoCompatibleImages(..))
-                    if config.dockerfile(&target)?.is_some() =>
+                    if config.dockerfile(&target).is_some() =>
                 {
                     "scratch".into()
                 }
@@ -76,7 +76,7 @@ impl Run {
                 }
             };
 
-            let image = image.to_definite_with(&engine, msg_info);
+            let image = image.to_definite_with(&engine, msg_info)?;
 
             let paths = docker::DockerPaths::create(&engine, metadata, cwd, toolchain, msg_info)?;
             let options = docker::DockerOptions::new(

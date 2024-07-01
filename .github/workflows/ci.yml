@@ -71,7 +71,7 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           components: clippy
-          toolchain: 1.64.0 # MSRV, Minimally Supported Rust Version. Make sure to update README.md and clippy.toml
+          toolchain: 1.77.2 # MSRV, Minimally Supported Rust Version. Make sure to update README.md and clippy.toml
       - name: Run clippy
         run: cargo clippy --locked --all-targets --all-features --workspace -- -D warnings
   test:

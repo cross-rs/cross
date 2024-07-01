@@ -8,10 +8,11 @@ set -euo pipefail
 
 main() {
     local arch="${1}"
+    local manufacturer="${2}"
 
     local binutils=2.28.1 \
         gcc=8.4.0 \
-        target="${arch}-sun-solaris2.10"
+        target="${arch}-${manufacturer}-solaris2.10"
 
     install_packages bzip2 \
         ca-certificates \
@@ -56,28 +57,33 @@ main() {
     esac
 
     apt-key adv --batch --yes --keyserver keyserver.ubuntu.com --recv-keys 74DA7924C5513486
-    add-apt-repository -y 'deb http://apt.dilos.org/dilos dilos2-testing main'
+    add-apt-repository -y 'deb http://apt.dilos.org/dilos dilos2 main'
     dpkg --add-architecture "${apt_arch}"
     apt-get update
-    # shellcheck disable=SC2046
-    apt-get download $(apt-cache depends --recurse --no-replaces \
+    apt-get install -y --download-only \
         "libc:${apt_arch}"            \
-        "liblgrp-dev:${apt_arch}"     \
         "liblgrp:${apt_arch}"         \
         "libm-dev:${apt_arch}"        \
         "libpthread:${apt_arch}"      \
         "libresolv:${apt_arch}"       \
         "librt:${apt_arch}"           \
-        "libsendfile-dev:${apt_arch}" \
         "libsendfile:${apt_arch}"     \
         "libsocket:${apt_arch}"       \
         "system-crt:${apt_arch}"      \
-        "system-header:${apt_arch}"   \
-        | grep "^\w")
+        "system-header:${apt_arch}"
 
-    for deb in *"${apt_arch}.deb"; do
+    for deb in /var/cache/apt/archives/*"${apt_arch}.deb"; do
         dpkg -x "${deb}" "${td}/solaris"
     done
+    apt-get clean
+
+    # The -dev packages are not available from the apt repository we're using.
+    # However, those packages are just symlinks from *.so to *.so.<version>.
+    # This makes all those symlinks.
+    while IFS= read -r -d '' lib; do
+        link_name=${lib%.so.*}.so
+        [ -e "$link_name" ] || ln -sf "${lib##*/}" "$link_name"
+    done < <(find . -name '*.so.*' -print0)
 
     cd binutils-build
     ../binutils/configure \
@@ -121,7 +127,7 @@ EOF
         --disable-lto \
         --disable-multilib \
         --disable-nls \
-        --enable-languages=c,c++ \
+        --enable-languages=c,c++,fortran \
         --with-gnu-as \
         --with-gnu-ld \
         --target="${target}"

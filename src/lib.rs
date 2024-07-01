@@ -54,6 +54,7 @@ use cli::Args;
 use color_eyre::owo_colors::OwoColorize;
 use color_eyre::{Help, SectionExt};
 use config::Config;
+use cross_toml::BuildStd;
 use rustc::{QualifiedToolchain, Toolchain};
 use rustc_version::Channel;
 use serde::{Deserialize, Serialize, Serializer};
@@ -159,7 +160,7 @@ impl TargetTriple {
             "aarch64-unknown-freebsd" => Some("freebsd-arm64"),
             "x86_64-unknown-netbsd" => Some("netbsd-amd64"),
             "sparcv9-sun-solaris" => Some("solaris-sparc"),
-            "x86_64-sun-solaris" => Some("solaris-amd64"),
+            "x86_64-pc-solaris" => Some("solaris-amd64"),
             "thumbv6m-none-eabi" => Some("arm"),
             "thumbv7em-none-eabi" => Some("arm"),
             "thumbv7em-none-eabihf" => Some("armhf"),
@@ -541,7 +542,7 @@ pub fn run(
             target,
             uses_xargo,
             uses_zig,
-            uses_build_std,
+            build_std,
             zig_version,
             toolchain,
             is_remote,
@@ -586,7 +587,7 @@ pub fn run(
             rustup::setup_components(
                 &target,
                 uses_xargo,
-                uses_build_std,
+                build_std.enabled(),
                 &toolchain,
                 is_nightly,
                 available_targets,
@@ -594,14 +595,8 @@ pub fn run(
                 msg_info,
             )?;
 
-            let filtered_args = get_filtered_args(
-                zig_version,
-                &args,
-                &target,
-                &config,
-                is_nightly,
-                uses_build_std,
-            );
+            let filtered_args =
+                get_filtered_args(zig_version, &args, &target, &config, is_nightly, &build_std);
 
             let needs_docker = args
                 .subcommand
@@ -693,7 +688,7 @@ pub fn get_filtered_args(
     target: &Target,
     config: &Config,
     is_nightly: bool,
-    uses_build_std: bool,
+    build_std: &BuildStd,
 ) -> Vec<String> {
     let add_libc = |triple: &str| add_libc_version(triple, zig_version.as_deref());
     let mut filtered_args = if args
@@ -746,9 +741,16 @@ pub fn get_filtered_args(
     if is_test && config.doctests().unwrap_or_default() && is_nightly {
         filtered_args.push("-Zdoctest-xcompile".to_owned());
     }
-    if uses_build_std {
-        filtered_args.push("-Zbuild-std".to_owned());
+
+    if build_std.enabled() {
+        let mut arg = "-Zbuild-std".to_owned();
+        if let BuildStd::Crates(crates) = build_std {
+            arg.push('=');
+            arg.push_str(&crates.join(","));
+        }
+        filtered_args.push(arg);
     }
+
     filtered_args.extend(args.rest_args.iter().cloned());
     filtered_args
 }
@@ -769,14 +771,14 @@ pub fn setup(
         .clone()
         .or_else(|| config.target(&target_list))
         .unwrap_or_else(|| Target::from(host.triple(), &target_list));
-    let uses_build_std = config.build_std(&target).unwrap_or(false);
-    let uses_xargo = !uses_build_std && config.xargo(&target).unwrap_or(!target.is_builtin());
+    let build_std = config.build_std(&target).unwrap_or_default();
+    let uses_xargo = !build_std.enabled() && config.xargo(&target).unwrap_or(!target.is_builtin());
     let uses_zig = config.zig(&target).unwrap_or(false);
-    let zig_version = config.zig_version(&target)?;
+    let zig_version = config.zig_version(&target);
     let image = match docker::get_image(&config, &target, uses_zig) {
         Ok(i) => i,
         Err(docker::GetImageError::NoCompatibleImages(..))
-            if config.dockerfile(&target)?.is_some() =>
+            if config.dockerfile(&target).is_some() =>
         {
             "scratch".into()
         }
@@ -808,14 +810,14 @@ To override the toolchain mounted in the image, set `target.{target}.image.toolc
     };
     let is_remote = docker::Engine::is_remote();
     let engine = docker::Engine::new(None, Some(is_remote), msg_info)?;
-    let image = image.to_definite_with(&engine, msg_info);
+    let image = image.to_definite_with(&engine, msg_info)?;
     toolchain.replace_host(&image.platform);
     Ok(Some(CrossSetup {
         config,
         target,
         uses_xargo,
         uses_zig,
-        uses_build_std,
+        build_std,
         zig_version,
         toolchain,
         is_remote,
@@ -830,7 +832,7 @@ pub struct CrossSetup {
     pub target: Target,
     pub uses_xargo: bool,
     pub uses_zig: bool,
-    pub uses_build_std: bool,
+    pub build_std: BuildStd,
     pub zig_version: Option<String>,
     pub toolchain: QualifiedToolchain,
     pub is_remote: bool,

@@ -12,7 +12,9 @@ pub use self::engine::*;
 pub use self::provided_images::PROVIDED_IMAGES;
 pub use self::shared::*;
 
-pub use image::{Architecture, Image, ImagePlatform, Os as ContainerOs, PossibleImage};
+pub use image::{
+    Architecture, Image, ImagePlatform, ImageReference, Os as ContainerOs, PossibleImage,
+};
 
 use std::process::ExitStatus;
 
@@ -30,6 +32,10 @@ pub struct ProvidedImage {
 impl ProvidedImage {
     pub fn image_name(&self, repository: &str, tag: &str) -> String {
         image_name(self.name, self.sub, repository, tag)
+    }
+
+    pub fn default_image_name(&self) -> String {
+        self.image_name(CROSS_IMAGE, DEFAULT_IMAGE_VERSION)
     }
 }
 

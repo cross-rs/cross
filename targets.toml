@@ -115,6 +115,15 @@ run = true
 runners = "native qemu-user qemu-system"
 
 [[target]]
+target = "loongarch64-unknown-linux-gnu"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+run = true
+runners = "qemu-user"
+
+[[target]]
 target = "mips-unknown-linux-gnu"
 os = "ubuntu-latest"
 cpp = true
@@ -438,7 +447,6 @@ dylib = true
 std = true
 
 [[target]]
-disabled = true # https://github.com/cross-rs/cross/issues/1424
 target = "sparcv9-sun-solaris"
 os = "ubuntu-latest"
 cpp = true
@@ -446,8 +454,7 @@ dylib = true
 std = true
 
 [[target]]
-disabled = true # https://github.com/cross-rs/cross/issues/1424
-target = "x86_64-sun-solaris"
+target = "x86_64-pc-solaris"
 os = "ubuntu-latest"
 cpp = true
 dylib = true

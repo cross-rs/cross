@@ -17,7 +17,7 @@ silence_stdout() {
 main() {
     local config="${1}"
     local nproc="${2}"
-    local ctng_version=1.25.0
+    local ctng_version=1.26.0
     local ctng_url="https://github.com/crosstool-ng/crosstool-ng/archive/crosstool-ng-${ctng_version}.tar.gz"
     local username=crosstool
     local crosstooldir=/opt/crosstool
@@ -39,6 +39,7 @@ main() {
         python3 \
         python3-dev \
         python3-pip \
+        rsync \
         texinfo \
         wget \
         unzip \
@@ -70,6 +71,7 @@ main() {
     pushd "${buildir}"
     cp /"${config}" .config
     chown "${username}":"${username}" .config
+    su "${username}" -c "${crosstooldir}/bin/ct-ng olddefconfig"
 
     # the download steps can stall indefinitely, so we want to set a timeout to
     # ensure it always completes. we therefore attempt to  download until

@@ -1,0 +1,49 @@
+FROM ubuntu:20.04 as cross-base
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+FROM cross-base as build
+
+ARG VERBOSE
+COPY crosstool-ng.sh /
+COPY crosstool-config/loongarch64-unknown-linux-gnu.config /
+RUN /crosstool-ng.sh loongarch64-unknown-linux-gnu.config 5
+
+ENV PATH /x-tools/loongarch64-unknown-linux-gnu/bin/:$PATH
+
+COPY deny-debian-packages.sh /
+RUN TARGET_ARCH=loong64 /deny-debian-packages.sh
+
+COPY qemu.sh /
+RUN /qemu.sh loongarch64
+
+COPY qemu-runner base-runner.sh /
+COPY toolchain.cmake /opt/toolchain.cmake
+
+ENV CROSS_TOOLCHAIN_PREFIX=loongarch64-unknown-linux-gnu-
+ENV CROSS_SYSROOT=/x-tools/loongarch64-unknown-linux-gnu/loongarch64-unknown-linux-gnu/sysroot/
+ENV CROSS_TARGET_RUNNER="/qemu-runner loongarch64"
+ENV CARGO_TARGET_LOONGARCH64_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CARGO_TARGET_LOONGARCH64_UNKNOWN_LINUX_GNU_RUNNER="$CROSS_TARGET_RUNNER" \
+    AR_loongarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"ar \
+    CC_loongarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"gcc \
+    CXX_loongarch64_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"g++ \
+    CMAKE_TOOLCHAIN_FILE_loongarch64_unknown_linux_gnu=/opt/toolchain.cmake \
+    BINDGEN_EXTRA_CLANG_ARGS_loongarch64_unknown_linux_gnu="--sysroot=$CROSS_SYSROOT -idirafter/usr/include" \
+    QEMU_LD_PREFIX="$CROSS_SYSROOT" \
+    RUST_TEST_THREADS=1 \
+    CROSS_CMAKE_SYSTEM_NAME=Linux \
+    CROSS_CMAKE_SYSTEM_PROCESSOR=loongarch64 \
+    CROSS_CMAKE_CRT=gnu \
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC"
+
+RUN mv $CROSS_SYSROOT/lib/* $CROSS_SYSROOT/lib64/
+RUN sed -e "s#@DEFAULT_QEMU_LD_PREFIX@#$QEMU_LD_PREFIX#g" -i /qemu-runner

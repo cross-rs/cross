@@ -1,0 +1,5 @@
+{
+    "description": "Allow specifying only a tag or subtarget for images in config",
+    "issues": [1169],
+    "type": "changed"
+}
