@@ -56,7 +56,7 @@ cargo install cross --git https://github.com/cross-rs/cross
 ```
 
 It's also possible to directly download the pre-compiled [release
-binaries](https://github.com/cross-rs/cross/releases) or using
+binaries](https://github.com/cross-rs/cross/releases) or use
 [cargo-binstall](https://github.com/cargo-bins/cargo-binstall).
 
 ## Usage
