@@ -363,6 +363,7 @@ mkdir /dev/pts
 mount -t devpts none /dev/pts/
 
 # some archs does not have virtio modules
+# fscache is builtin on riscv64
 insmod /modules/failover.ko || insmod /modules/failover.ko.xz || true
 insmod /modules/net_failover.ko || insmod /modules/net_failover.ko.xz || true
 insmod /modules/virtio.ko || insmod /modules/virtio.ko.xz || true
@@ -373,7 +374,7 @@ insmod /modules/virtio_pci_modern_dev.ko || insmod /modules/virtio_pci_modern_de
 insmod /modules/virtio_pci.ko || insmod /modules/virtio_pci.ko.xz || true
 insmod /modules/virtio_net.ko || insmod /modules/virtio_net.ko.xz || true
 insmod /modules/netfs.ko || insmod /modules/netfs.ko.xz || true
-insmod /modules/fscache.ko || insmod /modules/fscache.ko.xz
+insmod /modules/fscache.ko || insmod /modules/fscache.ko.xz || true
 insmod /modules/9pnet.ko || insmod /modules/9pnet.ko.xz
 insmod /modules/9pnet_virtio.ko || insmod /modules/9pnet_virtio.ko.xz || true
 insmod /modules/9p.ko || insmod /modules/9p.ko.xz
