@@ -29,6 +29,10 @@ build_static_libffi () {
 build_static_libmount () {
     local version_spec=2.23.2
     local version=2.23
+
+    if_ubuntu_ge 22.04 version_spec=2.37.2
+    if_ubuntu_ge 22.04 version=2.37
+
     local td
     td="$(mktemp -d)"
 
@@ -190,6 +194,9 @@ main() {
         libpixman-1-dev \
         libselinux1-dev \
         zlib1g-dev
+
+    # ubuntu no longer provides statically linked libmount
+    if_ubuntu_ge 22.04 build_static_libmount
 
     # if we have python3.6+, we can install qemu 7.0.0, which needs ninja-build
     # ubuntu 16.04 only provides python3.5, so remove when we have a newer qemu.
