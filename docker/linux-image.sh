@@ -137,9 +137,7 @@ main() {
         ;;
     riscv64)
         kernel='6.*-riscv64'
-        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
-        debsource="${debsource}\ndeb http://deb.debian.org/debian unstable main"
+        debsource="deb http://deb.debian.org/debian unstable main"
         deps=(libcrypt1:"${arch}")
         ;;
     s390x)
