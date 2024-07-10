@@ -388,6 +388,12 @@ mount -t 9p -o trans=virtio target /target -oversion=9p2000.u || true
 exec dropbear -F -E -B
 EOF
 
+    if [[ "${arch}" == "riscv64" ]]; then
+        # Symlink dynamic loader to /lib/ld-linux-riscv64-lp64d.so.1
+        mkdir -p "${root}/lib"
+        ln -s /usr/lib/riscv64-linux-gnu/ld-linux-riscv64-lp64d.so.1 "${root}/lib/ld-linux-riscv64-lp64d.so.1"
+    fi
+
     chmod +x "${root}/init"
     cd "${root}"
     find . | cpio --create --format='newc' --quiet | gzip >../initrd.gz
