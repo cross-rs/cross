@@ -14,7 +14,7 @@ walkdir = "2.3.3"
 color-eyre = "0.6.2"
 eyre = "0.6.8"
 clap = { version = "4.1", features = ["derive", "env"] }
-which = { version = "4.2", default_features = false }
+which = { version = "4.2", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 shell-words = "1.1.0"
