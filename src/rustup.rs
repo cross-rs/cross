@@ -16,6 +16,12 @@ pub struct AvailableTargets {
     pub not_installed: Vec<String>,
 }
 
+#[derive(Debug)]
+pub struct InstalledToolchain {
+    pub name: String,
+    pub path: String,
+}
+
 impl AvailableTargets {
     pub fn contains(&self, target: &Target) -> bool {
         let triple = target.triple();
@@ -30,12 +36,13 @@ impl AvailableTargets {
 
 pub fn setup_rustup(
     toolchain: &QualifiedToolchain,
+    installed_toolchains: &[InstalledToolchain],
     msg_info: &mut MessageInfo,
 ) -> Result<AvailableTargets, color_eyre::Report> {
     if !toolchain.is_custom
-        && !installed_toolchains(msg_info)?
+        && !installed_toolchains
             .into_iter()
-            .any(|t| t == toolchain.to_string())
+            .any(|t| t.name == toolchain.to_string())
     {
         install_toolchain(toolchain, msg_info)?;
     }
@@ -83,20 +90,29 @@ pub fn active_toolchain(msg_info: &mut MessageInfo) -> Result<String> {
         .to_owned())
 }
 
-pub fn installed_toolchains(msg_info: &mut MessageInfo) -> Result<Vec<String>> {
+pub fn installed_toolchains(msg_info: &mut MessageInfo) -> Result<Vec<InstalledToolchain>> {
     let out = rustup_command(msg_info, true)
-        .args(["toolchain", "list"])
+        .args(["toolchain", "list", "-v"])
         .run_and_get_stdout(msg_info)?;
 
     Ok(out
         .lines()
         .map(|l| {
-            l.replace(" (default)", "")
+            let l = l
+                .replace(" (default)", "")
                 .replace(" (override)", "")
                 .trim()
-                .to_owned()
+                .to_owned();
+            l.split_once(" ")
+                .map(|(n, p)| {
+                    (InstalledToolchain {
+                        name: n.to_owned(),
+                        path: p.to_owned(),
+                    })
+                })
+                .ok_or_else(|| eyre::eyre!("rustup returned invalid data"))
         })
-        .collect())
+        .collect::<Result<_>>()?)
 }
 
 pub fn available_targets(

@@ -548,6 +548,7 @@ pub fn run(
             is_remote,
             engine,
             image,
+            installed_toolchains,
         } = match setup(&host_version_meta, &metadata, &args, target_list, msg_info)? {
             Some(setup) => setup,
             _ => {
@@ -582,7 +583,8 @@ pub fn run(
                 rustc_version = Some(version);
             }
 
-            let available_targets = rustup::setup_rustup(&toolchain, msg_info)?;
+            let available_targets =
+                rustup::setup_rustup(&toolchain, &installed_toolchains, msg_info)?;
 
             rustup::setup_components(
                 &target,
@@ -788,23 +790,44 @@ pub fn setup(
             return Ok(None);
         }
     };
+    let installed_toolchains = if config.custom_toolchain() {
+        rustup::installed_toolchains(msg_info).inspect_err(|e| {
+            msg_info
+                .debug(format_args!("could not get installed toolchains: {e}"))
+                .expect("should be able to debug");
+        })?
+    } else {
+        rustup::installed_toolchains(msg_info)?
+    };
     let default_toolchain = QualifiedToolchain::default(&config, msg_info)?;
     let mut toolchain = if let Some(channel) = &args.channel {
-        let picked_toolchain: Toolchain = channel.parse()?;
+        if default_toolchain.is_custom {
+            QualifiedToolchain::custom(
+                channel,
+                &installed_toolchains
+                    .iter()
+                    .find_map(|t| (&t.name == channel).then(|| (&t.path).into()))
+                    .unwrap_or_else(|| default_toolchain.get_sysroot().with_file_name(channel)),
+                &config,
+                msg_info,
+            )?
+        } else {
+            let picked_toolchain: Toolchain = channel.parse()?;
 
-        if let Some(picked_host) = &picked_toolchain.host {
-            return Err(eyre::eyre!("the specified toolchain `{picked_toolchain}` can't be used"))
+            if let Some(picked_host) = &picked_toolchain.host {
+                return Err(eyre::eyre!("the specified toolchain `{picked_toolchain}` can't be used"))
                 .with_suggestion(|| {
                     format!(
                         "try `cross +{}` instead",
                         picked_toolchain.remove_host()
                     )
                 }).with_section(|| format!(
-    r#"Overriding the toolchain in cross is only possible in CLI by specifying a channel and optional date: `+channel[-YYYY-MM-DD]`.
+                    r#"Overriding the toolchain in cross is only possible in CLI by specifying a channel and optional date: `+channel[-YYYY-MM-DD]`.
 To override the toolchain mounted in the image, set `target.{target}.image.toolchain = "{picked_host}"`"#).header("Note:".bright_cyan()));
-        }
+            }
 
-        default_toolchain.with_picked(picked_toolchain)?
+            default_toolchain.with_picked(picked_toolchain)?
+        }
     } else {
         default_toolchain
     };
@@ -823,6 +846,7 @@ To override the toolchain mounted in the image, set `target.{target}.image.toolc
         is_remote,
         engine,
         image,
+        installed_toolchains,
     }))
 }
 
@@ -838,6 +862,7 @@ pub struct CrossSetup {
     pub is_remote: bool,
     pub engine: docker::Engine,
     pub image: docker::Image,
+    pub installed_toolchains: Vec<rustup::InstalledToolchain>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
