@@ -103,7 +103,7 @@ pub fn installed_toolchains(msg_info: &mut MessageInfo) -> Result<Vec<InstalledT
                 .replace(" (override)", "")
                 .trim()
                 .to_owned();
-            l.split_once(" ")
+            l.split_once("\t")
                 .map(|(n, p)| {
                     (InstalledToolchain {
                         name: n.to_owned(),

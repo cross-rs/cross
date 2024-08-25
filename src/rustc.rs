@@ -96,7 +96,7 @@ impl QualifiedToolchain {
         channel: &str,
         date: &Option<String>,
         host: &ImagePlatform,
-        sysroot: &Path,
+        some_sysroot: &Path,
         is_custom: bool,
     ) -> Self {
         let mut this = Self {
@@ -109,9 +109,10 @@ impl QualifiedToolchain {
             } else {
                 format!("{}-{}", channel, host.target)
             },
-            sysroot: sysroot.to_owned(),
+            sysroot: some_sysroot.to_owned(),
         };
         if !is_custom {
+            // properly set sysroot name
             this.sysroot.set_file_name(&this.full);
         }
         this
