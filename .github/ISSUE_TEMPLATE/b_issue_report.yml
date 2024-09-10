@@ -53,6 +53,7 @@ body:
         - i686-unknown-linux-gnu
         - i686-unknown-linux-musl
         - loongarch64-unknown-linux-gnu
+        - loongarch64-unknown-linux-musl
         - mips64el-unknown-linux-gnuabi64
         - mips64el-unknown-linux-muslabi64
         - mips64-unknown-linux-gnuabi64
