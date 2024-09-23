@@ -225,6 +225,7 @@ terminate.
 | `i686-pc-windows-gnu`                  | N/A    | 9.4    | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`               | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `loongarch64-unknown-linux-gnu`        | 2.36   | 14.2.0 | ✓   | 8.2.2 |   ✓    |
+| `loongarch64-unknown-linux-musl`       | 1.2.5  | 14.2.0 | ✓   | 8.2.2 |   ✓    |
 | `mips-unknown-linux-gnu`               | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `mips-unknown-linux-musl`              | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
 | `mips64-unknown-linux-gnuabi64`        | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |

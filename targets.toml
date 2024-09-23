@@ -124,6 +124,15 @@ run = true
 runners = "qemu-user"
 
 [[target]]
+target = "loongarch64-unknown-linux-musl"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+run = true
+runners = "qemu-user"
+
+[[target]]
 target = "mips-unknown-linux-gnu"
 os = "ubuntu-latest"
 cpp = true
