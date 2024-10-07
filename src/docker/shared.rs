@@ -1364,7 +1364,7 @@ fn docker_inspect_self_mountinfo(engine: &Engine, msg_info: &mut MessageInfo) ->
     let container_id = mountinfo
         .lines()
         .filter_map(|s| s.split(' ').nth(3))
-        .filter(|s| s.contains("/docker/"))
+        .filter(|s| s.contains("/docker/") || s.contains("/docker-data/")) // Check for both "/docker/" and "/docker-data/"
         .flat_map(|s| s.split('/'))
         .find(|s| s.len() == 64 && s.as_bytes().iter().all(u8::is_ascii_hexdigit))
         .ok_or_else(|| eyre::eyre!("couldn't find container id in mountinfo"))?;
