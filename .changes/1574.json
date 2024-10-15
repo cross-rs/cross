@@ -1,0 +1,4 @@
+{
+  "type": "fixed",
+  "description": "`dockerfile` path is now relative to cargo workspace root"
+}
