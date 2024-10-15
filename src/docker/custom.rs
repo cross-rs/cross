@@ -120,7 +120,9 @@ impl<'a> Dockerfile<'a> {
         }
 
         let path = match self {
-            Dockerfile::File { path, .. } => PathBuf::from(path),
+            Dockerfile::File { path, .. } => {
+                paths.metadata.workspace_root.join(PathBuf::from(path))
+            }
             Dockerfile::Custom { content, .. } => {
                 let target_dir = paths
                     .metadata
@@ -147,10 +149,6 @@ impl<'a> Dockerfile<'a> {
             }
         }
 
-        // note that this is always relative to the PWD: if we have
-        // `$workspace_root/Dockerfile`, then running a build
-        // `PWD=$workspace_root/src/ cross build` would require
-        //  the Dockerfile path to be specified as `../Dockerfile`.
         docker_build.args(["--file".into(), path]);
 
         if let Some(build_opts) = options.config.build_opts() {
