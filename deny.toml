@@ -9,8 +9,9 @@ targets = [
 
 [advisories]
 version = 2
-# FIXME: remove this if/when clap changes to is-terminal, atty is
-# patched, or we migrated to an MSRV of 1.66.0.
+# FIXME: remove this when color-eyre does a release of
+# https://github.com/eyre-rs/eyre/pull/167
+# or if atty is patched.
 ignore = [
     "RUSTSEC-2021-0145",
 ]
@@ -20,6 +21,9 @@ multiple-versions = "deny"
 deny = []
 skip-tree = [
     { name = "nix", version = "=0.26.4", depth = 2 },
+    # FIXME: remove this when color-eyre does a release of
+    # https://github.com/eyre-rs/eyre/pull/167
+    { name = "owo-colors" },
 ]
 
 [sources]

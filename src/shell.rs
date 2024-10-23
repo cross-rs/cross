@@ -27,7 +27,7 @@ macro_rules! write_style {
             ColorChoice::Auto => write!(
                 $stream,
                 "{}",
-                $message $(.if_supports_color($stream.owo(), |text| text.$style()))*
+                $message $(.if_supports_color($stream.owo().unwrap(), |text| text.$style()))*
             ),
         }?;
     }};
@@ -451,19 +451,19 @@ fn get_verbosity(
 
 pub trait Stream {
     type TTY: IsTerminal;
-    const OWO: owo_colors::Stream;
+    const OWO: Option<owo_colors::Stream>;
 
     #[must_use]
     fn is_atty() -> bool;
 
-    fn owo(&self) -> owo_colors::Stream {
+    fn owo(&self) -> Option<owo_colors::Stream> {
         Self::OWO
     }
 }
 
 impl Stream for io::Stdin {
     type TTY = io::Stdin;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stdin;
+    const OWO: Option<owo_colors::Stream> = None;
 
     fn is_atty() -> bool {
         io::stdin().is_terminal()
@@ -472,7 +472,7 @@ impl Stream for io::Stdin {
 
 impl Stream for io::Stdout {
     type TTY = io::Stdout;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stdout;
+    const OWO: Option<owo_colors::Stream> = Some(owo_colors::Stream::Stdout);
 
     fn is_atty() -> bool {
         io::stdout().is_terminal()
@@ -481,7 +481,7 @@ impl Stream for io::Stdout {
 
 impl Stream for io::Stderr {
     type TTY = io::Stderr;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stderr;
+    const OWO: Option<owo_colors::Stream> = Some(owo_colors::Stream::Stderr);
 
     fn is_atty() -> bool {
         io::stderr().is_terminal()
