@@ -6,7 +6,7 @@ keywords = ["cross", "compilation", "testing", "tool"]
 license = "MIT OR Apache-2.0"
 name = "cross"
 repository = "https://github.com/cross-rs/cross"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 include = [
   "src/**/*",
@@ -17,7 +17,7 @@ include = [
   "README.md",
   "assets/*",
 ]
-rust-version = "1.77.2"
+rust-version = "1.82.0"
 
 [features]
 default = []
@@ -34,24 +34,24 @@ eyre = "0.6.8"
 thiserror = "1.0.38"
 home = "0.5.4"
 rustc_version = "0.4.0"
-toml = "0.7.0"
-which = { version = "4.4.0", default-features = false }
+toml = "0.8.19"
+which = { version = "6.0.3", default-features = false }
 shell-escape = "0.1.5"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0.91", features = ["raw_value"] }
 serde_ignored = "0.1.7"
 shell-words = "1.1.0"
-const-sha1 = "0.2.0"
+const-sha1 = "0.3.0"
 signal-hook = { version = "0.3.15" }
-directories = "4.0.1"
+directories = "5.0.1"
 walkdir = { version = "2.3.2", optional = true }
 tempfile = "3.3.0"
 owo-colors = { version = "3.5.0", features = ["supports-colors"] }
-semver = "1.0.16"
+semver = "1.0.23"
 is_ci = "1.1.1"
 
 [target.'cfg(not(windows))'.dependencies]
-nix = { version = "0.26.2", default-features = false, features = ["user"] }
+nix = { version = "0.29.0", default-features = false, features = ["user"] }
 libc = "0.2.139"
 
 [target.'cfg(windows)'.dependencies]
