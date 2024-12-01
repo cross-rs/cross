@@ -57,10 +57,10 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-        kversion=5.10.0-34
+        kversion=6.1.0-28
 
-    local debsource="deb http://http.debian.net/debian/ bullseye main"
-    debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"
+    local debsource="deb http://http.debian.net/debian/ bookworm main"
+    debsource="${debsource}\ndeb http://security.debian.org/ bookworm-security main"
 
     local dropbear="dropbear-bin"
 
@@ -240,8 +240,8 @@ main() {
         "libgmp10:${arch}" \
         "libc6:${arch}" \
         "linux-image-${kernel}:${arch}" \
-        ncurses-base"${ncurses}" \
         "zlib1g:${arch}"
+        # "ncurses-base:all" \
 
     if [[ "${arch}" != "${dpkg_arch}" ]]; then
         apt-get -d --no-install-recommends download "${libgcc_packages[@]}"
