@@ -11,7 +11,7 @@ main() {
 
     # python3 is still needed for newer NDK versions, just since it
     # simplifies making symlinks even though the toolchain is prebuilt
-    install_packages curl python python3
+    install_packages curl python3
     get_ndk_info
     if [[ "${NDK_VERSION}" -le 9 ]]; then
         install_packages bzip2
