@@ -556,6 +556,7 @@ pub(crate) struct ChildContainerInfo {
 // that the drop only gets called once, even if we have
 // the signal handle invoked multiple times or it fails.
 #[allow(missing_debug_implementations)]
+#[derive(Default)]
 pub struct ChildContainer {
     info: Option<ChildContainerInfo>,
     exists: AtomicBool,

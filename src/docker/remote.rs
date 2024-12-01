@@ -1001,7 +1001,7 @@ symlink_recurse \"${{prefix}}\"
     {
         subcommand_or_exit(engine, "cp")?
             .arg("-a")
-            .arg(&format!("{container_id}:{mount_target_dir}",))
+            .arg(format!("{container_id}:{mount_target_dir}",))
             .arg(
                 package_dirs
                     .target()

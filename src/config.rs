@@ -259,12 +259,9 @@ impl Config {
             for mentioned_target in keys {
                 let mentioned_target_norm = mentioned_target
                     .to_string()
-                    .replace(|c| c == '-' || c == '_', "")
+                    .replace(['-', '_'], "")
                     .to_lowercase();
-                let target_norm = target
-                    .to_string()
-                    .replace(|c| c == '-' || c == '_', "")
-                    .to_lowercase();
+                let target_norm = target.to_string().replace(['-', '_'], "").to_lowercase();
                 if mentioned_target != target && mentioned_target_norm == target_norm {
                     msg_info.warn(format_args!("a target named \"{mentioned_target}\" is mentioned in the Cross configuration, but the current specified target is \"{target}\"."))?;
                     msg_info.status(" > Is the target misspelled in the Cross configuration?")?;
