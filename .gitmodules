@@ -1,0 +1,3 @@
+[submodule "docker/cross-toolchains"]
+	path = docker/cross-toolchains
+	url = https://github.com/cross-rs/cross-toolchains
