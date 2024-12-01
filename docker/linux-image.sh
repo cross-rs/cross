@@ -67,7 +67,7 @@ main() {
     local -a deps
     local kernel=
     local libgcc="libgcc-s1"
-    local ncurses=
+    # local ncurses=
 
     # select debian arch and kernel version
     case "${arch}" in
@@ -92,7 +92,7 @@ main() {
         debsource="deb http://http.debian.net/debian/ buster main"
         debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
         kernel='4.*-4kc-malta'
-        ncurses="=6.1*"
+        # ncurses="=6.1*"
         ;;
     mipsel)
         kernel='5.*-4kc-malta'
