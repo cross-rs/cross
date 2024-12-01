@@ -78,7 +78,7 @@ main() {
         ;;
     armv7)
         arch=armhf
-        kernel='5.*-armmp'
+        kernel='6.*-armmp'
         deps=(libcrypt1:"${arch}")
         ;;
     i686)
@@ -95,11 +95,11 @@ main() {
         # ncurses="=6.1*"
         ;;
     mipsel)
-        kernel='5.*-4kc-malta'
+        kernel='6.*-4kc-malta'
         deps=(libcrypt1:"${arch}")
         ;;
     mips64el)
-        kernel='5.*-5kc-malta'
+        kernel='6.*-5kc-malta'
         deps=(libcrypt1:"${arch}")
         ;;
     powerpc)
@@ -132,7 +132,7 @@ main() {
         ;;
     powerpc64le)
         arch=ppc64el
-        kernel='5.*-powerpc64le'
+        kernel='6.*-powerpc64le'
         deps=(libcrypt1:"${arch}")
         ;;
     riscv64)
@@ -142,7 +142,7 @@ main() {
         ;;
     s390x)
         arch=s390x
-        kernel='5.*-s390x'
+        kernel='6.*-s390x'
         deps=(libcrypt1:"${arch}")
         ;;
     sparc64)
