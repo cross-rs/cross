@@ -12,10 +12,11 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
-    g++-mips64el-linux-gnuabi64 \
-    gfortran-mips64el-linux-gnuabi64 \
-    libc6-dev-mips64el-cross
+ENV CROSS_TOOLCHAIN_PREFIX=mips64el-linux-gnuabi64-
+ENV CROSS_SYSROOT=/usr/mips64el-linux-gnuabi64
+
+COPY apt-cross-essential.sh /
+RUN TARGET_ARCH=mips64el TARGET_TRIPLE=mips64el-linux-gnuabi64 /apt-cross-essential.sh
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=mips64el /deny-debian-packages.sh \
@@ -34,8 +35,6 @@ RUN /linux-image.sh mips64el
 COPY linux-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
-ENV CROSS_TOOLCHAIN_PREFIX=mips64el-linux-gnuabi64-
-ENV CROSS_SYSROOT=/usr/mips64el-linux-gnuabi64
 ENV CROSS_TARGET_RUNNER="/linux-runner mips64el"
 ENV CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_GNUABI64_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_GNUABI64_RUNNER="$CROSS_TARGET_RUNNER" \
