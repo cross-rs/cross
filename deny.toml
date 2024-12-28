@@ -13,6 +13,7 @@ version = 2
 # patched, or we migrated to an MSRV of 1.66.0.
 ignore = [
     "RUSTSEC-2021-0145",
+    "RUSTSEC-2024-0375"
 ]
 
 [bans]

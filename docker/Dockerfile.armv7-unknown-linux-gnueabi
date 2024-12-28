@@ -12,10 +12,11 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-RUN apt-get install --assume-yes --no-install-recommends \
-    g++-arm-linux-gnueabi \
-    gfortran-arm-linux-gnueabi \
-    libc6-dev-armel-cross
+ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabi-
+ENV CROSS_SYSROOT=/usr/arm-linux-gnueabi
+
+COPY apt-cross-essential.sh /
+RUN TARGET_ARCH=armel TARGET_TRIPLE=arm-linux-gnueabi /apt-cross-essential.sh
 
 COPY qemu.sh /
 RUN /qemu.sh arm
@@ -23,8 +24,6 @@ RUN /qemu.sh arm
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
-ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabi-
-ENV CROSS_SYSROOT=/usr/arm-linux-gnueabi
 ENV CROSS_TARGET_RUNNER="/qemu-runner armv7"
 ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABI_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABI_RUNNER="$CROSS_TARGET_RUNNER" \

@@ -57,7 +57,7 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-        kversion=5.10.0-26
+        kversion=5.10.0-27
 
     local debsource="deb http://http.debian.net/debian/ bullseye main"
     debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"
@@ -424,7 +424,7 @@ EOF
 
     # need to reinstall the removed libgcc packages, which are required for apt
     if [[ "${arch}" == "${dpkg_arch}" ]]; then
-        apt-get install --no-install-recommends --assume-yes "${packages[@]}"
+        apt-get install --no-install-recommends --assume-yes "${libgcc_packages[@]}"
     fi
 
     purge_packages

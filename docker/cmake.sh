@@ -13,11 +13,33 @@ main() {
 
     local td
     td="$(mktemp -d)"
-
     pushd "${td}"
 
-    curl --retry 3 -sSfL "https://github.com/Kitware/CMake/releases/download/v${version}/cmake-${version}-linux-x86_64.sh" -o cmake.sh
+    local cmake_arch
+    local cmake_sha256
+
+    local narch
+    narch="$(dpkg --print-architecture)"
+
+    case "${narch}" in
+        amd64)
+            cmake_arch="linux-x86_64"
+            cmake_sha256="da2a9b18c3bfb136917fa1a579aa5316b01c1d6c111043d03f18877ff05bda30"
+            ;;
+        arm64)
+            cmake_arch="linux-aarch64"
+            cmake_sha256="86122bdfd030208aa36705ef421a218ccec52a14368020b2d67043af5e45490b"
+            ;;
+        *)
+            echo "Unsupported architecture: ${narch}" 1>&2
+            exit 1
+            ;;
+     esac
+
+    curl --retry 3 -sSfL "https://github.com/Kitware/CMake/releases/download/v${version}/cmake-${version}-${cmake_arch}.sh" -o cmake.sh
+    sha256sum --check <<<"${cmake_sha256}  cmake.sh"
     sh cmake.sh --skip-license --prefix=/usr/local
+    cmake --version
 
     popd
 

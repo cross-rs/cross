@@ -12,10 +12,11 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
-    g++-s390x-linux-gnu \
-    gfortran-s390x-linux-gnu \
-    libc6-dev-s390x-cross
+ENV CROSS_TOOLCHAIN_PREFIX=s390x-linux-gnu-
+ENV CROSS_SYSROOT=/usr/s390x-linux-gnu
+
+COPY apt-cross-essential.sh /
+RUN TARGET_ARCH=s390x TARGET_TRIPLE=s390x-linux-gnu /apt-cross-essential.sh
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=s390x /deny-debian-packages.sh \
@@ -34,8 +35,6 @@ RUN /linux-image.sh s390x
 COPY linux-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
-ENV CROSS_TOOLCHAIN_PREFIX=s390x-linux-gnu-
-ENV CROSS_SYSROOT=/usr/s390x-linux-gnu
 ENV CROSS_TARGET_RUNNER="/linux-runner s390x"
 ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER="$CROSS_TARGET_RUNNER" \
