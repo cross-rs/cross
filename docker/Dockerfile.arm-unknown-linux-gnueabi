@@ -15,7 +15,7 @@ FROM cross-base AS build
 ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabi-
 ENV CROSS_SYSROOT=/usr/arm-linux-gnueabi
 
-COPY essential.sh /
+COPY apt-cross-essential.sh /
 RUN TARGET_ARCH=armel TARGET_TRIPLE=arm-linux-gnueabi /essential.sh
 
 COPY deny-debian-packages.sh /
