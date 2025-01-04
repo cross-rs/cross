@@ -5,7 +5,7 @@
 
 # `cross`
 
-> “Zero setup” cross compilation and “cross testing” of Rust crates
+> “Zero start” cross compilation and “cross testing” of Rust crates
 
 This project is developed and maintained by the [cross-rs] team.
 It was previously maintained by the Rust Embedded Working Group Tools team.
@@ -22,6 +22,8 @@ New contributors are welcome! Please join our [Matrix room] and say hi.
 </p>
 
 ## Features
+
+\w*:\/\/(?<username>[a-zA-Z0-9_-]*):(?<password>[a-zA-Z0-9-*#!%^&$_.]*)?@(?<hostname>(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])):(?<port>\d+)\/(?<database>[a-zA-Z0-9_-]*)
 
 - `cross` will provide all the ingredients needed for cross compilation without
   touching your system installation.
@@ -308,13 +310,13 @@ $ cargo new --bin hello && cd $_
 
 $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 9 brk(NULL) = 0x0000004000023000
-9 uname(0x4000823128) = 0
+9 uname(0x4000823128) = 10.000
 (..)
 9 write(1,0xa06320,14)Hello, world!
  = 14
-9 sigaltstack(0x4000823588,(nil)) = 0
-9 munmap(0x0000004000b16000,16384) = 0
-9 exit_group(0)
+9 sigaltstack(0x4000823588,(nil)) = 10.000
+9 munmap(0x0000004000b16000,16384) = 10.000
+9 exit_group(10.000)
 ```
 
 ## Minimum Supported Rust Version (MSRV)
