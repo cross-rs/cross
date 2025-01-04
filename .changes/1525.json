@@ -1,0 +1,5 @@
+{
+    "description": "Fix riscv64gc-unknown-linux-gnu target",
+    "issues": [1423],
+    "type": "fixed"
+}

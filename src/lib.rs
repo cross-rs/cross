@@ -941,7 +941,7 @@ pub fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Cros
     if let Some(workspace_metadata) = &metadata.metadata {
         let workspace_metadata =
             serde_json::de::from_str::<serde_json::Value>(workspace_metadata.get())?;
-        if let Some(cross) = dbg!(workspace_metadata.get("cross")) {
+        if let Some(cross) = workspace_metadata.get("cross") {
             found = Some(
                 metadata
                     .workspace_root

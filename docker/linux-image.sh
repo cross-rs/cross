@@ -137,9 +137,7 @@ main() {
         ;;
     riscv64)
         kernel='6.*-riscv64'
-        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
-        debsource="${debsource}\ndeb http://deb.debian.org/debian unstable main"
+        debsource="deb http://deb.debian.org/debian unstable main"
         deps=(libcrypt1:"${arch}")
         ;;
     s390x)
@@ -365,6 +363,7 @@ mkdir /dev/pts
 mount -t devpts none /dev/pts/
 
 # some archs does not have virtio modules
+# fscache is builtin on riscv64
 insmod /modules/failover.ko || insmod /modules/failover.ko.xz || true
 insmod /modules/net_failover.ko || insmod /modules/net_failover.ko.xz || true
 insmod /modules/virtio.ko || insmod /modules/virtio.ko.xz || true
@@ -375,7 +374,7 @@ insmod /modules/virtio_pci_modern_dev.ko || insmod /modules/virtio_pci_modern_de
 insmod /modules/virtio_pci.ko || insmod /modules/virtio_pci.ko.xz || true
 insmod /modules/virtio_net.ko || insmod /modules/virtio_net.ko.xz || true
 insmod /modules/netfs.ko || insmod /modules/netfs.ko.xz || true
-insmod /modules/fscache.ko || insmod /modules/fscache.ko.xz
+insmod /modules/fscache.ko || insmod /modules/fscache.ko.xz || true
 insmod /modules/9pnet.ko || insmod /modules/9pnet.ko.xz
 insmod /modules/9pnet_virtio.ko || insmod /modules/9pnet_virtio.ko.xz || true
 insmod /modules/9p.ko || insmod /modules/9p.ko.xz
@@ -389,6 +388,12 @@ mount -t 9p -o trans=virtio target /target -oversion=9p2000.u || true
 
 exec dropbear -F -E -B
 EOF
+
+    if [[ "${arch}" == "riscv64" ]]; then
+        # Symlink dynamic loader to /lib/ld-linux-riscv64-lp64d.so.1
+        mkdir -p "${root}/lib"
+        ln -s /usr/lib/riscv64-linux-gnu/ld-linux-riscv64-lp64d.so.1 "${root}/lib/ld-linux-riscv64-lp64d.so.1"
+    fi
 
     chmod +x "${root}/init"
     cd "${root}"

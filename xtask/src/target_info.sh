@@ -288,6 +288,9 @@ case "${target}" in
             libc=$(max_glibc_version "${libdir}")
         fi
         ;;
+    riscv64gc-unknown-linux-gnu)
+        libc="$(dpkg-query --showformat='${Version}' --show libc6-riscv64-cross | cut -d- -f1)"
+        ;;
     *-*-linux-gnu*)
         toolchain_prefix="${!cc_var//-gcc/}"
         libdir="/usr/${toolchain_prefix}/lib"

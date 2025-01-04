@@ -56,7 +56,7 @@ cargo install cross --git https://github.com/cross-rs/cross
 ```
 
 It's also possible to directly download the pre-compiled [release
-binaries](https://github.com/cross-rs/cross/releases) or using
+binaries](https://github.com/cross-rs/cross/releases) or use
 [cargo-binstall](https://github.com/cargo-bins/cargo-binstall).
 
 ## Usage
@@ -224,7 +224,8 @@ terminate.
 | `i686-linux-android` [1]               | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
 | `i686-pc-windows-gnu`                  | N/A    | 9.4    | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`               | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `loongarch64-unknown-linux-gnu`        | 2.36   | 13.2.0 | ✓   | 8.2.2 |   ✓    |
+| `loongarch64-unknown-linux-gnu`        | 2.36   | 14.2.0 | ✓   | 8.2.2 |   ✓    |
+| `loongarch64-unknown-linux-musl`       | 1.2.5  | 14.2.0 | ✓   | 8.2.2 |   ✓    |
 | `mips-unknown-linux-gnu`               | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `mips-unknown-linux-musl`              | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
 | `mips64-unknown-linux-gnuabi64`        | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
@@ -236,7 +237,7 @@ terminate.
 | `powerpc-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `powerpc64-unknown-linux-gnu`          | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `powerpc64le-unknown-linux-gnu`        | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `riscv64gc-unknown-linux-gnu`          | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `riscv64gc-unknown-linux-gnu`          | 2.35   | 11.4.0 | ✓   | 8.2.2 |   ✓    |
 | `s390x-unknown-linux-gnu`              | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `sparc64-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `sparcv9-sun-solaris`                  | 1.22.7 | 8.4.0  | ✓   | N/A   |        |

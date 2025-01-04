@@ -1,0 +1,5 @@
+{
+    "type": "added",
+    "description": "add loongarch64-linux-musl support",
+    "issues": [1556]
+}

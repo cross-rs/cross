@@ -1,0 +1,5 @@
+{
+    "description": "Upgrade the crosstool for the loongarch64-unknown-linux-gnu target",
+    "issues": [1538],
+    "type": "fixed"
+}
