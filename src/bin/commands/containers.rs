@@ -3,8 +3,9 @@ use std::io;
 use clap::{Args, Subcommand};
 use cross::docker::ImagePlatform;
 use cross::rustc::{QualifiedToolchain, Toolchain};
-use cross::shell::{MessageInfo, Stream};
+use cross::shell::MessageInfo;
 use cross::{docker, CommandExt, TargetTriple};
+use is_terminal::IsTerminal;
 
 #[derive(Args, Debug)]
 pub struct ListVolumes {
@@ -327,7 +328,8 @@ pub fn create_persistent_volume(
     docker.arg("--rm");
     docker.args(["-v", &format!("{}:{}", volume_id, mount_prefix)]);
     docker.arg("-d");
-    let is_tty = io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty();
+    let is_tty =
+        io::stdin().is_terminal() && io::stdout().is_terminal() && io::stderr().is_terminal();
     if is_tty {
         docker.arg("-t");
     }
