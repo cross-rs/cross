@@ -8,7 +8,6 @@ use std::str::FromStr;
 
 use crate::config::bool_from_envvar;
 use crate::errors::Result;
-use is_terminal::IsTerminal;
 use owo_colors::{self, OwoColorize};
 
 // get the prefix for stderr messages
@@ -201,7 +200,7 @@ impl MessageInfo {
         self.as_verbosity(call, Verbosity::Verbose(2))
     }
 
-    fn erase_line<S: Stream + Write>(&mut self, stream: &mut S) -> Result<()> {
+    fn erase_line<S: OwoStream + Write>(&mut self, stream: &mut S) -> Result<()> {
         // this is the Erase in Line sequence
         stream.write_all(b"\x1B[K").map_err(Into::into)
     }
@@ -449,42 +448,19 @@ fn get_verbosity(
     })
 }
 
-pub trait Stream {
-    type TTY: IsTerminal;
-    const OWO: owo_colors::Stream;
+trait OwoStream {
+    fn owo(&self) -> owo_colors::Stream;
+}
 
-    #[must_use]
-    fn is_atty() -> bool;
-
+impl OwoStream for io::Stdout {
     fn owo(&self) -> owo_colors::Stream {
-        Self::OWO
+        owo_colors::Stream::Stdout
     }
 }
 
-impl Stream for io::Stdin {
-    type TTY = io::Stdin;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stdin;
-
-    fn is_atty() -> bool {
-        io::stdin().is_terminal()
-    }
-}
-
-impl Stream for io::Stdout {
-    type TTY = io::Stdout;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stdout;
-
-    fn is_atty() -> bool {
-        io::stdout().is_terminal()
-    }
-}
-
-impl Stream for io::Stderr {
-    type TTY = io::Stderr;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stderr;
-
-    fn is_atty() -> bool {
-        io::stderr().is_terminal()
+impl OwoStream for io::Stderr {
+    fn owo(&self) -> owo_colors::Stream {
+        owo_colors::Stream::Stderr
     }
 }
 
