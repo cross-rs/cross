@@ -152,7 +152,6 @@ impl TargetTriple {
             "x86_64-linux-android" => None,
             "x86_64-pc-windows-gnu" => None,
             "i686-pc-windows-gnu" => None,
-            "asmjs-unknown-emscripten" => None,
             "wasm32-unknown-emscripten" => None,
             "x86_64-unknown-dragonfly" => Some("dragonflybsd-amd64"),
             "i686-unknown-freebsd" => Some("freebsd-i386"),
