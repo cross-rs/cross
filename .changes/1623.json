@@ -1,0 +1,4 @@
+{
+    "type": "fixed",
+    "description": "fixed an issue where cross would look for metadata.cross outside the workspace"
+  }
