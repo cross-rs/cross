@@ -959,6 +959,7 @@ pub fn toml(metadata: &CargoMetadata, msg_info: &mut MessageInfo) -> Result<Cros
     for (package, package_metadata) in metadata
         .packages
         .iter()
+        .filter(|p| metadata.workspace_members.contains(&p.id))
         .filter_map(|p| Some((p.manifest_path.as_path(), p.metadata.as_deref()?)))
     {
         let package_metadata =
