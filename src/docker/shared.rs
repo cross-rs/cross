@@ -25,7 +25,7 @@ pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 
 pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 // note: this is the most common base image for our images
-pub const UBUNTU_BASE: &str = "ubuntu:20.04";
+pub const UBUNTU_BASE: &str = "ubuntu:24.04";
 pub const DEFAULT_IMAGE_VERSION: &str = if crate::commit_info().is_empty() {
     env!("CARGO_PKG_VERSION")
 } else {
@@ -1535,8 +1535,8 @@ pub const PATH_HASH_SHORT: usize = 5;
 pub const PATH_HASH_UNIQUE: usize = 10;
 
 fn path_digest(path: &Path) -> Result<const_sha1::Digest> {
-    let buffer = const_sha1::ConstBuffer::from_slice(path.to_utf8()?.as_bytes());
-    Ok(const_sha1::sha1(&buffer))
+    let buffer = const_sha1::ConstSlice::from_slice(path.to_utf8()?.as_bytes());
+    Ok(const_sha1::sha1_from_const_slice(&buffer))
 }
 
 pub fn path_hash(path: &Path, count: usize) -> Result<String> {
