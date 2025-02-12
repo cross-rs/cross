@@ -6,6 +6,12 @@ RUN /linux-image.sh aarch64
 
 FROM centos:7
 
+# From https://github.com/rust-lang/rust/blob/672e3aaf28ab1e5cbe80b3ff012cd3a8e4ef98af/src/ci/docker/host-x86_64/dist-x86_64-linux/Dockerfile#L9-L12
+# CentOS 7 EOL is June 30, 2024, but the repos remain in the vault.
+RUN sed -i /etc/yum.repos.d/*.repo -e 's!^mirrorlist!#mirrorlist!' \
+  -e 's!^#baseurl=http://mirror.centos.org/!baseurl=https://vault.centos.org/!'
+RUN sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+
 COPY common.sh lib.sh /
 RUN /common.sh
 
