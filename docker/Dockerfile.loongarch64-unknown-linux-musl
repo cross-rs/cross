@@ -15,7 +15,7 @@ FROM cross-base as build
 ARG VERBOSE
 COPY crosstool-ng.sh /
 COPY crosstool-config/loongarch64-unknown-linux-musl.config /
-RUN /crosstool-ng.sh loongarch64-unknown-linux-musl.config 5 ed12fa68402f58e171a6f79500f73f4781fdc9e5
+RUN /crosstool-ng.sh loongarch64-unknown-linux-musl.config 5
 
 ENV PATH /x-tools/loongarch64-unknown-linux-musl/bin/:$PATH
 
