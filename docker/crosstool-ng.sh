@@ -17,7 +17,7 @@ silence_stdout() {
 main() {
     local config="${1}"
     local nproc="${2}"
-    local ctng_version=${3:-crosstool-ng-1.26.0}
+    local ctng_version=${3:-crosstool-ng-1.27.0}
     local ctng_url="https://github.com/crosstool-ng/crosstool-ng"
     local username=crosstool
     local crosstooldir=/opt/crosstool
