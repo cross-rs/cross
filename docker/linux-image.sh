@@ -57,7 +57,7 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-        kversion=5.10.0-26
+        kversion=5.10.0-33
 
     local debsource="deb http://http.debian.net/debian/ bullseye main"
     debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"

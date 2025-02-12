@@ -77,7 +77,7 @@ runs:
 
     - name: Upload artifacts
       if: ${{ steps.archive.outputs.path }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.archive.outputs.name }}
         path: ${{ steps.archive.outputs.path }}
