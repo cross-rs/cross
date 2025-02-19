@@ -11,7 +11,12 @@ main() {
     local -a packages
 
     narch="$(dpkg --print-architecture)"
-    packages+=("libc6-dev-${TARGET_ARCH}-cross:${narch}" "crossbuild-essential-${TARGET_ARCH}:${narch}")
+    packages+=("libc6-dev-${TARGET_ARCH}-cross:${narch}")
+
+    # Install crossbuild-essential if CROSSBUILD_ESSENTIAL is set
+    if [ -n "${CROSSBUILD_ESSENTIAL:-}" ]; then
+        packages+=("crossbuild-essential-${TARGET_ARCH}:${narch}")
+    fi
 
     if ! command -v "${CROSS_TOOLCHAIN_PREFIX}g++" &>/dev/null; then
       packages+=("g++-${TARGET_TRIPLE}:${narch}")

@@ -16,7 +16,7 @@ ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabihf-
 ENV CROSS_SYSROOT=/usr/arm-linux-gnueabihf
 
 COPY apt-cross-essential.sh /
-RUN TARGET_ARCH=armhf TARGET_TRIPLE=arm-linux-gnueabihf /essential.sh
+RUN TARGET_ARCH=armhf TARGET_TRIPLE=arm-linux-gnueabihf /apt-cross-essential.sh
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=armhf /deny-debian-packages.sh \

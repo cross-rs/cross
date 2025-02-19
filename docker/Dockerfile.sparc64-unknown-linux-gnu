@@ -18,11 +18,6 @@ ENV CROSS_SYSROOT=/usr/sparc64-linux-gnu
 COPY apt-cross-essential.sh /
 RUN TARGET_ARCH=sparc64 TARGET_TRIPLE=sparc64-linux-gnu /apt-cross-essential.sh
 
-RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
-    g++- \
-    gfortran-sparc64-linux-gnu \
-    libc6-dev-sparc64-cross
-
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=sparc64 /deny-debian-packages.sh \
     binutils \
