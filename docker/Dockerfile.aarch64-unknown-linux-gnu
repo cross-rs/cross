@@ -12,11 +12,10 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-ENV CROSS_TOOLCHAIN_PREFIX=aarch64-linux-gnu-
-ENV CROSS_SYSROOT=/usr/aarch64-linux-gnu
-
-COPY apt-cross-essential.sh /
-RUN TARGET_ARCH=arm64 TARGET_TRIPLE=aarch64-linux-gnu /apt-cross-essential.sh
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    g++-aarch64-linux-gnu \
+    gfortran-aarch64-linux-gnu \
+    libc6-dev-arm64-cross
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=arm64 /deny-debian-packages.sh \
@@ -35,6 +34,8 @@ RUN /linux-image.sh aarch64
 COPY linux-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
+ENV CROSS_TOOLCHAIN_PREFIX=aarch64-linux-gnu-
+ENV CROSS_SYSROOT=/usr/aarch64-linux-gnu
 ENV CROSS_TARGET_RUNNER="/linux-runner aarch64"
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="$CROSS_TARGET_RUNNER" \

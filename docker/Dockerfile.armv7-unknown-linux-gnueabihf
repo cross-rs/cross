@@ -10,13 +10,12 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-FROM cross-base AS build
+FROM cross-base as build
 
-ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabihf-
-ENV CROSS_SYSROOT=/usr/arm-linux-gnueabihf
-
-COPY apt-cross-essential.sh /
-RUN TARGET_ARCH=armhf TARGET_TRIPLE=arm-linux-gnueabihf /apt-cross-essential.sh
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    g++-arm-linux-gnueabihf \
+    gfortran-arm-linux-gnueabihf \
+    libc6-dev-armhf-cross
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=armhf /deny-debian-packages.sh \
@@ -35,6 +34,8 @@ RUN /linux-image.sh armv7
 COPY linux-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
+ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabihf-
+ENV CROSS_SYSROOT=/usr/arm-linux-gnueabihf
 ENV CROSS_TARGET_RUNNER="/linux-runner armv7hf"
 ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_RUNNER="$CROSS_TARGET_RUNNER" \

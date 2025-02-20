@@ -12,8 +12,10 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-COPY apt-cross-essential.sh /
-RUN TARGET_ARCH=i386 TARGET_TRIPLE=i686-linux-gnu /apt-cross-essential.sh
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    g++-i686-linux-gnu \
+    gfortran-i686-linux-gnu \
+    libc6-dev-i386-cross
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=i386 /deny-debian-packages.sh \

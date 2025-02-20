@@ -12,11 +12,10 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-ENV CROSS_TOOLCHAIN_PREFIX=mips64-linux-gnuabi64-
-ENV CROSS_SYSROOT=/usr/mips64-linux-gnuabi64
-
-COPY apt-cross-essential.sh /
-RUN TARGET_ARCH=mips64 TARGET_TRIPLE=mips64-linux-gnuabi64 /apt-cross-essential.sh
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    g++-mips64-linux-gnuabi64 \
+    gfortran-mips64-linux-gnuabi64 \
+    libc6-dev-mips64-cross
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=mips64 /deny-debian-packages.sh \
@@ -29,6 +28,8 @@ RUN /qemu.sh mips64
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
+ENV CROSS_TOOLCHAIN_PREFIX=mips64-linux-gnuabi64-
+ENV CROSS_SYSROOT=/usr/mips64-linux-gnuabi64
 ENV CROSS_TARGET_RUNNER="/qemu-runner mips64"
 ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_GNUABI64_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_MIPS64_UNKNOWN_LINUX_GNUABI64_RUNNER="$CROSS_TARGET_RUNNER" \

@@ -12,11 +12,10 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-ENV CROSS_TOOLCHAIN_PREFIX=powerpc64le-linux-gnu-
-ENV CROSS_SYSROOT=/usr/powerpc64le-linux-gnu
-
-COPY apt-cross-essential.sh /
-RUN TARGET_ARCH=ppc64el TARGET_TRIPLE=powerpc64le-linux-gnu /apt-cross-essential.sh
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    g++-powerpc64le-linux-gnu \
+    gfortran-powerpc64le-linux-gnu \
+    libc6-dev-ppc64el-cross
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=ppc64el /deny-debian-packages.sh \
@@ -35,6 +34,8 @@ RUN /linux-image.sh powerpc64le
 COPY linux-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
+ENV CROSS_TOOLCHAIN_PREFIX=powerpc64le-linux-gnu-
+ENV CROSS_SYSROOT=/usr/powerpc64le-linux-gnu
 ENV CROSS_TARGET_RUNNER="/linux-runner powerpc64le"
 ENV CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_RUNNER="$CROSS_TARGET_RUNNER" \

@@ -12,11 +12,11 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabi-
-ENV CROSS_SYSROOT=/usr/arm-linux-gnueabi
-
-COPY apt-cross-essential.sh /
-RUN TARGET_ARCH=armel TARGET_TRIPLE=arm-linux-gnueabi CROSSBUILD_ESSENTIAL=1 /apt-cross-essential.sh
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+    g++-arm-linux-gnueabi \
+    gfortran-arm-linux-gnueabi \
+    crossbuild-essential-armel \
+    libc6-dev-armel-cross
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=armel /deny-debian-packages.sh \
@@ -29,6 +29,8 @@ RUN /qemu.sh arm
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
+ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-gnueabi-
+ENV CROSS_SYSROOT=/usr/arm-linux-gnueabi
 ENV CROSS_TARGET_RUNNER="/qemu-runner arm"
 ENV CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_GNUEABI_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_GNUEABI_RUNNER="$CROSS_TARGET_RUNNER" \

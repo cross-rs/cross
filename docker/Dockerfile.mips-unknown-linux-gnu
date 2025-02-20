@@ -12,11 +12,10 @@ RUN /xargo.sh
 
 FROM cross-base as build
 
-ENV CROSS_TOOLCHAIN_PREFIX=mips-linux-gnu-
-ENV CROSS_SYSROOT=/usr/mips-linux-gnu
-
-COPY apt-cross-essential.sh /
-RUN TARGET_ARCH=mips TARGET_TRIPLE=mips-linux-gnu /apt-cross-essential.sh
+RUN apt-get install --assume-yes --no-install-recommends \
+    g++-mips-linux-gnu \
+    gfortran-mips-linux-gnu \
+    libc6-dev-mips-cross
 
 COPY qemu.sh /
 RUN /qemu.sh mips
@@ -24,6 +23,8 @@ RUN /qemu.sh mips
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
+ENV CROSS_TOOLCHAIN_PREFIX=mips-linux-gnu-
+ENV CROSS_SYSROOT=/usr/mips-linux-gnu
 ENV CROSS_TARGET_RUNNER="/qemu-runner mips"
 ENV CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_RUNNER="$CROSS_TARGET_RUNNER" \
