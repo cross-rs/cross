@@ -191,6 +191,17 @@ impl ImagePlatform {
             format!("{}/{}", self.os, self.architecture)
         }
     }
+
+    /// Returns a string that can be used in codegen to represent this platform
+    pub fn to_codegen_string(&self) -> Option<&'static str> {
+        match self.target {
+            TargetTriple::X86_64UnknownLinuxGnu => Some("ImagePlatform::X86_64_UNKNOWN_LINUX_GNU"),
+            TargetTriple::Aarch64UnknownLinuxGnu => {
+                Some("ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU")
+            }
+            _ => None,
+        }
+    }
 }
 
 impl Default for ImagePlatform {
@@ -221,6 +232,14 @@ impl std::str::FromStr for ImagePlatform {
             value::{Error as SerdeError, StrDeserializer},
             IntoDeserializer,
         };
+
+        // Try to match the docker platform string first
+        match s {
+            "linux/amd64" => return Ok(Self::X86_64_UNKNOWN_LINUX_GNU),
+            "linux/arm64" | "linux/arm64/v8" => return Ok(Self::AARCH64_UNKNOWN_LINUX_GNU),
+            _ => {}
+        };
+
         if let Some((platform, toolchain)) = s.split_once('=') {
             let image_toolchain = toolchain.into();
             let (os, arch, variant) = if let Some((os, rest)) = platform.split_once('/') {
@@ -503,6 +522,26 @@ pub mod tests {
         assert_eq!(Os::from_target(&t!("aarch64-linux-android"))?, Os::Android);
         assert_eq!(Os::from_target(&t!("x86_64-unknown-linux-gnu"))?, Os::Linux);
         assert_eq!(Os::from_target(&t!("x86_64-pc-windows-msvc"))?, Os::Windows);
+        Ok(())
+    }
+
+    #[test]
+    fn image_platform_from_docker_platform_str() -> Result<()> {
+        assert_eq!(
+            "linux/amd64".parse::<ImagePlatform>()?,
+            ImagePlatform::X86_64_UNKNOWN_LINUX_GNU
+        );
+
+        assert_eq!(
+            "linux/arm64".parse::<ImagePlatform>()?,
+            ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU
+        );
+
+        assert_eq!(
+            "linux/arm64/v8".parse::<ImagePlatform>()?,
+            ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU
+        );
+
         Ok(())
     }
 }

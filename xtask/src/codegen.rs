@@ -1,4 +1,5 @@
 use clap::Args;
+use cross::docker::ImagePlatform;
 use eyre::Context;
 use std::fmt::Write;
 
@@ -39,10 +40,12 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &["#,
                 .platforms()
                 .iter()
                 .map(|p| {
-                    format!(
-                        "ImagePlatform::{}",
-                        p.replace('-', "_").to_ascii_uppercase()
-                    )
+                    let image_platform: ImagePlatform =
+                        p.parse().expect("should be a valid platform");
+
+                    image_platform
+                        .to_codegen_string()
+                        .expect("should be a valid platform")
                 })
                 .collect::<Vec<_>>()
                 .join(", "),

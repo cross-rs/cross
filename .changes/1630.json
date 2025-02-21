@@ -1,0 +1,4 @@
+{
+  "type": "added",
+  "description": "Add docker platform support for `linux/arm64/v8` target for many Ubuntu-based targets"
+}
