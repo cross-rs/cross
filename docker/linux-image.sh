@@ -57,7 +57,7 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-        kversion=5.10.0-26
+        kversion=5.10.0-33
 
     local debsource="deb http://http.debian.net/debian/ bullseye main"
     debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"
@@ -198,10 +198,10 @@ main() {
     dpkg --add-architecture "${arch}" || echo "foreign-architecture ${arch}" >/etc/dpkg/dpkg.cfg.d/multiarch
 
     # Add Debian keys.
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11}.asc' -O
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11}-security.asc' -O
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11}.asc' -O
-    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023,2024}.key' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11,12}.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11,12}-security.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11,12}.asc' -O
+    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023,2024,2025}.key' -O
 
     for key in *.asc *.key; do
         apt-key add "${key}"
