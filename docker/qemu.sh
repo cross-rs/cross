@@ -140,12 +140,6 @@ main() {
     local arch="${1}" \
         softmmu="${2:-}"
 
-    # if arch is what we're currently running, we can just ignore qemu.
-    if [ "$(uname -m)" = "${arch}" ]; then
-        echo "Already running on ${arch}, skipping QEMU installation."
-        exit 0
-    fi
-
     install_packages \
         autoconf \
         automake \
