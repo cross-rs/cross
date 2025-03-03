@@ -4,8 +4,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use cross::{docker::ImagePlatform, shell::MessageInfo};
 use cross::{docker, CommandExt, ToUtf8};
+use cross::{docker::ImagePlatform, shell::MessageInfo};
 
 use once_cell::sync::{Lazy, OnceCell};
 use serde::Deserialize;
@@ -387,6 +387,7 @@ mod tests {
             ImageTarget {
                 name: "x86_64-unknown-linux-gnu".to_owned(),
                 sub: None,
+                platform: None,
             },
             "x86_64-unknown-linux-gnu".parse().unwrap()
         );
@@ -394,6 +395,7 @@ mod tests {
             ImageTarget {
                 name: "x86_64-unknown-linux-gnu".to_owned(),
                 sub: Some("centos".to_owned()),
+                platform: None,
             },
             "x86_64-unknown-linux-gnu.centos".parse().unwrap()
         );
@@ -401,6 +403,7 @@ mod tests {
             ImageTarget {
                 name: "thumbv8m.main-none-eabihf".to_owned(),
                 sub: None,
+                platform: None,
             },
             "thumbv8m.main-none-eabihf".parse().unwrap()
         );
@@ -408,6 +411,7 @@ mod tests {
             ImageTarget {
                 name: "thumbv8m.main-unknown-linux-gnueabihf".to_owned(),
                 sub: Some("alpine".to_owned()),
+                platform: None,
             },
             "thumbv8m.main-unknown-linux-gnueabihf.alpine"
                 .parse()

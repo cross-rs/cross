@@ -1,5 +1,4 @@
 use clap::Args;
-use cross::docker::ImagePlatform;
 use eyre::Context;
 use std::fmt::Write;
 

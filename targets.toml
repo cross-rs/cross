@@ -11,6 +11,7 @@ deploy = true
 
 [[target]]
 target = "x86_64-unknown-linux-gnu"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 os = "ubuntu-latest"
 cpp = true
 dylib = true
@@ -47,6 +48,7 @@ runners = "native qemu-user qemu-system"
 
 [[target]]
 target = "aarch64-unknown-linux-gnu"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 os = "ubuntu-latest"
 cpp = true
 dylib = true
@@ -532,8 +534,8 @@ special = true
 
 [[target]]
 target = "aarch64-unknown-linux-gnu"
-platforms = ["x86_64-unknown-linux-gnu"]
 sub = "centos"
+platforms = ["x86_64-unknown-linux-gnu"]
 os = "ubuntu-latest"
 cpp = true
 dylib = true

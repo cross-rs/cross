@@ -62,6 +62,7 @@ impl TargetMatrix {
                     runners: vec![],
                     none: false,
                     has_image: true,
+                    platform: vec![],
                     verbose: false,
                     tests: vec!["all".to_owned()],
                 },
@@ -285,6 +286,8 @@ struct TargetMatrixArgs {
     none: bool,
     #[clap(long)]
     has_image: bool,
+    #[clap(long, num_args = 0..)]
+    platform: Vec<ImagePlatform>,
     #[clap(long, short)]
     verbose: bool,
     #[clap(long, value_parser = PossibleValuesParser::new(&[
@@ -314,6 +317,7 @@ impl Default for TargetMatrixArgs {
             runners: Vec::new(),
             none: false,
             has_image: false,
+            platform: Vec::new(),
             verbose: false,
             tests: vec!["all".to_owned()],
         }
@@ -365,6 +369,22 @@ impl TargetMatrixArgs {
                 self.runners
                     .iter()
                     .any(|runner| m.runners.as_deref().unwrap_or_default().contains(runner))
+            });
+        }
+        if !self.platform.is_empty() {
+            matrix.retain(|t| {
+                t.platforms()
+                    .iter()
+                    .any(|platform| self.platform.contains(platform))
+            });
+            matrix.iter_mut().for_each(|t| {
+                t.platforms = Some(
+                    t.platforms()
+                        .iter()
+                        .filter(|&p| self.platform.contains(p))
+                        .cloned()
+                        .collect(),
+                )
             });
         }
     }
