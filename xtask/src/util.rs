@@ -4,7 +4,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use cross::shell::MessageInfo;
+use cross::{docker::ImagePlatform, shell::MessageInfo};
 use cross::{docker, CommandExt, ToUtf8};
 
 use once_cell::sync::{Lazy, OnceCell};
@@ -46,9 +46,9 @@ pub struct CiTarget {
     /// if `true` publish the generated binaries for cross
     #[serde(default)]
     pub deploy: Option<bool>,
-    /// the platform to build this image for, defaults to `["linux/amd64"]`, takes multiple
+    /// the platform to build this image for, defaults to whatever is needed, takes multiple
     #[serde(skip_serializing_if = "Option::is_none")]
-    platforms: Option<Vec<String>>,
+    pub platforms: Option<Vec<ImagePlatform>>,
     /// if `true` signal that this target requires `-Zbuild-std`
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build_std: Option<bool>,
@@ -82,6 +82,8 @@ impl CiTarget {
         crate::ImageTarget {
             name: self.target.clone(),
             sub: self.sub.clone(),
+            // XXX: This does not align with platforms() by design, as we want to be able to know if the field was set or not.
+            platform: self.platforms.clone(),
         }
     }
 
@@ -89,8 +91,8 @@ impl CiTarget {
         self.os == "ubuntu-latest"
     }
 
-    pub fn platforms(&self) -> &[String] {
-        self.platforms.as_ref().unwrap_or(&DEFAULT_PLATFORMS_STRING)
+    pub fn platforms(&self) -> &[ImagePlatform] {
+        self.platforms.as_deref().unwrap_or(DEFAULT_PLATFORMS)
     }
 }
 
@@ -162,6 +164,7 @@ pub fn pull_image(
 pub struct ImageTarget {
     pub name: String,
     pub sub: Option<String>,
+    pub platform: Option<Vec<ImagePlatform>>,
 }
 
 impl ImageTarget {
@@ -235,6 +238,7 @@ impl std::str::FromStr for ImageTarget {
                 return Ok(ImageTarget {
                     name: target.to_string(),
                     sub: Some(sub.to_string()),
+                    platform: None,
                 });
             }
         }
@@ -242,6 +246,7 @@ impl std::str::FromStr for ImageTarget {
         Ok(ImageTarget {
             name: s.to_string(),
             sub: None,
+            platform: None,
         })
     }
 }

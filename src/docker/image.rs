@@ -162,7 +162,7 @@ impl From<String> for ImageReference {
 /// The architecture/platform to use in the image
 ///
 /// <https://github.com/containerd/containerd/blob/release/1.6/platforms/platforms.go#L63>
-#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize)]
 #[serde(try_from = "String")]
 pub struct ImagePlatform {
     /// CPU architecture, x86_64, aarch64 etc

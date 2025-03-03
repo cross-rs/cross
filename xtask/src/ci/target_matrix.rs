@@ -2,7 +2,7 @@ use std::process::Command;
 
 use clap::builder::{BoolishValueParser, PossibleValuesParser};
 use clap::Parser;
-use cross::{shell::Verbosity, CommandExt};
+use cross::{docker::ImagePlatform, shell::Verbosity, CommandExt};
 use serde::{Deserialize, Serialize};
 
 use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
@@ -244,7 +244,7 @@ fn process_try_comment(message: &str) -> cross::Result<(bool, TargetMatrixArgs)>
 #[serde(rename_all = "kebab-case")]
 struct TargetMatrixElement<'a> {
     pretty: String,
-    platforms: &'a [String],
+    platforms: &'a [ImagePlatform],
     target: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     sub: Option<&'a str>,

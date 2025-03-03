@@ -72,7 +72,7 @@ pub use self::rustc::{TargetList, VersionMetaExt};
 pub const CROSS_LABEL_DOMAIN: &str = "org.cross-rs";
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash, PartialOrd, Ord)]
 #[serde(from = "&str", into = "String")]
 #[serde(rename_all = "snake_case")]
 pub enum TargetTriple {

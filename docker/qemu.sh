@@ -131,7 +131,7 @@ build_static_slirp() {
 
     rm -rf "${td}"
 }
-
+# passed arg 1: $1 = arch, so for example "arm64" or "aarch64"
 main() {
     local version=5.1.0
 
@@ -139,6 +139,12 @@ main() {
 
     local arch="${1}" \
         softmmu="${2:-}"
+
+    # if arch is what we're currently running, we can just ignore qemu.
+    if [ "$(uname -m)" = "${arch}" ]; then
+        echo "Already running on ${arch}, skipping QEMU installation."
+        exit 0
+    fi
 
     install_packages \
         autoconf \

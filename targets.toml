@@ -391,6 +391,7 @@ run = true
 [[target]]
 target = "x86_64-pc-windows-gnu"
 os = "ubuntu-latest"
+platforms = ["x86_64-unknown-linux-gnu"]
 cpp = true
 std = true
 run = true
@@ -398,6 +399,7 @@ run = true
 [[target]]
 target = "i686-pc-windows-gnu"
 os = "ubuntu-latest"
+platforms = ["x86_64-unknown-linux-gnu"]
 cpp = true
 std = true
 run = true
@@ -530,6 +532,7 @@ special = true
 
 [[target]]
 target = "aarch64-unknown-linux-gnu"
+platforms = ["x86_64-unknown-linux-gnu"]
 sub = "centos"
 os = "ubuntu-latest"
 cpp = true
