@@ -22,6 +22,7 @@ main() {
         curl \
         g++ \
         make \
+        texinfo \
         wget \
         xz-utils
 

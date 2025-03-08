@@ -23,6 +23,7 @@ main() {
         make \
         patch \
         software-properties-common \
+        texinfo \
         wget \
         xz-utils
 
