@@ -1,0 +1,5 @@
+{
+    "description": "Update binutils to 2.38 in illumos and solaris",
+    "issues": [1639],
+    "type": "changed"
+}

@@ -1,6 +1,0 @@
-{
-    "description": "fix(illumos): Update binutils to 2.38",
-    "issues": [1639],
-    "type": "changed",
-    "breaking": false
-}

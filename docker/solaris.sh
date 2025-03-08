@@ -10,7 +10,7 @@ main() {
     local arch="${1}"
     local manufacturer="${2}"
 
-    local binutils=2.28.1 \
+    local binutils=2.38 \
         gcc=8.4.0 \
         target="${arch}-${manufacturer}-solaris2.10"
 
