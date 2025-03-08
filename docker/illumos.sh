@@ -10,7 +10,7 @@ set -euo pipefail
 
 main() {
     local arch="${1}"
-    local binutils=2.28.1
+    local binutils=2.38
     local gcc=8.4.0
     local target="${arch}-unknown-illumos"
     local build_target="${arch}-pc-solaris2.10"
@@ -22,6 +22,7 @@ main() {
         curl \
         g++ \
         make \
+        texinfo \
         wget \
         xz-utils
 
@@ -31,7 +32,7 @@ main() {
 
     mkdir "${td}"/{binutils,gcc}{,-build} "${td}/illumos"
 
-    local binutils_sum="16328a906e55a3c633854beec8e9e255a639b366436470b4f6245eb0d2fde942"
+    local binutils_sum="e316477a914f567eccc34d5d29785b8b0f5a10208d36bbacedcc39048ecfe024"
     download_binutils "${binutils}" "xz"
     real_sum=$(sha256sum "binutils-${binutils}.tar.xz" | cut -d ' ' -f 1)
     if [[ "${binutils_sum}" != "${real_sum}" ]]; then
