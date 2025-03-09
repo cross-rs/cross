@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.14
+FROM emscripten/emsdk:3.1.74
 WORKDIR /
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -12,8 +12,7 @@ COPY xargo.sh /
 RUN /xargo.sh
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
-  libxml2 \
-  python
+    libxml2
 
 ENV CROSS_TOOLCHAIN_PREFIX=em
 ENV CROSS_SYSROOT=/emsdk/upstream/emscripten/cache/sysroot
