@@ -85,18 +85,10 @@ pub fn active_toolchain(msg_info: &mut MessageInfo) -> Result<String> {
 
 pub fn installed_toolchains(msg_info: &mut MessageInfo) -> Result<Vec<String>> {
     let out = rustup_command(msg_info, true)
-        .args(["toolchain", "list"])
+        .args(["--quiet", "toolchain", "list"])
         .run_and_get_stdout(msg_info)?;
 
-    Ok(out
-        .lines()
-        .map(|l| {
-            l.replace(" (default)", "")
-                .replace(" (override)", "")
-                .trim()
-                .to_owned()
-        })
-        .collect())
+    Ok(out.lines().map(|l| l.trim().to_owned()).collect())
 }
 
 pub fn available_targets(

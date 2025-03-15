@@ -1,0 +1,5 @@
+{
+    "description": "use `-q` when gathering the installed toolchains",
+    "issues": [1645],
+    "type": "fixed"
+}
