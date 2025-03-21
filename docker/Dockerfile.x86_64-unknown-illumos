@@ -22,7 +22,7 @@ ENV PATH=$PATH:/usr/local/x86_64-unknown-illumos/bin/ \
     CC_x86_64_unknown_illumos="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CXX_x86_64_unknown_illumos="$CROSS_TOOLCHAIN_PREFIX"g++ \
     CMAKE_TOOLCHAIN_FILE_x86_64_unknown_illumos=/opt/toolchain.cmake \
-    BINDGEN_EXTRA_CLANG_ARGS_sparcv9_sun_solaris="--sysroot=$CROSS_SYSROOT" \
+    BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_illumos="--sysroot=$CROSS_SYSROOT" \
     CROSS_CMAKE_SYSTEM_NAME=illumos \
     CROSS_CMAKE_SYSTEM_PROCESSOR=x86_64 \
     CROSS_CMAKE_CRT=solaris \
