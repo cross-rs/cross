@@ -295,7 +295,10 @@ pub fn build_docker_image(
 
         docker_build.cross_labels(
             &target.name,
-            &platforms.iter().map(|p| p.target.triple()).collect(),
+            &platforms
+                .iter()
+                .map(|p| p.target.triple())
+                .collect::<Vec<_>>(),
         );
         docker_build.args(["--file", &dockerfile]);
 
