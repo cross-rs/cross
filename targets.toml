@@ -91,6 +91,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user qemu-system"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "thumbv7neon-unknown-linux-gnueabihf"
@@ -100,6 +101,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user qemu-system"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "i586-unknown-linux-gnu"
@@ -108,6 +110,7 @@ cpp = true
 dylib = true
 std = true
 run = true
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "i686-unknown-linux-gnu"
@@ -117,6 +120,7 @@ dylib = true
 std = true
 run = true
 runners = "native qemu-user qemu-system"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "loongarch64-unknown-linux-gnu"
@@ -145,6 +149,7 @@ std = true
 run = true
 runners = "qemu-user"
 build-std = true
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "mipsel-unknown-linux-gnu"
@@ -164,6 +169,7 @@ dylib = true
 std = true
 run = true
 build-std = true
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "mips64el-unknown-linux-gnuabi64"

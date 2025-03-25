@@ -97,10 +97,7 @@ impl<'a> Dockerfile<'a> {
 
         docker_build.progress(None)?;
         docker_build.verbose(msg_info.verbosity);
-        docker_build.cross_labels(
-            options.target.triple(),
-            &vec![self.runs_with().target.triple()],
-        );
+        docker_build.cross_labels(options.target.triple(), &[self.runs_with().target.triple()]);
 
         docker_build.args([
             "--label",
