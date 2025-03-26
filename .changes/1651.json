@@ -1,0 +1,6 @@
+{
+    "description": "Fix BINDGEN_EXTRA_CLANG_ARGS for x86_64-unknown-illumos",
+    "issues": [1644],
+    "type": "fixed",
+    "breaking": false
+}
