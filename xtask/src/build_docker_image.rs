@@ -75,7 +75,7 @@ pub struct BuildDockerImage {
     #[clap(long)]
     pub build_arg: Vec<String>,
     // [os/arch[/variant]=]toolchain
-    #[clap(long, short = 'a', action = clap::builder::ArgAction::Append)]
+    #[clap(long, short = 'a', action = clap::builder::ArgAction::Append, value_delimiter = ',')]
     pub platform: Vec<ImagePlatform>,
     /// Targets to build for
     #[clap()]
@@ -217,6 +217,7 @@ pub fn build_docker_image(
             }
             dockerfile = dockerfile_path.to_utf8()?.to_string();
         }
+        docker_build.args(["--platform", &docker_platforms.join(",")]);
 
         if push {
             docker_build.arg("--push");

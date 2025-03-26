@@ -203,7 +203,7 @@ jobs:
         id: build-docker-image
         if: steps.prepare-meta.outputs.has-image
         timeout-minutes: 120
-        run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}" ${{ matrix.verbose && '-v' || ''  }} --platform ${{ matrix.platforms }}
+        run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}" ${{ matrix.verbose && '-v' || ''  }} --platform ${{ matrix.platform }}
         env:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}
@@ -247,28 +247,6 @@ jobs:
         env:
           TARGET: 'aarch64-unknown-linux-gnu'
           IMAGE: 'ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main'
-        shell: bash
-
-      - name: Login to GitHub Container Registry
-        if: steps.prepare-meta.outputs.has-image
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push image to GitHub Container Registry
-        if: >
-          (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') &&
-          steps.prepare-meta.outputs.has-image && (
-            github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
-            startsWith(github.ref, 'refs/tags/v')
-          )
-        run: cargo xtask build-docker-image -v --push "${TARGET}${SUB:+.$SUB}"
-        env:
-          TARGET: ${{ matrix.target }}
-          SUB: ${{ matrix.sub }}
-          LABELS: ${{ steps.docker-meta.outputs.labels }}
-          LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
         shell: bash
 
   push_image:
@@ -345,7 +323,7 @@ jobs:
             github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
             startsWith(github.ref, 'refs/tags/v')
           )
-        run: cargo xtask build-docker-image -v --push "${TARGET}${SUB:+.$SUB}"
+        run: cargo xtask build-docker-image -v --push "${TARGET}${SUB:+.$SUB}" --platform ${{ join(matrix.platforms, ',') }}
         env:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}

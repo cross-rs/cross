@@ -1,11 +1,11 @@
 use std::process::Command;
 
+use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
 use clap::builder::{BoolishValueParser, PossibleValuesParser};
 use clap::Parser;
+use cross::docker::ImagePlatform;
 use cross::{shell::Verbosity, CommandExt};
 use serde::{Deserialize, Serialize};
-
-use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
 
 #[derive(Parser, Debug)]
 pub struct TargetMatrix {
@@ -113,7 +113,7 @@ impl TargetMatrix {
                 })
                 .map(|(target, platform)| TargetMatrixElementForBuild {
                     pretty: target.to_image_target().alt(),
-                    platform: platform.to_string(),
+                    platform: platform.clone(),
                     target: &target.target,
                     sub: target.sub.as_deref(),
                     os: &target.os,
@@ -275,7 +275,7 @@ fn process_try_comment(message: &str) -> cross::Result<(bool, TargetMatrixArgs)>
 #[serde(rename_all = "kebab-case")]
 struct TargetMatrixElement<'a> {
     pretty: String,
-    platforms: &'a [String],
+    platforms: &'a [ImagePlatform],
     target: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     sub: Option<&'a str>,
@@ -300,7 +300,7 @@ struct TargetMatrixElement<'a> {
 #[serde(rename_all = "kebab-case")]
 struct TargetMatrixElementForBuild<'a> {
     pretty: String,
-    platform: String,
+    platform: ImagePlatform,
     target: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     sub: Option<&'a str>,
