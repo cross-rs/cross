@@ -131,7 +131,7 @@ build_static_slirp() {
 
     rm -rf "${td}"
 }
-
+# passed arg 1: $1 = arch, so for example "arm64" or "aarch64"
 main() {
     local version=5.1.0
 

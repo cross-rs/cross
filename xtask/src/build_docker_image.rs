@@ -146,6 +146,12 @@ pub fn build_docker_image(
                 .contents_first(true)
                 .into_iter()
                 .filter_map(|e| e.ok().filter(|f| f.file_type().is_file()))
+                // don't add native
+                .filter(|f| {
+                    !f.file_name()
+                        .to_string_lossy()
+                        .starts_with("Dockerfile.native")
+                })
                 .filter_map(|f| {
                     f.file_name()
                         .to_string_lossy()
@@ -156,6 +162,17 @@ pub fn build_docker_image(
                 .collect();
         }
     }
+
+    // grab platform from the targets.toml file, if it exists.
+    targets.iter_mut().for_each(|t| {
+        if let Some(m) = get_matrix()
+            .iter()
+            .find(|m| m.target == t.name && m.sub == t.sub)
+        {
+            t.platform = m.platforms.clone();
+        }
+    });
+
     let gha = std::env::var("GITHUB_ACTIONS").is_ok();
     let mut progress = progress.map(|x| x.parse().unwrap());
     if gha {
@@ -178,10 +195,17 @@ pub fn build_docker_image(
     let mut results = vec![];
     for (platform, (target, dockerfile)) in targets
         .iter()
-        .flat_map(|t| platforms.iter().map(move |p| (p, t)))
+        .flat_map(|(t, d)| {
+            t.platform
+                .as_deref()
+                .unwrap_or(&platforms)
+                .iter()
+                .map(move |p| (p, (t, d)))
+        })
+        .filter(|(p, _)| platforms.contains(p))
     {
         if gha && targets.len() > 1 {
-            gha_print("::group::Build {target}");
+            gha_print(&format!("::group::Build {target} for {}", platform.target));
         } else {
             msg_info.note(format_args!("Build {target} for {}", platform.target))?;
         }
