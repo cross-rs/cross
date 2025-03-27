@@ -149,7 +149,6 @@ std = true
 run = true
 runners = "qemu-user"
 build-std = true
-platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "mipsel-unknown-linux-gnu"
@@ -169,7 +168,6 @@ dylib = true
 std = true
 run = true
 build-std = true
-platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "mips64el-unknown-linux-gnuabi64"

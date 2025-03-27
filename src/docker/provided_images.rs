@@ -70,7 +70,7 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
         },
         ProvidedImage {
             name: "mips-unknown-linux-gnu",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
@@ -80,7 +80,7 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
         },
         ProvidedImage {
             name: "mips64-unknown-linux-gnuabi64",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
