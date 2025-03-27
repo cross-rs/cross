@@ -7,6 +7,7 @@ use std::process::Command;
 use cross::shell::MessageInfo;
 use cross::{docker, CommandExt, ToUtf8};
 
+use cross::docker::ImagePlatform;
 use once_cell::sync::{Lazy, OnceCell};
 use serde::Deserialize;
 
@@ -48,7 +49,7 @@ pub struct CiTarget {
     pub deploy: Option<bool>,
     /// the platform to build this image for, defaults to `["linux/amd64"]`, takes multiple
     #[serde(skip_serializing_if = "Option::is_none")]
-    platforms: Option<Vec<String>>,
+    platforms: Option<Vec<ImagePlatform>>,
     /// if `true` signal that this target requires `-Zbuild-std`
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build_std: Option<bool>,
@@ -89,8 +90,8 @@ impl CiTarget {
         self.os == "ubuntu-latest"
     }
 
-    pub fn platforms(&self) -> &[String] {
-        self.platforms.as_ref().unwrap_or(&DEFAULT_PLATFORMS_STRING)
+    pub fn platforms(&self) -> &[ImagePlatform] {
+        self.platforms.as_deref().unwrap_or(DEFAULT_PLATFORMS)
     }
 }
 
