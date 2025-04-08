@@ -39,7 +39,9 @@ if_centos install_packages \
     gcc-c++ \
     gcc-gfortran \
     glibc-devel \
-    pkgconfig
+    pkgconfig \
+    dpkg-devel \
+    dpkg-dev
 
 if_ubuntu install_packages \
     g++ \
