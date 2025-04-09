@@ -1620,7 +1620,8 @@ mod tests {
                 } else {
                     "x86_64-unknown-linux-gnu"
                 };
-                let expected = format!("{EXPECTED_CROSS_IMAGE}/{expected_image_target}{expected_ver}");
+                let expected =
+                    format!("{EXPECTED_CROSS_IMAGE}/{expected_image_target}{expected_ver}");
 
                 let image = get_image(&config, &target, uses_zig)?;
                 assert_eq!(image.reference.get(), expected);

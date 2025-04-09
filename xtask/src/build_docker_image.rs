@@ -305,7 +305,10 @@ pub fn build_docker_image(
             false => Path::new("."),
         });
 
-        docker_build.args(["--add-host=gcc.gnu.org:8.43.85.97", "--add-host=ftp.gnu.org:209.51.188.20"]);
+        docker_build.args([
+            "--add-host=gcc.gnu.org:8.43.85.97",
+            "--add-host=ftp.gnu.org:209.51.188.20",
+        ]);
 
         if !dry_run && (force || !push || gha) {
             let result = docker_build
