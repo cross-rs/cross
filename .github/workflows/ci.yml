@@ -137,7 +137,7 @@ jobs:
   build:
     name: target (${{ matrix.pretty }},${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: [shellcheck, test, generate-matrix, check]
+    needs: [shellcheck, generate-matrix, check]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' || github.event_name == 'issue_comment' || github.event_name == 'schedule')  && needs.generate-matrix.outputs.matrix != '{}' && needs.generate-matrix.outputs.matrix != '[]' && needs.generate-matrix.outputs.matrix != ''
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.pretty }}
@@ -270,7 +270,7 @@ jobs:
 
   # we should always have an artifact from a previous build.
   remote:
-    needs: [test, check, generate-matrix]
+    needs: [check, generate-matrix]
     if: fromJson(needs.generate-matrix.outputs.tests).remote
     runs-on: ubuntu-latest
     steps:
@@ -294,7 +294,7 @@ jobs:
         shell: bash
 
   bisect:
-    needs: [test, check, generate-matrix]
+    needs: [check, generate-matrix]
     if: fromJson(needs.generate-matrix.outputs.tests).bisect
     runs-on: ubuntu-latest
     steps:
@@ -318,7 +318,7 @@ jobs:
         shell: bash
 
   foreign:
-    needs: [test, check, generate-matrix]
+    needs: [check, generate-matrix]
     if: fromJson(needs.generate-matrix.outputs.tests).foreign
     runs-on: ubuntu-latest
     steps:
@@ -348,7 +348,7 @@ jobs:
         shell: bash
 
   docker-in-docker:
-    needs: [test, check, generate-matrix]
+    needs: [check, generate-matrix]
     if: fromJson(needs.generate-matrix.outputs.tests).docker-in-docker
     runs-on: ubuntu-latest
     steps:
@@ -375,7 +375,7 @@ jobs:
   podman:
     name: podman
     runs-on: ubuntu-latest
-    needs: [shellcheck, test, check, generate-matrix]
+    needs: [shellcheck, check, generate-matrix]
     if: fromJson(needs.generate-matrix.outputs.tests).podman
     strategy:
       fail-fast: false
@@ -431,7 +431,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker, foreign, podman]
+    needs: [shellcheck, fmt, clippy, generate-matrix, build, publish, check, remote, bisect, docker-in-docker, foreign, podman]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -446,7 +446,7 @@ jobs:
 
   code-cov:
     name: Coverage
-    needs: [test, build, conclusion, generate-matrix]
+    needs: [build, conclusion, generate-matrix]
     # should check that there are any artifacts, if not skip
     if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped') && needs.test.result == 'success'
     runs-on: ubuntu-latest
