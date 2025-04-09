@@ -305,6 +305,8 @@ pub fn build_docker_image(
             false => Path::new("."),
         });
 
+        docker_build.args(["--add-host=gcc.gnu.org:8.43.85.97"]);
+
         if !dry_run && (force || !push || gha) {
             let result = docker_build
                 .run(msg_info, false)
