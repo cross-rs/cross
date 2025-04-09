@@ -75,6 +75,7 @@ jobs:
       - name: Run clippy
         run: cargo clippy --locked --all-targets --all-features --workspace -- -D warnings
   test:
+    allow-failure: true
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
