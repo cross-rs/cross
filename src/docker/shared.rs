@@ -4,7 +4,8 @@ use std::process::{Command, ExitStatus, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::LazyLock;
 use std::{env, fs, time};
-
+use std::convert::Into;
+use std::string::ToString;
 use super::custom::{Dockerfile, PreBuild};
 use super::image::PossibleImage;
 use super::Image;
@@ -34,6 +35,7 @@ pub const CROSS_IMAGE: LazyLock<&str> =  LazyLock::new(move || {
     // we default to the cross-rs namespace.
     "ghcr.io/cross-rs"
 });
+
 
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:20.04";
@@ -1630,8 +1632,7 @@ mod tests {
                 } else {
                     "x86_64-unknown-linux-gnu"
                 };
-                let expected =
-                    format!("{CROSS_IMAGE}/{expected_image_target}{expected_ver}");
+                let expected = format!("{}/{expected_image_target}{expected_ver}", &CROSS_IMAGE);
 
                 let image = get_image(&config, &target, uses_zig)?;
                 assert_eq!(image.reference.get(), expected);

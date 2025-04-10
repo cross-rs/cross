@@ -35,7 +35,7 @@ impl ProvidedImage {
     }
 
     pub fn default_image_name(&self) -> String {
-        self.image_name(CROSS_IMAGE, DEFAULT_IMAGE_VERSION)
+        self.image_name(&*CROSS_IMAGE, DEFAULT_IMAGE_VERSION)
     }
 }
 
