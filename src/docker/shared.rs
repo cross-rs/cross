@@ -2,6 +2,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::LazyLock;
 use std::{env, fs, time};
 
 use super::custom::{Dockerfile, PreBuild};
@@ -22,9 +23,18 @@ use crate::{CommandVariant, OutputExt, Target, TargetTriple};
 use rustc_version::Version as RustcVersion;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
+pub const CROSS_IMAGE: LazyLock<&str> =  LazyLock::new(move || {
+    // We try to get the namespace from the environment variable
+    // `CROSS_IMAGE`
+    if let Ok(base) = std::env::var("CROSS_IMAGE") {
+        return base.leak();
+    }
 
-pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
-pub const EXPECTED_CROSS_IMAGE: &str = "ghcr.io/cross-rs";
+    // If we don't retrieve a value from the env var,
+    // we default to the cross-rs namespace.
+    "ghcr.io/cross-rs"
+});
+
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:20.04";
 pub const DEFAULT_IMAGE_VERSION: &str = if crate::commit_info().is_empty() {
@@ -1621,7 +1631,7 @@ mod tests {
                     "x86_64-unknown-linux-gnu"
                 };
                 let expected =
-                    format!("{EXPECTED_CROSS_IMAGE}/{expected_image_target}{expected_ver}");
+                    format!("{CROSS_IMAGE}/{expected_image_target}{expected_ver}");
 
                 let image = get_image(&config, &target, uses_zig)?;
                 assert_eq!(image.reference.get(), expected);
