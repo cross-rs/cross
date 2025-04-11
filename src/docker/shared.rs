@@ -2,7 +2,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::LazyLock;
+// use std::sync::LazyLock;
 use std::{env, fs, time};
 use std::convert::Into;
 use std::string::ToString;
