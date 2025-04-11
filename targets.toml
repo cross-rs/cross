@@ -228,6 +228,15 @@ run = true
 runners = "qemu-user qemu-system"
 
 [[target]]
+target = "riscv64gc-unknown-linux-musl"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+run = true
+runners = "qemu-user"
+
+[[target]]
 target = "s390x-unknown-linux-gnu"
 os = "ubuntu-latest"
 cpp = true
