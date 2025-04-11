@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::LazyLock;
 use clap::builder::PossibleValue;
 use clap::{Args, Subcommand};
 use cross::docker::{self, CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX};
@@ -9,10 +8,10 @@ use cross::{CommandExt, TargetList};
 // known image prefixes, with their registry
 // the docker.io registry can also be implicit
 
-const GHCR_IO: LazyLock<&str> = docker::CROSS_IMAGE;
+const GHCR_IO: &str = docker::CROSS_IMAGE;
 const RUST_EMBEDDED: &str = "rustembedded/cross";
 const DOCKER_IO: &str = "docker.io/rustembedded/cross";
-const IMAGE_PREFIXES: &[&str] = &[GHCR_IO, DOCKER_IO, RUST_EMBEDDED];
+const IMAGE_PREFIXES: &[&str] = &[&GHCR_IO, DOCKER_IO, RUST_EMBEDDED];
 
 #[derive(Args, Debug)]
 pub struct ListImages {

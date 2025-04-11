@@ -24,18 +24,17 @@ use crate::{CommandVariant, OutputExt, Target, TargetTriple};
 use rustc_version::Version as RustcVersion;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
-pub const CROSS_IMAGE: LazyLock<&str> =  LazyLock::new(move || {
-    // We try to get the namespace from the environment variable
-    // `CROSS_IMAGE`
-    if let Ok(base) = std::env::var("CROSS_IMAGE") {
-        return base.leak();
-    }
-
-    // If we don't retrieve a value from the env var,
-    // we default to the cross-rs namespace.
-    "ghcr.io/cross-rs"
-});
-
+// pub const CROSS_IMAGE: LazyLock<&str> =  LazyLock::new(|| {
+//     // We try to get the namespace from the environment variable `CROSS_IMAGE`
+//     if let Ok(base) = std::env::var("CROSS_IMAGE") {
+//         return base.leak();
+//     }
+//
+//     // If we don't retrieve a value from the env var,
+//     // we default to the cross-rs namespace.
+//     "ghcr.io/cross-rs"
+// });
+pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:20.04";
