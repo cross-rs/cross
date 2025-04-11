@@ -52,7 +52,6 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           components: rustfmt
-          target: ''
 
       - name: Run rustfmt
         run: cargo fmt -- --check
@@ -74,7 +73,6 @@ jobs:
         with:
           components: clippy
           toolchain: 1.77.2 # MSRV, Minimally Supported Rust Version. Make sure to update README.md and clippy.toml
-          target: ''
       - name: Run clippy
         run: cargo clippy --locked --all-targets --all-features --workspace -- -D warnings
   test:
@@ -91,9 +89,6 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
       - uses: ./.github/actions/cargo-llvm-cov
         with:
           name: test-${{matrix.os}}
@@ -110,9 +105,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
       - run: cargo xtask ci-job check
         id: check
   generate-matrix:
@@ -125,9 +117,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
 
       - name: Generate matrix
         id: generate-matrix
@@ -157,9 +146,6 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
 
       - name: Set up Docker Buildx
         if: runner.os == 'Linux'
@@ -279,9 +265,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
 
       - name: LLVM instrument coverage
         uses: ./.github/actions/cargo-llvm-cov
@@ -303,9 +286,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
 
       - name: LLVM instrument coverage
         uses: ./.github/actions/cargo-llvm-cov
@@ -327,9 +307,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
 
       - name: LLVM instrument coverage
         uses: ./.github/actions/cargo-llvm-cov
@@ -357,9 +334,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
 
       - name: LLVM instrument coverage
         uses: ./.github/actions/cargo-llvm-cov
@@ -388,9 +362,6 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
 
       - name: Install Podman
         env:
@@ -423,9 +394,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
       - uses: ./.github/actions/cargo-publish
         with:
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -456,9 +424,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/setup-rust
-        with:
-          components: ''
-          target: ''
       - uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/artifacts

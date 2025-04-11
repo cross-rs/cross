@@ -7,10 +7,10 @@ inputs:
     required: true
   target:
     description: 'Target'
-    required: true
+    required: false
   components:
     description: 'Components'
-    required: true
+    required: false
 
 runs:
   using: composite
