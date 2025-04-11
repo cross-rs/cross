@@ -3,9 +3,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
 // use std::sync::LazyLock;
-use std::{env, fs, time};
-use std::convert::Into;
-use std::string::ToString;
 use super::custom::{Dockerfile, PreBuild};
 use super::image::PossibleImage;
 use super::Image;
@@ -20,6 +17,9 @@ use crate::id;
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{ColorChoice, MessageInfo, Verbosity};
 use crate::{CommandVariant, OutputExt, Target, TargetTriple};
+use std::convert::Into;
+use std::string::ToString;
+use std::{env, fs, time};
 
 use rustc_version::Version as RustcVersion;
 

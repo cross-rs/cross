@@ -139,7 +139,10 @@ impl ImageReference {
                 format!("{}/{target_name}{id}", &*CROSS_IMAGE)
             }
             Self::Subtarget(sub) => {
-                format!("{}/{target_name}:{DEFAULT_IMAGE_VERSION}{sub}", &*CROSS_IMAGE)
+                format!(
+                    "{}/{target_name}:{DEFAULT_IMAGE_VERSION}{sub}",
+                    &*CROSS_IMAGE
+                )
             }
         };
 
