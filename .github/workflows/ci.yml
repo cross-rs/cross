@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: ${{ inputs.checkout-ref }}
+          exclude-paths: "/github/workspace/.github/CODEOWNERS,/github/workspace/LICENSE-APACHE,/github/workspace/LICENSE-MIT"
 
       - name: Run ShellCheck
         uses: azohra/shell-linter@v0.6.0
