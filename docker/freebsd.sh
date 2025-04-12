@@ -115,7 +115,7 @@ _freebsd_mirror() {
         # we need a timeout in case the server is down to avoid
         # infinitely hanging. timeout error code is always 124
         # these mirrors can be quite slow, so have a long timeout
-        timeout 20s curl --retry 3 -sSfL "${mirror}/${FREEBSD_ARCH}/" >/dev/null
+        timeout 20s curl -4 --retry 3 -sSfL "${mirror}/${FREEBSD_ARCH}/" >/dev/null
         code=$?
         if [[ "${code}" == 0 ]]; then
             echo "${mirror}"
