@@ -122,7 +122,8 @@ setup_freebsd_packagesite() {
 
     mkdir -p "${FREEBSD_PACKAGEDIR}"
     curl --retry 3 -sSfL "${pkg_source}/packagesite.txz" -O
-    tar -C "${FREEBSD_PACKAGEDIR}" -xJf packagesite.txz
+    ### If the first iteration of tar doesn't work, the second should
+    tar -C "${FREEBSD_PACKAGEDIR}" -xJf packagesite.txz || tar -C "${FREEBSD_PACKAGEDIR}" --zstd -xvf packagesite.txz
 
     rm packagesite.txz
 }
