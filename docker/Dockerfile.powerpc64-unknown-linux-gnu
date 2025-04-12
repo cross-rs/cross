@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 as cross-base
+FROM ubuntu:20.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
@@ -10,7 +10,7 @@ RUN /cmake.sh
 COPY xargo.sh /
 RUN /xargo.sh
 
-FROM cross-base as build
+FROM cross-base AS build
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-powerpc64-linux-gnu \
