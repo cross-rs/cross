@@ -32,7 +32,7 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - name: Run ShellCheck
-        uses: Azagheri/shell-linter@latest
+        uses: Azbagheri/shell-linter@latest
         with:
           exclude-paths: ".github/CODEOWNERS,LICENSE-APACHE,LICENSE-MIT"
 
