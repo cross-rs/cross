@@ -32,9 +32,9 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - name: Run ShellCheck
-        uses: azohra/shell-linter@v0.6.0
+        uses: Azagheri/shell-linter@latest
         with:
-          exclude-paths: "/github/workspace/.github/CODEOWNERS,/github/workspace/LICENSE-APACHE,/github/workspace/LICENSE-MIT"
+          exclude-paths: ".github/CODEOWNERS,LICENSE-APACHE,LICENSE-MIT"
 
   cargo-deny:
     runs-on: ubuntu-latest
