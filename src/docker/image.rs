@@ -136,13 +136,10 @@ impl ImageReference {
         let image_name = match self {
             Self::Name(_) => return,
             Self::Identifier(id) => {
-                format!("{}/{target_name}{id}", &*CROSS_IMAGE)
+                format!("{CROSS_IMAGE}/{target_name}{id}")
             }
             Self::Subtarget(sub) => {
-                format!(
-                    "{}/{target_name}:{DEFAULT_IMAGE_VERSION}{sub}",
-                    &*CROSS_IMAGE
-                )
+                format!("{CROSS_IMAGE}/{target_name}:{DEFAULT_IMAGE_VERSION}{sub}")
             }
         };
 
