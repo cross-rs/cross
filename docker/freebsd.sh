@@ -79,7 +79,7 @@ latest_freebsd() {
     local releases=
     local max_release=
 
-    response=$(curl --retry 3 -sSfL "${mirror}/${FREEBSD_ARCH}/" | grep RELEASE)
+    response=$(curl -4 --retry 3 -sSfL "${mirror}/${FREEBSD_ARCH}/" | grep RELEASE)
     if [[ "${response}" != *RELEASE* ]]; then
         echo -e "\e[31merror:\e[0m could not find a candidate release for FreeBSD ${FREEBSD_MAJOR}." 1>&2
         exit 1
@@ -172,7 +172,7 @@ main() {
     ./contrib/download_prerequisites
     cd ..
 
-    curl --retry 3 -sSfL "${bsd_url}/base.txz" -O
+    curl -4 --retry 3 -sSfL "${bsd_url}/base.txz" -O
     tar -C "${td}/freebsd" -xJf base.txz ./usr/include ./usr/lib ./lib
 
     cd binutils-build
@@ -240,7 +240,7 @@ main() {
     purge_packages
 
     # store the version info for the FreeBSD release
-    bsd_revision=$(curl --retry 3 -sSfL "${bsd_url}/REVISION")
+    bsd_revision=$(curl -4 --retry 3 -sSfL "${bsd_url}/REVISION")
     echo "${base_release} (${bsd_revision})" > /opt/freebsd-version
 
     rm -rf "${td}"
