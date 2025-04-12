@@ -34,7 +34,13 @@ pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 //     // we default to the cross-rs namespace.
 //     "ghcr.io/cross-rs"
 // });
-pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
+pub const CROSS_IMAGE: &str = const {
+    if let Some(opt) = option_env!("CROSS_IMAGE") {
+        opt
+    } else {
+        "ghcr.io/cross-rs"
+    }
+};
 
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:20.04";

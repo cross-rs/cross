@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, BTreeSet};
 const GHCR_IO: &str = docker::CROSS_IMAGE;
 const RUST_EMBEDDED: &str = "rustembedded/cross";
 const DOCKER_IO: &str = "docker.io/rustembedded/cross";
-const IMAGE_PREFIXES: &[&str] = &[&GHCR_IO, DOCKER_IO, RUST_EMBEDDED];
+const IMAGE_PREFIXES: &[&str] = &[GHCR_IO, DOCKER_IO, RUST_EMBEDDED];
 
 #[derive(Args, Debug)]
 pub struct ListImages {
