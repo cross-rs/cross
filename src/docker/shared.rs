@@ -34,7 +34,7 @@ pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
 //     // we default to the cross-rs namespace.
 //     "ghcr.io/cross-rs"
 // });
-pub const CROSS_IMAGE: &str = const {
+pub const CROSS_IMAGE: &str = {
     if let Some(opt) = option_env!("CROSS_IMAGE") {
         opt
     } else {
