@@ -1,9 +1,10 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use clap::builder::PossibleValue;
 use clap::{Args, Subcommand};
 use cross::docker::{self, CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX};
 use cross::shell::MessageInfo;
 use cross::{CommandExt, TargetList};
-use std::collections::{BTreeMap, BTreeSet};
 
 // known image prefixes, with their registry
 // the docker.io registry can also be implicit

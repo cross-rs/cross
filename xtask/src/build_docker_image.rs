@@ -305,13 +305,6 @@ pub fn build_docker_image(
             false => Path::new("."),
         });
 
-        // if gha {
-        //     // If we are inside a GHA (GitHub Actions) environment, we use the host network
-        //     // instead of the default. This aims to fix the issue where a container can't access
-        //     // a FQDN because of an ipv6-only resolution and hangs until it gets a timeout.
-        //     docker_build.args(["--network", "host"]);
-        // }
-
         if !dry_run && (force || !push || gha) {
             let result = docker_build
                 .run(msg_info, false)
