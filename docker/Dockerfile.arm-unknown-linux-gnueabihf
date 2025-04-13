@@ -17,7 +17,7 @@ COPY crosstool-ng.sh /
 COPY crosstool-config/arm-unknown-linux-gnueabihf.config /
 RUN /crosstool-ng.sh arm-unknown-linux-gnueabihf.config 5
 
-ENV PATH /x-tools/arm-unknown-linux-gnueabihf/bin/:$PATH
+ENV PATH=/x-tools/arm-unknown-linux-gnueabihf/bin/:$PATH
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=armhf /deny-debian-packages.sh
