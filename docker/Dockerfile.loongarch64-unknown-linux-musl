@@ -17,7 +17,7 @@ COPY crosstool-ng.sh /
 COPY crosstool-config/loongarch64-unknown-linux-musl.config /
 RUN /crosstool-ng.sh loongarch64-unknown-linux-musl.config 5
 
-ENV PATH /x-tools/loongarch64-unknown-linux-musl/bin/:$PATH
+ENV PATH=/x-tools/loongarch64-unknown-linux-musl/bin/:$PATH
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=loong64 /deny-debian-packages.sh
