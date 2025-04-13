@@ -109,6 +109,11 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             sub: None
         },
         ProvidedImage {
+            name: "riscv64gc-unknown-linux-musl",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
             name: "s390x-unknown-linux-gnu",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
