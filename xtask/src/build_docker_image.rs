@@ -75,7 +75,7 @@ pub struct BuildDockerImage {
     #[clap(long)]
     pub build_arg: Vec<String>,
     // [os/arch[/variant]=]toolchain
-    #[clap(long, short = 'a', action = clap::builder::ArgAction::Append)]
+    #[clap(long, short = 'a', action = clap::builder::ArgAction::Append, value_delimiter = ',')]
     pub platform: Vec<ImagePlatform>,
     /// Targets to build for
     #[clap()]
@@ -176,30 +176,35 @@ pub fn build_docker_image(
     };
 
     let mut results = vec![];
-    for (platform, (target, dockerfile)) in targets
-        .iter()
-        .flat_map(|t| platforms.iter().map(move |p| (p, t)))
-    {
+    for (target, dockerfile) in targets.iter() {
         if gha && targets.len() > 1 {
             gha_print("::group::Build {target}");
         } else {
-            msg_info.note(format_args!("Build {target} for {}", platform.target))?;
+            msg_info.note(format_args!(
+                "Build {target} for {}",
+                platforms
+                    .iter()
+                    .map(|p| p.target.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" and ")
+            ))?;
         }
         let mut docker_build = engine.command();
         docker_build.invoke_build_command();
         let has_buildkit = docker::Engine::has_buildkit();
         docker_build.current_dir(&docker_root);
 
-        let docker_platform = platform.docker_platform();
+        let docker_platforms: Vec<String> = platforms.iter().map(|p| p.docker_platform()).collect();
         let mut dockerfile = dockerfile.clone();
-        docker_build.args(["--platform", &docker_platform]);
         let uppercase_triple = target.name.to_ascii_uppercase().replace('-', "_");
         docker_build.args([
             "--build-arg",
             &format!("CROSS_TARGET_TRIPLE={}", uppercase_triple),
         ]);
         // add our platform, and determine if we need to use a native docker image
-        if has_native_image(docker_platform.as_str(), target, msg_info)? {
+        if docker_platforms.len() == 1
+            && has_native_image(docker_platforms[0].as_str(), target, msg_info)?
+        {
             let dockerfile_name = match target.sub.as_deref() {
                 Some(sub) => format!("Dockerfile.native.{sub}"),
                 None => "Dockerfile.native".to_owned(),
@@ -212,6 +217,7 @@ pub fn build_docker_image(
             }
             dockerfile = dockerfile_path.to_utf8()?.to_string();
         }
+        docker_build.args(["--platform", &docker_platforms.join(",")]);
 
         if push {
             docker_build.arg("--push");
@@ -220,6 +226,7 @@ pub fn build_docker_image(
         } else if no_output {
             msg_info.fatal("cannot specify `--no-output` with engine that does not support the `--output` flag", 1);
         } else if has_buildkit {
+            // TODO: docker daemon doesn't support loading multi-arch, so it will fail when platforms.len() > 1
             docker_build.arg("--load");
         }
 
@@ -287,7 +294,13 @@ pub fn build_docker_image(
             docker_build.args(["--label", label]);
         }
 
-        docker_build.cross_labels(&target.name, platform.target.triple());
+        docker_build.cross_labels(
+            &target.name,
+            &platforms
+                .iter()
+                .map(|p| p.target.triple())
+                .collect::<Vec<_>>(),
+        );
         docker_build.args(["--file", &dockerfile]);
 
         docker_build.progress(progress)?;
