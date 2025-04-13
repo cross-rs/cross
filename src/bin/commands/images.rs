@@ -8,6 +8,7 @@ use cross::{CommandExt, TargetList};
 
 // known image prefixes, with their registry
 // the docker.io registry can also be implicit
+
 const GHCR_IO: &str = docker::CROSS_IMAGE;
 const RUST_EMBEDDED: &str = "rustembedded/cross";
 const DOCKER_IO: &str = "docker.io/rustembedded/cross";

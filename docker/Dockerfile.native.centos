@@ -17,7 +17,6 @@ RUN sed -i /etc/yum.repos.d/*.repo -e 's!^mirrorlist!#mirrorlist!' \
   -e 's!^#baseurl=http://mirror.centos.org/!baseurl=https://vault.centos.org/!'
 RUN sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
 
-
 COPY common.sh lib.sh /
 RUN /common.sh
 
