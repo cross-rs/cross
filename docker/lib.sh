@@ -174,3 +174,62 @@ docker_to_linux_arch() {
 
     eval "${oldstate}"
 }
+
+find_argument() {
+    # Extracts the value from an argument of the form VARIABLE=VALUE
+    local needle="$1"
+    local return_var="$2"
+    shift 2
+    local prefix="${needle}="
+    for var in "${@}"; do
+        case "$var" in
+            "$prefix"*)
+                eval "$return_var=${var#"${prefix}"}"
+                return 0 ;;
+            *)           ;;
+        esac
+    done
+    echo "Missing argument ${needle}"
+    exit 1
+}
+
+symlinkify_if_same() {
+    local file1="$1"
+    local file2="$2"
+    # Only make a symlink if the files are identical, and the destination file isn't already a symlink
+    if [ ! -L "${file2}" ] && cmp "$file1" "$file2"; then
+        ln -sf "$file1" "$file2"
+    fi
+}
+
+symlinkify_and_strip_toolchain() {
+    local target="$1"
+    local gcc_ver="$2"
+
+    local target_bin="/usr/local/${target}/bin"
+    local local_bin="/usr/local/bin"
+
+    # The first set of tools appear as /usr/local/bin/<target>-<tool> and /usr/local/<target>/bin/<tool>
+
+    # Special case: ld is itself usually hardlinked to ld.bfd
+    symlinkify_if_same "${local_bin}/ld" "${local_bin}/ld.bfd"
+
+    # Turn hard links or otherwise identical files into symlinks
+    for tool in ar  as  ld  ld.bfd  nm  objcopy  objdump  ranlib  readelf  strip; do
+        local src="${local_bin}/${target}-${tool}"
+        local dest="${target_bin}/${tool}"
+        symlinkify_if_same "${src}" "${dest}"
+        strip "${src}"
+    done
+
+    # The second set of tools only appear as /usr/local/bin/<target>-<tool>
+
+    # Special case: c++ and g++ are usually the same file
+    symlinkify_if_same "${local_bin}/${target}-c++" "${local_bin}/${target}-g++"
+    # Special case: gcc and gcc-<version>
+    symlinkify_if_same "${local_bin}/${target}-gcc" "${local_bin}/${target}-gcc-${gcc_ver}"
+
+    for tool in  addr2line  c++ c++filt  cpp  elfedit  g++  gcc  gcc-${gcc_ver}  gcc-ar  gcc-nm  gcc-ranlib  gcov  gcov-dump  gcov-tool  gfortran  gprof  size  strings; do
+        strip "${local_bin}/${target}-${tool}"
+    done
+}
