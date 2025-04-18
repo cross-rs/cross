@@ -18,6 +18,13 @@ RUN /musl.sh TARGET=x86_64-linux-musl
 COPY qemu.sh /
 RUN /qemu.sh x86_64
 
+COPY tidyup.sh /
+RUN /tidyup.sh
+
+FROM scratch AS final
+COPY --from=build / /
+CMD ["/bin/bash"]
+
 ENV CROSS_TOOLCHAIN_PREFIX=x86_64-linux-musl-
 ENV CROSS_SYSROOT=/usr/local/x86_64-linux-musl
 COPY musl-symlink.sh /
