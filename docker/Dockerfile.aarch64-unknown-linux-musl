@@ -18,6 +18,13 @@ RUN /qemu.sh aarch64
 COPY musl.sh /
 RUN /musl.sh TARGET=aarch64-linux-musl
 
+COPY tidyup.sh /
+RUN /tidyup.sh
+
+FROM scratch AS final
+COPY --from=build / /
+CMD ["/bin/bash"]
+
 ENV CROSS_TOOLCHAIN_PREFIX=aarch64-linux-musl-
 ENV CROSS_SYSROOT=/usr/local/aarch64-linux-musl
 COPY musl-symlink.sh /

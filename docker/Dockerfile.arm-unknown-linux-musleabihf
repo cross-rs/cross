@@ -23,6 +23,13 @@ RUN /musl.sh \
                       --with-float=hard \
                       --with-mode=arm"
 
+COPY tidyup.sh /
+RUN /tidyup.sh
+
+FROM scratch AS final
+COPY --from=build / /
+CMD ["/bin/bash"]
+
 ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-musleabihf-
 ENV CROSS_SYSROOT=/usr/local/arm-linux-musleabihf
 COPY musl-symlink.sh /
