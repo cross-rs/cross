@@ -26,6 +26,14 @@ ENV PATH=/x-tools/riscv64-unknown-linux-musl/bin/:$PATH
 COPY qemu.sh /
 RUN /qemu.sh riscv64
 
+COPY tidyup.sh /
+RUN /tidyup.sh
+
+FROM scratch AS final
+COPY --from=build / /
+CMD ["/bin/bash"]
+ENV PATH=/x-tools/riscv64-unknown-linux-musl/bin/:$PATH
+
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
