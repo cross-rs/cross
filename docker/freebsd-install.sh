@@ -121,10 +121,8 @@ setup_freebsd_packagesite() {
     pkg_source=$(freebsd_package_source "${url}")
 
     mkdir -p "${FREEBSD_PACKAGEDIR}"
-    curl --retry 3 -sSfL "${pkg_source}/packagesite.txz" -O
-    tar -C "${FREEBSD_PACKAGEDIR}" -xJf packagesite.txz
-
-    rm packagesite.txz
+    curl --retry 3 -sSfL "${pkg_source}/packagesite.tzst" -O
+    tar -C "${FREEBSD_PACKAGEDIR}" --zstd -xf packagesite.tzst
 }
 
 # don't provide the mirror as a positional argument, so it can be optional

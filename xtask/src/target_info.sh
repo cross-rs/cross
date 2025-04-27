@@ -304,7 +304,7 @@ case "${target}" in
         # the symbol versioning can be found here:
         #   https://wiki.freebsd.org/SymbolVersioning
         version=$(cat /opt/freebsd-version)
-        if [[ "${version}" =~ ([0-9]+)\.([0-9]+)" ("[A-Za-z]+")" ]]; then
+        if [[ "${version}" =~ ([0-9]+)\.([0-9]+)" ("[A-Za-z0-9]+")" ]]; then
             major_version="${BASH_REMATCH[1]}"
             minor_version="${BASH_REMATCH[2]}"
             case "${major_version}" in
@@ -328,6 +328,9 @@ case "${target}" in
                     ;;
                 13)
                     libc="1.6"
+                    ;;
+                14)
+                    libc="1.7"
                     ;;
                 *)
                     echo "Invalid FreeBSD version, got ${major_version}.${minor_version}." 1>&2
