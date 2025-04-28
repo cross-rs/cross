@@ -144,7 +144,7 @@ bsd_url="${mirror}/${FREEBSD_ARCH}/${base_release}-RELEASE"
 
 main() {
     local binutils=2.40 \
-        gcc=6.4.0 \
+        gcc=13.3.0 \
         target="${ARCH}-unknown-freebsd${FREEBSD_MAJOR}"
 
     install_packages ca-certificates \
@@ -153,7 +153,8 @@ main() {
         make \
         wget \
         texinfo \
-        xz-utils
+        xz-utils \
+        bzip2
 
     local td
     td="$(mktemp -d)"
@@ -188,9 +189,10 @@ main() {
     cp "${td}/freebsd/usr/lib/libc++.so.1" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libc++.a" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libcxxrt.a" "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib/libcxxrt.so" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib/libcompiler_rt.a" "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/lib{c,util,m,ssp_nonshared,memstat}.a "${destdir}/lib"
-    cp "${td}/freebsd/usr/lib"/lib{rt,execinfo,procstat}.so.1 "${destdir}/lib"
+    cp "${td}/freebsd/usr/lib"/lib{rt,execinfo,procstat}.so "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/libmemstat.so.3 "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/{crt1,Scrt1,crti,crtn}.o "${destdir}/lib"
     cp "${td}/freebsd/usr/lib"/libkvm.a "${destdir}/lib"
@@ -228,6 +230,7 @@ main() {
         --disable-libvtv \
         --disable-lto \
         --disable-nls \
+        --disable-multilib \
         --enable-languages=c,c++,fortran \
         --target="${target}"
     make "-j$(nproc)"

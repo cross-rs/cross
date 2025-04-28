@@ -21,7 +21,8 @@ main() {
         curl \
         dnsutils \
         jq \
-        xz-utils
+        xz-utils \
+        zstd
 
     local url=
     url=$(fetch_best_freebsd_mirror)
