@@ -8,7 +8,7 @@ set -euo pipefail
 
 unpack_rpm() {
     local package="${1}"
-    curl --retry 3 "http://mirror.centos.org/altarch/7/os/aarch64/Packages/${package}" -O
+    curl --retry 3 "https://vault.centos.org/altarch/7/os/aarch64/Packages/${package}" -O
     rpm2cpio "${package}" | cpio -idmv
 }
 
