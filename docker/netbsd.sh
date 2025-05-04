@@ -57,10 +57,10 @@ main() {
         "ftp://ftp.netbsd.org"
         "https://cdn.NetBSD.org"
     )
-    download_mirrors "pub/NetBSD/NetBSD-9.2/amd64/binary/sets" "base.tar.xz" "${mirrors[@]}"
+    download_mirrors "pub/NetBSD/NetBSD-9.3/amd64/binary/sets" "base.tar.xz" "${mirrors[@]}"
     tar -C "${td}/netbsd" -xJf base.tar.xz ./usr/include ./usr/lib ./lib
 
-    download_mirrors "pub/NetBSD/NetBSD-9.2/amd64/binary/sets" "comp.tar.xz" "${mirrors[@]}"
+    download_mirrors "pub/NetBSD/NetBSD-9.3/amd64/binary/sets" "comp.tar.xz" "${mirrors[@]}"
     tar -C "${td}/netbsd" -xJf comp.tar.xz ./usr/include ./usr/lib
 
     pushd binutils-build
