@@ -1,9 +1,3 @@
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus, Output};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::{env, fs, time};
-
 use super::custom::{Dockerfile, PreBuild};
 use super::image::PossibleImage;
 use super::Image;
@@ -18,12 +12,23 @@ use crate::id;
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{ColorChoice, MessageInfo, Verbosity};
 use crate::{CommandVariant, OutputExt, Target, TargetTriple};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::{Command, ExitStatus, Output};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::{env, fs, time};
 
 use rustc_version::Version as RustcVersion;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
+pub const CROSS_IMAGE: &str = {
+    if let Some(opt) = option_env!("CROSS_IMAGE") {
+        opt
+    } else {
+        "ghcr.io/cross-rs"
+    }
+};
 
-pub const CROSS_IMAGE: &str = "ghcr.io/cross-rs";
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:20.04";
 pub const DEFAULT_IMAGE_VERSION: &str = if crate::commit_info().is_empty() {
@@ -1619,7 +1624,7 @@ mod tests {
                 } else {
                     "x86_64-unknown-linux-gnu"
                 };
-                let expected = format!("ghcr.io/cross-rs/{expected_image_target}{expected_ver}");
+                let expected = format!("{CROSS_IMAGE}/{expected_image_target}{expected_ver}");
 
                 let image = get_image(&config, &target, uses_zig)?;
                 assert_eq!(image.reference.get(), expected);

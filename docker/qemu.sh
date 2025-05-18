@@ -173,8 +173,12 @@ main() {
         zlib-devel \
         zlib-static
 
-    if_centos 'curl --retry 3 -sSfL "https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD" -o /usr/share/automake*/config.guess'
-    if_centos 'curl --retry 3 -sSfL "https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD" -o /usr/share/automake*/config.sub'
+    ### See this thread in case there are other issues regarding Savannah from gnu
+    ### https://lists.nongnu.org/archive/html/savannah-hackers-public/2025-04/msg00003.html
+    ### This link should be a good reference for the config.git repository: https://cgit.git.savannah.gnu.org/cgit/config.git/
+
+    if_centos 'curl --retry 3 -sSfL "https://gitweb.git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD" -o /usr/share/automake*/config.guess'
+    if_centos 'curl --retry 3 -sSfL "https://gitweb.git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD" -o /usr/share/automake*/config.sub'
 
     # these are not packaged as static libraries in centos; build them manually
     if_centos build_static_libffi
