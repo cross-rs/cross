@@ -35,7 +35,7 @@ pub fn setup_rustup(
     if !toolchain.is_custom
         && !installed_toolchains(msg_info)?
             .into_iter()
-            .any(|t| t == toolchain.to_string())
+            .any(|t| t.split_whitespace().next().unwrap_or("") == toolchain.to_string())
     {
         install_toolchain(toolchain, msg_info)?;
     }
