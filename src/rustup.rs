@@ -85,7 +85,7 @@ pub fn active_toolchain(msg_info: &mut MessageInfo) -> Result<String> {
 
 pub fn installed_toolchains(msg_info: &mut MessageInfo) -> Result<Vec<String>> {
     let out = rustup_command(msg_info, true)
-        .args(["--quiet", "toolchain", "list"])
+        .args(["toolchain", "list", "--quiet"]) // suppress " (active, default)" suffix
         .run_and_get_stdout(msg_info)?;
 
     Ok(out.lines().map(|l| l.trim().to_owned()).collect())

@@ -1,0 +1,5 @@
+{
+    "description": "also recognize active and default as installed toolchains",
+    "issues": [1645, 1678],
+    "type": "fixed"
+}
