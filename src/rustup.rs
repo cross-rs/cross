@@ -85,10 +85,14 @@ pub fn active_toolchain(msg_info: &mut MessageInfo) -> Result<String> {
 
 pub fn installed_toolchains(msg_info: &mut MessageInfo) -> Result<Vec<String>> {
     let out = rustup_command(msg_info, true)
-        .args(["toolchain", "list", "--quiet"]) // suppress " (active, default)" suffix
+        .args(["toolchain", "list"]) // --quiet would be available from 1.28.0
         .run_and_get_stdout(msg_info)?;
 
-    Ok(out.lines().map(|l| l.trim().to_owned()).collect())
+    // Emulate --quiet by removing suffixes like " (active, default)" or " (override)" manually
+    Ok(out
+        .lines()
+        .map(|l| l.split_once(" (").map_or(l.trim(), |(a, _)| a).to_owned())
+        .collect())
 }
 
 pub fn available_targets(
