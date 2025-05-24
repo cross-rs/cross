@@ -1,0 +1,5 @@
+{
+    "description": "remove `asmjs-unknown-emscripten` target.",
+    "type": "removed",
+    "breaking": true
+}
