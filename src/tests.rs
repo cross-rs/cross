@@ -1,3 +1,4 @@
+mod rustup;
 mod toml;
 
 use std::{
