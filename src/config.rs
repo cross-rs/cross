@@ -189,7 +189,7 @@ impl Environment {
     }
 
     fn custom_toolchain_compat(&self) -> Option<String> {
-        self.get_var("CUSTOM_TOOLCHAIN_COMPAT")
+        self.get_var("CROSS_CUSTOM_TOOLCHAIN_COMPAT")
     }
 
     fn build_opts(&self) -> Option<String> {
