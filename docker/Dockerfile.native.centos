@@ -1,5 +1,6 @@
 FROM ubuntu:20.04 AS base
 ENV DEBIAN_FRONTEND=noninteractive
+ARG RUST_VERSION=latest
 
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -24,7 +25,7 @@ COPY cmake.sh /
 RUN /cmake.sh
 
 COPY xargo.sh /
-RUN /xargo.sh
+RUN /xargo.sh $RUST_VERSION
 
 # these need to be present in **both** FROM sections
 ARG TARGETARCH

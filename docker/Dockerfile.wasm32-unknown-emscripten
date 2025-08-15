@@ -1,6 +1,7 @@
 FROM emscripten/emsdk:3.1.14
 WORKDIR /
 ENV DEBIAN_FRONTEND=noninteractive
+ARG RUST_VERSION=latest
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -9,7 +10,7 @@ COPY cmake.sh /
 RUN /cmake.sh
 
 COPY xargo.sh /
-RUN /xargo.sh
+RUN /xargo.sh $RUST_VERSION
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
   libxml2 \

@@ -1,5 +1,6 @@
 FROM ubuntu:20.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
+ARG RUST_VERSION=latest
 
 COPY common.sh lib.sh /
 RUN /common.sh
@@ -8,7 +9,7 @@ COPY cmake.sh /
 RUN /cmake.sh
 
 COPY xargo.sh /
-RUN /xargo.sh
+RUN /xargo.sh $RUST_VERSION
 
 FROM cross-base AS build
 
