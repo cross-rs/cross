@@ -7,8 +7,8 @@ RUN /common.sh
 COPY cmake.sh /
 RUN /cmake.sh
 
-COPY xargo.sh /
-RUN /xargo.sh
+# COPY xargo.sh /
+# RUN /xargo.sh
 
 FROM cross-base AS build
 
