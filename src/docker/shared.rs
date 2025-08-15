@@ -573,6 +573,7 @@ impl ChildContainer {
     pub fn create(engine: Engine, name: String) -> Result<()> {
         // SAFETY: guarded by an atomic swap
         unsafe {
+            #[allow(static_mut_refs)]
             if !CHILD_CONTAINER.exists.swap(true, Ordering::SeqCst) {
                 CHILD_CONTAINER.info = Some(ChildContainerInfo {
                     engine,
@@ -597,6 +598,7 @@ impl ChildContainer {
 
     pub fn exists_static() -> bool {
         // SAFETY: an atomic load.
+        #[allow(static_mut_refs)]
         unsafe { CHILD_CONTAINER.exists() }
     }
 
@@ -608,6 +610,7 @@ impl ChildContainer {
 
     pub fn exit_static() {
         // SAFETY: an atomic store.
+        #[allow(static_mut_refs)]
         unsafe {
             CHILD_CONTAINER.exit();
         }
@@ -634,6 +637,7 @@ impl ChildContainer {
 
     pub fn finish_static(is_tty: bool, msg_info: &mut MessageInfo) {
         // SAFETY: internally guarded by an atomic load.
+        #[allow(static_mut_refs)]
         unsafe {
             CHILD_CONTAINER.finish(is_tty, msg_info);
         }
@@ -693,7 +697,7 @@ pub enum VolumeId {
 impl VolumeId {
     pub fn mount(&self, mount_prefix: &str) -> String {
         match self {
-            VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
+            VolumeId::Keep(id) => format!("{id}:{mount_prefix}"),
             VolumeId::Discard => mount_prefix.to_owned(),
         }
     }

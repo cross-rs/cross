@@ -21,6 +21,7 @@ pub fn dir() -> Result<PathBuf> {
 
 pub(crate) fn has_tempfiles() -> bool {
     // SAFETY: safe, since we only check if the stack is empty.
+    #[allow(static_mut_refs)]
     unsafe { !FILES.is_empty() || !DIRS.is_empty() }
 }
 
@@ -30,7 +31,9 @@ pub(crate) unsafe fn clean() {
     // don't expose FILES or DIRS outside this module,
     // so we can only add or remove from the stack using
     // our wrappers, guaranteeing add/remove in order.
+    #[allow(static_mut_refs)]
     FILES.clear();
+    #[allow(static_mut_refs)]
     DIRS.clear();
 }
 
@@ -40,13 +43,16 @@ unsafe fn push_tempfile() -> Result<&'static mut tempfile::NamedTempFile> {
     let parent = dir()?;
     fs::create_dir_all(&parent).ok();
     let file = tempfile::NamedTempFile::new_in(&parent)?;
+    #[allow(static_mut_refs)]
     FILES.push(file);
+    #[allow(static_mut_refs)]
     Ok(FILES.last_mut().expect("file list should not be empty"))
 }
 
 /// # Safety
 /// Safe as long as we have single-threaded execution.
 unsafe fn pop_tempfile() -> Option<tempfile::NamedTempFile> {
+    #[allow(static_mut_refs)]
     FILES.pop()
 }
 
@@ -89,13 +95,16 @@ unsafe fn push_tempdir() -> Result<&'static Path> {
     let parent = dir()?;
     fs::create_dir_all(&parent).ok();
     let dir = tempfile::TempDir::new_in(&parent)?;
+    #[allow(static_mut_refs)]
     DIRS.push(dir);
+    #[allow(static_mut_refs)]
     Ok(DIRS.last().expect("should not be empty").path())
 }
 
 /// # Safety
 /// Safe as long as we have single-threaded execution.
 unsafe fn pop_tempdir() -> Option<tempfile::TempDir> {
+    #[allow(static_mut_refs)]
     DIRS.pop()
 }
 
