@@ -138,15 +138,14 @@ impl<'a> Dockerfile<'a> {
             }
         };
 
-        if matches!(self, Dockerfile::File { .. }) {
-            if let Ok(cross_base_image) =
-                self::get_image_name(&options.config, &options.target, uses_zig)
-            {
-                docker_build.args([
-                    "--build-arg",
-                    &format!("CROSS_BASE_IMAGE={cross_base_image}"),
-                ]);
-            }
+        if matches!(self, Dockerfile::File { .. })
+            && let Ok(cross_base_image) =
+            self::get_image_name(&options.config, &options.target, uses_zig)
+        {
+            docker_build.args([
+                "--build-arg",
+                &format!("CROSS_BASE_IMAGE={cross_base_image}"),
+            ]);
         }
 
         docker_build.args(["--file".into(), path]);
@@ -155,7 +154,7 @@ impl<'a> Dockerfile<'a> {
             docker_build.args(Engine::parse_opts(&build_opts)?);
         }
 
-        let has_output = options.config.build_opts().map_or(false, |opts| {
+        let has_output = options.config.build_opts().is_some_and(|opts| {
             opts.contains("--load") || opts.contains("--output")
         });
         if options.engine.kind.is_docker() && !has_output {

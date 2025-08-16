@@ -185,7 +185,7 @@ impl Environment {
 
     fn custom_toolchain(&self) -> bool {
         self.get_var("CROSS_CUSTOM_TOOLCHAIN")
-            .map_or(false, |s| bool_from_envvar(&s))
+            .is_some_and(|s| bool_from_envvar(&s))
     }
 
     fn custom_toolchain_compat(&self) -> Option<String> {

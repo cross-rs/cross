@@ -70,10 +70,8 @@ pub fn hash_from_version_string(version: &str, index: usize) -> String {
         .and_then(|meta| meta.strip_prefix('('))
         .and_then(|meta| meta.strip_suffix(')'))
         .and_then(|meta| meta.split_once(' '))
-    {
-        if is_hash(commit) && is_date(date) {
-            return short_commit_hash(commit);
-        }
+        && is_hash(commit) && is_date(date) {
+        return short_commit_hash(commit);
     }
 
     // fallback: can't extract the hash. just create a hash of the version string.

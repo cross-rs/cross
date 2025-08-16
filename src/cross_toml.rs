@@ -162,7 +162,7 @@ impl CrossToml {
         if let Ok(toml_d) = toml_d {
             Self::parse_from_deserializer(toml_d, source, msg_info)
         } else {
-            Err(toml_d.err().unwrap().into())
+            Err(toml_d.err().expect("This err-field must be set").into())
         }
     }
 

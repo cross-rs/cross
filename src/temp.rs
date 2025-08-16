@@ -34,9 +34,13 @@ pub(crate) unsafe fn clean() {
     // so we can only add or remove from the stack using
     // our wrappers, guaranteeing add/remove in order.
     #[allow(static_mut_refs)]
-    FILES.clear();
+    unsafe {
+        FILES.clear();
+    }
     #[allow(static_mut_refs)]
-    DIRS.clear();
+    unsafe {
+        DIRS.clear();
+    }
 }
 
 /// # Safety
@@ -46,16 +50,16 @@ unsafe fn push_tempfile() -> Result<&'static mut tempfile::NamedTempFile> {
     fs::create_dir_all(&parent).ok();
     let file = tempfile::NamedTempFile::new_in(&parent)?;
     #[allow(static_mut_refs)]
-    FILES.push(file);
+    unsafe {FILES.push(file);}
     #[allow(static_mut_refs)]
-    Ok(FILES.last_mut().expect("file list should not be empty"))
+    unsafe {Ok(FILES.last_mut().expect("file list should not be empty"))}
 }
 
 /// # Safety
 /// Safe as long as we have single-threaded execution.
 unsafe fn pop_tempfile() -> Option<tempfile::NamedTempFile> {
     #[allow(static_mut_refs)]
-    FILES.pop()
+    unsafe {FILES.pop() }
 }
 
 #[derive(Debug)]
@@ -68,7 +72,7 @@ impl TempFile {
     /// Safe as long as we have single-threaded execution.
     pub unsafe fn new() -> Result<Self> {
         Ok(Self {
-            file: push_tempfile()?,
+            file: unsafe {push_tempfile()? },
         })
     }
 
@@ -98,16 +102,16 @@ unsafe fn push_tempdir() -> Result<&'static Path> {
     fs::create_dir_all(&parent).ok();
     let dir = tempfile::TempDir::new_in(&parent)?;
     #[allow(static_mut_refs)]
-    DIRS.push(dir);
+    unsafe {DIRS.push(dir); }
     #[allow(static_mut_refs)]
-    Ok(DIRS.last().expect("should not be empty").path())
+    Ok(unsafe { DIRS.last().expect("should not be empty").path() })
 }
 
 /// # Safety
 /// Safe as long as we have single-threaded execution.
 unsafe fn pop_tempdir() -> Option<tempfile::TempDir> {
     #[allow(static_mut_refs)]
-    DIRS.pop()
+    unsafe {DIRS.pop() }
 }
 
 #[derive(Debug)]
@@ -120,7 +124,7 @@ impl TempDir {
     /// Safe as long as we have single-threaded execution.
     pub unsafe fn new() -> Result<Self> {
         Ok(Self {
-            path: push_tempdir()?,
+            path: unsafe { push_tempdir()? },
         })
     }
 

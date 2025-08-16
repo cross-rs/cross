@@ -1403,14 +1403,13 @@ fn docker_inspect_self(engine: &Engine, msg_info: &mut MessageInfo) -> Result<St
             Ok(out.stdout()?)
         } else {
             let val = serde_json::from_slice::<serde_json::Value>(&out.stdout);
-            if let Ok(val) = val {
-                if let Some(array) = val.as_array() {
-                    // `docker inspect` completed but returned an empty array, most
-                    // likely indicating that the hostname isn't a valid container ID.
-                    if array.is_empty() {
-                        msg_info.debug("docker inspect found no containers matching HOSTNAME, retrying using mountinfo")?;
-                        return docker_inspect_self_mountinfo(engine, msg_info);
-                    }
+            if let Ok(val) = val
+                && let Some(array) = val.as_array() {
+                // `docker inspect` completed but returned an empty array, most
+                // likely indicating that the hostname isn't a valid container ID.
+                if array.is_empty() {
+                    msg_info.debug("docker inspect found no containers matching HOSTNAME, retrying using mountinfo")?;
+                    return docker_inspect_self_mountinfo(engine, msg_info);
                 }
             }
 
@@ -1530,7 +1529,7 @@ impl MountFinder {
         if cfg!(target_os = "windows") && host {
             // On Windows, we can not mount the directory name directly.
             // Instead, we convert the path to a linux compatible path.
-            return path.to_utf8().map(ToOwned::to_owned);
+            path.to_utf8().map(ToOwned::to_owned)
         } else if cfg!(target_os = "windows") {
             path.as_posix_absolute()
         } else {
@@ -1588,7 +1587,7 @@ mod tests {
     fn test_docker_userns() {
         let var = "CROSS_CONTAINER_USER_NAMESPACE";
         let old = env::var(var);
-        env::remove_var(var);
+        unsafe { env::remove_var(var); }
 
         let host = "\"engine\" \"--userns\" \"host\"".to_owned();
         let custom = "\"engine\" \"--userns\" \"custom\"".to_owned();
@@ -1601,21 +1600,23 @@ mod tests {
         };
         test(&host);
 
-        env::set_var(var, "auto");
+        unsafe { env::set_var(var, "auto"); }
         test(&host);
 
-        env::set_var(var, "none");
+        unsafe { env::set_var(var, "none"); }
         test(&none);
 
-        env::set_var(var, "host");
+        unsafe { env::set_var(var, "host"); }
         test(&host);
 
-        env::set_var(var, "custom");
+        unsafe { env::set_var(var, "custom"); }
         test(&custom);
 
-        match old {
-            Ok(v) => env::set_var(var, v),
-            Err(_) => env::remove_var(var),
+        unsafe {
+            match old {
+                Ok(v) => env::set_var(var, v),
+                Err(_) => env::remove_var(var),
+            }
         }
     }
 
@@ -1674,7 +1675,7 @@ mod tests {
             let envvars = ["CARGO_HOME", "XARGO_HOME", "NIX_STORE"];
             for var in envvars {
                 result.push((var, env::var(var).ok()));
-                env::remove_var(var);
+                unsafe { env::remove_var(var); }
             }
 
             result
@@ -1683,7 +1684,7 @@ mod tests {
         fn reset_env(vars: Vec<(&'static str, Option<String>)>) {
             for (var, value) in vars {
                 if let Some(value) = value {
-                    env::set_var(var, value);
+                    unsafe { env::set_var(var, value); }
                 }
             }
         }

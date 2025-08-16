@@ -30,7 +30,7 @@ fn toml_check() -> Result<(), Box<dyn std::error::Error>> {
 
     for dir_entry in walk {
         let dir_entry = dir_entry?;
-        if dir_entry.file_type().map_or(true, |f| f.is_dir()) {
+        if dir_entry.file_type().is_none_or(|f| f.is_dir()) {
             continue;
         }
         eprintln!("File: {:?}", dir_entry.path());
@@ -89,7 +89,7 @@ pub fn text_line_no(text: &str, index: usize) -> usize {
     let mut count = 0;
     for line in text.split('\n') {
         line_no += 1;
-        count += line.as_bytes().len() + 1;
+        count += line.len() + 1;
         if count >= index {
             break;
         }

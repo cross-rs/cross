@@ -39,7 +39,7 @@ pub fn walk_dir<'a>(
                 .any(|dir| e.file_name() == dir)
             {
                 return false;
-            } else if e.file_type().map_or(false, |f| f.is_dir()) {
+            } else if e.file_type().is_some_and(|f| f.is_dir()) {
                 return true;
             }
             ext(e.path().extension())
@@ -141,7 +141,7 @@ release: {version}
 fn check_newlines() -> crate::Result<()> {
     for file in walk_dir(get_cargo_workspace(), &[".git", "target"], |_| true) {
         let file = file?;
-        if !file.file_type().map_or(true, |f| f.is_file()) {
+        if !file.file_type().is_none_or(|f| f.is_file()) {
             continue;
         }
         eprintln!("File: {:?}", file.path());
