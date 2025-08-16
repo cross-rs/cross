@@ -216,10 +216,10 @@ fn get_image_target(
         .repository
         .starts_with(CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX)
         && let Some(target) = target_list
-        .triples
-        .iter()
-        .find(|target| image.tag.starts_with(target.as_str()))
-        .cloned()
+            .triples
+            .iter()
+            .find(|target| image.tag.starts_with(target.as_str()))
+            .cloned()
     {
         return Ok(target);
     }

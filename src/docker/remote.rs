@@ -78,9 +78,9 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             && src.is_dir()
             && !src.to_string_lossy().ends_with("/.")
             && rel
-            == src
-            .file_name()
-            .expect("filename should be defined as we are a directory")
+                == src
+                    .file_name()
+                    .expect("filename should be defined as we are a directory")
         {
             msg_info.warn(format_args!(
                 "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
@@ -386,7 +386,8 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         self.copy_rust_manifest(mount_prefix, msg_info)?;
         self.copy_rust_triple(dirs.host_target(), mount_prefix, false, msg_info)?;
         if let Some(target_triple) = target_triple
-            && target_triple.triple() != dirs.host_target().triple() {
+            && target_triple.triple() != dirs.host_target().triple()
+        {
             self.copy_rust_triple(target_triple, mount_prefix, false, msg_info)?;
         }
 

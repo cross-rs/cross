@@ -1404,7 +1404,8 @@ fn docker_inspect_self(engine: &Engine, msg_info: &mut MessageInfo) -> Result<St
         } else {
             let val = serde_json::from_slice::<serde_json::Value>(&out.stdout);
             if let Ok(val) = val
-                && let Some(array) = val.as_array() {
+                && let Some(array) = val.as_array()
+            {
                 // `docker inspect` completed but returned an empty array, most
                 // likely indicating that the hostname isn't a valid container ID.
                 if array.is_empty() {
@@ -1587,7 +1588,9 @@ mod tests {
     fn test_docker_userns() {
         let var = "CROSS_CONTAINER_USER_NAMESPACE";
         let old = env::var(var);
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
 
         let host = "\"engine\" \"--userns\" \"host\"".to_owned();
         let custom = "\"engine\" \"--userns\" \"custom\"".to_owned();
@@ -1600,16 +1603,24 @@ mod tests {
         };
         test(&host);
 
-        unsafe { env::set_var(var, "auto"); }
+        unsafe {
+            env::set_var(var, "auto");
+        }
         test(&host);
 
-        unsafe { env::set_var(var, "none"); }
+        unsafe {
+            env::set_var(var, "none");
+        }
         test(&none);
 
-        unsafe { env::set_var(var, "host"); }
+        unsafe {
+            env::set_var(var, "host");
+        }
         test(&host);
 
-        unsafe { env::set_var(var, "custom"); }
+        unsafe {
+            env::set_var(var, "custom");
+        }
         test(&custom);
 
         unsafe {
@@ -1675,7 +1686,9 @@ mod tests {
             let envvars = ["CARGO_HOME", "XARGO_HOME", "NIX_STORE"];
             for var in envvars {
                 result.push((var, env::var(var).ok()));
-                unsafe { env::remove_var(var); }
+                unsafe {
+                    env::remove_var(var);
+                }
             }
 
             result
@@ -1684,7 +1697,9 @@ mod tests {
         fn reset_env(vars: Vec<(&'static str, Option<String>)>) {
             for (var, value) in vars {
                 if let Some(value) = value {
-                    unsafe { env::set_var(var, value); }
+                    unsafe {
+                        env::set_var(var, value);
+                    }
                 }
             }
         }

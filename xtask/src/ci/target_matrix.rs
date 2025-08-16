@@ -338,8 +338,7 @@ impl TargetMatrixArgs {
                 let matrix_target = m.to_image_target();
                 let matrix_string = matrix_target.to_string();
 
-                self
-                    .target
+                self.target
                     .iter()
                     .any(|t| t.parse::<ImageTarget>().unwrap() == matrix_target)
                     || self

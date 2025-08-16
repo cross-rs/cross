@@ -186,9 +186,7 @@ impl TargetTriple {
                 TargetTriple::X86_64UnknownLinuxGnu
                 | TargetTriple::Aarch64UnknownLinuxGnu
                 | TargetTriple::X86_64UnknownLinuxMusl
-                | TargetTriple::Aarch64UnknownLinuxMusl => {
-                    target.is_none_or(|t| t.needs_docker())
-                }
+                | TargetTriple::Aarch64UnknownLinuxMusl => target.is_none_or(|t| t.needs_docker()),
                 TargetTriple::X86_64PcWindowsMsvc => target.is_some_and(|t| {
                     t.triple() != TargetTriple::X86_64PcWindowsMsvc.triple() && t.needs_docker()
                 }),

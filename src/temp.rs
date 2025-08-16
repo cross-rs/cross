@@ -50,16 +50,22 @@ unsafe fn push_tempfile() -> Result<&'static mut tempfile::NamedTempFile> {
     fs::create_dir_all(&parent).ok();
     let file = tempfile::NamedTempFile::new_in(&parent)?;
     #[allow(static_mut_refs)]
-    unsafe {FILES.push(file);}
+    unsafe {
+        FILES.push(file);
+    }
     #[allow(static_mut_refs)]
-    unsafe {Ok(FILES.last_mut().expect("file list should not be empty"))}
+    unsafe {
+        Ok(FILES.last_mut().expect("file list should not be empty"))
+    }
 }
 
 /// # Safety
 /// Safe as long as we have single-threaded execution.
 unsafe fn pop_tempfile() -> Option<tempfile::NamedTempFile> {
     #[allow(static_mut_refs)]
-    unsafe {FILES.pop() }
+    unsafe {
+        FILES.pop()
+    }
 }
 
 #[derive(Debug)]
@@ -72,7 +78,7 @@ impl TempFile {
     /// Safe as long as we have single-threaded execution.
     pub unsafe fn new() -> Result<Self> {
         Ok(Self {
-            file: unsafe {push_tempfile()? },
+            file: unsafe { push_tempfile()? },
         })
     }
 
@@ -102,7 +108,9 @@ unsafe fn push_tempdir() -> Result<&'static Path> {
     fs::create_dir_all(&parent).ok();
     let dir = tempfile::TempDir::new_in(&parent)?;
     #[allow(static_mut_refs)]
-    unsafe {DIRS.push(dir); }
+    unsafe {
+        DIRS.push(dir);
+    }
     #[allow(static_mut_refs)]
     Ok(unsafe { DIRS.last().expect("should not be empty").path() })
 }
@@ -111,7 +119,9 @@ unsafe fn push_tempdir() -> Result<&'static Path> {
 /// Safe as long as we have single-threaded execution.
 unsafe fn pop_tempdir() -> Option<tempfile::TempDir> {
     #[allow(static_mut_refs)]
-    unsafe {DIRS.pop() }
+    unsafe {
+        DIRS.pop()
+    }
 }
 
 #[derive(Debug)]

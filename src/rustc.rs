@@ -70,7 +70,9 @@ pub fn hash_from_version_string(version: &str, index: usize) -> String {
         .and_then(|meta| meta.strip_prefix('('))
         .and_then(|meta| meta.strip_suffix(')'))
         .and_then(|meta| meta.split_once(' '))
-        && is_hash(commit) && is_date(date) {
+        && is_hash(commit)
+        && is_date(date)
+    {
         return short_commit_hash(commit);
     }
 
