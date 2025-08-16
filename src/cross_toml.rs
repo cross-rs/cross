@@ -6,11 +6,11 @@
 //! [1]: https://github.com/cross-rs/cross/blob/main/docs/config_file.md
 
 use crate::config::ConfVal;
-use crate::docker::custom::PreBuild;
 use crate::docker::PossibleImage;
+use crate::docker::custom::PreBuild;
 use crate::shell::MessageInfo;
-use crate::{config, errors::*};
 use crate::{Target, TargetList};
+use crate::{config, errors::*};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::{BTreeSet, HashMap};
@@ -157,7 +157,8 @@ impl CrossToml {
         source: Option<&str>,
         msg_info: &mut MessageInfo,
     ) -> Result<(Self, BTreeSet<String>)> {
-        let toml_d: std::result::Result<toml::Deserializer<'_>, Error> = toml::Deserializer::parse(toml_str);
+        let toml_d: std::result::Result<toml::Deserializer<'_>, Error> =
+            toml::Deserializer::parse(toml_str);
         if let Ok(toml_d) = toml_d {
             Self::parse_from_deserializer(toml_d, source, msg_info)
         } else {

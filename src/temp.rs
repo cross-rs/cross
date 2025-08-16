@@ -22,7 +22,9 @@ pub fn dir() -> Result<PathBuf> {
 pub(crate) fn has_tempfiles() -> bool {
     // SAFETY: safe, since we only check if the stack is empty.
     #[allow(static_mut_refs)]
-    unsafe { !FILES.is_empty() || !DIRS.is_empty() }
+    unsafe {
+        !FILES.is_empty() || !DIRS.is_empty()
+    }
 }
 
 /// # Safety

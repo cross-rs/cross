@@ -4,7 +4,7 @@ use clap::{Args, Subcommand};
 use cross::docker::ImagePlatform;
 use cross::rustc::{QualifiedToolchain, Toolchain};
 use cross::shell::{MessageInfo, Stream};
-use cross::{docker, CommandExt, TargetTriple};
+use cross::{CommandExt, TargetTriple, docker};
 
 #[derive(Args, Debug)]
 pub struct ListVolumes {

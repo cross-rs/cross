@@ -8,6 +8,7 @@ use eyre::Context;
 
 use super::engine::Engine;
 use super::shared::*;
+use crate::TargetTriple;
 use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
@@ -15,7 +16,6 @@ use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
 use crate::shell::{MessageInfo, Stream};
 use crate::temp;
-use crate::TargetTriple;
 
 // prevent further commands from running if we handled
 // a signal earlier, and the volume is exited.

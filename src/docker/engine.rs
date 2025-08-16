@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::bool_from_envvar;
 use crate::extensions::CommandExt;
 use crate::shell::MessageInfo;
-use crate::{errors::*, OutputExt};
+use crate::{OutputExt, errors::*};
 
 use super::{Architecture, ContainerOs};
 

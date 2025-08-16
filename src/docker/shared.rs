@@ -4,12 +4,14 @@ use super::custom::{Dockerfile, PreBuild};
 use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
-use super::{engine::*, ProvidedImage};
+use super::custom::{Dockerfile, PreBuild};
+use super::image::PossibleImage;
+use super::{ProvidedImage, engine::*};
 use crate::cargo::CargoMetadata;
 use crate::config::Config;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
-use crate::file::{self, write_file, PathExt, ToUtf8};
+use crate::file::{self, PathExt, ToUtf8, write_file};
 use crate::id;
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{ColorChoice, MessageInfo, Verbosity};
@@ -599,7 +601,9 @@ impl ChildContainer {
     pub fn exists_static() -> bool {
         // SAFETY: an atomic load.
         #[allow(static_mut_refs)]
-        unsafe { CHILD_CONTAINER.exists() }
+        unsafe {
+            CHILD_CONTAINER.exists()
+        }
     }
 
     // when the `docker run` command finished.
@@ -1246,11 +1250,7 @@ pub enum GetImageError {
 }
 
 fn get_target_name(target: &Target, uses_zig: bool) -> &str {
-    if uses_zig {
-        "zig"
-    } else {
-        target.triple()
-    }
+    if uses_zig { "zig" } else { target.triple() }
 }
 
 fn get_user_image(
@@ -1899,7 +1899,9 @@ mod tests {
                 },
             }])).unwrap();
             let want = MountDetail {
-                source: PathBuf::from("/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/merged"),
+                source: PathBuf::from(
+                    "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/merged",
+                ),
                 destination: PathBuf::from("/"),
             };
             assert_eq!(want, actual);

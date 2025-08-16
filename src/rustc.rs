@@ -4,11 +4,11 @@ use std::process::Command;
 use rustc_version::{Version, VersionMeta};
 use serde::Deserialize;
 
+use crate::TargetTriple;
 use crate::docker::ImagePlatform;
 use crate::errors::*;
-use crate::extensions::{env_program, CommandExt};
+use crate::extensions::{CommandExt, env_program};
 use crate::shell::MessageInfo;
-use crate::TargetTriple;
 
 #[derive(Debug)]
 pub struct TargetList {

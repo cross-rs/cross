@@ -1,12 +1,12 @@
 use std::env;
 use std::path::{Path, PathBuf};
 
+use crate::Target;
 use crate::cargo::Subcommand;
 use crate::errors::Result;
-use crate::file::{absolute_path, PathExt};
+use crate::file::{PathExt, absolute_path};
 use crate::rustc::TargetList;
 use crate::shell::{self, MessageInfo};
-use crate::Target;
 
 #[derive(Debug)]
 pub struct Args {
