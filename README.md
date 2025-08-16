@@ -320,11 +320,14 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 
 ## Minimum Supported Rust Version (MSRV)
 
-This crate is guaranteed to compile on stable Rust 1.77.2 and up. It *might*
-compile with older versions but that may change in any new patch release.
+This crate is guaranteed to compile on stable Rust 1.88.0 and up. It *might*
+compile with older versions, but that may change in any new patch release.
 
-Some cross-compilation targets require a later Rust version, and using Xargo
-requires a nightly Rust toolchain.
+Some cross-compilation targets require a later Rust version.
+
+### Xargo
+"Xargo" is no longer supported since its maintenance was stopped a long time ago,
+and its compilation is now problematic.
 
 ## License
 
