@@ -43,6 +43,8 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          rust-version: "1.89.0"
 
   fmt:
     runs-on: ubuntu-latest
