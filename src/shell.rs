@@ -461,14 +461,14 @@ pub trait Stream {
     }
 }
 
-impl Stream for io::Stdin {
-    type TTY = io::Stdin;
-    const OWO: owo_colors::Stream = owo_colors::Stream::Stdin;
-
-    fn is_atty() -> bool {
-        io::stdin().is_terminal()
-    }
-}
+// impl Stream for io::Stdin {
+//     type TTY = io::Stdin;
+//     const OWO: owo_colors::Stream = owo_colors::Stream::Stdin;
+//
+//     fn is_atty() -> bool {
+//         io::stdin().is_terminal()
+//     }
+// }
 
 impl Stream for io::Stdout {
     type TTY = io::Stdout;

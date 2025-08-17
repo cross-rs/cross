@@ -773,7 +773,7 @@ pub(crate) fn run(
     }
 
     docker.arg("-d");
-    let is_tty = io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty();
+    let is_tty = /* io::Stdin::is_atty() && */ io::Stdout::is_atty() && io::Stderr::is_atty();
     if is_tty {
         docker.arg("-t");
     }
