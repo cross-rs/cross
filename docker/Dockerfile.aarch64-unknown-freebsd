@@ -7,9 +7,6 @@ RUN /common.sh
 COPY cmake.sh /
 RUN /cmake.sh
 
-# COPY xargo.sh /
-# RUN /xargo.sh
-
 FROM cross-base AS build
 
 RUN echo "export ARCH=aarch64" > /freebsd-arch.sh
@@ -42,3 +39,5 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_FREEBSD_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh 
     CROSS_CMAKE_SYSTEM_PROCESSOR=amd64 \
     CROSS_CMAKE_CRT=freebsd \
     CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m64"
+
+COPY ubuntu.sources /etc/apt/sources.list.d/
