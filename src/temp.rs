@@ -1,3 +1,5 @@
+#![allow(static_mut_refs)] // FIXME: use appropriate std types for `FILES` and `DIRS`.
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
