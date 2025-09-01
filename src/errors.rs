@@ -7,7 +7,7 @@ pub use color_eyre::Section;
 pub use eyre::Context;
 pub use eyre::Result;
 
-pub static mut TERMINATED: AtomicBool = AtomicBool::new(false);
+pub static TERMINATED: AtomicBool = AtomicBool::new(false);
 
 pub fn install_panic_hook() -> Result<()> {
     let is_dev = !crate::commit_info().is_empty() || std::env::var("CROSS_DEBUG").is_ok();
@@ -102,6 +102,7 @@ unsafe fn termination_handler() {
     // however, we'd need to store the engine path and the argument list as
     // a global CString and `Vec<CString>`, respectively. this atomic guard
     // makes this safe regardless.
+    #[allow(static_mut_refs)] // FIXME: Use correct types for CHILD_CONTAINER
     docker::CHILD_CONTAINER.terminate();
 
     // all termination exit codes are 128 + signal code. the exit code is

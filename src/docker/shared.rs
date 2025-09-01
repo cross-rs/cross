@@ -1,3 +1,5 @@
+#![allow(static_mut_refs)] // FIXME: Use correct types for CHILD_CONTAINER
+
 use super::custom::{Dockerfile, PreBuild};
 use super::image::PossibleImage;
 use super::Image;
