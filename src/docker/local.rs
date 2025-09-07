@@ -166,7 +166,7 @@ pub(crate) fn run(
     // simpler: just test if the program termination handler was called.
     // SAFETY: an atomic load.
     #[allow(static_mut_refs)]
-    let is_terminated = unsafe { crate::errors::TERMINATED.load(Ordering::SeqCst) };
+    let is_terminated = crate::errors::TERMINATED.load(Ordering::SeqCst);
     if !is_terminated {
         ChildContainer::exit_static();
     }

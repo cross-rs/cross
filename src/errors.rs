@@ -19,7 +19,7 @@ pub fn install_panic_hook() -> Result<()> {
 
 /// # Safety
 /// Safe as long as we have single-threaded execution.
-unsafe fn termination_handler() {
+fn termination_handler() {
     // we can't warn the user here, since locks aren't signal-safe.
     // we can delete files, since fdopendir is thread-safe, and
     // `openat`, `unlinkat`, and `lstat` are signal-safe.
@@ -106,7 +106,7 @@ unsafe fn termination_handler() {
     // a global CString and `Vec<CString>`, respectively. this atomic guard
     // makes this safe regardless.
     #[allow(static_mut_refs)] // FIXME: Use correct types for CHILD_CONTAINER
-    docker::CHILD_CONTAINER.terminate();
+    unsafe { docker::CHILD_CONTAINER.terminate(); }
 
     // all termination exit codes are 128 + signal code. the exit code is
     // 130 for Ctrl+C or SIGINT (signal code 2) for linux, macos, and windows.

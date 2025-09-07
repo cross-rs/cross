@@ -4,8 +4,6 @@ use super::custom::{Dockerfile, PreBuild};
 use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
-use super::custom::{Dockerfile, PreBuild};
-use super::image::PossibleImage;
 use super::{ProvidedImage, engine::*};
 use crate::cargo::CargoMetadata;
 use crate::config::Config;
