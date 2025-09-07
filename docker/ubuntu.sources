@@ -7,8 +7,8 @@ Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 Types: deb deb-src
 URIs: http://ports.ubuntu.com/ubuntu-ports
-Suites: noble noble-updates noble-security
-Architectures: arm64
+Suites: noble noble-updates noble-backports noble-security
+Architectures: arm64 armhf
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
