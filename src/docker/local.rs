@@ -136,9 +136,7 @@ pub(crate) fn run(
         ]);
     }
 
-    if
-    /* io::Stdin::is_atty() && */
-    io::Stdout::is_atty() && io::Stderr::is_atty() {
+    if io::Stdout::is_atty() && io::Stderr::is_atty() {
         docker.arg("-t");
     }
 
