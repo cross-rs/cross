@@ -118,7 +118,7 @@ fn termination_handler() {
 pub fn install_termination_hook() -> Result<()> {
     // SAFETY: safe since single-threaded execution.
     unsafe {
-        signal_hook::low_level::register(signal_hook::consts::SIGINT, || termination_handler())
+        signal_hook::low_level::register(signal_hook::consts::SIGINT, termination_handler)
     }
     .map_err(Into::into)
     .map(|_| ())
