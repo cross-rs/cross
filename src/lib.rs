@@ -24,7 +24,6 @@
     clippy::ref_binding_to_reference,
     clippy::semicolon_if_nothing_returned,
     clippy::str_to_string,
-    clippy::string_to_string,
     clippy::unwrap_used
 )]
 
