@@ -326,8 +326,9 @@ compile with older versions, but that may change in any new patch release.
 Some cross-compilation targets require a later Rust version.
 
 ### Xargo
+
 "Xargo" is no longer supported since its maintenance was stopped a long time ago,
-and its compilation is now problematic.
+most of the functionality is available when using `build-std`.
 
 ## License
 
