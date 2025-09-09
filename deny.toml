@@ -20,7 +20,7 @@ ignore = [
 multiple-versions = "deny"
 deny = []
 skip-tree = [
-    { name = "nix", version = "=0.26.4", depth = 2 },
+    { name = "windows-sys", reason = "0.53 and 0.52 are used by different crates"},
 ]
 
 [sources]
