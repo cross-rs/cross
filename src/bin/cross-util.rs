@@ -79,9 +79,7 @@ fn get_container_engine(
 }
 
 macro_rules! get_engine {
-    ($args:ident, $docker_in_docker:expr, $msg_info: ident) => {{
-        get_container_engine($args.engine(), $docker_in_docker, &mut $msg_info)
-    }};
+    ($args:ident, $docker_in_docker:expr, $msg_info: ident) => {{ get_container_engine($args.engine(), $docker_in_docker, &mut $msg_info) }};
 }
 
 pub fn main() -> cross::Result<()> {

@@ -20,7 +20,7 @@ ignore = [
 multiple-versions = "deny"
 deny = []
 skip-tree = [
-    { name = "nix", version = "=0.26.4", depth = 2 },
+    { name = "windows-sys", reason = "0.53 and 0.52 are used by different crates"},
 ]
 
 [sources]
@@ -41,8 +41,10 @@ allow = [
   "0BSD",
   "BSD-2-Clause",
   "BSD-3-Clause",
+  "MPL-2.0",
   "Unlicense",
   "Unicode-DFS-2016",
+  "Unicode-3.0",
 ]
 
 [licenses.private]

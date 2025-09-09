@@ -1,6 +1,6 @@
 #[cfg(not(target_os = "windows"))]
 use nix::{
-    errno::{errno, Errno},
+    errno::Errno,
     unistd::{Gid, Uid},
 };
 #[cfg(not(target_os = "windows"))]
@@ -63,13 +63,13 @@ pub fn username() -> Result<Option<String>> {
         let passwd = libc::getpwuid(Uid::current().as_raw());
 
         if passwd.is_null() {
-            let errno = errno();
+            let errno = Errno::last_raw();
 
             if errno == 0 {
                 return Ok(None);
             }
 
-            return Err(Errno::from_i32(errno)).wrap_err("could not get username");
+            return Err(Errno::from_raw(errno)).wrap_err("could not get username");
         }
 
         CStr::from_ptr((*passwd).pw_name)

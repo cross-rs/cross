@@ -8,6 +8,7 @@ use eyre::Context;
 
 use super::engine::Engine;
 use super::shared::*;
+use crate::TargetTriple;
 use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
@@ -15,7 +16,6 @@ use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
 use crate::shell::{MessageInfo, Stream};
 use crate::temp;
-use crate::TargetTriple;
 
 // prevent further commands from running if we handled
 // a signal earlier, and the volume is exited.
@@ -73,22 +73,21 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         mount_prefix: &str,
         msg_info: &mut MessageInfo,
     ) -> Result<ExitStatus> {
-        if let Some((_, rel)) = reldst.rsplit_once('/') {
-            if msg_info.cross_debug
-                && src.is_dir()
-                && !src.to_string_lossy().ends_with("/.")
-                && rel
-                    == src
-                        .file_name()
-                        .expect("filename should be defined as we are a directory")
-            {
-                msg_info.warn(format_args!(
-                    "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
-                    src.as_posix_relative()?,
-                    reldst,
-                    std::panic::Location::caller()
-                ))?;
-            }
+        if let Some((_, rel)) = reldst.rsplit_once('/')
+            && msg_info.cross_debug
+            && src.is_dir()
+            && !src.to_string_lossy().ends_with("/.")
+            && rel
+                == src
+                    .file_name()
+                    .expect("filename should be defined as we are a directory")
+        {
+            msg_info.warn(format_args!(
+                "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
+                src.as_posix_relative()?,
+                reldst,
+                std::panic::Location::caller()
+            ))?;
         }
         subcommand_or_exit(self.engine, "cp")?
             .arg("-a")
@@ -386,10 +385,10 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         self.copy_rust_base(mount_prefix, msg_info)?;
         self.copy_rust_manifest(mount_prefix, msg_info)?;
         self.copy_rust_triple(dirs.host_target(), mount_prefix, false, msg_info)?;
-        if let Some(target_triple) = target_triple {
-            if target_triple.triple() != dirs.host_target().triple() {
-                self.copy_rust_triple(target_triple, mount_prefix, false, msg_info)?;
-            }
+        if let Some(target_triple) = target_triple
+            && target_triple.triple() != dirs.host_target().triple()
+        {
+            self.copy_rust_triple(target_triple, mount_prefix, false, msg_info)?;
         }
 
         Ok(())
@@ -613,7 +612,7 @@ impl Fingerprint {
         let to_copy: Vec<&str> = current
             .map
             .iter()
-            .filter(|(k, v1)| self.map.get(*k).map_or(true, |v2| v1 != &v2))
+            .filter(|(k, v1)| self.map.get(*k).is_none_or(|v2| v1 != &v2))
             .map(|(k, _)| k.as_str())
             .collect();
         let to_remove: Vec<&str> = self
@@ -774,7 +773,7 @@ pub(crate) fn run(
     }
 
     docker.arg("-d");
-    let is_tty = io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty();
+    let is_tty = /* io::Stdin::is_atty() && */ io::Stdout::is_atty() && io::Stderr::is_atty();
     if is_tty {
         docker.arg("-t");
     }
@@ -924,7 +923,7 @@ pub(crate) fn run(
                 final_args.push(arg);
             }
         }
-        if !has_target_dir && subcommand.map_or(true, |s| s.needs_target_in_command()) {
+        if !has_target_dir && subcommand.is_none_or(|s| s.needs_target_in_command()) {
             final_args.push("--target-dir".to_owned());
             final_args.push(target_dir.clone());
         }
@@ -1001,15 +1000,14 @@ symlink_recurse \"${{prefix}}\"
     {
         subcommand_or_exit(engine, "cp")?
             .arg("-a")
-            .arg(&format!("{container_id}:{mount_target_dir}",))
+            .arg(format!("{container_id}:{mount_target_dir}",))
             .arg(
                 package_dirs
                     .target()
                     .parent()
                     .expect("target directory should have a parent"),
             )
-            .run_and_get_status(msg_info, false)
-            .map_err::<eyre::ErrReport, _>(Into::into)?;
+            .run_and_get_status(msg_info, false)?;
     }
 
     ChildContainer::finish_static(is_tty, msg_info);

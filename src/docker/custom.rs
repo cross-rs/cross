@@ -4,12 +4,12 @@ use std::str::FromStr;
 
 use crate::docker::{self, DockerOptions, DockerPaths};
 use crate::shell::MessageInfo;
-use crate::{errors::*, file, CommandExt, ToUtf8};
 use crate::{CargoMetadata, TargetTriple};
+use crate::{CommandExt, ToUtf8, errors::*, file};
 
 use super::{
-    create_target_dir, get_image_name, path_hash, BuildCommandExt, BuildResultExt, Engine,
-    ImagePlatform,
+    BuildCommandExt, BuildResultExt, Engine, ImagePlatform, create_target_dir, get_image_name,
+    path_hash,
 };
 
 pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "localhost/cross-rs/cross-custom-";
@@ -138,15 +138,14 @@ impl<'a> Dockerfile<'a> {
             }
         };
 
-        if matches!(self, Dockerfile::File { .. }) {
-            if let Ok(cross_base_image) =
+        if matches!(self, Dockerfile::File { .. })
+            && let Ok(cross_base_image) =
                 self::get_image_name(&options.config, &options.target, uses_zig)
-            {
-                docker_build.args([
-                    "--build-arg",
-                    &format!("CROSS_BASE_IMAGE={cross_base_image}"),
-                ]);
-            }
+        {
+            docker_build.args([
+                "--build-arg",
+                &format!("CROSS_BASE_IMAGE={cross_base_image}"),
+            ]);
         }
 
         docker_build.args(["--file".into(), path]);
@@ -155,9 +154,10 @@ impl<'a> Dockerfile<'a> {
             docker_build.args(Engine::parse_opts(&build_opts)?);
         }
 
-        let has_output = options.config.build_opts().map_or(false, |opts| {
-            opts.contains("--load") || opts.contains("--output")
-        });
+        let has_output = options
+            .config
+            .build_opts()
+            .is_some_and(|opts| opts.contains("--load") || opts.contains("--output"));
         if options.engine.kind.is_docker() && !has_output {
             docker_build.args(["--output", "type=docker"]);
         };
@@ -266,7 +266,7 @@ fn docker_tag_name(file_name: &str) -> String {
 
     // in case our result ends in an invalid last char `-` or `.`
     // we remove
-    result = result.trim_end_matches(&['.', '-']).to_owned();
+    result = result.trim_end_matches(['.', '-']).to_owned();
 
     // in case all characters were invalid or we had all non-ASCII
     // characters followed by a `-` or `.`, we use a non-empty filename

@@ -35,3 +35,5 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: EmbarkStudios/cargo-deny-action@v1
+      with:
+        rust-version: "1.89.0"

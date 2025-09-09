@@ -4,11 +4,11 @@ use std::process::Command;
 use rustc_version::{Version, VersionMeta};
 use serde::Deserialize;
 
+use crate::TargetTriple;
 use crate::docker::ImagePlatform;
 use crate::errors::*;
-use crate::extensions::{env_program, CommandExt};
+use crate::extensions::{CommandExt, env_program};
 use crate::shell::MessageInfo;
-use crate::TargetTriple;
 
 #[derive(Debug)]
 pub struct TargetList {
@@ -70,15 +70,15 @@ pub fn hash_from_version_string(version: &str, index: usize) -> String {
         .and_then(|meta| meta.strip_prefix('('))
         .and_then(|meta| meta.strip_suffix(')'))
         .and_then(|meta| meta.split_once(' '))
+        && is_hash(commit)
+        && is_date(date)
     {
-        if is_hash(commit) && is_date(date) {
-            return short_commit_hash(commit);
-        }
+        return short_commit_hash(commit);
     }
 
     // fallback: can't extract the hash. just create a hash of the version string.
-    let buffer = const_sha1::ConstBuffer::from_slice(version.as_bytes());
-    short_commit_hash(&const_sha1::sha1(&buffer).to_string())
+    let buffer = const_sha1::ConstSlice::from_slice(version.as_bytes());
+    short_commit_hash(&const_sha1::sha1_from_const_slice(&buffer).to_string())
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]

@@ -5,7 +5,7 @@ use std::process::Command;
 use crate::config::bool_from_envvar;
 use crate::extensions::CommandExt;
 use crate::shell::MessageInfo;
-use crate::{errors::*, OutputExt};
+use crate::{OutputExt, errors::*};
 
 use super::{Architecture, ContainerOs};
 
@@ -175,7 +175,9 @@ fn is_docker_rootless(ce: &Path, msg_info: &mut MessageInfo) -> bool {
 fn various_is_rootless_configs() {
     let var = "CROSS_ROOTLESS_CONTAINER_ENGINE";
     let old = env::var(var);
-    env::remove_var(var);
+    unsafe {
+        env::remove_var(var);
+    }
 
     assert!(!is_rootless(EngineType::Docker).unwrap_or(false));
     assert!(is_rootless(EngineType::Docker).unwrap_or(true));
@@ -185,27 +187,33 @@ fn various_is_rootless_configs() {
     assert_eq!(is_rootless(EngineType::PodmanRemote), Some(true));
     assert_eq!(is_rootless(EngineType::Other), Some(true));
 
-    env::set_var(var, "0");
+    unsafe {
+        env::set_var(var, "0");
+    }
     assert_eq!(is_rootless(EngineType::Docker), Some(false));
     assert_eq!(is_rootless(EngineType::Podman), Some(false));
     assert_eq!(is_rootless(EngineType::PodmanRemote), Some(false));
     assert_eq!(is_rootless(EngineType::Other), Some(false));
 
-    env::set_var(var, "1");
+    unsafe {
+        env::set_var(var, "1");
+    }
     assert_eq!(is_rootless(EngineType::Docker), Some(true));
     assert_eq!(is_rootless(EngineType::Podman), Some(true));
     assert_eq!(is_rootless(EngineType::PodmanRemote), Some(true));
     assert_eq!(is_rootless(EngineType::Other), Some(true));
 
-    env::set_var(var, "auto");
+    unsafe {
+        env::set_var(var, "auto");
+    }
     assert_eq!(is_rootless(EngineType::Docker), None);
     assert_eq!(is_rootless(EngineType::Podman), Some(true));
     assert_eq!(is_rootless(EngineType::PodmanRemote), Some(true));
     assert_eq!(is_rootless(EngineType::Other), Some(true));
 
     match old {
-        Ok(v) => env::set_var(var, v),
-        Err(_) => env::remove_var(var),
+        Ok(v) => unsafe { env::set_var(var, v) },
+        Err(_) => unsafe { env::remove_var(var) },
     }
 }
 
