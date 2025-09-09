@@ -133,7 +133,7 @@ build_static_slirp() {
 }
 
 main() {
-    local version=5.1.0
+    local version=10.1.0
 
     if_centos version=4.2.1
 
