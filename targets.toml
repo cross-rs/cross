@@ -55,6 +55,16 @@ run = true
 runners = "qemu-user qemu-system"
 
 [[target]]
+target = "aarch64_be-unknown-linux-gnu"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+run = true
+runners = "qemu-user"
+build-std = true
+
+[[target]]
 target = "arm-unknown-linux-gnueabi"
 os = "ubuntu-latest"
 cpp = true

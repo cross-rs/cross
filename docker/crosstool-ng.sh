@@ -27,8 +27,11 @@ main() {
     local sleep=15s
     local timeout=5m
 
-    install_packages autoconf \
+    install_packages \
+        adduser \
+        autoconf \
         bison \
+        bzip2 \
         curl \
         flex \
         gawk \
