@@ -272,6 +272,14 @@ std = true
 run = true
 
 [[target]]
+target = "aarch64_be-unknown-linux-musl"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+run = true
+
+[[target]]
 target = "arm-unknown-linux-musleabihf"
 os = "ubuntu-latest"
 cpp = true
