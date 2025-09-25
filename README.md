@@ -207,6 +207,7 @@ terminate.
 | `aarch64-unknown-linux-gnu:centos` [7] | 2.17   | 4.8.5  |     | 4.2.1 |   ✓    |
 | `aarch64-unknown-linux-musl`           | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
 | `aarch64_be-unknown-linux-gnu`         | 2.36   | 14.2.0 | ✓   | 6.1.0 |   ✓    |
+| `aarch64_be-unknown-linux-musl`        | 1.2.5  | 14.2.0 | ✓   | 6.1.0 |   ✓    |
 | `arm-linux-androideabi` [1]            | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabi`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `arm-unknown-linux-gnueabihf`          | 2.31   | 8.5.0  | ✓   | 6.1.0 |   ✓    |
