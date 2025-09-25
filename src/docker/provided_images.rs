@@ -24,6 +24,11 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             sub: None
         },
         ProvidedImage {
+            name: "aarch64_be-unknown-linux-gnu",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
             name: "arm-unknown-linux-gnueabi",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
