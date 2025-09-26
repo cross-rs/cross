@@ -8,9 +8,6 @@ RUN /common.sh
 COPY cmake.sh /
 RUN /cmake.sh
 
-COPY xargo.sh /
-RUN /xargo.sh
-
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
   libxml2 \
   python

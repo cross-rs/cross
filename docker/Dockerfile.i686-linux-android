@@ -7,9 +7,6 @@ RUN /common.sh
 COPY cmake.sh /
 RUN /cmake.sh
 
-COPY xargo.sh /
-RUN /xargo.sh
-
 FROM cross-base AS build
 
 # We could supposedly directly run i686 binaries like we do for x86_64, but
