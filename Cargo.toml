@@ -29,7 +29,7 @@ members = ["xtask"]
 [dependencies]
 is-terminal = "0.4.2"
 clap = { version = "4.1.4", features = ["derive"] }
-color-eyre = { version = "0.6.2", default-features = false, features = ["track-caller"] }
+color-eyre = { version = "0.6.5", default-features = false, features = ["track-caller"] }
 eyre = "0.6.8"
 thiserror = "1.0.38"
 home = "0.5.4"
