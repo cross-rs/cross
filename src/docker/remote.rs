@@ -5,6 +5,7 @@ use std::process::{Command, ExitStatus};
 use std::{env, fs, time};
 
 use eyre::Context;
+use is_terminal::IsTerminal;
 
 use super::engine::Engine;
 use super::shared::*;
@@ -13,7 +14,7 @@ use crate::errors::Result;
 use crate::extensions::CommandExt;
 use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
-use crate::shell::{MessageInfo, Stream};
+use crate::shell::MessageInfo;
 use crate::temp;
 use crate::TargetTriple;
 
@@ -774,7 +775,8 @@ pub(crate) fn run(
     }
 
     docker.arg("-d");
-    let is_tty = io::Stdin::is_atty() && io::Stdout::is_atty() && io::Stderr::is_atty();
+    let is_tty =
+        io::stdin().is_terminal() && io::stdout().is_terminal() && io::stderr().is_terminal();
     if is_tty {
         docker.arg("-t");
     }
