@@ -1,3 +1,10 @@
+# Preface:
+
+This is a public fork of cross-rs and is only designed to be used internally by builds at @Induct-ie
+
+PRs are welcome if you choose to use this yourself and want stuff patched
+
+
 [![crates.io](https://img.shields.io/crates/v/cross.svg)](https://crates.io/crates/cross)
 [![crates.io](https://img.shields.io/crates/d/cross.svg)](https://crates.io/crates/cross)
 [![CI](https://github.com/cross-rs/cross/actions/workflows/ci.yml/badge.svg?query=branch%3Amain)](https://github.com/cross-rs/cross/actions/workflows/ci.yml?query=branch)
