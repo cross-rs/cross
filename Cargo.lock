@@ -250,41 +250,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 
 [[package]]
-name = "cross"
-version = "0.0.1"
-dependencies = [
- "clap",
- "color-eyre",
- "const-sha1",
- "directories",
- "dunce",
- "eyre",
- "home",
- "ignore",
- "is-terminal",
- "is_ci",
- "libc",
- "nix",
- "once_cell",
- "owo-colors",
- "regex",
- "rustc_version",
- "semver",
- "serde",
- "serde_ignored",
- "serde_json",
- "shell-escape",
- "shell-words",
- "signal-hook",
- "tempfile",
- "thiserror",
- "toml",
- "walkdir",
- "which",
- "winapi",
-]
-
-[[package]]
 name = "crossbeam-deque"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -515,6 +480,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29c15563dc2726973df627357ce0c9ddddbea194836909d655df6a75d2cf296d"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "lacrosse"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "color-eyre",
+ "const-sha1",
+ "directories",
+ "dunce",
+ "eyre",
+ "home",
+ "ignore",
+ "is-terminal",
+ "is_ci",
+ "libc",
+ "nix",
+ "once_cell",
+ "owo-colors",
+ "regex",
+ "rustc_version",
+ "semver",
+ "serde",
+ "serde_ignored",
+ "serde_json",
+ "shell-escape",
+ "shell-words",
+ "signal-hook",
+ "tempfile",
+ "thiserror",
+ "toml",
+ "walkdir",
+ "which",
+ "winapi",
 ]
 
 [[package]]
@@ -1201,8 +1201,8 @@ dependencies = [
  "chrono",
  "clap",
  "color-eyre",
- "cross",
  "eyre",
+ "lacrosse",
  "once_cell",
  "semver",
  "serde",

@@ -9,7 +9,7 @@ publish = false
 
 
 [dependencies]
-cross = { path = "..", features = ["dev"] }
+cross = { package = "lacrosse", path = "..", features = ["dev"] }
 walkdir = "2.3.3"
 color-eyre = "0.6.2"
 eyre = "0.6.8"

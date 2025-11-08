@@ -92,12 +92,12 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
                 }
                 let search = cargo_command()
                     .args(["search", "--limit", "1"])
-                    .arg("cross")
+                    .arg("lacrosse")
                     .run_and_get_stdout(&mut Verbosity::Verbose(2).into())?;
                 let (cross, rest) = search
                     .split_once(" = ")
                     .ok_or_else(|| eyre::eyre!("cargo search failed"))?;
-                assert_eq!(cross, "cross");
+                assert_eq!(cross, "lacrosse");
                 // Note: this version includes pre-releases.
                 let latest_version = semver::Version::parse(
                     rest.split('"')
