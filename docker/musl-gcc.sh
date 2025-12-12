@@ -19,7 +19,6 @@
 #   missing soft-fp routine `__trunctfsf2`
 #   https://github.com/rust-lang/compiler-builtins/pull/483
 
-set -x
 set -euo pipefail
 
 main() {
@@ -28,9 +27,9 @@ main() {
     minor=$(rustc_minor_version)
 
     if [[ $# -eq 0 ]] || [[ "${minor}" -ge "${patched_minor}" ]]; then
-        exec "${CROSS_TOOLCHAIN_PREFIX}"gcc "${@}"
+        exec "${CROSS_TOOLCHAIN_PREFIX}"gcc "$@"
     else
-        exec "${CROSS_TOOLCHAIN_PREFIX}"gcc "${@}" -lgcc -static-libgcc
+        exec "${CROSS_TOOLCHAIN_PREFIX}"gcc "$@" -lgcc -static-libgcc
     fi
 }
 
@@ -71,4 +70,4 @@ rustc_patch_version() {
     echo "${CROSS_RUSTC_PATCH_VERSION}"
 }
 
-main "${@}"
+main "$@"
