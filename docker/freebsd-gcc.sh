@@ -3,7 +3,6 @@
 # the freebsd images need libstdc++ to be linked as well
 # otherwise, we get `undefined reference to `std::ios_base::Init::Init()'`
 
-set -x
 set -euo pipefail
 
 main() {

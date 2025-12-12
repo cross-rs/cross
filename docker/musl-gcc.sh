@@ -19,7 +19,6 @@
 #   missing soft-fp routine `__trunctfsf2`
 #   https://github.com/rust-lang/compiler-builtins/pull/483
 
-set -x
 set -euo pipefail
 
 main() {
