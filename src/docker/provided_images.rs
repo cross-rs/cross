@@ -24,6 +24,11 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
             sub: None
         },
         ProvidedImage {
+            name: "aarch64_be-unknown-linux-gnu",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
             name: "arm-unknown-linux-gnueabi",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
@@ -125,6 +130,11 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
         },
         ProvidedImage {
             name: "aarch64-unknown-linux-musl",
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            sub: None
+        },
+        ProvidedImage {
+            name: "aarch64_be-unknown-linux-musl",
             platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
             sub: None
         },

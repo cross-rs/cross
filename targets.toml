@@ -55,6 +55,15 @@ run = true
 runners = "qemu-user qemu-system"
 
 [[target]]
+target = "aarch64_be-unknown-linux-gnu"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+run = true
+runners = "qemu-user"
+
+[[target]]
 target = "arm-unknown-linux-gnueabi"
 os = "ubuntu-latest"
 cpp = true
@@ -256,6 +265,14 @@ runners = "qemu-user qemu-system"
 
 [[target]]
 target = "aarch64-unknown-linux-musl"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+run = true
+
+[[target]]
+target = "aarch64_be-unknown-linux-musl"
 os = "ubuntu-latest"
 cpp = true
 dylib = true

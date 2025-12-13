@@ -25,6 +25,7 @@ install_packages \
     autoconf \
     automake \
     binutils \
+    bzip2 \
     ca-certificates \
     curl \
     file \
@@ -42,6 +43,7 @@ if_centos install_packages \
     pkgconfig
 
 if_ubuntu install_packages \
+    adduser \
     g++ \
     gfortran \
     libc6-dev \
