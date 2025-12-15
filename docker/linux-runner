@@ -53,7 +53,7 @@ drivernet="virtio-net-pci"
 
 # select qemu parameters
 case "${arch}" in
-    aarch64)
+    aarch64|aarch64_be)
         # 8 is the max number of cpu supported by qemu-aarch64
         n=$(( n > 8 ? 8 : n ))
         opt="-machine virt -cpu cortex-a57"
