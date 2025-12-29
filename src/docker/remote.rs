@@ -209,28 +209,6 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     }
 
     #[track_caller]
-    pub fn copy_xargo(&self, mount_prefix: &str, msg_info: &mut MessageInfo) -> Result<()> {
-        let dirs = &self.toolchain_dirs;
-        let reldst = dirs.xargo_mount_path_relative()?;
-        if dirs.xargo().exists() {
-            self.create_dir(
-                // this always works, even if we have `/xargo`, since
-                // this will be an absolute path. passing an empty path
-                // to `create_dir` isn't an issue.
-                posix_parent(dirs.xargo_mount_path())
-                    .expect("destination should have a parent")
-                    .strip_prefix('/')
-                    .expect("parent directory must be absolute"),
-                mount_prefix,
-                msg_info,
-            )?;
-            self.copy_files(&dirs.xargo().join("."), &reldst, mount_prefix, msg_info)?;
-        }
-
-        Ok(())
-    }
-
-    #[track_caller]
     pub fn copy_cargo(
         &self,
         mount_prefix: &str,
@@ -814,9 +792,6 @@ pub(crate) fn run(
     };
     if let VolumeId::Discard = volume {
         data_volume
-            .copy_xargo(mount_prefix, msg_info)
-            .wrap_err("when copying xargo")?;
-        data_volume
             .copy_cargo(mount_prefix, false, msg_info)
             .wrap_err("when copying cargo")?;
         data_volume
@@ -845,10 +820,6 @@ pub(crate) fn run(
     copy(package_dirs.host_root(), rel_mount_root, msg_info).wrap_err("when copying project")?;
     let sysroot = toolchain_dirs.get_sysroot().to_owned();
     let mut copied = vec![
-        (
-            toolchain_dirs.xargo(),
-            toolchain_dirs.xargo_mount_path_relative()?,
-        ),
         (
             toolchain_dirs.cargo(),
             toolchain_dirs.cargo_mount_path_relative()?,

@@ -81,14 +81,6 @@ pub(crate) fn run(
             "-v",
             &format!(
                 "{}:{}{selinux}",
-                toolchain_dirs.xargo_host_path()?,
-                toolchain_dirs.xargo_mount_path()
-            ),
-        ])
-        .args([
-            "-v",
-            &format!(
-                "{}:{}{selinux}",
                 toolchain_dirs.cargo_host_path()?,
                 toolchain_dirs.cargo_mount_path()
             ),

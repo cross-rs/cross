@@ -259,21 +259,15 @@ impl DockerPaths {
 #[derive(Debug)]
 pub struct ToolchainDirectories {
     cargo: PathBuf,
-    xargo: PathBuf,
     nix_store: Option<PathBuf>,
     toolchain: QualifiedToolchain,
     cargo_mount_path: String,
-    xargo_mount_path: String,
     sysroot_mount_path: String,
 }
 
 impl ToolchainDirectories {
     pub fn assemble(mount_finder: &MountFinder, toolchain: QualifiedToolchain) -> Result<Self> {
-        let home_dir =
-            home::home_dir().ok_or_else(|| eyre::eyre!("could not find home directory"))?;
         let cargo = home::cargo_home()?;
-        let xargo =
-            env::var_os("XARGO_HOME").map_or_else(|| home_dir.join(".xargo"), PathBuf::from);
         // NIX_STORE_DIR is an override of NIX_STORE, which is the path in derivations.
         let nix_store = env::var_os("NIX_STORE_DIR")
             .or_else(|| env::var_os("NIX_STORE"))
@@ -284,19 +278,16 @@ impl ToolchainDirectories {
         // cargo builds all intermediate directories, but fails
         // if it has other issues (such as permission errors).
         file::create_dir_all(&cargo)?;
-        file::create_dir_all(&xargo)?;
         if let Some(ref nix_store) = nix_store {
             file::create_dir_all(nix_store)?;
         }
 
         // get our mount paths prior to canonicalizing them
         let cargo_mount_path = cargo.as_posix_absolute()?;
-        let xargo_mount_path = xargo.as_posix_absolute()?;
 
         // now that we know the paths exist, canonicalize them. this avoids creating
         // directories after failed canonicalization into a shared directory.
         let cargo = file::canonicalize(&cargo)?;
-        let xargo = file::canonicalize(&xargo)?;
 
         let default_nix_store = PathBuf::from("/nix/store");
         let nix_store = match nix_store {
@@ -314,18 +305,15 @@ impl ToolchainDirectories {
         };
 
         let cargo = mount_finder.find_mount_path(cargo);
-        let xargo = mount_finder.find_mount_path(xargo);
 
         // canonicalize these once to avoid syscalls
         let sysroot_mount_path = toolchain.get_sysroot().as_posix_absolute()?;
 
         Ok(ToolchainDirectories {
             cargo,
-            xargo,
             nix_store,
             toolchain,
             cargo_mount_path,
-            xargo_mount_path,
             sysroot_mount_path,
         })
     }
@@ -362,18 +350,6 @@ impl ToolchainDirectories {
         &self.cargo_mount_path
     }
 
-    pub fn xargo(&self) -> &Path {
-        &self.xargo
-    }
-
-    pub fn xargo_host_path(&self) -> Result<&str> {
-        self.xargo.to_utf8()
-    }
-
-    pub fn xargo_mount_path(&self) -> &str {
-        &self.xargo_mount_path
-    }
-
     pub fn sysroot_mount_path(&self) -> &str {
         &self.sysroot_mount_path
     }
@@ -387,13 +363,6 @@ impl ToolchainDirectories {
             .strip_prefix('/')
             .map(ToOwned::to_owned)
             .ok_or_else(|| eyre::eyre!("cargo directory must be relative to root"))
-    }
-
-    pub fn xargo_mount_path_relative(&self) -> Result<String> {
-        self.xargo_mount_path()
-            .strip_prefix('/')
-            .map(ToOwned::to_owned)
-            .ok_or_else(|| eyre::eyre!("xargo directory must be relative to root"))
     }
 
     pub fn sysroot_mount_path_relative(&self) -> Result<String> {
@@ -1037,8 +1006,7 @@ impl DockerCommandExt for Command {
 
         let runner = options.config.runner(&options.target);
         let cross_runner = format!("CROSS_RUNNER={}", runner.unwrap_or_default());
-        self.args(["-e", &format!("XARGO_HOME={}", dirs.xargo_mount_path())])
-            .args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
+        self.args(["-e", &format!("CARGO_HOME={}", dirs.cargo_mount_path())])
             .args([
                 "-e",
                 &format!("CROSS_RUST_SYSROOT={}", dirs.sysroot_mount_path()),
@@ -1666,7 +1634,7 @@ mod tests {
 
         fn unset_env() -> Vec<(&'static str, Option<String>)> {
             let mut result = vec![];
-            let envvars = ["CARGO_HOME", "XARGO_HOME", "NIX_STORE"];
+            let envvars = ["CARGO_HOME", "NIX_STORE"];
             for var in envvars {
                 result.push((var, env::var(var).ok()));
                 env::remove_var(var);
@@ -1763,7 +1731,6 @@ mod tests {
             let toolchain_dirs = directories.toolchain_directories();
             let package_dirs = directories.package_directories();
             paths_equal(toolchain_dirs.cargo(), &home()?.join(".cargo"))?;
-            paths_equal(toolchain_dirs.xargo(), &home()?.join(".xargo"))?;
             paths_equal(package_dirs.host_root(), &metadata.workspace_root)?;
             assert_eq!(
                 package_dirs.mount_root(),
@@ -1809,7 +1776,6 @@ mod tests {
             let mount_path = |p| mount_finder.find_mount_path(p);
 
             paths_equal(toolchain_dirs.cargo(), &mount_path(home()?.join(".cargo")))?;
-            paths_equal(toolchain_dirs.xargo(), &mount_path(home()?.join(".xargo")))?;
             paths_equal(package_dirs.host_root(), &get_cwd()?)?;
             assert_eq!(package_dirs.mount_root(), &get_cwd()?.as_posix_absolute()?);
             assert_eq!(package_dirs.mount_cwd(), &get_cwd()?.as_posix_absolute()?);

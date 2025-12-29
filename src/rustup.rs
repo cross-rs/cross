@@ -269,7 +269,6 @@ pub fn component_is_installed(
 #[allow(clippy::too_many_arguments)]
 pub fn setup_components(
     target: &Target,
-    uses_xargo: bool,
     uses_build_std: bool,
     toolchain: &QualifiedToolchain,
     is_nightly: bool,
@@ -278,9 +277,6 @@ pub fn setup_components(
     msg_info: &mut MessageInfo,
 ) -> Result<(), color_eyre::Report> {
     if !toolchain.is_custom {
-        // build-std overrides xargo, but only use it if it's a built-in
-        // tool but not an available target or doesn't have rust-std.
-
         if !is_nightly && uses_build_std {
             eyre::bail!(
                 "no rust-std component available for {}: must use nightly",
@@ -288,8 +284,7 @@ pub fn setup_components(
             );
         }
 
-        if !uses_xargo
-            && !uses_build_std
+        if !uses_build_std
             && !available_targets.is_installed(target)
             && available_targets.contains(target)
         {

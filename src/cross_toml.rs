@@ -29,7 +29,6 @@ pub struct CrossEnvConfig {
 pub struct CrossBuildConfig {
     #[serde(default)]
     env: CrossEnvConfig,
-    xargo: Option<bool>,
     build_std: Option<BuildStd>,
     #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
     zig: Option<CrossZigConfig>,
@@ -44,7 +43,6 @@ pub struct CrossBuildConfig {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CrossTargetConfig {
-    xargo: Option<bool>,
     build_std: Option<BuildStd>,
     #[serde(default, deserialize_with = "opt_string_bool_or_struct")]
     zig: Option<CrossZigConfig>,
@@ -321,11 +319,6 @@ impl CrossToml {
     /// Returns the `target.{}.runner` part of `Cross.toml`
     pub fn runner(&self, target: &Target) -> Option<&String> {
         self.get_target(target).and_then(|t| t.runner.as_ref())
-    }
-
-    /// Returns the `build.xargo` or the `target.{}.xargo` part of `Cross.toml`
-    pub fn xargo(&self, target: &Target) -> ConfVal<bool> {
-        self.get_value(target, |b| b.xargo, |t| t.xargo)
     }
 
     /// Returns the `build.build-std` or the `target.{}.build-std` part of `Cross.toml`
@@ -631,7 +624,6 @@ mod tests {
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                     passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
                 },
-                xargo: Some(true),
                 build_std: None,
                 zig: None,
                 default_target: None,
@@ -642,7 +634,6 @@ mod tests {
 
         let test_str = r#"
           [build]
-          xargo = true
           pre-build = ["echo 'Hello World!'"]
 
           [build.env]
@@ -669,7 +660,6 @@ mod tests {
                     passthrough: Some(vec![p!("VAR1"), p!("VAR2")]),
                     volumes: Some(vec![p!("VOL1_ARG"), p!("VOL2_ARG")]),
                 },
-                xargo: Some(false),
                 build_std: Some(BuildStd::Bool(true)),
                 zig: None,
                 image: Some("test-image".into()),
@@ -687,7 +677,6 @@ mod tests {
                     passthrough: None,
                     volumes: None,
                 },
-                xargo: None,
                 build_std: None,
                 zig: Some(CrossZigConfig {
                     enable: Some(true),
@@ -711,7 +700,6 @@ mod tests {
             volumes = ["VOL1_ARG", "VOL2_ARG"]
             passthrough = ["VAR1", "VAR2"]
             [target.aarch64-unknown-linux-gnu]
-            xargo = false
             build-std = true
             image = "test-image"
             pre-build = []
@@ -737,7 +725,6 @@ mod tests {
                 triple: "aarch64-unknown-linux-gnu".into(),
             },
             CrossTargetConfig {
-                xargo: Some(false),
                 build_std: None,
                 zig: None,
                 image: Some(PossibleImage {
@@ -767,7 +754,6 @@ mod tests {
                     volumes: None,
                     passthrough: Some(vec![]),
                 },
-                xargo: Some(true),
                 build_std: None,
                 zig: Some(CrossZigConfig {
                     enable: None,
@@ -787,7 +773,6 @@ mod tests {
 
         let test_str = r#"
             [build]
-            xargo = true
             pre-build = []
 
             [build.zig.image]
@@ -798,7 +783,6 @@ mod tests {
             passthrough = []
 
             [target.aarch64-unknown-linux-gnu]
-            xargo = false
             dockerfile = "Dockerfile.test"
             pre-build = ["echo 'Hello'"]
             image.name = "test-image"
@@ -841,8 +825,7 @@ mod tests {
                     passthrough: None,
                     volumes: None,
                 },
-                build_std: None,
-                xargo: Some(true),
+                build_std: Some(BuildStd::Bool(true)),
                 zig: None,
                 default_target: None,
                 pre_build: None,
@@ -859,7 +842,7 @@ mod tests {
           cross = "1.2.3"
 
           [package.metadata.cross.build]
-          xargo = true
+          build-std = true
         "#;
 
         if let Some((parsed_cfg, _unused)) =
@@ -877,7 +860,6 @@ mod tests {
     pub fn fully_populated_roundtrip() -> Result<()> {
         let cfg = r#"
             [target.a]
-            xargo = false
             build-std = true
             image.name = "local"
             image.toolchain = ["x86_64-unknown-linux-gnu"]
@@ -900,7 +882,6 @@ mod tests {
     pub fn merge() -> Result<()> {
         let cfg1_str = r#"
             [target.aarch64-unknown-linux-gnu]
-            xargo = false
             build-std = true
             image = "test-image1"
 
@@ -909,7 +890,6 @@ mod tests {
             passthrough = ["VAR1"]
 
             [target.target2]
-            xargo = false
             build-std = true
             image = "test-image2"
 
@@ -919,7 +899,6 @@ mod tests {
 
             [build]
             build-std = true
-            xargo = true
 
             [build.env]
             volumes = []
@@ -928,7 +907,6 @@ mod tests {
 
         let cfg2_str = r#"
             [target.target2]
-            xargo = false
             build-std = false
             image = "test-image2-precedence"
 
@@ -937,7 +915,6 @@ mod tests {
             passthrough = ["VAR2_PRECEDENCE"]
 
             [target.target3]
-            xargo = false
             build-std = true
             image = "@sha256:test-image3"
 
@@ -947,7 +924,6 @@ mod tests {
 
             [build]
             build-std = ["core", "alloc"]
-            xargo = false
             default-target = "aarch64-unknown-linux-gnu"
 
             [build.env]
@@ -958,7 +934,6 @@ mod tests {
 
         let cfg_expected_str = r#"
             [target.aarch64-unknown-linux-gnu]
-            xargo = false
             build-std = true
             image = "test-image1"
 
@@ -967,7 +942,6 @@ mod tests {
             passthrough = ["VAR1"]
 
             [target.target2]
-            xargo = false
             build-std = false
             image = "test-image2-precedence"
 
@@ -976,7 +950,6 @@ mod tests {
             passthrough = ["VAR2_PRECEDENCE"]
 
             [target.target3]
-            xargo = false
             build-std = true
             image = "@sha256:test-image3"
 
@@ -986,7 +959,6 @@ mod tests {
 
             [build]
             build-std = ["core", "alloc"]
-            xargo = false
             default-target = "aarch64-unknown-linux-gnu"
 
             [build.env]
@@ -1013,7 +985,6 @@ mod tests {
                 "alloc".to_owned()
             ]))
         );
-        assert_eq!(build.xargo, Some(false));
         assert_eq!(build.default_target, Some(p!("aarch64-unknown-linux-gnu")));
         assert_eq!(build.pre_build, None);
         assert_eq!(build.dockerfile, None);
@@ -1023,7 +994,6 @@ mod tests {
         let targets = &cfg_expected.targets;
         let aarch64 = &targets[&Target::new_built_in("aarch64-unknown-linux-gnu")];
         assert_eq!(aarch64.build_std, Some(BuildStd::Bool(true)));
-        assert_eq!(aarch64.xargo, Some(false));
         assert_eq!(aarch64.image, Some(p!("test-image1")));
         assert_eq!(aarch64.pre_build, None);
         assert_eq!(aarch64.dockerfile, None);
@@ -1032,7 +1002,6 @@ mod tests {
 
         let target2 = &targets[&Target::new_custom("target2")];
         assert_eq!(target2.build_std, Some(BuildStd::Bool(false)));
-        assert_eq!(target2.xargo, Some(false));
         assert_eq!(target2.image, Some(p!("test-image2-precedence")));
         assert_eq!(target2.pre_build, None);
         assert_eq!(target2.dockerfile, None);
@@ -1041,7 +1010,6 @@ mod tests {
 
         let target3 = &targets[&Target::new_custom("target3")];
         assert_eq!(target3.build_std, Some(BuildStd::Bool(true)));
-        assert_eq!(target3.xargo, Some(false));
         assert_eq!(target3.image, Some(p!("@sha256:test-image3")));
         assert_eq!(target3.pre_build, None);
         assert_eq!(target3.dockerfile, None);

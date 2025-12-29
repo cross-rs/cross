@@ -91,10 +91,6 @@ impl Environment {
         self.get_var(&self.build_var_name(&Self::target_path(target, key)))
     }
 
-    fn xargo(&self, target: &Target) -> ConfVal<bool> {
-        self.get_values_for("XARGO", target, bool_from_envvar)
-    }
-
     fn build_std(&self, target: &Target) -> ConfVal<BuildStd> {
         self.get_values_for("BUILD_STD", target, |v| {
             if let Some(value) = try_bool_from_envvar(v) {
@@ -356,10 +352,6 @@ impl Config {
         Config { toml, env }
     }
 
-    pub fn xargo(&self, target: &Target) -> Option<bool> {
-        self.get_from_value(target, Environment::xargo, CrossToml::xargo)
-    }
-
     pub fn build_std(&self, target: &Target) -> Option<BuildStd> {
         self.get_from_ref(target, Environment::build_std, CrossToml::build_std)
     }
@@ -528,12 +520,10 @@ mod tests {
         #[test]
         pub fn parse_error_in_env() -> Result<()> {
             let mut map = std::collections::HashMap::new();
-            map.insert("CROSS_BUILD_XARGO", "tru");
             map.insert("CROSS_BUILD_STD", "false");
             map.insert("CROSS_BUILD_ZIG_IMAGE", "zig:local");
 
             let env = Environment::new(Some(map));
-            assert_eq!(env.xargo(&target()), (Some(true), None));
             assert_eq!(
                 env.build_std(&target()),
                 (Some(BuildStd::Bool(false)), None)
@@ -548,13 +538,10 @@ mod tests {
         #[test]
         pub fn build_and_target_set_returns_tuple() -> Result<()> {
             let mut map = std::collections::HashMap::new();
-            map.insert("CROSS_BUILD_XARGO", "true");
             map.insert("CROSS_BUILD_ZIG", "true");
             map.insert("CROSS_BUILD_ZIG_VERSION", "2.17");
-            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "false");
 
             let env = Environment::new(Some(map));
-            assert_eq!(env.xargo(&target()), (Some(true), Some(false)));
             assert_eq!(env.zig(&target()), (Some(true), None));
             assert_eq!(env.zig_version(&target()), (Some("2.17".into()), None));
 
@@ -566,11 +553,6 @@ mod tests {
             let map = std::collections::HashMap::new();
 
             let env = Environment::new(Some(map));
-            assert_eq!(env.build_var_name("build_xargo"), "CROSS_BUILD_XARGO");
-            assert_eq!(
-                env.build_var_name("target_aarch64-unknown-linux-gnu_XARGO"),
-                "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO"
-            );
             assert_eq!(
                 env.build_var_name("target-aarch64-unknown-linux-gnu_image"),
                 "CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_IMAGE"
@@ -612,62 +594,6 @@ mod tests {
                     .wrap_err("couldn't parse toml")?
                     .0,
             )
-        }
-
-        #[test]
-        pub fn env_and_toml_build_xargo_then_use_env() -> Result<()> {
-            let mut map = HashMap::new();
-            map.insert("CROSS_BUILD_XARGO", "true");
-            map.insert(
-                "CROSS_BUILD_PRE_BUILD",
-                "apt-get update\napt-get install zlib-dev",
-            );
-
-            let env = Environment::new(Some(map));
-            let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
-            assert_eq!(config.xargo(&target()), Some(true));
-            assert_eq!(config.build_std(&target()), None);
-            assert_eq!(
-                config.pre_build(&target()),
-                Some(PreBuild::Lines(vec![
-                    s!("apt-get update"),
-                    s!("apt-get install zlib-dev")
-                ]))
-            );
-
-            Ok(())
-        }
-
-        #[test]
-        pub fn env_target_and_toml_target_xargo_target_then_use_env() -> Result<()> {
-            let mut map = HashMap::new();
-            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
-            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_BUILD_STD", "core");
-            let env = Environment::new(Some(map));
-
-            let config = Config::new_with(Some(toml(TOML_TARGET_XARGO_FALSE)?), env);
-            assert_eq!(config.xargo(&target()), Some(true));
-            assert_eq!(
-                config.build_std(&target()),
-                Some(BuildStd::Crates(vec!["core".to_owned()]))
-            );
-            assert_eq!(config.pre_build(&target()), None);
-
-            Ok(())
-        }
-
-        #[test]
-        pub fn env_target_and_toml_build_xargo_then_use_toml() -> Result<()> {
-            let mut map = HashMap::new();
-            map.insert("CROSS_TARGET_AARCH64_UNKNOWN_LINUX_GNU_XARGO", "true");
-
-            let env = Environment::new(Some(map));
-            let config = Config::new_with(Some(toml(TOML_BUILD_XARGO_FALSE)?), env);
-            assert_eq!(config.xargo(&target()), Some(true));
-            assert_eq!(config.build_std(&target()), None);
-            assert_eq!(config.pre_build(&target()), None);
-
-            Ok(())
         }
 
         #[test]
@@ -831,11 +757,6 @@ mod tests {
             Ok(())
         }
 
-        static TOML_BUILD_XARGO_FALSE: &str = r#"
-    [build]
-    xargo = false
-    "#;
-
         static TOML_BUILD_PRE_BUILD: &str = r#"
     [build]
     pre-build = ["apt-get update && apt-get install zlib-dev"]
@@ -848,16 +769,10 @@ mod tests {
     dockerfile = "Dockerfile2"
     "#;
 
-        static TOML_TARGET_XARGO_FALSE: &str = r#"
-    [target.aarch64-unknown-linux-gnu]
-    xargo = false
-    "#;
-
         static TOML_BUILD_VOLUMES: &str = r#"
     [build.env]
     volumes = ["VOLUME3", "VOLUME4"]
     [target.aarch64-unknown-linux-gnu]
-    xargo = false
     "#;
 
         static TOML_ARRAYS_BOTH: &str = r#"
