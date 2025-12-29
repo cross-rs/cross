@@ -38,6 +38,8 @@ In-depth documentation with examples can be found [here][env-examples].
   binaries when using `cross` run.
 - `CARGO_BUILD_TARGET`: Sets the default target, similar to specifying
   `--target`.
+- `CROSS_BUILD_DOCKERFILE`: Specify to provide a custom Docker image for all
+  targets.
 - `CROSS_ROOTLESS_CONTAINER_ENGINE`: Specify whether to container engine runs
   as root or is rootless. If set to `auto` or not provided, it assumes `docker`
   runs as root and all other container engines are rootless.
