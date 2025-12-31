@@ -263,7 +263,6 @@ terminate.
 | `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5  | ✓   | 4.2.1 |   ✓    |
 | `x86_64-unknown-linux-musl`            | 1.2.3  | 9.2.0  | ✓   | N/A   |   ✓    |
 | `x86_64-unknown-netbsd` [3]            | 9.2.0  | 9.4.0  | ✓   | N/A   |        |
-<!--| `asmjs-unknown-emscripten` [7]       | 3.1.14 | 15.0.0  | ✓   | N/A   |   ✓    |-->
 
 [1] libc = bionic; Only works with native tests, that is, tests that do not
     depends on the Android Runtime. For i686 some tests may fails with the
