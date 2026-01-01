@@ -1542,8 +1542,7 @@ pub const PATH_HASH_SHORT: usize = 5;
 pub const PATH_HASH_UNIQUE: usize = 10;
 
 fn path_digest(path: &Path) -> Result<const_sha1::Digest> {
-    let buffer = const_sha1::ConstBuffer::from_slice(path.to_utf8()?.as_bytes());
-    Ok(const_sha1::sha1(&buffer))
+    Ok(const_sha1::sha1(path.to_utf8()?.as_bytes()))
 }
 
 pub fn path_hash(path: &Path, count: usize) -> Result<String> {
