@@ -229,13 +229,7 @@ impl QualifiedToolchain {
             .map_or(Ok(self.host), ImagePlatform::from_target)?;
         let channel = picked.channel;
 
-        Ok(Self::new(
-            &channel,
-            &date,
-            &host,
-            &self.sysroot,
-            false,
-        ))
+        Ok(Self::new(&channel, &date, &host, &self.sysroot, false))
     }
 
     pub fn set_sysroot(&mut self, convert: impl Fn(&Path) -> PathBuf) {
@@ -417,7 +411,7 @@ mod tests {
     fn with_picked_stable_removes_date() {
         let base = QualifiedToolchain::new(
             "nightly",
-            &Some("2024-08-02".to_string()),
+            &Some("2024-08-02".to_owned()),
             &ImagePlatform::from_const_target(TargetTriple::X86_64UnknownLinuxGnu),
             Path::new("/tmp/toolchain"),
             false,
@@ -434,7 +428,7 @@ mod tests {
     fn with_picked_beta_removes_date() {
         let base = QualifiedToolchain::new(
             "nightly",
-            &Some("2024-08-02".to_string()),
+            &Some("2024-08-02".to_owned()),
             &ImagePlatform::from_const_target(TargetTriple::X86_64UnknownLinuxGnu),
             Path::new("/tmp/toolchain"),
             false,
@@ -461,6 +455,6 @@ mod tests {
         let result = base.with_picked(picked).unwrap();
 
         assert_eq!(result.channel, "nightly");
-        assert_eq!(result.date, Some("2024-08-02".to_string()));
+        assert_eq!(result.date, Some("2024-08-02".to_owned()));
     }
 }
