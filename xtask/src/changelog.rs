@@ -358,7 +358,7 @@ fn read_changes(changes_dir: &Path) -> cross::Result<Changes> {
         let file_name = entry.file_name();
         let path = entry.path();
         let ext = path.extension();
-        if file_type.is_file() && ext.map_or(false, |v| v == "json") {
+        if file_type.is_file() && ext.is_some_and(|v| v == "json") {
             let stem = file_stem(&path)?;
             let id = IdType::parse_stem(stem)?;
             let contents = fs::read_to_string(path)?;
@@ -433,7 +433,7 @@ fn delete_changes(root: &Path) -> cross::Result<()> {
         let file_type = entry.file_type()?;
         let srcpath = entry.path();
         let ext = srcpath.extension();
-        if file_type.is_file() && ext.map_or(false, |v| v == "json") {
+        if file_type.is_file() && ext.is_some_and(|v| v == "json") {
             fs::remove_file(srcpath)?;
         }
     }
@@ -519,7 +519,7 @@ pub fn validate_changelog(
     if files.is_empty() {
         files = fs::read_dir(&changes_dir)?
             .filter_map(|x| x.ok())
-            .filter(|x| x.file_type().map_or(false, |v| v.is_file()))
+            .filter(|x| x.file_type().is_ok_and(|v| v.is_file()))
             .filter_map(|x| {
                 if x.path()
                     .extension()

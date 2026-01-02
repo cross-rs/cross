@@ -561,6 +561,12 @@ pub struct ChildContainer {
     exists: AtomicBool,
 }
 
+impl Default for ChildContainer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChildContainer {
     pub const fn new() -> ChildContainer {
         ChildContainer {
@@ -1525,7 +1531,7 @@ impl MountFinder {
         if cfg!(target_os = "windows") && host {
             // On Windows, we can not mount the directory name directly.
             // Instead, we convert the path to a linux compatible path.
-            return path.to_utf8().map(ToOwned::to_owned);
+            path.to_utf8().map(ToOwned::to_owned)
         } else if cfg!(target_os = "windows") {
             path.as_posix_absolute()
         } else {

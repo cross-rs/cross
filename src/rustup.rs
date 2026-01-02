@@ -300,7 +300,7 @@ pub fn setup_components(
         if args
             .subcommand
             .clone()
-            .map_or(false, |sc| sc == crate::Subcommand::Clippy)
+            .is_some_and(|sc| sc == crate::Subcommand::Clippy)
             && !component_is_installed("clippy", toolchain, msg_info)?
         {
             install_component("clippy", toolchain, msg_info)?;

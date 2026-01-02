@@ -204,7 +204,7 @@ fn has_no_ci_tests_label(pr: &str) -> cross::Result<bool> {
 /// Convert a `GITHUB_REF` into it's merge group pr
 fn process_merge_group(ref_: &str) -> cross::Result<&str> {
     ref_.split('/')
-        .last()
+        .next_back()
         .unwrap_or_default()
         .strip_prefix("pr-")
         .ok_or_else(|| eyre::eyre!("merge group ref must start last / segment with \"pr-\""))?
@@ -338,14 +338,13 @@ impl TargetMatrixArgs {
                 let matrix_target = m.to_image_target();
                 let matrix_string = matrix_target.to_string();
 
-                return self
-                    .target
+                self.target
                     .iter()
                     .any(|t| t.parse::<ImageTarget>().unwrap() == matrix_target)
                     || self
                         .target
                         .iter()
-                        .any(|t| wildmatch::WildMatch::new(t).matches(&matrix_string));
+                        .any(|t| wildmatch::WildMatch::new(t).matches(&matrix_string))
             })
         };
         if let Some(std) = self.std {

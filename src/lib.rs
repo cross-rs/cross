@@ -24,7 +24,6 @@
     clippy::ref_binding_to_reference,
     clippy::semicolon_if_nothing_returned,
     clippy::str_to_string,
-    clippy::string_to_string,
     clippy::unwrap_used
 )]
 
@@ -181,15 +180,13 @@ impl TargetTriple {
             // variable `CROSS_COMPATIBILITY_VERSION`.
             Ok("0.2.1") => match self {
                 TargetTriple::X86_64AppleDarwin | TargetTriple::Aarch64AppleDarwin => {
-                    target.map_or(false, |t| t.needs_docker())
+                    target.is_some_and(|t| t.needs_docker())
                 }
                 TargetTriple::X86_64UnknownLinuxGnu
                 | TargetTriple::Aarch64UnknownLinuxGnu
                 | TargetTriple::X86_64UnknownLinuxMusl
-                | TargetTriple::Aarch64UnknownLinuxMusl => {
-                    target.map_or(true, |t| t.needs_docker())
-                }
-                TargetTriple::X86_64PcWindowsMsvc => target.map_or(false, |t| {
+                | TargetTriple::Aarch64UnknownLinuxMusl => target.is_none_or(|t| t.needs_docker()),
+                TargetTriple::X86_64PcWindowsMsvc => target.is_some_and(|t| {
                     t.triple() != TargetTriple::X86_64PcWindowsMsvc.triple() && t.needs_docker()
                 }),
                 TargetTriple::Other(_) => false,
@@ -204,7 +201,7 @@ impl TargetTriple {
             // example to test custom docker images. Cross should not try to recognize if host and
             // target are equal, it's a user decision and if user wants to bypass cross he can call
             // cargo directly or omit the `--target` option.
-            _ => target.map_or(false, |t| t.needs_docker()),
+            _ => target.is_some_and(|t| t.needs_docker()),
         }
     }
 
@@ -223,7 +220,7 @@ impl TargetTriple {
     }
 }
 
-impl<'a> From<&'a str> for TargetTriple {
+impl From<&str> for TargetTriple {
     fn from(s: &str) -> TargetTriple {
         match s {
             "x86_64-apple-darwin" => TargetTriple::X86_64AppleDarwin,
@@ -601,7 +598,7 @@ pub fn run(
             let needs_docker = args
                 .subcommand
                 .clone()
-                .map_or(false, |sc| sc.needs_docker(is_remote));
+                .is_some_and(|sc| sc.needs_docker(is_remote));
             if target.needs_docker() && needs_docker {
                 let paths = docker::DockerPaths::create(
                     &engine,
@@ -645,7 +642,7 @@ pub fn run(
                     return Ok(None);
                 };
 
-                let needs_host = args.subcommand.map_or(false, |sc| sc.needs_host(is_remote));
+                let needs_host = args.subcommand.is_some_and(|sc| sc.needs_host(is_remote));
                 if !status.success() {
                     warn_on_failure(&target, &toolchain, msg_info)?;
                 }
@@ -669,7 +666,7 @@ pub fn install_interpreter_if_needed(
     let needs_interpreter = args
         .subcommand
         .clone()
-        .map_or(false, |sc| sc.needs_interpreter());
+        .is_some_and(|sc| sc.needs_interpreter());
 
     if host_version_meta.needs_interpreter()
         && needs_interpreter
@@ -694,7 +691,7 @@ pub fn get_filtered_args(
     let mut filtered_args = if args
         .subcommand
         .clone()
-        .map_or(false, |s| !s.needs_target_in_command())
+        .is_some_and(|s| !s.needs_target_in_command())
     {
         let mut filtered_args = Vec::new();
         let mut args_iter = args.cargo_args.clone().into_iter();
@@ -737,7 +734,7 @@ pub fn get_filtered_args(
     let is_test = args
         .subcommand
         .clone()
-        .map_or(false, |sc| sc == Subcommand::Test);
+        .is_some_and(|sc| sc == Subcommand::Test);
     if is_test && config.doctests().unwrap_or_default() && is_nightly {
         filtered_args.push("-Zdoctest-xcompile".to_owned());
     }

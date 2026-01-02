@@ -155,9 +155,10 @@ impl<'a> Dockerfile<'a> {
             docker_build.args(Engine::parse_opts(&build_opts)?);
         }
 
-        let has_output = options.config.build_opts().map_or(false, |opts| {
-            opts.contains("--load") || opts.contains("--output")
-        });
+        let has_output = options
+            .config
+            .build_opts()
+            .is_some_and(|opts| opts.contains("--load") || opts.contains("--output"));
         if options.engine.kind.is_docker() && !has_output {
             docker_build.args(["--output", "type=docker"]);
         };
