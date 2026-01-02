@@ -213,20 +213,23 @@ impl QualifiedToolchain {
     }
 
     /// Merge a "picked" toolchain, overriding set fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the host platform cannot be determined.
     pub fn with_picked(self, picked: Toolchain) -> Result<Self> {
-        let date = picked.date.or(self.date);
+        // Only nightly channel supports dated releases
+        let date = if picked.channel.starts_with("nightly") {
+            picked.date.or(self.date)
+        } else {
+            picked.date
+        };
         let host = picked
             .host
             .map_or(Ok(self.host), ImagePlatform::from_target)?;
         let channel = picked.channel;
 
-        Ok(QualifiedToolchain::new(
-            &channel,
-            &date,
-            &host,
-            &self.sysroot,
-            false,
-        ))
+        Ok(Self::new(&channel, &date, &host, &self.sysroot, false))
     }
 
     pub fn set_sysroot(&mut self, convert: impl Fn(&Path) -> PathBuf) {
@@ -402,5 +405,56 @@ mod tests {
             hash_from_version_string("rustc 1.61.0 (fe5b13d68 2022-05-18)", 2),
             "fe5b13d68"
         );
+    }
+
+    #[test]
+    fn with_picked_stable_removes_date() {
+        let base = QualifiedToolchain::new(
+            "nightly",
+            &Some("2024-08-02".to_owned()),
+            &ImagePlatform::from_const_target(TargetTriple::X86_64UnknownLinuxGnu),
+            Path::new("/tmp/toolchain"),
+            false,
+        );
+
+        let picked: Toolchain = "stable".parse().unwrap();
+        let result = base.with_picked(picked).unwrap();
+
+        assert_eq!(result.channel, "stable");
+        assert_eq!(result.date, None);
+    }
+
+    #[test]
+    fn with_picked_beta_removes_date() {
+        let base = QualifiedToolchain::new(
+            "nightly",
+            &Some("2024-08-02".to_owned()),
+            &ImagePlatform::from_const_target(TargetTriple::X86_64UnknownLinuxGnu),
+            Path::new("/tmp/toolchain"),
+            false,
+        );
+
+        let picked: Toolchain = "beta".parse().unwrap();
+        let result = base.with_picked(picked).unwrap();
+
+        assert_eq!(result.channel, "beta");
+        assert_eq!(result.date, None);
+    }
+
+    #[test]
+    fn with_picked_nightly_preserves_date() {
+        let base = QualifiedToolchain::new(
+            "stable",
+            &None,
+            &ImagePlatform::from_const_target(TargetTriple::X86_64UnknownLinuxGnu),
+            Path::new("/tmp/toolchain"),
+            false,
+        );
+
+        let picked: Toolchain = "nightly-2024-08-02".parse().unwrap();
+        let result = base.with_picked(picked).unwrap();
+
+        assert_eq!(result.channel, "nightly");
+        assert_eq!(result.date, Some("2024-08-02".to_owned()));
     }
 }
