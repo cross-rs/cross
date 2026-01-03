@@ -38,8 +38,7 @@ The `build` key allows you to set global variables, e.g.:
 
 ```toml
 [build]
-build-std = false                              # do not build the std library. has precedence over xargo
-xargo = true                                   # enable the use of xargo by default
+build-std = false                              # do not build the std library
 zig = false                                    # do not use zig cc for the builds
 default-target = "x86_64-unknown-linux-gnu"    # use this target if none is explicitly provided
 pre-build = [                                  # additional commands to run prior to building the package
@@ -161,8 +160,7 @@ targets:
 
 ```toml
 [target.aarch64-unknown-linux-gnu]
-build-std = ["core", "alloc"]   # always build the `core` and `alloc` crates from the std library. has precedence over xargo
-xargo = false                   # disable the use of xargo
+build-std = ["core", "alloc"]   # always build the `core` and `alloc` crates from the std library
 image = "test-image"            # use a different image for the target
 runner = "qemu-user"            # wrapper to run the binary (must be `qemu-system`, `qemu-user`, or `native`).
 ```

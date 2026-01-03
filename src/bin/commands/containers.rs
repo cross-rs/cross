@@ -347,7 +347,6 @@ pub fn create_persistent_volume(
     docker.run_and_get_status(msg_info, true)?;
 
     let data_volume = docker::ContainerDataVolume::new(engine, &container_id, &dirs);
-    data_volume.copy_xargo(mount_prefix, msg_info)?;
     data_volume.copy_cargo(mount_prefix, *copy_registry, msg_info)?;
     data_volume.copy_rust(None, mount_prefix, msg_info)?;
 

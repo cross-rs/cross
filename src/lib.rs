@@ -445,32 +445,24 @@ impl Serialize for Target {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandVariant {
     Cargo,
-    Xargo,
     Zig,
     Shell,
 }
 
 impl CommandVariant {
-    pub fn create(uses_zig: bool, uses_xargo: bool) -> Result<CommandVariant> {
-        match (uses_zig, uses_xargo) {
-            (true, true) => eyre::bail!("cannot use both zig and xargo"),
-            (true, false) => Ok(CommandVariant::Zig),
-            (false, true) => Ok(CommandVariant::Xargo),
-            (false, false) => Ok(CommandVariant::Cargo),
+    pub fn create(uses_zig: bool) -> Result<CommandVariant> {
+        match uses_zig {
+            true => Ok(CommandVariant::Zig),
+            false => Ok(CommandVariant::Cargo),
         }
     }
 
     pub fn to_str(self) -> &'static str {
         match self {
             CommandVariant::Cargo => "cargo",
-            CommandVariant::Xargo => "xargo",
             CommandVariant::Zig => "cargo-zigbuild",
             CommandVariant::Shell => "sh",
         }
-    }
-
-    pub fn uses_xargo(self) -> bool {
-        self == CommandVariant::Xargo
     }
 
     pub fn uses_zig(self) -> bool {
@@ -537,7 +529,6 @@ pub fn run(
         let CrossSetup {
             config,
             target,
-            uses_xargo,
             uses_zig,
             build_std,
             zig_version,
@@ -583,7 +574,6 @@ pub fn run(
 
             rustup::setup_components(
                 &target,
-                uses_xargo,
                 build_std.enabled(),
                 &toolchain,
                 is_nightly,
@@ -612,7 +602,7 @@ pub fn run(
                     target.clone(),
                     config,
                     image,
-                    crate::CommandVariant::create(uses_zig, uses_xargo)?,
+                    crate::CommandVariant::create(uses_zig)?,
                     rustc_version,
                     false,
                 );
@@ -769,7 +759,6 @@ pub fn setup(
         .or_else(|| config.target(&target_list))
         .unwrap_or_else(|| Target::from(host.triple(), &target_list));
     let build_std = config.build_std(&target).unwrap_or_default();
-    let uses_xargo = !build_std.enabled() && config.xargo(&target).unwrap_or(!target.is_builtin());
     let uses_zig = config.zig(&target).unwrap_or(false);
     let zig_version = config.zig_version(&target);
     let image = match docker::get_image(&config, &target, uses_zig) {
@@ -812,7 +801,6 @@ To override the toolchain mounted in the image, set `target.{target}.image.toolc
     Ok(Some(CrossSetup {
         config,
         target,
-        uses_xargo,
         uses_zig,
         build_std,
         zig_version,
@@ -827,7 +815,6 @@ To override the toolchain mounted in the image, set `target.{target}.image.toolc
 pub struct CrossSetup {
     pub config: Config,
     pub target: Target,
-    pub uses_xargo: bool,
     pub uses_zig: bool,
     pub build_std: BuildStd,
     pub zig_version: Option<String>,
