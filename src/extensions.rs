@@ -97,9 +97,9 @@ impl CommandExt for Command {
         let msg_info = &mut msg_info;
         let mut string = String::new();
         if let Some(caller) = msg_info.caller() {
-            write!(string, "[{}] ->\n+ ", caller).unwrap();
+            write!(string, "[{}] ->\n+ ", caller).expect("writing to string should not fail");
         } else {
-            write!(string, "+ ").unwrap();
+            write!(string, "+ ").expect("writing to string should not fail");
         };
         if let Some(cwd) = self.get_current_dir() {
             write!(
@@ -108,14 +108,14 @@ impl CommandExt for Command {
                 cwd,
                 msg_info.as_verbose(|info| self.command_pretty(info, |_| false))
             )
-            .unwrap();
+            .expect("writing to string should not fail");
         } else {
             write!(
                 string,
                 "{}",
                 msg_info.as_verbose(|info| self.command_pretty(info, |_| false))
             )
-            .unwrap();
+            .expect("writing to string should not fail");
         }
         string
     }

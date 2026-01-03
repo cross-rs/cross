@@ -77,8 +77,7 @@ pub fn hash_from_version_string(version: &str, index: usize) -> String {
     }
 
     // fallback: can't extract the hash. just create a hash of the version string.
-    let buffer = const_sha1::ConstBuffer::from_slice(version.as_bytes());
-    short_commit_hash(&const_sha1::sha1(&buffer).to_string())
+    short_commit_hash(&const_sha1::sha1(version.as_bytes()).to_string())
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]

@@ -561,6 +561,12 @@ pub struct ChildContainer {
     exists: AtomicBool,
 }
 
+impl Default for ChildContainer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChildContainer {
     pub const fn new() -> ChildContainer {
         ChildContainer {
@@ -1525,7 +1531,7 @@ impl MountFinder {
         if cfg!(target_os = "windows") && host {
             // On Windows, we can not mount the directory name directly.
             // Instead, we convert the path to a linux compatible path.
-            return path.to_utf8().map(ToOwned::to_owned);
+            path.to_utf8().map(ToOwned::to_owned)
         } else if cfg!(target_os = "windows") {
             path.as_posix_absolute()
         } else {
@@ -1542,8 +1548,7 @@ pub const PATH_HASH_SHORT: usize = 5;
 pub const PATH_HASH_UNIQUE: usize = 10;
 
 fn path_digest(path: &Path) -> Result<const_sha1::Digest> {
-    let buffer = const_sha1::ConstBuffer::from_slice(path.to_utf8()?.as_bytes());
-    Ok(const_sha1::sha1(&buffer))
+    Ok(const_sha1::sha1(path.to_utf8()?.as_bytes()))
 }
 
 pub fn path_hash(path: &Path, count: usize) -> Result<String> {

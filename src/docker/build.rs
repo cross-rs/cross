@@ -100,7 +100,7 @@ impl BuildResultExt for Result<()> {
                     .path
                     .file_name()
                     .and_then(|s| s.to_str())
-                    .map_or_else(|| "container engine", |s| s)
+                    .unwrap_or("container engine")
             )
         })
     }

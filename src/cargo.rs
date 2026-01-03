@@ -50,7 +50,7 @@ impl Subcommand {
     }
 }
 
-impl<'a> From<&'a str> for Subcommand {
+impl From<&str> for Subcommand {
     fn from(s: &str) -> Subcommand {
         match s {
             "b" | "build" => Subcommand::Build,

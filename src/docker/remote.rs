@@ -614,7 +614,7 @@ impl Fingerprint {
         let to_copy: Vec<&str> = current
             .map
             .iter()
-            .filter(|(k, v1)| self.map.get(*k).map_or(true, |v2| v1 != &v2))
+            .filter(|(k, v1)| self.map.get(*k).is_none_or(|v2| v1 != &v2))
             .map(|(k, _)| k.as_str())
             .collect();
         let to_remove: Vec<&str> = self
@@ -926,7 +926,7 @@ pub(crate) fn run(
                 final_args.push(arg);
             }
         }
-        if !has_target_dir && subcommand.map_or(true, |s| s.needs_target_in_command()) {
+        if !has_target_dir && subcommand.is_none_or(|s| s.needs_target_in_command()) {
             final_args.push("--target-dir".to_owned());
             final_args.push(target_dir.clone());
         }
@@ -1003,15 +1003,14 @@ symlink_recurse \"${{prefix}}\"
     {
         subcommand_or_exit(engine, "cp")?
             .arg("-a")
-            .arg(&format!("{container_id}:{mount_target_dir}",))
+            .arg(format!("{container_id}:{mount_target_dir}",))
             .arg(
                 package_dirs
                     .target()
                     .parent()
                     .expect("target directory should have a parent"),
             )
-            .run_and_get_status(msg_info, false)
-            .map_err::<eyre::ErrReport, _>(Into::into)?;
+            .run_and_get_status(msg_info, false)?;
     }
 
     ChildContainer::finish_static(is_tty, msg_info);
