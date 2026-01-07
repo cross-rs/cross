@@ -133,8 +133,8 @@ impl DockerOptions {
                     line: pre_build_script,
                     env,
                 } if !env
-                    || !pre_build_script.contains('\n')
-                        && paths.host_root().join(&pre_build_script).is_file() =>
+                    && !pre_build_script.contains('\n')
+                    && paths.host_root().join(&pre_build_script).is_file() =>
                 {
                     let custom = Dockerfile::Custom {
                         content: format!(
