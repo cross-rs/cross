@@ -1,11 +1,11 @@
 use std::process::Command;
 
+use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
 use clap::builder::{BoolishValueParser, PossibleValuesParser};
 use clap::Parser;
+use cross::docker::ImagePlatform;
 use cross::{shell::Verbosity, CommandExt};
 use serde::{Deserialize, Serialize};
-
-use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
 
 #[derive(Parser, Debug)]
 pub struct TargetMatrix {
@@ -17,6 +17,8 @@ pub struct TargetMatrix {
     pub merge_group: Option<String>,
     #[clap(subcommand)]
     pub subcommand: Option<TargetMatrixSub>,
+    #[clap(long)]
+    pub for_build: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -91,6 +93,7 @@ impl TargetMatrix {
                 weekly: false,
                 merge_group: Some(_) | None,
                 subcommand: None,
+                for_build: false | true,
             }
         ) || is_default_try
         {
@@ -99,26 +102,54 @@ impl TargetMatrix {
 
         app.filter(&mut matrix);
 
-        let matrix = matrix
-            .iter()
-            .map(|target| TargetMatrixElement {
-                pretty: target.to_image_target().alt(),
-                platforms: target.platforms(),
-                target: &target.target,
-                sub: target.sub.as_deref(),
-                os: &target.os,
-                run: target.run.map(|b| b as u8),
-                deploy: target.deploy.map(|b| b as u8),
-                build_std: target.build_std.map(|b| b as u8),
-                cpp: target.cpp.map(|b| b as u8),
-                dylib: target.dylib.map(|b| b as u8),
-                runners: target.runners.as_deref(),
-                std: target.std.map(|b| b as u8),
-                verbose: app.verbose,
-            })
-            .collect::<Vec<_>>();
+        let json = if self.for_build {
+            let matrix = matrix
+                .iter()
+                .flat_map(|target| {
+                    target
+                        .platforms()
+                        .iter()
+                        .map(move |platform| (target, platform))
+                })
+                .map(|(target, platform)| TargetMatrixElementForBuild {
+                    pretty: target.to_image_target().alt(),
+                    platform: platform.clone(),
+                    target: &target.target,
+                    sub: target.sub.as_deref(),
+                    os: &target.os,
+                    run: target.run.map(|b| b as u8),
+                    deploy: target.deploy.map(|b| b as u8),
+                    build_std: target.build_std.map(|b| b as u8),
+                    cpp: target.cpp.map(|b| b as u8),
+                    dylib: target.dylib.map(|b| b as u8),
+                    runners: target.runners.as_deref(),
+                    std: target.std.map(|b| b as u8),
+                    verbose: app.verbose,
+                })
+                .collect::<Vec<_>>();
+            serde_json::to_string(&matrix)?
+        } else {
+            let matrix = matrix
+                .iter()
+                .map(|target| TargetMatrixElement {
+                    pretty: target.to_image_target().alt(),
+                    platforms: target.platforms(),
+                    target: &target.target,
+                    sub: target.sub.as_deref(),
+                    os: &target.os,
+                    run: target.run.map(|b| b as u8),
+                    deploy: target.deploy.map(|b| b as u8),
+                    build_std: target.build_std.map(|b| b as u8),
+                    cpp: target.cpp.map(|b| b as u8),
+                    dylib: target.dylib.map(|b| b as u8),
+                    runners: target.runners.as_deref(),
+                    std: target.std.map(|b| b as u8),
+                    verbose: app.verbose,
+                })
+                .collect::<Vec<_>>();
+            serde_json::to_string(&matrix)?
+        };
 
-        let json = serde_json::to_string(&matrix)?;
         gha_output("matrix", &json)?;
         let tests = serde_json::to_string(&app.tests()?)?;
         gha_output("tests", &tests)?;
@@ -244,7 +275,32 @@ fn process_try_comment(message: &str) -> cross::Result<(bool, TargetMatrixArgs)>
 #[serde(rename_all = "kebab-case")]
 struct TargetMatrixElement<'a> {
     pretty: String,
-    platforms: &'a [String],
+    platforms: &'a [ImagePlatform],
+    target: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sub: Option<&'a str>,
+    os: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    run: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deploy: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    build_std: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cpp: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dylib: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    runners: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    std: Option<u8>,
+    verbose: bool,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "kebab-case")]
+struct TargetMatrixElementForBuild<'a> {
+    pretty: String,
+    platform: ImagePlatform,
     target: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     sub: Option<&'a str>,

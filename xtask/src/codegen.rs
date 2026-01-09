@@ -1,5 +1,4 @@
 use clap::Args;
-use cross::docker::ImagePlatform;
 use eyre::Context;
 use std::fmt::Write;
 
@@ -39,10 +38,7 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &["#,
             platform = &image_target
                 .platforms()
                 .iter()
-                .map(|p| {
-                    let image_platform: ImagePlatform =
-                        p.parse().expect("should be a valid platform");
-
+                .map(|image_platform| {
                     image_platform
                         .to_codegen_string()
                         .expect("should be a valid platform")
