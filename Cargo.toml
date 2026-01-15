@@ -17,7 +17,6 @@ include = [
   "README.md",
   "assets/*",
 ]
-rust-version = "1.92.0"
 
 [features]
 default = []
