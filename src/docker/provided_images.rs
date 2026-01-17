@@ -20,7 +20,7 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
         },
         ProvidedImage {
             name: "aarch64-unknown-linux-gnu",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
@@ -30,37 +30,37 @@ pub static PROVIDED_IMAGES: &[ProvidedImage] = &[
         },
         ProvidedImage {
             name: "arm-unknown-linux-gnueabi",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
             name: "arm-unknown-linux-gnueabihf",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
             name: "armv7-unknown-linux-gnueabi",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
             name: "armv7-unknown-linux-gnueabihf",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
             name: "thumbv7neon-unknown-linux-gnueabihf",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
             name: "i586-unknown-linux-gnu",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
             name: "i686-unknown-linux-gnu",
-            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU],
+            platforms: &[ImagePlatform::X86_64_UNKNOWN_LINUX_GNU, ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU],
             sub: None
         },
         ProvidedImage {
