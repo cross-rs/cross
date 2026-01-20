@@ -53,6 +53,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user qemu-system"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "aarch64_be-unknown-linux-gnu"
@@ -71,6 +72,7 @@ cpp = true
 dylib = true
 std = true
 run = true
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "arm-unknown-linux-gnueabihf"
@@ -79,6 +81,7 @@ cpp = true
 dylib = true
 std = true
 run = true
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "armv7-unknown-linux-gnueabi"
@@ -88,6 +91,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "armv7-unknown-linux-gnueabihf"
@@ -97,6 +101,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user qemu-system"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "thumbv7neon-unknown-linux-gnueabihf"
@@ -106,6 +111,7 @@ dylib = true
 std = true
 run = true
 runners = "qemu-user qemu-system"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "i586-unknown-linux-gnu"
@@ -114,6 +120,7 @@ cpp = true
 dylib = true
 std = true
 run = true
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "i686-unknown-linux-gnu"
@@ -123,6 +130,7 @@ dylib = true
 std = true
 run = true
 runners = "native qemu-user qemu-system"
+platforms = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [[target]]
 target = "loongarch64-unknown-linux-gnu"

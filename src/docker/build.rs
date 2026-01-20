@@ -41,7 +41,7 @@ pub trait BuildCommandExt {
     fn progress(&mut self, progress: Option<Progress>) -> Result<&mut Self>;
     fn verbose(&mut self, verbosity: Verbosity) -> &mut Self;
     fn disable_scan_suggest(&mut self) -> &mut Self;
-    fn cross_labels(&mut self, target: &str, platform: &str) -> &mut Self;
+    fn cross_labels(&mut self, target: &str, platform: &[&str]) -> &mut Self;
 }
 
 impl BuildCommandExt for Command {
@@ -74,15 +74,18 @@ impl BuildCommandExt for Command {
         self.env("DOCKER_SCAN_SUGGEST", "false")
     }
 
-    fn cross_labels(&mut self, target: &str, platform: &str) -> &mut Self {
+    fn cross_labels(&mut self, target: &str, platforms: &[&str]) -> &mut Self {
         self.args([
             "--label",
             &format!("{}.for-cross-target={target}", crate::CROSS_LABEL_DOMAIN,),
         ]);
-        self.args([
-            "--label",
-            &format!("{}.runs-with={platform}", crate::CROSS_LABEL_DOMAIN,),
-        ])
+        for platform in platforms {
+            self.args([
+                "--label",
+                &format!("{}.runs-with={platform}", crate::CROSS_LABEL_DOMAIN,),
+            ]);
+        }
+        self
     }
 }
 
