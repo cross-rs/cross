@@ -216,8 +216,8 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     ) -> Result<()> {
         let dirs = &self.toolchain_dirs;
         let reldst = dirs.cargo_mount_path_relative()?;
-        let copy_registry = env::var("CROSS_REMOTE_COPY_REGISTRY")
-            .map_or(copy_registry, |s| bool_from_envvar(&s));
+        let copy_registry =
+            env::var("CROSS_REMOTE_COPY_REGISTRY").map_or(copy_registry, |s| bool_from_envvar(&s));
 
         self.create_dir(&reldst, mount_prefix, msg_info)?;
         if copy_registry {
