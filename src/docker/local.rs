@@ -158,6 +158,7 @@ pub(crate) fn run(
     // terminate or it may be a known interrupt return status (130, 137, 143).
     // simpler: just test if the program termination handler was called.
     // SAFETY: an atomic load.
+    #[allow(static_mut_refs)]
     let is_terminated = crate::errors::TERMINATED.load(Ordering::SeqCst);
     if !is_terminated {
         ChildContainer::exit_static();

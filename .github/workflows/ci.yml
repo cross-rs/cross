@@ -404,7 +404,22 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker, foreign, podman]
+    needs:
+      [
+        shellcheck,
+        fmt,
+        clippy,
+        test,
+        generate-matrix,
+        build,
+        publish,
+        check,
+        remote,
+        bisect,
+        docker-in-docker,
+        foreign,
+        podman,
+      ]
     if: always()
     runs-on: ubuntu-latest
     steps:

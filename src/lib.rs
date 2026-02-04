@@ -58,14 +58,14 @@ use rustc::{QualifiedToolchain, Toolchain};
 use rustc_version::Channel;
 use serde::{Deserialize, Serialize, Serializer};
 
-pub use self::cargo::{cargo_command, cargo_metadata_with_args, CargoMetadata, Subcommand};
+pub use self::cargo::{CargoMetadata, Subcommand, cargo_command, cargo_metadata_with_args};
 use self::cross_toml::CrossToml;
 use self::errors::Context;
 use self::shell::{MessageInfo, Verbosity};
 
-pub use self::errors::{install_panic_hook, install_termination_hook, Result};
+pub use self::errors::{Result, install_panic_hook, install_termination_hook};
 pub use self::extensions::{CommandExt, OutputExt, SafeCommand};
-pub use self::file::{pretty_path, ToUtf8};
+pub use self::file::{ToUtf8, pretty_path};
 pub use self::rustc::{TargetList, VersionMetaExt};
 
 pub const CROSS_LABEL_DOMAIN: &str = "org.cross-rs";

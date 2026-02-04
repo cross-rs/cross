@@ -1,15 +1,15 @@
 #![allow(static_mut_refs)] // FIXME: Use correct types for CHILD_CONTAINER
 
-use super::custom::{Dockerfile, PreBuild};
-use super::image::PossibleImage;
 use super::Image;
 use super::PROVIDED_IMAGES;
-use super::{engine::*, ProvidedImage};
+use super::custom::{Dockerfile, PreBuild};
+use super::image::PossibleImage;
+use super::{ProvidedImage, engine::*};
 use crate::cargo::CargoMetadata;
 use crate::config::Config;
 use crate::errors::*;
 use crate::extensions::{CommandExt, SafeCommand};
-use crate::file::{self, write_file, PathExt, ToUtf8};
+use crate::file::{self, PathExt, ToUtf8, write_file};
 use crate::id;
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{ColorChoice, MessageInfo, Verbosity};
@@ -32,7 +32,7 @@ pub const CROSS_IMAGE: &str = {
 };
 
 // note: this is the most common base image for our images
-pub const UBUNTU_BASE: &str = "ubuntu:20.04";
+pub const UBUNTU_BASE: &str = "ubuntu:24.04";
 pub const DEFAULT_IMAGE_VERSION: &str = if crate::commit_info().is_empty() {
     env!("CARGO_PKG_VERSION")
 } else {
@@ -547,6 +547,7 @@ impl ChildContainer {
     pub fn create(engine: Engine, name: String) -> Result<()> {
         // SAFETY: guarded by an atomic swap
         unsafe {
+            #[allow(static_mut_refs)]
             if !CHILD_CONTAINER.exists.swap(true, Ordering::SeqCst) {
                 CHILD_CONTAINER.info = Some(ChildContainerInfo {
                     engine,
@@ -571,7 +572,10 @@ impl ChildContainer {
 
     pub fn exists_static() -> bool {
         // SAFETY: an atomic load.
-        unsafe { CHILD_CONTAINER.exists() }
+        #[allow(static_mut_refs)]
+        unsafe {
+            CHILD_CONTAINER.exists()
+        }
     }
 
     // when the `docker run` command finished.
@@ -582,6 +586,7 @@ impl ChildContainer {
 
     pub fn exit_static() {
         // SAFETY: an atomic store.
+        #[allow(static_mut_refs)]
         unsafe {
             CHILD_CONTAINER.exit();
         }
@@ -608,6 +613,7 @@ impl ChildContainer {
 
     pub fn finish_static(is_tty: bool, msg_info: &mut MessageInfo) {
         // SAFETY: internally guarded by an atomic load.
+        #[allow(static_mut_refs)]
         unsafe {
             CHILD_CONTAINER.finish(is_tty, msg_info);
         }
@@ -667,7 +673,7 @@ pub enum VolumeId {
 impl VolumeId {
     pub fn mount(&self, mount_prefix: &str) -> String {
         match self {
-            VolumeId::Keep(ref id) => format!("{id}:{mount_prefix}"),
+            VolumeId::Keep(id) => format!("{id}:{mount_prefix}"),
             VolumeId::Discard => mount_prefix.to_owned(),
         }
     }
@@ -1215,11 +1221,7 @@ pub enum GetImageError {
 }
 
 fn get_target_name(target: &Target, uses_zig: bool) -> &str {
-    if uses_zig {
-        "zig"
-    } else {
-        target.triple()
-    }
+    if uses_zig { "zig" } else { target.triple() }
 }
 
 fn get_user_image(
@@ -1372,14 +1374,14 @@ fn docker_inspect_self(engine: &Engine, msg_info: &mut MessageInfo) -> Result<St
             Ok(out.stdout()?)
         } else {
             let val = serde_json::from_slice::<serde_json::Value>(&out.stdout);
-            if let Ok(val) = val {
-                if let Some(array) = val.as_array() {
-                    // `docker inspect` completed but returned an empty array, most
-                    // likely indicating that the hostname isn't a valid container ID.
-                    if array.is_empty() {
-                        msg_info.debug("docker inspect found no containers matching HOSTNAME, retrying using mountinfo")?;
-                        return docker_inspect_self_mountinfo(engine, msg_info);
-                    }
+            if let Ok(val) = val
+                && let Some(array) = val.as_array()
+            {
+                // `docker inspect` completed but returned an empty array, most
+                // likely indicating that the hostname isn't a valid container ID.
+                if array.is_empty() {
+                    msg_info.debug("docker inspect found no containers matching HOSTNAME, retrying using mountinfo")?;
+                    return docker_inspect_self_mountinfo(engine, msg_info);
                 }
             }
 
@@ -1556,7 +1558,9 @@ mod tests {
     fn test_docker_userns() {
         let var = "CROSS_CONTAINER_USER_NAMESPACE";
         let old = env::var(var);
-        env::remove_var(var);
+        unsafe {
+            env::remove_var(var);
+        }
 
         let host = "\"engine\" \"--userns\" \"host\"".to_owned();
         let custom = "\"engine\" \"--userns\" \"custom\"".to_owned();
@@ -1569,21 +1573,31 @@ mod tests {
         };
         test(&host);
 
-        env::set_var(var, "auto");
+        unsafe {
+            env::set_var(var, "auto");
+        }
         test(&host);
 
-        env::set_var(var, "none");
+        unsafe {
+            env::set_var(var, "none");
+        }
         test(&none);
 
-        env::set_var(var, "host");
+        unsafe {
+            env::set_var(var, "host");
+        }
         test(&host);
 
-        env::set_var(var, "custom");
+        unsafe {
+            env::set_var(var, "custom");
+        }
         test(&custom);
 
-        match old {
-            Ok(v) => env::set_var(var, v),
-            Err(_) => env::remove_var(var),
+        unsafe {
+            match old {
+                Ok(v) => env::set_var(var, v),
+                Err(_) => env::remove_var(var),
+            }
         }
     }
 
@@ -1642,7 +1656,9 @@ mod tests {
             let envvars = ["CARGO_HOME", "NIX_STORE"];
             for var in envvars {
                 result.push((var, env::var(var).ok()));
-                env::remove_var(var);
+                unsafe {
+                    env::remove_var(var);
+                }
             }
 
             result
@@ -1651,7 +1667,9 @@ mod tests {
         fn reset_env(vars: Vec<(&'static str, Option<String>)>) {
             for (var, value) in vars {
                 if let Some(value) = value {
-                    env::set_var(var, value);
+                    unsafe {
+                        env::set_var(var, value);
+                    }
                 }
             }
         }
@@ -1865,7 +1883,9 @@ mod tests {
                 },
             }])).unwrap();
             let want = MountDetail {
-                source: PathBuf::from("/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/merged"),
+                source: PathBuf::from(
+                    "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/merged",
+                ),
                 destination: PathBuf::from("/"),
             };
             assert_eq!(want, actual);

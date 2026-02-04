@@ -3,10 +3,10 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    TargetTriple,
     docker::{CROSS_IMAGE, DEFAULT_IMAGE_VERSION},
     errors::*,
     shell::MessageInfo,
-    TargetTriple,
 };
 
 use super::Engine;
@@ -229,8 +229,8 @@ impl std::str::FromStr for ImagePlatform {
     // [os/arch[/variant]=]toolchain
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use serde::de::{
-            value::{Error as SerdeError, StrDeserializer},
             IntoDeserializer,
+            value::{Error as SerdeError, StrDeserializer},
         };
 
         // Try to match the docker platform string first

@@ -9,7 +9,7 @@ use std::{
 use once_cell::sync::OnceCell;
 use rustc_version::VersionMeta;
 
-use crate::{docker::ImagePlatform, rustc::QualifiedToolchain, TargetTriple, ToUtf8};
+use crate::{TargetTriple, ToUtf8, docker::ImagePlatform, rustc::QualifiedToolchain};
 
 static WORKSPACE: OnceCell<PathBuf> = OnceCell::new();
 
@@ -49,7 +49,7 @@ pub fn walk_dir<'a>(
 
 #[test]
 pub fn target_mismatch() {
-    use crate::{warn_host_version_mismatch, VersionMatch};
+    use crate::{VersionMatch, warn_host_version_mismatch};
 
     fn make_meta(input: &str) -> VersionMeta {
         let mut split = input.split(' ');
