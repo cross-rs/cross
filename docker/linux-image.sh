@@ -271,7 +271,7 @@ main() {
         # will prefer the system packages, which it can't find later.
         # removing these packages needs to occur after download via apt,
         # since apt-get relies on libgcc_s1 and libstdc++6.
-        dpkg -r --force-depends "${libgcc_packages[@]}"
+        dpkg -r --force-depends --force-remove-protected "${libgcc_packages[@]}"
     fi
     cd /qemu
 
