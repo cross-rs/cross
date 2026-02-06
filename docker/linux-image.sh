@@ -278,13 +278,14 @@ main() {
     # Install packages
     root="root-${arch}"
 
-    mkdir -p "${root}"/{bin,etc/dropbear,root,sys,dev,proc,sbin,tmp,usr/{bin,sbin},var/log}
-    for deb in "${arch}"/*deb; do
-        dpkg -x "${deb}" "${root}"/
-    done
     # make libraries and binaries available as usrmerge
     for d in lib lib64 bin sbin; do
-        ln -ns "usr/${d}" "${root}/${d}"
+        ln -nsd "usr/${d}" "${root}/${d}"
+    done
+    mkdir -p "${root}"/{etc/dropbear,root,sys,dev,proc,tmp,usr/{bin,sbin},var/log}
+    # install
+    for deb in "${arch}"/*deb; do
+        dpkg -x "${deb}" "${root}"/
     done
 
     cp "${root}/boot/vmlinu"* kernel
