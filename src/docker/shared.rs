@@ -1330,22 +1330,26 @@ pub fn get_image(
     Ok(image)
 }
 
-fn docker_inspect_self_mountinfo(engine: &Engine, msg_info: &mut MessageInfo) -> Result<String> {
+fn docker_find_self_mountinfo(engine: &Engine, msg_info: &mut MessageInfo) -> Result<String> {
     if cfg!(not(target_os = "linux")) {
         eyre::bail!("/proc/self/mountinfo is unavailable when target_os != linux");
     }
 
+    msg_info.debug("attempting to use /proc/self/mountinfo to find container id")?;
+
+    let docker_mount = engine.command().args(["info", "--format", "{{.DockerRootDir}}"]).run_and_get_stdout(msg_info).wrap_err("failed to get docker root dir")?;
+
     // The ID for the current Docker container might be in mountinfo,
     // somewhere in a mount root. Full IDs are 64-char hexadecimal
-    // strings, so the first matching path segment in a mount root
-    // containing /docker/ is likely to be what we're looking for. See:
+    // strings.
+    // See:
     // https://www.kernel.org/doc/Documentation/filesystems/proc.txt
     // https://community.toradex.com/t/15240/4
     let mountinfo = file::read("/proc/self/mountinfo")?;
     let container_id = mountinfo
         .lines()
         .filter_map(|s| s.split(' ').nth(3))
-        .filter(|s| s.contains("/docker/"))
+        .filter(|s| s.contains(&docker_mount))
         .flat_map(|s| s.split('/'))
         .find(|s| s.len() == 64 && s.as_bytes().iter().all(u8::is_ascii_hexdigit))
         .ok_or_else(|| eyre::eyre!("couldn't find container id in mountinfo"))?;
@@ -1358,7 +1362,7 @@ fn docker_inspect_self_mountinfo(engine: &Engine, msg_info: &mut MessageInfo) ->
 
 fn docker_inspect_self(engine: &Engine, msg_info: &mut MessageInfo) -> Result<String> {
     // Try to find the container ID by looking at HOSTNAME, and fallback to
-    // parsing `/proc/self/mountinfo` if HOSTNAME is unset or if there's no
+    // parsing other data if HOSTNAME is unset or if there's no
     // container that matches it (necessary e.g. when the container uses
     // `--network=host`, which is act's default, see issue #1321).
     // If `docker inspect` fails with unexpected output, skip the fallback
@@ -1378,7 +1382,7 @@ fn docker_inspect_self(engine: &Engine, msg_info: &mut MessageInfo) -> Result<St
                     // likely indicating that the hostname isn't a valid container ID.
                     if array.is_empty() {
                         msg_info.debug("docker inspect found no containers matching HOSTNAME, retrying using mountinfo")?;
-                        return docker_inspect_self_mountinfo(engine, msg_info);
+                        return docker_find_self_mountinfo(engine, msg_info);
                     }
                 }
             }
@@ -1391,7 +1395,7 @@ fn docker_inspect_self(engine: &Engine, msg_info: &mut MessageInfo) -> Result<St
         }
     } else {
         msg_info.debug("HOSTNAME environment variable is unset")?;
-        docker_inspect_self_mountinfo(engine, msg_info)
+        docker_find_self_mountinfo(engine, msg_info)
     }
 }
 
