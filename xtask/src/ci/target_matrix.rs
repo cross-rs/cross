@@ -63,6 +63,7 @@ impl TargetMatrix {
                     none: false,
                     has_image: true,
                     verbose: false,
+                    cross_debug: false,
                     tests: vec!["all".to_owned()],
                 },
             ),
@@ -115,6 +116,7 @@ impl TargetMatrix {
                 runners: target.runners.as_deref(),
                 std: target.std.map(|b| b as u8),
                 verbose: app.verbose,
+                cross_debug: app.cross_debug,
             })
             .collect::<Vec<_>>();
 
@@ -264,6 +266,12 @@ struct TargetMatrixElement<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     std: Option<u8>,
     verbose: bool,
+    #[serde(skip_serializing_if = "bool_negate")]
+    cross_debug: bool,
+}
+
+fn bool_negate(b: &bool) -> bool {
+    !b
 }
 
 #[derive(Parser, Debug, PartialEq, Eq)]
@@ -287,6 +295,8 @@ struct TargetMatrixArgs {
     has_image: bool,
     #[clap(long, short)]
     verbose: bool,
+    #[clap(long, short)]
+    cross_debug: bool,
     #[clap(long, value_parser = PossibleValuesParser::new(&[
             "remote",
             "bisect",
@@ -315,6 +325,7 @@ impl Default for TargetMatrixArgs {
             none: false,
             has_image: false,
             verbose: false,
+            cross_debug: false,
             tests: vec!["all".to_owned()],
         }
     }

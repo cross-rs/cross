@@ -195,6 +195,7 @@ jobs:
           SUB: ${{ matrix.sub }}
           LABELS: ${{ steps.docker-meta.outputs.labels }}
           LATEST: ${{ needs.check.outputs.is-latest || 'false' }}
+          CROSS_DEBUG: ${{ matrix.cross-debug }}
         shell: bash
       - name: Set Docker image for test
         if: steps.prepare-meta.outputs.has-image
@@ -216,6 +217,7 @@ jobs:
           BUILD_STD: ${{ matrix.build-std }}
           RUN: ${{ matrix.run }}
           RUNNERS: ${{ matrix.runners }}
+          CROSS_DEBUG: ${{ matrix.cross-debug }}
         shell: bash
       - uses: ./.github/actions/cargo-install-upload-artifacts
         if: matrix.deploy
