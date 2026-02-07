@@ -73,12 +73,14 @@ main() {
         gcc-multilib \
         git \
         g++-multilib \
-        libncurses5 \
-        libtinfo5 \
+        libncurses6 \
+        libtinfo6 \
         make \
         openssh-client \
-        python \
+        python-is-python3 \
         python3 \
+        pybind11-dev \
+        libre2-dev \
         xz-utils
 
     curl --retry 3 -sSfL https://storage.googleapis.com/git-repo-downloads/repo -O
