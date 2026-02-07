@@ -72,7 +72,7 @@ main() {
         retry cargo fetch
         # don't use xargo: should have native support just from rustc
         rustup toolchain add nightly
-        cross_build --lib --target "${TARGET}"
+        cross_build -p compiler_builtins --lib --target "${TARGET}"
         popd
 
         rm -rf "${td}"
