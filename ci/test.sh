@@ -22,7 +22,7 @@ workspace_test() {
 main() {
     local td=
 
-    retry cargo fetch
+    retry cargo fetch --target "${TARGET}"
     cargo build
 
     # Unset RUSTFLAGS
@@ -69,7 +69,8 @@ main() {
             https://github.com/rust-lang-nursery/compiler-builtins "${td}"
 
         pushd "${td}"
-        retry cargo fetch
+        # FIXME: this cargo fetch will pull more than needed, need a `cargo fetch -p`
+        retry cargo fetch --target "${TARGET}"
         # don't use xargo: should have native support just from rustc
         rustup toolchain add nightly
         cross_build -p compiler_builtins --lib --target "${TARGET}"
@@ -84,7 +85,7 @@ main() {
 
         pushd "${td}"
         cargo init --lib --name foo .
-        retry cargo fetch
+        retry cargo fetch --target "${TARGET}"
         cross_build --target "${TARGET}"
         popd
 
@@ -96,7 +97,7 @@ main() {
         pushd "${td}"
         # test that linking works
         cargo init --bin --name hello .
-        retry cargo fetch
+        retry cargo fetch --target "${TARGET}"
         cross_build --target "${TARGET}"
         popd
 
@@ -176,7 +177,7 @@ main() {
         git clone --depth 1 https://github.com/cross-rs/rust-cpp-accumulate "${td}"
 
         pushd "${td}"
-        retry cargo fetch
+        retry cargo fetch --target "${TARGET}"
         cross_build --target "${TARGET}"
         popd
 
@@ -190,7 +191,7 @@ main() {
         git clone --depth 1 https://github.com/cross-rs/rust-cpp-hello-word "${td}"
 
         pushd "${td}"
-        retry cargo fetch
+        retry cargo fetch --target "${TARGET}"
         if (( ${RUN:-0} )); then
             cross_run --target "${TARGET}"
         else
@@ -208,7 +209,7 @@ main() {
 
         pushd "${td}"
         cargo init --bin --name hello .
-        retry cargo fetch
+        retry cargo fetch --target "${TARGET}"
         RUSTFLAGS="$RUSTFLAGS -C target-feature=-crt-static" \
             cross_build --target "${TARGET}"
         popd
@@ -225,7 +226,7 @@ main() {
         https://github.com/cross-rs/rust-cmake-hello-world "${td}"
 
     pushd "${td}"
-    retry cargo fetch
+    retry cargo fetch --target "${TARGET}"
     if [[ "${TARGET}" == "arm-linux-androideabi" ]]; then
         # ARMv5te isn't supported anymore by Android, which produces missing
         # symbol errors with re2 like `__libcpp_signed_lock_free`.
