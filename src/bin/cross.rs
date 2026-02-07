@@ -6,9 +6,8 @@ use std::{
 };
 
 use cross::{
-    cargo, cli, rustc,
+    OutputExt, Subcommand, cargo, cli, rustc,
     shell::{self, Verbosity},
-    OutputExt, Subcommand,
 };
 
 pub fn main() -> cross::Result<()> {

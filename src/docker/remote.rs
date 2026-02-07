@@ -9,6 +9,7 @@ use is_terminal::IsTerminal;
 
 use super::engine::Engine;
 use super::shared::*;
+use crate::TargetTriple;
 use crate::config::bool_from_envvar;
 use crate::errors::Result;
 use crate::extensions::CommandExt;
@@ -16,7 +17,6 @@ use crate::file::{self, PathExt, ToUtf8};
 use crate::rustc::{self, QualifiedToolchain, VersionMetaExt};
 use crate::shell::MessageInfo;
 use crate::temp;
-use crate::TargetTriple;
 
 // prevent further commands from running if we handled
 // a signal earlier, and the volume is exited.
@@ -74,22 +74,21 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         mount_prefix: &str,
         msg_info: &mut MessageInfo,
     ) -> Result<ExitStatus> {
-        if let Some((_, rel)) = reldst.rsplit_once('/') {
-            if msg_info.cross_debug
-                && src.is_dir()
-                && !src.to_string_lossy().ends_with("/.")
-                && rel
-                    == src
-                        .file_name()
-                        .expect("filename should be defined as we are a directory")
-            {
-                msg_info.warn(format_args!(
-                    "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
-                    src.as_posix_relative()?,
-                    reldst,
-                    std::panic::Location::caller()
-                ))?;
-            }
+        if let Some((_, rel)) = reldst.rsplit_once('/')
+            && msg_info.cross_debug
+            && src.is_dir()
+            && !src.to_string_lossy().ends_with("/.")
+            && rel
+                == src
+                    .file_name()
+                    .expect("filename should be defined as we are a directory")
+        {
+            msg_info.warn(format_args!(
+                "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
+                src.as_posix_relative()?,
+                reldst,
+                std::panic::Location::caller()
+            ))?;
         }
         subcommand_or_exit(self.engine, "cp")?
             .arg("-a")
@@ -217,9 +216,8 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
     ) -> Result<()> {
         let dirs = &self.toolchain_dirs;
         let reldst = dirs.cargo_mount_path_relative()?;
-        let copy_registry = env::var("CROSS_REMOTE_COPY_REGISTRY")
-            .map(|s| bool_from_envvar(&s))
-            .unwrap_or(copy_registry);
+        let copy_registry =
+            env::var("CROSS_REMOTE_COPY_REGISTRY").map_or(copy_registry, |s| bool_from_envvar(&s));
 
         self.create_dir(&reldst, mount_prefix, msg_info)?;
         if copy_registry {
@@ -307,7 +305,7 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
             &temppath.join(rustlib),
             true,
             0,
-            |e, d| d != 0 || e.file_type().map(|t| !t.is_file()).unwrap_or(true),
+            |e, d| d != 0 || e.file_type().map_or(true, |t| !t.is_file()),
         )?;
         self.copy_files(&temppath.join("lib"), &reldst, mount_prefix, msg_info)?;
 
@@ -365,10 +363,10 @@ impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
         self.copy_rust_base(mount_prefix, msg_info)?;
         self.copy_rust_manifest(mount_prefix, msg_info)?;
         self.copy_rust_triple(dirs.host_target(), mount_prefix, false, msg_info)?;
-        if let Some(target_triple) = target_triple {
-            if target_triple.triple() != dirs.host_target().triple() {
-                self.copy_rust_triple(target_triple, mount_prefix, false, msg_info)?;
-            }
+        if let Some(target_triple) = target_triple
+            && target_triple.triple() != dirs.host_target().triple()
+        {
+            self.copy_rust_triple(target_triple, mount_prefix, false, msg_info)?;
         }
 
         Ok(())
@@ -442,7 +440,7 @@ fn is_cachedir_tag(path: &Path) -> Result<bool> {
 fn is_cachedir(entry: &fs::DirEntry) -> bool {
     // avoid any cached directories when copying
     // see https://bford.info/cachedir/
-    if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+    if entry.file_type().is_ok_and(|t| t.is_dir()) {
         let path = entry.path().join("CACHEDIR.TAG");
         path.exists() && is_cachedir_tag(&path).unwrap_or(false)
     } else {

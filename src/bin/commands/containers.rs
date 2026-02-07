@@ -4,7 +4,7 @@ use clap::{Args, Subcommand};
 use cross::docker::ImagePlatform;
 use cross::rustc::{QualifiedToolchain, Toolchain};
 use cross::shell::MessageInfo;
-use cross::{docker, CommandExt, TargetTriple};
+use cross::{CommandExt, TargetTriple, docker};
 use is_terminal::IsTerminal;
 
 #[derive(Args, Debug)]

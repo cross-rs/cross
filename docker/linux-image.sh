@@ -57,17 +57,17 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-        kversion=5.10.0-34
+        kversion=6.12.41+deb13
 
-    local debsource="deb http://http.debian.net/debian/ bullseye main"
-    debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"
+    local debsource="deb http://http.debian.net/debian/ trixie main"
+    debsource="${debsource}\ndeb http://security.debian.org/ trixie-security main"
 
     local dropbear="dropbear-bin"
 
     local -a deps
     local kernel=
     local libgcc="libgcc-s1"
-    local ncurses=
+    # local ncurses=
 
     # select debian arch and kernel version
     case "${arch}" in
@@ -78,7 +78,7 @@ main() {
         ;;
     armv7)
         arch=armhf
-        kernel='5.*-armmp'
+        kernel='6.*-armmp'
         deps=(libcrypt1:"${arch}")
         ;;
     i686)
@@ -92,15 +92,19 @@ main() {
         debsource="deb http://http.debian.net/debian/ buster main"
         debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
         kernel='4.*-4kc-malta'
-        ncurses="=6.1*"
+        # ncurses="=6.1*"
         ;;
     mipsel)
-        kernel='5.*-4kc-malta'
+        # mipsel was discontinued in trixie, so we have to use bookworm.
+        kernel='6.*-4kc-malta'
         deps=(libcrypt1:"${arch}")
+        debsource="deb http://http.debian.net/debian/ bookworm main"
         ;;
     mips64el)
-        kernel='5.*-5kc-malta'
+        # mipsel was discontinued in trixie, so we have to use bookworm.
+        kernel='6.*-5kc-malta'
         deps=(libcrypt1:"${arch}")
+        debsource="deb http://http.debian.net/debian/ bookworm main"
         ;;
     powerpc)
         # there is no buster powerpc port, so we use jessie
@@ -108,9 +112,6 @@ main() {
         kversion='4.9.0-0.bpo.6'
         kernel="${kversion}-powerpc"
         debsource="deb http://archive.debian.org/debian jessie main"
-        debsource="${debsource}\ndeb http://archive.debian.org/debian jessie-backports main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
 
         # archive.debian.org Release files are expired.
         echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
@@ -132,7 +133,7 @@ main() {
         ;;
     powerpc64le)
         arch=ppc64el
-        kernel='5.*-powerpc64le'
+        kernel='6.*-powerpc64le'
         deps=(libcrypt1:"${arch}")
         ;;
     riscv64)
@@ -142,7 +143,7 @@ main() {
         ;;
     s390x)
         arch=s390x
-        kernel='5.*-s390x'
+        kernel='6.*-s390x'
         deps=(libcrypt1:"${arch}")
         ;;
     sparc64)
@@ -198,9 +199,9 @@ main() {
     dpkg --add-architecture "${arch}" || echo "foreign-architecture ${arch}" >/etc/dpkg/dpkg.cfg.d/multiarch
 
     # Add Debian keys.
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11,12}.asc' -O
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11,12}-security.asc' -O
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11,12}.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11,12,13}.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11,12,13}-security.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11,12,13}.asc' -O
     curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023,2024,2025}.key' -O
 
     for key in *.asc *.key; do
@@ -240,8 +241,8 @@ main() {
         "libgmp10:${arch}" \
         "libc6:${arch}" \
         "linux-image-${kernel}:${arch}" \
-        ncurses-base"${ncurses}" \
         "zlib1g:${arch}"
+        # "ncurses-base:all" \
 
     if [[ "${arch}" != "${dpkg_arch}" ]]; then
         apt-get -d --no-install-recommends download "${libgcc_packages[@]}"
@@ -271,13 +272,23 @@ main() {
         # will prefer the system packages, which it can't find later.
         # removing these packages needs to occur after download via apt,
         # since apt-get relies on libgcc_s1 and libstdc++6.
-        dpkg -r --force-depends "${libgcc_packages[@]}"
+        dpkg -r --force-depends --force-remove-protected "${libgcc_packages[@]}"
     fi
     cd /qemu
 
     # Install packages
     root="root-${arch}"
-    mkdir -p "${root}"/{bin,etc/dropbear,root,sys,dev,proc,sbin,tmp,usr/{bin,sbin},var/log}
+
+    # make libraries and binaries available as usrmerge
+    for d in lib lib64 bin sbin; do
+        if [ -d "usr/${d}" ]; then
+            ln -nsd "usr/${d}" "${root}/${d}"
+        else
+            mkdir -p "${root}/${d}"
+        fi
+    done
+    mkdir -p "${root}"/{etc/dropbear,root,sys,dev,proc,tmp,usr/{bin,sbin},var/log}
+    # install
     for deb in "${arch}"/*deb; do
         dpkg -x "${deb}" "${root}"/
     done
