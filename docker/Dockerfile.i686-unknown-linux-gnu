@@ -22,13 +22,7 @@ RUN TARGET_ARCH=i386 /deny-debian-packages.sh \
 COPY qemu.sh /
 RUN /qemu.sh i386 softmmu
 
-COPY dropbear.sh /
-RUN /dropbear.sh
-
-COPY linux-image.sh /
-RUN /linux-image.sh i686
-
-COPY linux-runner base-runner.sh /
+COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TOOLCHAIN_PREFIX=i686-linux-gnu-
