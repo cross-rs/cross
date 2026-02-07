@@ -95,12 +95,16 @@ main() {
         # ncurses="=6.1*"
         ;;
     mipsel)
+        # mipsel was discontinued in trixie, so we have to use bookworm.
         kernel='6.*-4kc-malta'
         deps=(libcrypt1:"${arch}")
+        debsource="deb http://http.debian.net/debian/ bookworm main"
         ;;
     mips64el)
+        # mipsel was discontinued in trixie, so we have to use bookworm.
         kernel='6.*-5kc-malta'
         deps=(libcrypt1:"${arch}")
+        debsource="deb http://http.debian.net/debian/ bookworm main"
         ;;
     powerpc)
         # there is no buster powerpc port, so we use jessie
@@ -108,9 +112,6 @@ main() {
         kversion='4.9.0-0.bpo.6'
         kernel="${kversion}-powerpc"
         debsource="deb http://archive.debian.org/debian jessie main"
-        debsource="${debsource}\ndeb http://archive.debian.org/debian jessie-backports main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
 
         # archive.debian.org Release files are expired.
         echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
@@ -280,7 +281,11 @@ main() {
 
     # make libraries and binaries available as usrmerge
     for d in lib lib64 bin sbin; do
-        ln -nsd "usr/${d}" "${root}/${d}"
+        if [ -d "usr/${d}" ]; then
+            ln -nsd "usr/${d}" "${root}/${d}"
+        else
+            mkdir -p "${root}/${d}"
+        fi
     done
     mkdir -p "${root}"/{etc/dropbear,root,sys,dev,proc,tmp,usr/{bin,sbin},var/log}
     # install
