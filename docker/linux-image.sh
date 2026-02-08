@@ -59,7 +59,7 @@ main() {
     local arch="${1}" \
         kversion=6.12.41+deb13
 
-    local debsource="deb https://http.debian.net/debian/ trixie main"
+    local debsource="deb https://deb.debian.org/debian trixie main"
     debsource="${debsource}\ndeb https://security.debian.org/ trixie-security main"
 
     local dropbear="dropbear-bin"
@@ -89,7 +89,7 @@ main() {
     mips)
         # mips was discontinued in bullseye, so we have to use buster.
         libgcc="libgcc1"
-        debsource="deb https://http.debian.net/debian/ buster main"
+        debsource="deb https://deb.debian.org/debian buster main"
         debsource="${debsource}\ndeb https://security.debian.org/ buster/updates main"
         kernel='4.*-4kc-malta'
         # ncurses="=6.1*"
@@ -98,13 +98,13 @@ main() {
         # mipsel was discontinued in trixie, so we have to use bookworm.
         kernel='6.*-4kc-malta'
         deps=(libcrypt1:"${arch}")
-        debsource="deb https://http.debian.net/debian/ bookworm main"
+        debsource="deb https://deb.debian.org/debian bookworm main"
         ;;
     mips64el)
         # mipsel was discontinued in trixie, so we have to use bookworm.
         kernel='6.*-5kc-malta'
         deps=(libcrypt1:"${arch}")
-        debsource="deb https://http.debian.net/debian/ bookworm main"
+        debsource="deb https://deb.debian.org/debian bookworm main"
         ;;
     powerpc)
         # there is no buster powerpc port, so we use jessie
