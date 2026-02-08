@@ -59,8 +59,8 @@ main() {
     local arch="${1}" \
         kversion=6.12.41+deb13
 
-    local debsource="deb http://http.debian.net/debian/ trixie main"
-    debsource="${debsource}\ndeb http://security.debian.org/ trixie-security main"
+    local debsource="deb https://http.debian.net/debian/ trixie main"
+    debsource="${debsource}\ndeb https://security.debian.org/ trixie-security main"
 
     local dropbear="dropbear-bin"
 
@@ -89,8 +89,8 @@ main() {
     mips)
         # mips was discontinued in bullseye, so we have to use buster.
         libgcc="libgcc1"
-        debsource="deb http://http.debian.net/debian/ buster main"
-        debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
+        debsource="deb https://http.debian.net/debian/ buster main"
+        debsource="${debsource}\ndeb https://security.debian.org/ buster/updates main"
         kernel='4.*-4kc-malta'
         # ncurses="=6.1*"
         ;;
@@ -98,20 +98,20 @@ main() {
         # mipsel was discontinued in trixie, so we have to use bookworm.
         kernel='6.*-4kc-malta'
         deps=(libcrypt1:"${arch}")
-        debsource="deb http://http.debian.net/debian/ bookworm main"
+        debsource="deb https://http.debian.net/debian/ bookworm main"
         ;;
     mips64el)
         # mipsel was discontinued in trixie, so we have to use bookworm.
         kernel='6.*-5kc-malta'
         deps=(libcrypt1:"${arch}")
-        debsource="deb http://http.debian.net/debian/ bookworm main"
+        debsource="deb https://http.debian.net/debian/ bookworm main"
         ;;
     powerpc)
         # there is no buster powerpc port, so we use jessie
         # use a more recent kernel from backports
         kversion='4.9.0-0.bpo.6'
         kernel="${kversion}-powerpc"
-        debsource="deb http://archive.debian.org/debian jessie main"
+        debsource="deb https://archive.debian.org/debian jessie main"
 
         # archive.debian.org Release files are expired.
         echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
@@ -126,8 +126,8 @@ main() {
         arch=ppc64
         # https://packages.debian.org/en/sid/linux-image-powerpc64
         kernel='6.*-powerpc64'
-        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+        debsource="deb https://ftp.ports.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb https://ftp.ports.debian.org/debian-ports unreleased main"
         # sid version of dropbear requires these dependencies
         deps=(libcrypt1:"${arch}")
         ;;
@@ -138,7 +138,7 @@ main() {
         ;;
     riscv64)
         kernel='6.*-riscv64'
-        debsource="deb http://deb.debian.org/debian unstable main"
+        debsource="deb https://deb.debian.org/debian unstable main"
         deps=(libcrypt1:"${arch}")
         ;;
     s390x)
@@ -150,8 +150,8 @@ main() {
         # there is no stable port
         # https://packages.debian.org/en/sid/linux-image-sparc64
         kernel='6.*-sparc64'
-        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
+        debsource="deb https://ftp.ports.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb https://ftp.ports.debian.org/debian-ports unreleased main"
         # sid version of dropbear requires these dependencies
         deps=(libcrypt1:"${arch}")
         ;;
