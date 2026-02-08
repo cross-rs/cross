@@ -3,11 +3,11 @@ use std::process::Command;
 
 use rustc_version::{Channel, Version};
 
+use crate::Target;
 use crate::errors::*;
 pub use crate::extensions::{CommandExt, OutputExt};
 use crate::rustc::QualifiedToolchain;
 use crate::shell::{MessageInfo, Verbosity};
-use crate::Target;
 
 #[derive(Debug)]
 pub struct AvailableTargets {

@@ -2,8 +2,8 @@ use clap::Args as ClapArgs;
 use cross::config::Config;
 use cross::shell::{MessageInfo, Verbosity};
 use cross::{
-    cargo_metadata_with_args, cli::Args, docker, rustc, setup, toml, CommandVariant, CrossSetup,
-    Target,
+    CommandVariant, CrossSetup, Target, cargo_metadata_with_args, cli::Args, docker, rustc, setup,
+    toml,
 };
 use eyre::Context;
 

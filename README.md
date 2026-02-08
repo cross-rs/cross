@@ -324,8 +324,12 @@ $ QEMU_STRACE=1 cross run --target aarch64-unknown-linux-gnu
 This crate is guaranteed to compile on stable Rust 1.92.0 and up. It *might*
 compile with older versions but that may change in any new patch release.
 
-Some cross-compilation targets require a later Rust version, and using Xargo
-requires a nightly Rust toolchain.
+Some cross-compilation targets require a later Rust version.
+
+### Xargo
+
+"Xargo" is no longer supported since its maintenance was stopped a long time ago,
+most of the functionality is available when using `build-std`.
 
 ## License
 

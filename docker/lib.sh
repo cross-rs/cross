@@ -3,12 +3,6 @@
 
 purge_list=()
 
-set_centos_ulimit() {
-    # this is a bug affecting buildkit with yum when ulimit is unlimited
-    # https://github.com/docker/buildx/issues/379#issuecomment-1196517905
-    ulimit -n 1024000
-}
-
 install_packages() {
     if grep -i ubuntu /etc/os-release; then
         apt-get update
@@ -21,7 +15,6 @@ install_packages() {
             fi
         done
     else
-        set_centos_ulimit
         for pkg in "${@}"; do
             if ! yum list installed "${pkg}" >/dev/null 2>/dev/null; then
                 yum install -y "${pkg}"

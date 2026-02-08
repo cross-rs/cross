@@ -215,15 +215,13 @@ fn get_image_target(
     } else if image
         .repository
         .starts_with(CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX)
-    {
-        if let Some(target) = target_list
+        && let Some(target) = target_list
             .triples
             .iter()
             .find(|target| image.tag.starts_with(target.as_str()))
             .cloned()
-        {
-            return Ok(target);
-        }
+    {
+        return Ok(target);
     }
     let mut command = engine.subcommand("inspect");
     command.args([

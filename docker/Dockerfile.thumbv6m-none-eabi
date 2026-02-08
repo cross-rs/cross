@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 AS cross-base
+FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /

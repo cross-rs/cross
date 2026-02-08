@@ -15,6 +15,7 @@ FREEBSD_HTTP_TCP_SOURCES=(
 )
 FREEBSD_PACKAGEDIR="/opt/freebsd-packagesite"
 FREEBSD_PACKAGESITE="${FREEBSD_PACKAGEDIR}/packagesite.yaml"
+FREEBSD_RELEASE="release_5"
 FREEBSD_TARGET="${ARCH}-unknown-freebsd${FREEBSD_MAJOR}"
 FREEBSD_DEFAULT_MIRROR="pkg.freebsd.org"
 # NOTE: these mirrors were known to work as of 2022-11-28.
@@ -36,7 +37,7 @@ FREEBSD_BACKUP_MIRRORS=(
 # and `mirror` for those without the scheme for consistent naming.
 freebsd_package_source() {
     local url="${1}"
-    echo "${url}/FreeBSD:${FREEBSD_MAJOR}:${FREEBSD_ARCH}/quarterly"
+    echo "${url}/FreeBSD:${FREEBSD_MAJOR}:${FREEBSD_ARCH}/${FREEBSD_RELEASE}"
 }
 
 freebsd_mirror_works() {
@@ -121,8 +122,8 @@ setup_freebsd_packagesite() {
     pkg_source=$(freebsd_package_source "${url}")
 
     mkdir -p "${FREEBSD_PACKAGEDIR}"
-    curl --retry 3 -sSfL "${pkg_source}/packagesite.tzst" -O
-    tar -C "${FREEBSD_PACKAGEDIR}" --zstd -xf packagesite.tzst
+    curl --retry 3 -sSfL "${pkg_source}/packagesite.txz" -O
+    tar -C "${FREEBSD_PACKAGEDIR}" -xJf packagesite.txz
 }
 
 # don't provide the mirror as a positional argument, so it can be optional

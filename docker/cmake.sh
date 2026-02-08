@@ -48,7 +48,6 @@ main() {
     purge_packages
 
     rm -rf "${td}"
-    rm -rf /var/lib/apt/lists/*
     rm "${0}"
 }
 

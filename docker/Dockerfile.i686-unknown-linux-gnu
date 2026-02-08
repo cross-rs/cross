@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 AS cross-base
+FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
@@ -22,13 +22,7 @@ RUN TARGET_ARCH=i386 /deny-debian-packages.sh \
 COPY qemu.sh /
 RUN /qemu.sh i386 softmmu
 
-COPY dropbear.sh /
-RUN /dropbear.sh
-
-COPY linux-image.sh /
-RUN /linux-image.sh i686
-
-COPY linux-runner base-runner.sh /
+COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TOOLCHAIN_PREFIX=i686-linux-gnu-
@@ -50,4 +44,4 @@ ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CROSS_CMAKE_CRT=gnu \
     CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m32 -march=i686"
 
-RUN sed -e "s#@DEFAULT_QEMU_LD_PREFIX@#$QEMU_LD_PREFIX#g" -i /linux-runner
+RUN sed -e "s#@DEFAULT_QEMU_LD_PREFIX@#$QEMU_LD_PREFIX#g" -i /qemu-runner
