@@ -278,16 +278,12 @@ main() {
 
     # Install packages
     root="root-${arch}"
-
+    mkdir -p "${root}"
     # make libraries and binaries available as usrmerge
     for d in lib lib64 bin sbin; do
-        if [ -d "usr/${d}" ]; then
-            ln -nsd "usr/${d}" "${root}/${d}"
-        else
-            mkdir -p "${root}/${d}"
-        fi
+        ln -nsd "usr/${d}" "${root}/${d}"
     done
-    mkdir -p "${root}"/{etc/dropbear,root,sys,dev,proc,tmp,usr/{bin,sbin},var/log}
+    mkdir -p "${root}"/{etc/dropbear,root,sys,dev,proc,tmp,usr/{bin,sbin,lib,lib64},var/log}
     # install
     for deb in "${arch}"/*deb; do
         dpkg -x "${deb}" "${root}"/
