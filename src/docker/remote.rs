@@ -40,7 +40,7 @@ pub fn posix_parent(path: &str) -> Option<&str> {
     Path::new(path).parent()?.to_str()
 }
 
-impl<'a, 'b, 'c> ContainerDataVolume<'a, 'b, 'c> {
+impl ContainerDataVolume<'_, '_, '_> {
     // NOTE: `reldir` should be a relative POSIX path to the root directory
     // on windows, this should be something like `mnt/c`. that is, all paths
     // inside the container should not have the mount prefix.
