@@ -13,6 +13,10 @@ version = 2
 [bans]
 multiple-versions = "deny"
 deny = []
+skip = [
+  # home v0.5.11
+  { name = "windows-sys", version = "0.59.0" },
+]
 skip-tree = [
     { name = "supports-color", depth = 1, version = "2.1.0", reason = "owo-colors pulls in two versions of supports-color" },
 ]

@@ -61,7 +61,7 @@ impl CommandExt for Command {
     ) -> String {
         // a dummy implementor of display to avoid using unwraps
         struct C<'c, 'd, F>(&'c Command, &'d mut MessageInfo, F);
-        impl<'e, 'f, F> std::fmt::Display for C<'e, 'f, F>
+        impl<F> std::fmt::Display for C<'_, '_, F>
         where
             F: for<'a> Fn(&'a str) -> bool,
         {
