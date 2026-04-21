@@ -1,3 +1,7 @@
+# If this project is cloned into another Rust project's subdirectory, and that
+# project defines its own aliases, string literals provide the best
+# compatibility because of Cargo's config merging rules:
+# https://doc.rust-lang.org/cargo/reference/config.html#hierarchical-structure
 [alias]
-xtask = ["run", "-p", "xtask", "--"]
-build-docker-image = ["xtask", "build-docker-image"]
+xtask = "run -p xtask --"
+build-docker-image = "xtask build-docker-image"
