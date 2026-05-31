@@ -42,6 +42,8 @@ if_centos install_packages \
     pkgconfig
 
 if_ubuntu install_packages \
+    bzip2 \
+    adduser \
     g++ \
     gfortran \
     libc6-dev \

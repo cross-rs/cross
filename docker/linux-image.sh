@@ -57,17 +57,17 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-        kversion=5.10.0-34
+        kversion=6.12.41+deb13
 
-    local debsource="deb http://http.debian.net/debian/ bullseye main"
-    debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"
+    local debsource="deb http://http.debian.net/debian/ trixie main"
+    debsource="${debsource}\ndeb http://security.debian.org/ trixie-security main"
 
     local dropbear="dropbear-bin"
 
     local -a deps
     local kernel=
     local libgcc="libgcc-s1"
-    local ncurses=
+    # local ncurses=
 
     # select debian arch and kernel version
     case "${arch}" in
@@ -78,7 +78,7 @@ main() {
         ;;
     armv7)
         arch=armhf
-        kernel='5.*-armmp'
+        kernel='6.*-armmp'
         deps=(libcrypt1:"${arch}")
         ;;
     i686)
@@ -92,14 +92,14 @@ main() {
         debsource="deb http://http.debian.net/debian/ buster main"
         debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
         kernel='4.*-4kc-malta'
-        ncurses="=6.1*"
+        # ncurses="=6.1*"
         ;;
     mipsel)
-        kernel='5.*-4kc-malta'
+        kernel='6.*-4kc-malta'
         deps=(libcrypt1:"${arch}")
         ;;
     mips64el)
-        kernel='5.*-5kc-malta'
+        kernel='6.*-5kc-malta'
         deps=(libcrypt1:"${arch}")
         ;;
     powerpc)
@@ -132,7 +132,7 @@ main() {
         ;;
     powerpc64le)
         arch=ppc64el
-        kernel='5.*-powerpc64le'
+        kernel='6.*-powerpc64le'
         deps=(libcrypt1:"${arch}")
         ;;
     riscv64)
@@ -142,7 +142,7 @@ main() {
         ;;
     s390x)
         arch=s390x
-        kernel='5.*-s390x'
+        kernel='6.*-s390x'
         deps=(libcrypt1:"${arch}")
         ;;
     sparc64)
@@ -198,9 +198,9 @@ main() {
     dpkg --add-architecture "${arch}" || echo "foreign-architecture ${arch}" >/etc/dpkg/dpkg.cfg.d/multiarch
 
     # Add Debian keys.
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11,12}.asc' -O
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11,12}-security.asc' -O
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11,12}.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11,12,13}.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11,12,13}-security.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11,12,13}.asc' -O
     curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023,2024,2025}.key' -O
 
     for key in *.asc *.key; do
@@ -240,8 +240,8 @@ main() {
         "libgmp10:${arch}" \
         "libc6:${arch}" \
         "linux-image-${kernel}:${arch}" \
-        ncurses-base"${ncurses}" \
         "zlib1g:${arch}"
+        # "ncurses-base:all" \
 
     if [[ "${arch}" != "${dpkg_arch}" ]]; then
         apt-get -d --no-install-recommends download "${libgcc_packages[@]}"

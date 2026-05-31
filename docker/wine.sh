@@ -7,7 +7,7 @@ set -euo pipefail
 . lib.sh
 
 main() {
-    local version="9.0.0.0~focal-1"
+    local version="10.*~noble-1"
     install_packages wget
 
     dpkg --add-architecture i386
@@ -23,9 +23,9 @@ main() {
     mkdir -p /etc/apt/keyrings
     mv winehq.key /etc/apt/keyrings/winehq-archive.key
 
-    wget -nc https://dl.winehq.org/wine-builds/ubuntu/dists/focal/winehq-focal.sources
-    mv winehq-focal.sources /etc/apt/sources.list.d/
-    sed -i s@/usr/share/keyrings/@/etc/apt/keyrings/@ /etc/apt/sources.list.d/winehq-focal.sources || true
+    wget -nc https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources
+    mv winehq-noble.sources /etc/apt/sources.list.d/
+    sed -i s@/usr/share/keyrings/@/etc/apt/keyrings/@ /etc/apt/sources.list.d/winehq-noble.sources || true
 
     # winehq requires all the dependencies to be manually specified
     # if we're not using the latest version of a given major version.

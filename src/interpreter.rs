@@ -1,8 +1,8 @@
 use std::path::Path;
 
+use crate::Target;
 use crate::errors::*;
 use crate::file;
-use crate::Target;
 
 /// Checks if the interpreters have been registered in the host system
 pub fn is_registered(target: &Target) -> Result<bool> {

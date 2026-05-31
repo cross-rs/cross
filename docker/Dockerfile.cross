@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 AS rust
+FROM ubuntu:24.04 AS rust
 ENV DEBIAN_FRONTEND=noninteractive
 COPY docker/lib.sh docker/cross.sh /
 COPY ./ /project
@@ -6,7 +6,7 @@ RUN /cross.sh /project
 
 # we build our images in 2 steps, to ensure we have a compact
 # image, since we want to add our current subdirectory
-FROM ubuntu:20.04 AS base
+FROM ubuntu:24.04 AS base
 COPY --from=rust /root/.cargo /root/.cargo
 COPY --from=rust /root/.rustup /root/.rustup
 
