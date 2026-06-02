@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use crate::util::{project_dir, write_to_string};
 use clap::Args;
-use cross::shell::MessageInfo;
 use cross::ToUtf8;
+use cross::shell::MessageInfo;
 
 const DEFAULT_GCC_VERSION: &str = "8.3.0";
 const DEFAULT_GLIBC_VERSION: &str = "2.17.0";

@@ -138,14 +138,15 @@ impl<'a> Dockerfile<'a> {
             }
         };
 
-        if matches!(self, Dockerfile::File { .. })
-            && let Ok(cross_base_image) =
+        if matches!(self, Dockerfile::File { .. }) {
+            if let Ok(cross_base_image) =
                 self::get_image_name(&options.config, &options.target, uses_zig)
-        {
-            docker_build.args([
-                "--build-arg",
-                &format!("CROSS_BASE_IMAGE={cross_base_image}"),
-            ]);
+            {
+                docker_build.args([
+                    "--build-arg",
+                    &format!("CROSS_BASE_IMAGE={cross_base_image}"),
+                ]);
+            }
         }
 
         docker_build.args(["--file".into(), path]);

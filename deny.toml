@@ -16,6 +16,8 @@ deny = []
 skip = [
   # home v0.5.11
   { name = "windows-sys", version = "0.59.0" },
+  # toml v0.9 uses winnow 0.7 directly, while toml_parser (sub-dep of toml) uses winnow 1.0
+  { name = "winnow", version = "0.7" },
 ]
 skip-tree = [
     { name = "supports-color", depth = 1, version = "2.1.0", reason = "owo-colors pulls in two versions of supports-color" },

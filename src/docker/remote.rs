@@ -74,21 +74,22 @@ impl ContainerDataVolume<'_, '_, '_> {
         mount_prefix: &str,
         msg_info: &mut MessageInfo,
     ) -> Result<ExitStatus> {
-        if let Some((_, rel)) = reldst.rsplit_once('/')
-            && msg_info.cross_debug
-            && src.is_dir()
-            && !src.to_string_lossy().ends_with("/.")
-            && rel
-                == src
-                    .file_name()
-                    .expect("filename should be defined as we are a directory")
-        {
-            msg_info.warn(format_args!(
-                "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
-                src.as_posix_relative()?,
-                reldst,
-                std::panic::Location::caller()
-            ))?;
+        if let Some((_, rel)) = reldst.rsplit_once('/') {
+            if msg_info.cross_debug
+                && src.is_dir()
+                && !src.to_string_lossy().ends_with("/.")
+                && rel
+                    == src
+                        .file_name()
+                        .expect("filename should be defined as we are a directory")
+            {
+                msg_info.warn(format_args!(
+                    "source is pointing to a directory instead of its contents: {} -> {}\nThis might be a bug. {}",
+                    src.as_posix_relative()?,
+                    reldst,
+                    std::panic::Location::caller()
+                ))?;
+            }
         }
         subcommand_or_exit(self.engine, "cp")?
             .arg("-a")
@@ -363,10 +364,10 @@ impl ContainerDataVolume<'_, '_, '_> {
         self.copy_rust_base(mount_prefix, msg_info)?;
         self.copy_rust_manifest(mount_prefix, msg_info)?;
         self.copy_rust_triple(dirs.host_target(), mount_prefix, false, msg_info)?;
-        if let Some(target_triple) = target_triple
-            && target_triple.triple() != dirs.host_target().triple()
-        {
-            self.copy_rust_triple(target_triple, mount_prefix, false, msg_info)?;
+        if let Some(target_triple) = target_triple {
+            if target_triple.triple() != dirs.host_target().triple() {
+                self.copy_rust_triple(target_triple, mount_prefix, false, msg_info)?;
+            }
         }
 
         Ok(())

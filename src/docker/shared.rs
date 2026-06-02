@@ -1374,14 +1374,14 @@ fn docker_inspect_self(engine: &Engine, msg_info: &mut MessageInfo) -> Result<St
             Ok(out.stdout()?)
         } else {
             let val = serde_json::from_slice::<serde_json::Value>(&out.stdout);
-            if let Ok(val) = val
-                && let Some(array) = val.as_array()
-            {
-                // `docker inspect` completed but returned an empty array, most
-                // likely indicating that the hostname isn't a valid container ID.
-                if array.is_empty() {
-                    msg_info.debug("docker inspect found no containers matching HOSTNAME, retrying using mountinfo")?;
-                    return docker_inspect_self_mountinfo(engine, msg_info);
+            if let Ok(val) = val {
+                if let Some(array) = val.as_array() {
+                    // `docker inspect` completed but returned an empty array, most
+                    // likely indicating that the hostname isn't a valid container ID.
+                    if array.is_empty() {
+                        msg_info.debug("docker inspect found no containers matching HOSTNAME, retrying using mountinfo")?;
+                        return docker_inspect_self_mountinfo(engine, msg_info);
+                    }
                 }
             }
 

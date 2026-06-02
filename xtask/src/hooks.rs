@@ -4,10 +4,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::util::{cargo, cargo_metadata, get_channel_prefer_nightly};
-use clap::builder::BoolishValueParser;
 use clap::Args;
-use cross::shell::MessageInfo;
+use clap::builder::BoolishValueParser;
 use cross::CommandExt;
+use cross::shell::MessageInfo;
 use eyre::Context;
 
 const CARGO_FLAGS: &[&str] = &["--all-features", "--all-targets", "--workspace"];

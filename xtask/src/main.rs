@@ -15,7 +15,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use codegen::Codegen;
 use cross::docker;
 use cross::shell::{MessageInfo, Verbosity};
-use util::{cargo_metadata, ImageTarget};
+use util::{ImageTarget, cargo_metadata};
 
 use self::build_docker_image::BuildDockerImage;
 use self::changelog::Changelog;
@@ -84,9 +84,7 @@ fn is_toolchain(toolchain: &str) -> cross::Result<String> {
 }
 
 macro_rules! get_engine {
-    ($args:ident, $msg_info:ident) => {{
-        get_container_engine($args.engine.as_deref(), &mut $msg_info)
-    }};
+    ($args:ident, $msg_info:ident) => {{ get_container_engine($args.engine.as_deref(), &mut $msg_info) }};
 }
 
 pub fn main() -> cross::Result<()> {

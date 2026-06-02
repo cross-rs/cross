@@ -6,7 +6,7 @@ keywords = ["cross", "compilation", "testing", "tool"]
 license = "MIT OR Apache-2.0"
 name = "cross"
 repository = "https://github.com/cross-rs/cross"
-version = "0.2.6"
+version = "0.2.5"
 edition = "2024"
 include = [
   "src/**/*",
@@ -45,7 +45,7 @@ const-sha1 = "0.3"
 signal-hook = { version = "0.4" }
 directories = "6.0"
 walkdir = { version = "2.3.2", optional = true }
-tempfile = "3.21"
+tempfile = "=3.24.0"
 owo-colors = { version = "4.2.2", features = ["supports-colors"] }
 semver = "1.0.26"
 is_ci = "1.2.0"

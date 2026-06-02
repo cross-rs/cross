@@ -45,6 +45,7 @@ function mkcargotemp {
     echo '# Cargo.toml
     [workspace]
     members = ["'"$(basename "$td")"'"]
+    resolver = "3"
     ' > "$CARGO_TMP_DIR"/Cargo.toml
     echo "$td"
 }
