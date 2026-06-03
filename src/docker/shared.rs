@@ -23,13 +23,7 @@ use std::{env, fs, time};
 use rustc_version::Version as RustcVersion;
 
 pub use super::custom::CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX;
-pub const CROSS_IMAGE: &str = {
-    if let Some(opt) = option_env!("CROSS_IMAGE") {
-        opt
-    } else {
-        "ghcr.io/cross-rs"
-    }
-};
+pub const CROSS_IMAGE: &str = env!("CROSS_IMAGE_LOWER");
 
 // note: this is the most common base image for our images
 pub const UBUNTU_BASE: &str = "ubuntu:24.04";

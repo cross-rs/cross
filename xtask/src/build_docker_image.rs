@@ -126,6 +126,8 @@ pub fn build_docker_image(
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
+    // OCI does not support uppercase characters from orga/owner names
+    let repository = repository.to_lowercase();
     let metadata = cargo_metadata(msg_info)?;
     let version = metadata
         .get_package("cross")

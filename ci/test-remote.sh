@@ -11,6 +11,9 @@ if [[ -z "${TARGET}" ]]; then
     export TARGET="aarch64-unknown-linux-gnu"
 fi
 
+# OCI does not support uppercase characters from orga/owner names
+CROSS_IMAGE=${CROSS_IMAGE,,}
+
 ci_dir=$(dirname "${BASH_SOURCE[0]}")
 ci_dir=$(realpath "${ci_dir}")
 . "${ci_dir}"/shared.sh

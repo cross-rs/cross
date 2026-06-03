@@ -7,9 +7,13 @@ set -eo pipefail
 if [[ -z "${TARGET}" ]]; then
     export TARGET="aarch64-unknown-linux-gnu"
 fi
-# ^^subst is not supported on macOS bash (bash <4)
+
 # shellcheck disable=SC2155
-export TARGET_UPPER=$(echo "$TARGET" | awk '{print toupper($0)}')
+export TARGET_UPPER=${TARGET_UPPER^^}
+
+# OCI does not support uppercase characters from orga/owner names
+IMAGE=${IMAGE,,}
+CROSS_IMAGE=${CROSS_IMAGE,,}
 
 if [[ "${IMAGE}" ]]; then
     # shellcheck disable=SC2140
