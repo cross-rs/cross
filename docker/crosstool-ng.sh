@@ -6,18 +6,10 @@ set -eo pipefail
 # shellcheck disable=SC1091
 . lib.sh
 
-silence_stdout() {
-    if [[ "${VERBOSE}" == "1" ]]; then
-        "${@}"
-    else
-        "${@}" >/dev/null
-    fi
-}
-
 main() {
     local config="${1}"
     local nproc="${2}"
-    local ctng_version=${3:-crosstool-ng-1.27.0}
+    local ctng_version=${3:-crosstool-ng-1.28.0}
     local ctng_url="https://github.com/crosstool-ng/crosstool-ng"
     local username=crosstool
     local crosstooldir=/opt/crosstool
@@ -80,7 +72,7 @@ main() {
     su "${username}" -c "${crosstooldir}/bin/ct-ng olddefconfig"
 
     # the download steps can stall indefinitely, so we want to set a timeout to
-    # ensure it always completes. we therefore attempt to  download until
+    # ensure it always completes. we therefore attempt to download until
     # this step completes or fails. the built toolchain installs to `/x-tools`.
     mkdir -p "${dstdir}"
     chown -R "${username}":"${username}" "${dstdir}"
@@ -90,16 +82,14 @@ main() {
         # timeout is a command, not a built-in, so it won't
         # work with any bash functions: must call a command.
         timeout "${timeout}" \
-            su "${username}" -c \
-            "STOP=${step} CT_DEBUG_CT_SAVE_STEPS=1 ${crosstooldir}/bin/ct-ng build.${nproc}"
+            su "${username}" -c "${crosstooldir}/bin/ct-ng build.${nproc} STOP=${step}"
     }
 
-    while silence_stdout download; [ $? -eq 124 ]; do
+    while download; [ $? -eq 124 ]; do
         # Indicates a timeout, repeat the command.
         sleep "${sleep}"
     done
-    silence_stdout su "${username}" \
-        -c "CT_DEBUG_CT_SAVE_STEPS=1 ${crosstooldir}/bin/ct-ng build.${nproc}"
+    su "${username}" -c "${crosstooldir}/bin/ct-ng build.${nproc}"
 
     popd
 

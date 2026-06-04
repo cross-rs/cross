@@ -1,6 +1,7 @@
 FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY ubuntu.sources /etc/apt/sources.list.d/
 COPY common.sh lib.sh /
 RUN /common.sh
 
@@ -39,5 +40,3 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_FREEBSD_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh 
     CROSS_CMAKE_SYSTEM_PROCESSOR=amd64 \
     CROSS_CMAKE_CRT=freebsd \
     CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m64"
-
-COPY ubuntu.sources /etc/apt/sources.list.d/

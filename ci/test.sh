@@ -79,6 +79,11 @@ main() {
         rm -rf "${td}"
     fi
 
+    # Solaris: Map old to new symbols. compat.o is compiled in solaris.sh during image build.
+    # - https://github.com/cross-rs/cross/issues/1599
+    # - https://github.com/cross-rs/cross/issues/1730
+    [[ ${TARGET} == *-solaris ]] && export RUSTFLAGS+=' -C link-arg=/compat.o'
+
     # `cross build` test for the other targets
     if [[ "${TARGET}" == *-unknown-emscripten ]]; then
         td=$(mkcargotemp -d)

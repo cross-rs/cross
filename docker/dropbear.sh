@@ -9,7 +9,7 @@ set -euo pipefail
 main() {
     local version=2022.82
     local mirrors=(
-        "https://matt.ucc.asn.au/dropbear/releases"
+        "https://matt.ucc.asn.au/dropbear"
         "https://mirror.dropbear.nl/mirror"
     )
 
@@ -28,7 +28,7 @@ main() {
 
     pushd "${td}"
 
-    download_mirrors "" "dropbear-${version}.tar.bz2" "${mirrors[@]}"
+    download_mirrors "releases" "dropbear-${version}.tar.bz2" "${mirrors[@]}"
     tar --strip-components=1 -xjf "dropbear-${version}.tar.bz2"
 
     # Remove some unwanted message

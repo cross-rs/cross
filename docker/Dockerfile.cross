@@ -11,10 +11,12 @@ COPY --from=rust /root/.cargo /root/.cargo
 COPY --from=rust /root/.rustup /root/.rustup
 
 # need some basic devtools, and requirements for docker
+COPY docker/ubuntu.sources /etc/apt/sources.list.d/
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     ca-certificates \
     curl \
     git
+RUN sed -i 's|http://|https://|' /etc/apt/sources.list.d/ubuntu.sources
 
 RUN curl -fsSL https://get.docker.com | sh
 

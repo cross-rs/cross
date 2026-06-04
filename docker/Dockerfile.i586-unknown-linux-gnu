@@ -1,6 +1,7 @@
 FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY ubuntu.sources /etc/apt/sources.list.d/
 COPY common.sh lib.sh /
 RUN /common.sh
 
@@ -13,6 +14,13 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     g++-i686-linux-gnu \
     gfortran-i686-linux-gnu \
     libc6-dev-i386-cross
+
+# Make i686 libraries available on host to test target binary
+RUN ln -s /usr/i686-linux-gnu/lib/ld-linux.so.2 /lib/
+RUN ln -s /usr/i686-linux-gnu/lib/libgcc_s.so.1 /lib/
+RUN ln -s /usr/i686-linux-gnu/lib/libc.so.6 /lib/
+RUN ln -s /usr/i686-linux-gnu/lib/libstdc++.so.6 /lib/
+RUN ln -s /usr/i686-linux-gnu/lib/libm.so.6 /lib/
 
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=i386 /deny-debian-packages.sh \

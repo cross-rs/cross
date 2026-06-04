@@ -58,7 +58,8 @@ main() {
     esac
 
     apt-key adv --batch --yes --keyserver keyserver.ubuntu.com --recv-keys 74DA7924C5513486
-    add-apt-repository -y 'deb http://apt.dilos.org/dilos dilos2 main'
+    # https://apt.dilos.org/dilos is currently down
+    add-apt-repository -y 'deb https://mirrors.dotsrc.org/mirrors/pub/dilos/apt dilos2 main'
     dpkg --add-architecture "${apt_arch}"
     apt-get update
     apt-get install -y --download-only \
@@ -135,6 +136,26 @@ EOF
     make "-j$(nproc)"
     make install
     cd ..
+
+    # Map old to new symbols. This file is picked up by linker flags in our tests.
+    # - https://github.com/cross-rs/cross/issues/1599
+    # - https://github.com/cross-rs/cross/issues/1730
+    cat << '_EOF_' > compat.c
+#include <unistd.h>
+
+// Forward declare the existing DilOS functions
+extern long __sysconf_xpg5(int);
+extern int __xnet_socket(int, int, int);
+
+// Create strong aliases that the Rust compiler can see
+long __sysconf_xpg7(int name) {
+    return __sysconf_xpg5(name);
+}
+int __xnet7_socket(int domain, int type, int protocol) {
+    return __xnet_socket(domain, type, protocol);
+}
+_EOF_
+    "${target}-gcc" -c compat.c -o /compat.o
 
     # clean up
     popd

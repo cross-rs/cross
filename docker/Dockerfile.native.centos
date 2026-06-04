@@ -5,6 +5,7 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 ARG CROSS_TARGET_TRIPLE
 
+COPY ubuntu.sources /etc/apt/sources.list.d/
 COPY lib.sh /
 COPY linux-image.sh native-linux-image.sh /
 RUN /native-linux-image.sh
