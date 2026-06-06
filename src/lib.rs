@@ -771,6 +771,28 @@ pub fn setup(
         Err(err) => {
             msg_info.warn(err)?;
 
+            let target_triple = target.triple();
+            let host_triple = host.triple();
+            let native_targets = [
+                "x86_64-pc-windows-msvc",
+                "x86_64-apple-darwin",
+                "aarch64-apple-darwin",
+            ];
+            if native_targets.contains(&target_triple) {
+                if target_triple == host_triple {
+                    msg_info.note(format_args!(
+                        "target `{target_triple}` is the same as the host; \
+                         try running `cargo` directly instead of `cross`."
+                    ))?;
+                } else {
+                    msg_info.note(format_args!(
+                        "`cross` does not natively support target `{target_triple}`. \
+                         See <https://github.com/cross-rs/cross-toolchains> for pre-built \
+                         Docker images for additional targets."
+                    ))?;
+                }
+            }
+
             return Ok(None);
         }
     };
