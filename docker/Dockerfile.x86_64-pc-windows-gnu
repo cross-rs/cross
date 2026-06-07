@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 AS cross-base
+FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY common.sh lib.sh /
@@ -16,6 +16,12 @@ COPY wine.sh /
 RUN /wine.sh
 
 RUN apt-get update && apt-get install --assume-yes --no-install-recommends g++-mingw-w64-x86-64 gfortran-mingw-w64-x86-64
+
+# Ensure we compile with the POSIX versions of mingw
+RUN update-alternatives --set x86_64-w64-mingw32-gcc  /usr/bin/x86_64-w64-mingw32-gcc-posix  && \
+    update-alternatives --set x86_64-w64-mingw32-g++  /usr/bin/x86_64-w64-mingw32-g++-posix  && \
+    update-alternatives --set x86_64-w64-mingw32-gfortran /usr/bin/x86_64-w64-mingw32-gfortran-posix 2>/dev/null || true && \
+    update-alternatives --set x86_64-w64-mingw32-gcj  /usr/bin/x86_64-w64-mingw32-gcj-posix  2>/dev/null || true
 
 # run-detectors are responsible for calling the correct interpreter for exe
 # files. For some reason it does not work inside a docker container (it works
@@ -49,4 +55,6 @@ ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc"$CROS
     CROSS_CMAKE_SYSTEM_NAME=Windows \
     CROSS_CMAKE_SYSTEM_PROCESSOR=AMD64 \
     CROSS_CMAKE_CRT=gnu \
-    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -m64"
+    CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -m64" \
+    PKG_CONFIG_ALLOW_CROSS=1 \
+    PKG_CONFIG_PATH="/usr/x86_64-w64-mingw32/lib/pkgconfig/"
