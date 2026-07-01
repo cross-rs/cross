@@ -1,0 +1,5 @@
+{
+    "description": "add powerpc64le-unknown-freebsd image.",
+    "type": "added",
+    "breaking": false
+}
