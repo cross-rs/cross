@@ -1,6 +1,9 @@
-FROM ubuntu:20.04 AS cross-base
+FROM ubuntu:22.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY ubuntu.sources /etc/apt/sources.list.d/
+RUN sed -i 's/noble/jammy/g' /etc/apt/sources.list.d/ubuntu.sources
+RUN rm /etc/apt/sources.list
 COPY common.sh lib.sh /
 RUN /common.sh
 

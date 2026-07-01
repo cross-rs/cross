@@ -3,7 +3,7 @@ mod target_matrix;
 use crate::util::gha_output;
 use clap::Subcommand;
 use cross::shell::Verbosity;
-use cross::{cargo_command, CargoMetadata, CommandExt};
+use cross::{CargoMetadata, CommandExt, cargo_command};
 
 #[derive(Subcommand, Debug)]
 pub enum CiJob {
@@ -88,10 +88,12 @@ pub fn ci(args: CiJob, metadata: CargoMetadata) -> cross::Result<()> {
             let version = semver::Version::parse(&cross_meta.version)?;
             if ref_type == "tag" {
                 if ref_name.starts_with('v') && ref_name != format!("v{version}") {
-                    eyre::bail!("a version tag was published, but the tag does not match the current version in Cargo.toml");
+                    eyre::bail!(
+                        "a version tag was published, but the tag does not match the current version in Cargo.toml"
+                    );
                 }
                 let search = cargo_command()
-                    .args(["search", "--limit", "1"])
+                    .args(["search", "--color", "never", "--limit", "1"])
                     .arg("cross")
                     .run_and_get_stdout(&mut Verbosity::Verbose(2).into())?;
                 let (cross, rest) = search

@@ -57,107 +57,79 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-        kversion=5.10.0-34
+        kversion=6.12.90+deb13.1
 
-    local debsource="deb http://http.debian.net/debian/ bullseye main"
-    debsource="${debsource}\ndeb http://security.debian.org/ bullseye-security main"
+    local debsource="deb https://deb.debian.org/debian trixie main"
+    debsource="${debsource}\ndeb https://security.debian.org trixie-security main"
 
-    local dropbear="dropbear-bin"
-
-    local -a deps
     local kernel=
-    local libgcc="libgcc-s1"
-    local ncurses=
+    local kernel_pkg_split=0
 
     # select debian arch and kernel version
     case "${arch}" in
     aarch64)
         arch=arm64
         kernel="${kversion}-arm64"
-        deps=(libcrypt1:"${arch}")
         ;;
     armv7)
         arch=armhf
-        kernel='5.*-armmp'
-        deps=(libcrypt1:"${arch}")
+        kernel="${kversion}-armmp"
         ;;
     i686)
         arch=i386
         kernel="${kversion}-686"
-        deps=(libcrypt1:"${arch}")
-        ;;
-    mips)
-        # mips was discontinued in bullseye, so we have to use buster.
-        libgcc="libgcc1"
-        debsource="deb http://http.debian.net/debian/ buster main"
-        debsource="${debsource}\ndeb http://security.debian.org/ buster/updates main"
-        kernel='4.*-4kc-malta'
-        ncurses="=6.1*"
         ;;
     mipsel)
-        kernel='5.*-4kc-malta'
-        deps=(libcrypt1:"${arch}")
+        # mipsel was discontinued in trixie, so we have to use bookworm.
+        kernel='6.*-4kc-malta'
+        debsource="deb https://deb.debian.org/debian bookworm main"
         ;;
     mips64el)
-        kernel='5.*-5kc-malta'
-        deps=(libcrypt1:"${arch}")
+        # mipsel was discontinued in trixie, so we have to use bookworm.
+        kernel='6.*-5kc-malta'
+        debsource="deb https://deb.debian.org/debian bookworm main"
         ;;
     powerpc)
-        # there is no buster powerpc port, so we use jessie
-        # use a more recent kernel from backports
-        kversion='4.9.0-0.bpo.6'
-        kernel="${kversion}-powerpc"
-        debsource="deb http://archive.debian.org/debian jessie main"
-        debsource="${debsource}\ndeb http://archive.debian.org/debian jessie-backports main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
-
-        # archive.debian.org Release files are expired.
-        echo "Acquire::Check-Valid-Until false;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
-        echo "APT::Get::AllowUnauthenticated true;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
-        echo "Acquire::AllowInsecureRepositories True;" | tee -a /etc/apt/apt.conf.d/10-nocheckvalid
-
-        dropbear="dropbear"
-        deps=(libcrypt1:"${arch}")
+        # there is no stable port
+        # https://deb.debian.org/debian-ports/pool-powerpc/main/l/linux/
+        kernel='7.*-powerpc'
+        debsource="deb https://deb.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb https://deb.debian.org/debian-ports unreleased main"
+        # Debian Forky splits linux-image-* packages into linux-binary-* and linux-modules-* and linux-base-*
+        kernel_pkg_split=1
         ;;
     powerpc64)
         # there is no stable port
         arch=ppc64
         # https://packages.debian.org/en/sid/linux-image-powerpc64
-        kernel='6.*-powerpc64'
-        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
-        # sid version of dropbear requires these dependencies
-        deps=(libcrypt1:"${arch}")
+        kernel='7.*-powerpc64'
+        debsource="deb https://deb.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb https://deb.debian.org/debian-ports unreleased main"
+        # Debian Forky splits linux-image-* packages into linux-binary-* and linux-modules-* and linux-base-*
+        kernel_pkg_split=1
         ;;
     powerpc64le)
         arch=ppc64el
-        kernel='5.*-powerpc64le'
-        deps=(libcrypt1:"${arch}")
+        kernel="${kversion}-powerpc64le"
         ;;
     riscv64)
-        kernel='6.*-riscv64'
-        debsource="deb http://deb.debian.org/debian unstable main"
-        deps=(libcrypt1:"${arch}")
+        kernel="${kversion}-riscv64"
         ;;
     s390x)
-        arch=s390x
-        kernel='5.*-s390x'
-        deps=(libcrypt1:"${arch}")
+        kernel="${kversion}-s390x"
         ;;
     sparc64)
         # there is no stable port
         # https://packages.debian.org/en/sid/linux-image-sparc64
-        kernel='6.*-sparc64'
-        debsource="deb http://ftp.ports.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb http://ftp.ports.debian.org/debian-ports unreleased main"
-        # sid version of dropbear requires these dependencies
-        deps=(libcrypt1:"${arch}")
+        kernel='7.*-sparc64'
+        debsource="deb https://deb.debian.org/debian-ports unstable main"
+        debsource="${debsource}\ndeb https://deb.debian.org/debian-ports unreleased main"
+        # Debian Forky splits linux-image-* packages into linux-binary-* and linux-modules-* and linux-base-*
+        kernel_pkg_split=1
         ;;
     x86_64)
         arch=amd64
         kernel="${kversion}-amd64"
-        deps=(libcrypt1:"${arch}")
         ;;
     *)
         echo "Invalid arch: ${arch}"
@@ -177,7 +149,7 @@ main() {
     # using dpkg later, since we cannot redownload via apt.
     local dpkg_arch
     dpkg_arch=$(dpkg --print-architecture)
-    local libgcc_packages=("${libgcc}:${arch}" "libstdc++6:${arch}")
+    local libgcc_packages=("libgcc-s1:${arch}" "libstdc++6:${arch}")
     if [[ "${arch}" == "${dpkg_arch}" ]]; then
         local libgcc_root=/qemu/libgcc
         mkdir -p "${libgcc_root}"
@@ -187,7 +159,7 @@ main() {
     fi
 
     # Download packages
-    mv /etc/apt/sources.list /etc/apt/sources.list.bak
+    [[ -f '/etc/apt/sources.list' ]] && mv /etc/apt/sources.list /etc/apt/sources.list.bak
     mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak
     echo -e "${debsource}" >/etc/apt/sources.list
 
@@ -198,15 +170,11 @@ main() {
     dpkg --add-architecture "${arch}" || echo "foreign-architecture ${arch}" >/etc/dpkg/dpkg.cfg.d/multiarch
 
     # Add Debian keys.
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{7.0,8,9,10,11,12}.asc' -O
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{8,9,10,11,12}-security.asc' -O
-    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{7,8,9,10,11,12}.asc' -O
-    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_{2020,2021,2022,2023,2024,2025}.key' -O
-
-    for key in *.asc *.key; do
-        apt-key add "${key}"
-        rm "${key}"
-    done
+    cd /etc/apt/trusted.gpg.d
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{10,11,12,13}.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/archive-key-{10,11,12,13}-security.asc' -O
+    curl --retry 3 -sSfL 'https://ftp-master.debian.org/keys/release-{10,11,12,13}.asc' -O
+    curl --retry 3 -sSfL 'https://www.ports.debian.org/archive_2026.key' -o archive_2026.asc
 
     # allow apt-get to retry downloads
     echo 'APT::Acquire::Retries "3";' >/etc/apt/apt.conf.d/80-retries
@@ -230,17 +198,24 @@ main() {
         kernel=$(max_kernel_version "$kversions")
     fi
 
+    # Debian Forky splits linux-image-* packages into linux-binary-* and linux-modules-* and linux-base-*
+    local kernel_packages=()
+    if (( kernel_pkg_split )); then
+        kernel_packages=("linux-binary-${kernel}:${arch}" "linux-modules-${kernel}:${arch}" "linux-base-${kernel}:${arch}")
+    else
+        kernel_packages=("linux-image-${kernel}:${arch}")
+    fi
+
     cd "/qemu/${arch}"
     apt-get -d --no-install-recommends download \
-        ${deps[@]+"${deps[@]}"} \
         "busybox:${arch}" \
-        "${dropbear}:${arch}" \
+        "dropbear-bin:${arch}" \
         "libtommath1:${arch}" \
         "libtomcrypt1:${arch}" \
         "libgmp10:${arch}" \
         "libc6:${arch}" \
-        "linux-image-${kernel}:${arch}" \
-        ncurses-base"${ncurses}" \
+        "libcrypt1:${arch}" \
+        "${kernel_packages[@]}" \
         "zlib1g:${arch}"
 
     if [[ "${arch}" != "${dpkg_arch}" ]]; then
@@ -271,13 +246,19 @@ main() {
         # will prefer the system packages, which it can't find later.
         # removing these packages needs to occur after download via apt,
         # since apt-get relies on libgcc_s1 and libstdc++6.
-        dpkg -r --force-depends "${libgcc_packages[@]}"
+        dpkg -r --force-depends --force-remove-protected "${libgcc_packages[@]}"
     fi
     cd /qemu
 
     # Install packages
     root="root-${arch}"
-    mkdir -p "${root}"/{bin,etc/dropbear,root,sys,dev,proc,sbin,tmp,usr/{bin,sbin},var/log}
+    mkdir -p "${root}"
+    # make libraries and binaries available as usrmerge
+    for d in lib lib64 bin sbin; do
+        ln -nsd "usr/${d}" "${root}/${d}"
+    done
+    mkdir -p "${root}"/{etc/dropbear,root,sys,dev,proc,tmp,usr/{bin,sbin,lib,lib64},var/log}
+    # install
     for deb in "${arch}"/*deb; do
         dpkg -x "${deb}" "${root}"/
     done
@@ -389,12 +370,6 @@ mount -t 9p -o trans=virtio target /target -oversion=9p2000.u || true
 exec dropbear -F -E -B
 EOF
 
-    if [[ "${arch}" == "riscv64" ]]; then
-        # Symlink dynamic loader to /lib/ld-linux-riscv64-lp64d.so.1
-        mkdir -p "${root}/lib"
-        ln -s /usr/lib/riscv64-linux-gnu/ld-linux-riscv64-lp64d.so.1 "${root}/lib/ld-linux-riscv64-lp64d.so.1"
-    fi
-
     chmod +x "${root}/init"
     cd "${root}"
     find . | cpio --create --format='newc' --quiet | gzip >../initrd.gz
@@ -410,7 +385,11 @@ EOF
 
     # Clean up
     rm -rf "/qemu/${root}" "/qemu/${arch}"
-    mv -f /etc/apt/sources.list.bak /etc/apt/sources.list
+    if [[ -f '/etc/apt/sources.list.bak' ]]; then
+        mv -f /etc/apt/sources.list.bak /etc/apt/sources.list
+    else
+        rm /etc/apt/sources.list
+    fi
     mv -f /etc/apt/sources.list.d.bak /etc/apt/sources.list.d
     if [ -f /etc/dpkg/dpkg.cfg.d/multiarch.bak ]; then
         mv /etc/dpkg/dpkg.cfg.d/multiarch.bak /etc/dpkg/dpkg.cfg.d/multiarch

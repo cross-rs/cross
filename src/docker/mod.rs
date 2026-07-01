@@ -40,6 +40,8 @@ impl ProvidedImage {
 }
 
 pub fn image_name(target: &str, sub: Option<&str>, repository: &str, tag: &str) -> String {
+    // OCI does not support uppercase characters from orga/owner names
+    let repository = repository.to_lowercase();
     if let Some(sub) = sub {
         format!("{repository}/{target}:{tag}-{sub}")
     } else {

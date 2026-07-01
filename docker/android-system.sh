@@ -69,17 +69,25 @@ main() {
     fake_java
 
     install_packages ca-certificates \
+        2to3 \
         curl \
         gcc-multilib \
         git \
         g++-multilib \
-        libncurses5 \
-        libtinfo5 \
         make \
         openssh-client \
-        python \
+        python-is-python3 \
         python3 \
+        pybind11-dev \
+        libre2-dev \
         xz-utils
+
+    # Prebuilt clang toolchain depends on libtinfo5 and libncurses5 while Ubuntu 24.04 host ships only libtinfo6 and libncurses6.
+    # Install latest libtinfo5 and libncurses5 from Debian Bookworm. They depend libc6 >=2.34 only, hence do not cause conflicts.
+    curl --retry 3 -sSfL https://deb.debian.org/debian/pool/main/n/ncurses/libtinfo5_6.4-4_amd64.deb -o libtinfo5.deb
+    curl --retry 3 -sSfL https://deb.debian.org/debian/pool/main/n/ncurses/libncurses5_6.4-4_amd64.deb -o libncurses5.deb
+    dpkg -i libtinfo5.deb libncurses5.deb
+    rm libtinfo5.deb libncurses5.deb
 
     curl --retry 3 -sSfL https://storage.googleapis.com/git-repo-downloads/repo -O
     chmod +x repo
@@ -125,6 +133,24 @@ main() {
                 ;;
         esac
     fi
+
+    # Convert Python 2 scripts for Python 3 compatibility
+    find . -path './.repo/repo' -prune\
+        -o -path './art/test' -prune\
+        -o -type f -name '*.py'\
+        ! -path './prebuilts/sdk/update_prebuilts/update_prebuilts.py'\
+        ! -path './art/tools/test_presubmit.py'\
+        ! -path './art/tools/jfuzz/run_jfuzz_test.py'\
+        ! -path './external/llvm/utils/lit/tests/shtest-encoding.py'\
+        -print | while read -r file
+    do
+        LC_ALL=C grep -Iq . "$file" || continue
+        2to3 -w -n "$file"
+    done
+    sed -i 's/lower <= value <= upper/lower <= int(value) <= upper/' ./bionic/libc/fs_config_generator.py
+
+    # Soong looks for a python2.7 executable explicitly
+    ln -s python3 /usr/bin/python2.7
 
     build_android
     install_android "${tools[@]}"
@@ -195,6 +221,9 @@ build_android() {
     if [[ "${ANDROID_SYSTEM_COMPLETE}" != "1" ]]; then
         export ALLOW_MISSING_DEPENDENCIES=true
     fi
+
+    # Workaround for AOSP expecting literal "C.UTF-8" locale while libc-bin ships it as "C.utf8"
+    [[ -d '/usr/lib/locale/C.UTF-8' ]] || ln -sTf C.utf8 /usr/lib/locale/C.UTF-8
 
     set +u
     # shellcheck disable=SC1091
@@ -812,7 +841,7 @@ major = sys.version_info.major
 minor = sys.version_info.minor
 print(f"{major}.{minor}")')
     set +u
-    export PYTHONPATH="${PYTHON_TMPDIR}/lib/python${version}/site-packages/:${PYTHONPATH}"
+    export PYTHONPATH="${PYTHON_TMPDIR}/local/lib/python${version}/dist-packages/:${PYTHONPATH}"
     set -u
     mkdir -p "${PYTHON_TMPDIR}"
     python3 -m pip install sly==0.4.0 --prefix "${PYTHON_TMPDIR}"

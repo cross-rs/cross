@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use cross::shell::MessageInfo;
-use cross::{docker, CommandExt, ToUtf8};
+use cross::{CommandExt, ToUtf8, docker};
 
 use once_cell::sync::{Lazy, OnceCell};
 use serde::Deserialize;
@@ -319,7 +319,9 @@ pub fn gha_error(content: &str) {
 pub fn gha_output(tag: &str, content: &str) -> cross::Result<()> {
     if content.contains('\n') {
         // https://github.com/actions/toolkit/issues/403
-        eyre::bail!("output `{tag}` contains newlines, consider serializing with json and deserializing in gha with fromJSON()");
+        eyre::bail!(
+            "output `{tag}` contains newlines, consider serializing with json and deserializing in gha with fromJSON()"
+        );
     }
     write_to_gha_env_file("GITHUB_OUTPUT", &format!("{tag}={content}"))?;
     Ok(())

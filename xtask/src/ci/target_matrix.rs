@@ -1,11 +1,11 @@
 use std::process::Command;
 
-use clap::builder::{BoolishValueParser, PossibleValuesParser};
 use clap::Parser;
-use cross::{shell::Verbosity, CommandExt};
+use clap::builder::{BoolishValueParser, PossibleValuesParser};
+use cross::{CommandExt, shell::Verbosity};
 use serde::{Deserialize, Serialize};
 
-use crate::util::{get_matrix, gha_output, gha_print, CiTarget, ImageTarget};
+use crate::util::{CiTarget, ImageTarget, get_matrix, gha_output, gha_print};
 
 #[derive(Parser, Debug)]
 pub struct TargetMatrix {
@@ -465,15 +465,19 @@ mod tests {
     #[test]
     fn ensure_filter_works() {
         let matrix = run(["--dylib", "1"]);
-        assert!(matrix
-            .iter()
-            .any(|t| t.target == "aarch64-unknown-linux-gnu"));
+        assert!(
+            matrix
+                .iter()
+                .any(|t| t.target == "aarch64-unknown-linux-gnu")
+        );
         assert!(matrix.iter().all(|t| t.target != "thumbv6m-none-eabi"));
 
         let matrix = run(["--dylib", "0"]);
-        assert!(matrix
-            .iter()
-            .all(|t| t.target != "aarch64-unknown-linux-gnu"));
+        assert!(
+            matrix
+                .iter()
+                .all(|t| t.target != "aarch64-unknown-linux-gnu")
+        );
         assert!(matrix.iter().any(|t| t.target == "thumbv6m-none-eabi"));
     }
 
@@ -494,7 +498,10 @@ mod tests {
     #[test]
     fn merge_group() {
         assert_eq!(
-            process_merge_group("refs/heads/gh-readonly-queue/main/pr-1375-44011c8854cb2eaac83b173cc323220ccdff18ea").unwrap(),
+            process_merge_group(
+                "refs/heads/gh-readonly-queue/main/pr-1375-44011c8854cb2eaac83b173cc323220ccdff18ea"
+            )
+            .unwrap(),
             "1375"
         );
     }

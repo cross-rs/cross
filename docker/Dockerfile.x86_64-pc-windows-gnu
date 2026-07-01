@@ -1,6 +1,7 @@
-FROM ubuntu:20.04 AS cross-base
+FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY ubuntu.sources /etc/apt/sources.list.d/
 COPY common.sh lib.sh /
 RUN /common.sh
 
@@ -9,13 +10,12 @@ RUN /cmake.sh
 
 FROM cross-base AS build
 
-RUN dpkg --add-architecture i386 && apt-get update && \
-    apt-get install --assume-yes --no-install-recommends libz-mingw-w64-dev
+RUN apt-get install --assume-yes --no-install-recommends libz-mingw-w64-dev
 
 COPY wine.sh /
 RUN /wine.sh
 
-RUN apt-get update && apt-get install --assume-yes --no-install-recommends g++-mingw-w64-x86-64 gfortran-mingw-w64-x86-64
+RUN apt-get install --assume-yes --no-install-recommends g++-mingw-w64-x86-64-posix gfortran-mingw-w64-x86-64-posix
 
 # run-detectors are responsible for calling the correct interpreter for exe
 # files. For some reason it does not work inside a docker container (it works
@@ -23,10 +23,9 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends g++-m
 # directly. This only affects the guest, we are not messing up with the host.
 #
 # See /usr/share/doc/binfmt-support/detectors
-RUN mkdir -p /usr/lib/binfmt-support/ && \
-    rm -f /usr/lib/binfmt-support/run-detectors /usr/bin/run-detectors && \
-    ln -s /usr/bin/wine /usr/lib/binfmt-support/run-detectors && \
-    ln -s /usr/bin/wine /usr/bin/run-detectors
+RUN mkdir -p /usr/lib/binfmt-support && \
+    ln -sTf /usr/bin/wine /usr/lib/binfmt-support/run-detectors && \
+    ln -sTf /usr/bin/wine /usr/bin/run-detectors
 
 COPY windows-entry.sh /
 ENTRYPOINT ["/windows-entry.sh"]

@@ -19,13 +19,16 @@ pub fn install_panic_hook() -> Result<()> {
 
 /// # Safety
 /// Safe as long as we have single-threaded execution.
-unsafe fn termination_handler() {
+fn termination_handler() {
     // we can't warn the user here, since locks aren't signal-safe.
     // we can delete files, since fdopendir is thread-safe, and
     // `openat`, `unlinkat`, and `lstat` are signal-safe.
     //  https://man7.org/linux/man-pages/man7/signal-safety.7.html
-    if !TERMINATED.swap(true, Ordering::SeqCst) && temp::has_tempfiles() {
-        temp::clean();
+    #[allow(static_mut_refs)]
+    unsafe {
+        if !TERMINATED.swap(true, Ordering::SeqCst) && temp::has_tempfiles() {
+            temp::clean();
+        }
     }
 
     // tl;dr this is a long explanation to say this is thread-safe.
@@ -103,7 +106,9 @@ unsafe fn termination_handler() {
     // a global CString and `Vec<CString>`, respectively. this atomic guard
     // makes this safe regardless.
     #[allow(static_mut_refs)] // FIXME: Use correct types for CHILD_CONTAINER
-    docker::CHILD_CONTAINER.terminate();
+    unsafe {
+        docker::CHILD_CONTAINER.terminate();
+    }
 
     // all termination exit codes are 128 + signal code. the exit code is
     // 130 for Ctrl+C or SIGINT (signal code 2) for linux, macos, and windows.
@@ -112,11 +117,9 @@ unsafe fn termination_handler() {
 
 pub fn install_termination_hook() -> Result<()> {
     // SAFETY: safe since single-threaded execution.
-    unsafe {
-        signal_hook::low_level::register(signal_hook::consts::SIGINT, || termination_handler())
-    }
-    .map_err(Into::into)
-    .map(|_| ())
+    unsafe { signal_hook::low_level::register(signal_hook::consts::SIGINT, termination_handler) }
+        .map_err(Into::into)
+        .map(|_| ())
 }
 
 #[derive(Debug, thiserror::Error)]

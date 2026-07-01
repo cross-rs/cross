@@ -4,12 +4,12 @@ use std::str::FromStr;
 
 use crate::docker::{self, DockerOptions, DockerPaths};
 use crate::shell::MessageInfo;
-use crate::{errors::*, file, CommandExt, ToUtf8};
 use crate::{CargoMetadata, TargetTriple};
+use crate::{CommandExt, ToUtf8, errors::*, file};
 
 use super::{
-    create_target_dir, get_image_name, path_hash, BuildCommandExt, BuildResultExt, Engine,
-    ImagePlatform,
+    BuildCommandExt, BuildResultExt, Engine, ImagePlatform, create_target_dir, get_image_name,
+    path_hash,
 };
 
 pub const CROSS_CUSTOM_DOCKERFILE_IMAGE_PREFIX: &str = "localhost/cross-rs/cross-custom-";

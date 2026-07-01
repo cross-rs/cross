@@ -1,6 +1,7 @@
 FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY ubuntu.sources /etc/apt/sources.list.d/
 COPY common.sh lib.sh /
 RUN /common.sh
 

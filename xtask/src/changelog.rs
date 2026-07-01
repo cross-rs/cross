@@ -5,8 +5,8 @@ use std::fs;
 use std::path::Path;
 
 use crate::util::{project_dir, write_to_string};
-use cross::shell::MessageInfo;
 use cross::ToUtf8;
+use cross::shell::MessageInfo;
 
 use chrono::{Datelike, Utc};
 use clap::{Args, Subcommand};
@@ -797,7 +797,9 @@ mod tests {
         let expected = ChangelogEntry::new(
             IdType::PullRequest(vec![905]),
             ChangelogContents {
-                description: s!("added qemu emulation to `i586-unknown-linux-gnu`, `i686-unknown-linux-musl`, and `i586-unknown-linux-gnu`, so they can run on an `x86` CPU, rather than an `x86_64` CPU."),
+                description: s!(
+                    "added qemu emulation to `i586-unknown-linux-gnu`, `i686-unknown-linux-musl`, and `i586-unknown-linux-gnu`, so they can run on an `x86` CPU, rather than an `x86_64` CPU."
+                ),
                 issues: vec![],
                 breaking: false,
                 kind: ChangelogType::Added,
@@ -808,7 +810,9 @@ mod tests {
         let expected = ChangelogEntry::new(
             IdType::PullRequest(vec![869]),
             ChangelogContents {
-                description: s!("ensure cargo configuration environment variable flags are passed to the docker container."),
+                description: s!(
+                    "ensure cargo configuration environment variable flags are passed to the docker container."
+                ),
                 issues: vec![],
                 breaking: false,
                 kind: ChangelogType::Changed,
@@ -819,7 +823,9 @@ mod tests {
         let expected = ChangelogEntry::new(
             IdType::PullRequest(vec![905]),
             ChangelogContents {
-                description: s!("fixed running dynamically-linked libraries for all musl targets except `x86_64-unknown-linux-musl`."),
+                description: s!(
+                    "fixed running dynamically-linked libraries for all musl targets except `x86_64-unknown-linux-musl`."
+                ),
                 issues: vec![],
                 breaking: false,
                 kind: ChangelogType::Fixed,

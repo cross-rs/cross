@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::util::{format_repo, pull_image};
 use clap::Args;
 use cross::shell::MessageInfo;
-use cross::{docker, CommandExt};
+use cross::{CommandExt, docker};
 
 // Store raw text data in the binary so we don't need a data directory
 // when extracting all targets, or running our target info script.

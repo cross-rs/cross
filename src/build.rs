@@ -24,11 +24,20 @@ fn main() {
         .write_all(commit_info().as_bytes())
         .unwrap();
 
+    // Add "cross_sandboxed" to list of approved cfgs
     println!("cargo::rustc-check-cfg=cfg(cross_sandboxed)");
+
     if env::var("CROSS_SANDBOXED").is_ok() {
         println!("cargo:rustc-cfg=cross_sandboxed");
     }
     println!("cargo:rerun-if-env-changed=CROSS_SANDBOXED");
+
+    // OCI does not support uppercase characters from orga/owner names
+    let image = std::env::var("CROSS_IMAGE")
+        .unwrap_or_else(|_| "ghcr.io/cross-rs".into())
+        .to_lowercase();
+
+    println!("cargo:rustc-env=CROSS_IMAGE_LOWER={image}");
 }
 
 fn commit_info() -> String {

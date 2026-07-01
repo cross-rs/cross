@@ -1,10 +1,10 @@
 use std::fmt::Write;
 use std::path::Path;
 
-use crate::util::{
-    cargo_metadata, get_matrix, gha_error, gha_output, gha_print, DEFAULT_PLATFORMS,
-};
 use crate::ImageTarget;
+use crate::util::{
+    DEFAULT_PLATFORMS, cargo_metadata, get_matrix, gha_error, gha_output, gha_print,
+};
 use clap::Args;
 use cross::docker::{self, BuildCommandExt, BuildResultExt, ImagePlatform, Progress};
 use cross::shell::MessageInfo;
@@ -126,6 +126,8 @@ pub fn build_docker_image(
     engine: &docker::Engine,
     msg_info: &mut MessageInfo,
 ) -> cross::Result<()> {
+    // OCI does not support uppercase characters from orga/owner names
+    let repository = repository.to_lowercase();
     let metadata = cargo_metadata(msg_info)?;
     let version = metadata
         .get_package("cross")
@@ -236,7 +238,9 @@ pub fn build_docker_image(
             )?),
             _ => {
                 if push && tag_override.is_none() {
-                    panic!("Refusing to push without tag or branch. Specify a repository and tag with `--repository <repository> --tag <tag>`")
+                    panic!(
+                        "Refusing to push without tag or branch. Specify a repository and tag with `--repository <repository> --tag <tag>`"
+                    )
                 }
                 tags.push(target.image_name(&repository, "local"));
             }
@@ -339,7 +343,9 @@ pub fn build_docker_image(
         }
     }
     if gha {
-        std::env::set_var("GITHUB_STEP_SUMMARY", job_summary(&results)?);
+        unsafe {
+            std::env::set_var("GITHUB_STEP_SUMMARY", job_summary(&results)?);
+        }
     }
     if results.iter().any(|r| r.is_err()) {
         #[allow(unknown_lints, clippy::manual_try_fold)]

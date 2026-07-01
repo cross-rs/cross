@@ -124,7 +124,7 @@ jobs:
         id: generate-matrix
         run: cargo xtask ci-job target-matrix ${{ github.event_name == 'merge_group' && format('--merge-group {0}', github.ref) || '' }} ${{ inputs.matrix-args || '' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
 
   build:
     name: target (${{ matrix.pretty }},${{ matrix.os }})
@@ -168,7 +168,7 @@ jobs:
       - name: LLVM instrument coverage
         id: cov
         uses: ./.github/actions/cargo-llvm-cov
-        if: steps.prepare-meta.outputs.has-image  && steps.prepare-meta.outputs.test-variant != 'zig'
+        if: steps.prepare-meta.outputs.has-image && steps.prepare-meta.outputs.test-variant != 'zig'
         with:
           name: cross-${{matrix.pretty}}
 
@@ -189,7 +189,7 @@ jobs:
         id: build-docker-image
         if: steps.prepare-meta.outputs.has-image
         timeout-minutes: 120
-        run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}" ${{ matrix.verbose && '-v' || ''  }}
+        run: cargo xtask build-docker-image -v "${TARGET}${SUB:+.$SUB}" ${{ matrix.verbose && '-v' || '' }}
         env:
           TARGET: ${{ matrix.target }}
           SUB: ${{ matrix.sub }}
@@ -243,7 +243,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
       - name: Push image to GitHub Container Registry
         if: >
           (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') &&
@@ -401,10 +401,25 @@ jobs:
       - uses: ./.github/actions/cargo-publish
         with:
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
 
   conclusion:
-    needs: [shellcheck, fmt, clippy, test, generate-matrix, build, publish, check, remote, bisect, docker-in-docker, foreign, podman]
+    needs:
+      [
+        shellcheck,
+        fmt,
+        clippy,
+        test,
+        generate-matrix,
+        build,
+        publish,
+        check,
+        remote,
+        bisect,
+        docker-in-docker,
+        foreign,
+        podman,
+      ]
     if: always()
     runs-on: ubuntu-latest
     steps:

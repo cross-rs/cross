@@ -1,6 +1,7 @@
-FROM ubuntu:20.04 AS cross-base
+FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY ubuntu.sources /etc/apt/sources.list.d/
 COPY common.sh lib.sh /
 RUN /common.sh
 
@@ -14,6 +15,13 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     gfortran-i686-linux-gnu \
     libc6-dev-i386-cross
 
+# Make i686 libraries available on host to test target binary
+RUN ln -s /usr/i686-linux-gnu/lib/ld-linux.so.2 /lib/
+RUN ln -s /usr/i686-linux-gnu/lib/libgcc_s.so.1 /lib/
+RUN ln -s /usr/i686-linux-gnu/lib/libc.so.6 /lib/
+RUN ln -s /usr/i686-linux-gnu/lib/libstdc++.so.6 /lib/
+RUN ln -s /usr/i686-linux-gnu/lib/libm.so.6 /lib/
+
 COPY deny-debian-packages.sh /
 RUN TARGET_ARCH=i386 /deny-debian-packages.sh \
     binutils \
@@ -22,18 +30,12 @@ RUN TARGET_ARCH=i386 /deny-debian-packages.sh \
 COPY qemu.sh /
 RUN /qemu.sh i386 softmmu
 
-COPY dropbear.sh /
-RUN /dropbear.sh
-
-COPY linux-image.sh /
-RUN /linux-image.sh i686
-
-COPY linux-runner base-runner.sh /
+COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TOOLCHAIN_PREFIX=i686-linux-gnu-
 ENV CROSS_SYSROOT=/usr/i686-linux-gnu
-ENV CROSS_TARGET_RUNNER="/linux-runner i686"
+ENV CROSS_TARGET_RUNNER="/qemu-runner i686"
 ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_i686_unknown_linux_gnu="$CROSS_TOOLCHAIN_PREFIX"ar \
@@ -50,4 +52,4 @@ ENV CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CROSS_CMAKE_CRT=gnu \
     CROSS_CMAKE_OBJECT_FLAGS="-ffunction-sections -fdata-sections -fPIC -m32 -march=i686"
 
-RUN sed -e "s#@DEFAULT_QEMU_LD_PREFIX@#$QEMU_LD_PREFIX#g" -i /linux-runner
+RUN sed -e "s#@DEFAULT_QEMU_LD_PREFIX@#$QEMU_LD_PREFIX#g" -i /qemu-runner

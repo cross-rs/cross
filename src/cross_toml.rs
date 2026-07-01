@@ -6,11 +6,11 @@
 //! [1]: https://github.com/cross-rs/cross/blob/main/docs/config_file.md
 
 use crate::config::ConfVal;
-use crate::docker::custom::PreBuild;
 use crate::docker::PossibleImage;
+use crate::docker::custom::PreBuild;
 use crate::shell::MessageInfo;
-use crate::{config, errors::*};
 use crate::{Target, TargetList};
+use crate::{config, errors::*};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::{BTreeSet, HashMap};
