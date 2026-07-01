@@ -39,6 +39,7 @@ impl Run {
         let args = Args {
             cargo_args: vec![],
             rest_args: vec![],
+            unstable_features: vec![],
             subcommand: None,
             channel: None,
             target: Some(target.clone()),
