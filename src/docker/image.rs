@@ -416,7 +416,7 @@ impl ImagePlatform {
             },
             TargetTriple::Aarch64AppleDarwin => ImagePlatform {
                 architecture: Architecture::Arm64,
-                os: Os::Linux,
+                os: Os::Darwin,
                 variant: None,
                 target,
             },
