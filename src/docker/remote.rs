@@ -470,13 +470,14 @@ where
 
         let src_path = file.path();
         let dst_path = dst.join(file.file_name());
-        if file.file_type()?.is_file() {
+        let file_type = file.file_type()?;
+        if file_type.is_file() {
             fs::copy(&src_path, &dst_path)
                 .wrap_err_with(|| format!("when copying file {src_path:?} -> {dst_path:?}"))?;
-        } else if file.file_type()?.is_dir() {
+        } else if file_type.is_dir() {
             fs::create_dir(&dst_path).ok();
             had_symlinks = copy_dir(&src_path, &dst_path, copy_symlinks, depth + 1, skip)?;
-        } else if copy_symlinks {
+        } else if file_type.is_symlink() && copy_symlinks {
             had_symlinks = true;
             let link_dst = fs::read_link(src_path)?;
 
