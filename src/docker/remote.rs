@@ -8,8 +8,6 @@ use eyre::Context;
 use is_terminal::IsTerminal;
 use serde::Deserialize;
 
-use crate::extensions::OutputExt;
-
 use super::engine::Engine;
 use super::shared::*;
 use crate::TargetTriple;
@@ -1058,8 +1056,7 @@ symlink_recurse \"${{prefix}}\"
 
     bail_container_exited!();
 
-    let output = docker.run_and_get_output(msg_info)?;
-    let status = output.status;
+    let (status, command_stdout) = docker.run_and_get_output_streamed(msg_info)?;
     // Per-artifact copies should land inside the host target directory
     // itself, e.g. <project>/target/<triple>/debug/<bin>.
     let host_target_dir = package_dirs.target().to_owned();
@@ -1079,8 +1076,7 @@ symlink_recurse \"${{prefix}}\"
         && data_volume.container_path_exists(&mount_target_dir, mount_prefix, msg_info)?
     {
         if produces_artifacts {
-            let json_output = output.stdout()?;
-            let artifact_files = parse_artifact_filenames(&json_output);
+            let artifact_files = parse_artifact_filenames(&command_stdout);
 
             if !artifact_files.is_empty() {
                 copy_artifacts_from_container(
@@ -1110,4 +1106,39 @@ symlink_recurse \"${{prefix}}\"
     ChildContainer::finish_static(is_tty, msg_info);
 
     Ok(Some(status))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_artifact_filenames;
+
+    #[test]
+    fn parse_workspace_artifacts() {
+        let json = r#"{"reason":"compiler-artifact","package_id":"path+file:///project/hello","target":{"kind":["bin"],"name":"hello"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/hello","/project/target/debug/hello.d"],"executable":"/project/target/debug/hello"}"#;
+        let out = parse_artifact_filenames(json);
+        assert_eq!(
+            out,
+            vec![
+                "/project/target/debug/hello",
+                "/project/target/debug/hello.d",
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_skips_program_output_and_non_workspace() {
+        let json = concat!(
+            "Hello, world!\n",
+            r#"{"reason":"compiler-artifact","package_id":"registry+https://github.com/rust-lang/crates.io-index#serde@1.0.0","target":{"kind":["lib"],"name":"serde"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/deps/libserde.rlib"],"executable":null}"#,
+            "\n",
+            r#"{"reason":"build-finished","success":true}"#,
+        );
+        assert!(parse_artifact_filenames(json).is_empty());
+    }
+
+    #[test]
+    fn parse_skips_empty_input() {
+        assert!(parse_artifact_filenames("").is_empty());
+        assert!(parse_artifact_filenames("\n  \n").is_empty());
+    }
 }
