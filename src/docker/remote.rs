@@ -949,6 +949,12 @@ pub(crate) fn run(
     let skip_artifacts = env::var("CROSS_REMOTE_SKIP_BUILD_ARTIFACTS")
         .map(|s| bool_from_envvar(&s))
         .unwrap_or_default();
+    // Copy the full target directory back to the host instead of only the
+    // compiler artifacts, e.g. when build scripts emit files (OUT_DIR
+    // contents, generated code) that must be available on the host.
+    let copy_full_target_dir = env::var("CROSS_REMOTE_COPY_FULL_TARGET_DIR")
+        .map(|s| bool_from_envvar(&s))
+        .unwrap_or_default();
 
     let mut cmd = options.command_variant.safe_command();
 
@@ -990,14 +996,14 @@ pub(crate) fn run(
             final_args.push(target_dir.clone());
         }
 
-        if produces_artifacts && !skip_artifacts {
+        if produces_artifacts && !skip_artifacts && !copy_full_target_dir {
             final_args.push("--message-format=json".to_owned());
         }
 
         cmd.args(final_args);
     } else {
         cmd.args(args);
-        if produces_artifacts && !skip_artifacts {
+        if produces_artifacts && !skip_artifacts && !copy_full_target_dir {
             cmd.arg(&"--message-format=json".to_owned());
         }
     }
@@ -1075,7 +1081,7 @@ symlink_recurse \"${{prefix}}\"
     if !skip_artifacts
         && data_volume.container_path_exists(&mount_target_dir, mount_prefix, msg_info)?
     {
-        if produces_artifacts {
+        if produces_artifacts && !copy_full_target_dir {
             let artifact_files = parse_artifact_filenames(&command_stdout);
 
             if !artifact_files.is_empty() {
