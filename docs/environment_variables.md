@@ -33,6 +33,10 @@ In-depth documentation with examples can be found [here][env-examples].
 - `CROSS_REMOTE`: Inform `cross` it is using a remote container engine, and use
   data volumes rather than local bind mounts. See [Remote][docs-remote] for
   more information using remote container engines.
+- `CROSS_REMOTE_COPY_FULL_TARGET_DIR`: Copy the entire target directory
+  back to the host after the build, instead of only the compiler artifacts.
+  Useful when build scripts generate files, such as the `OUT_DIR` contents,
+  that must be available on the host.
 - `QEMU_STRACE`: Get a backtrace of system calls from “foreign” (non x86_64)
   binaries when using `cross` run.
 - `CARGO_BUILD_TARGET`: Sets the default target, similar to specifying
