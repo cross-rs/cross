@@ -533,6 +533,11 @@ fn is_workspace_artifact(artifact: &CargoCompilerArtifact) -> bool {
     artifact.package_id.starts_with("path+file://")
 }
 
+fn is_intermediate_artifact(path: &str) -> bool {
+    path.contains("/deps/") && (path.ends_with("rlib") || path.ends_with("rmeta"))
+        || path.ends_with("build-script-build")
+}
+
 fn parse_artifact_filenames(json_output: &str) -> Vec<String> {
     let mut filenames = Vec::new();
     for line in json_output.lines() {
@@ -543,10 +548,15 @@ fn parse_artifact_filenames(json_output: &str) -> Vec<String> {
         if let Ok(artifact) = serde_json::from_str::<CargoCompilerArtifact>(line) {
             if artifact.reason == "compiler-artifact" && is_workspace_artifact(&artifact) {
                 for f in artifact.filenames {
+                    if is_intermediate_artifact(&f) {
+                        continue;
+                    }
                     if !filenames.contains(&f) {
                         filenames.push(f);
                     }
                 }
+                // Executables are final products even when cargo places
+                // them under `deps/` (e.g. test binaries).
                 if let Some(exe) = artifact.executable {
                     if !filenames.contains(&exe) {
                         filenames.push(exe);
@@ -1127,6 +1137,27 @@ mod tests {
             vec![
                 "/project/target/debug/hello",
                 "/project/target/debug/hello.d",
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_skips_deps_artifacts_keeps_executable() {
+        let json = concat!(
+            r#"{"reason":"compiler-artifact","package_id":"path+file:///project/lib","target":{"kind":["lib"],"name":"lib"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/deps/liblib-abc123.rlib","/project/target/debug/deps/liblib-abc123.rmeta","/project/target/debug/deps/liblib-abc123.d"],"executable":null}"#,
+            "\n",
+            r#"{"reason":"compiler-artifact","package_id":"path+file:///project/app","target":{"kind":["bin"],"name":"app"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/app","/project/target/debug/deps/app-def456"],"executable":"/project/target/debug/app"}"#,
+            "\n",
+            r#"{"reason":"compiler-artifact","package_id":"path+file:///project/itest","target":{"kind":["test"],"name":"itest"},"profile":{"test":true,"opt_level":"s"},"features":[],"filenames":["/project/target/debug/deps/itest-789abc"],"executable":"/project/target/debug/deps/itest-789abc"}"#,
+        );
+        let out = parse_artifact_filenames(json);
+        assert_eq!(
+            out,
+            vec![
+                "/project/target/debug/deps/liblib-abc123.d",
+                "/project/target/debug/app",
+                "/project/target/debug/deps/app-def456",
+                "/project/target/debug/deps/itest-789abc"
             ]
         );
     }
