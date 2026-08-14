@@ -538,6 +538,15 @@ fn is_intermediate_artifact(path: &str) -> bool {
         || path.ends_with("build-script-build")
 }
 
+/// Returns `true` when `line` is one of cargo's `--message-format=json`
+/// machine messages. Such lines are needed only for artifact discovery and
+/// must be captured silently instead of being printed to the user's stdout.
+fn is_cargo_json_message(line: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(line.trim())
+        .map(|value| value.get("reason").is_some())
+        .unwrap_or(false)
+}
+
 fn parse_artifact_filenames(json_output: &str) -> Vec<String> {
     let mut filenames = Vec::new();
     for line in json_output.lines() {
@@ -1072,7 +1081,8 @@ symlink_recurse \"${{prefix}}\"
 
     bail_container_exited!();
 
-    let (status, command_stdout) = docker.run_and_get_output_streamed(msg_info)?;
+    let (status, command_stdout) =
+        docker.run_and_get_output_streamed(msg_info, |line| !is_cargo_json_message(line))?;
     // Per-artifact copies should land inside the host target directory
     // itself, e.g. <project>/target/<triple>/debug/<bin>.
     let host_target_dir = package_dirs.target().to_owned();
@@ -1126,7 +1136,25 @@ symlink_recurse \"${{prefix}}\"
 
 #[cfg(test)]
 mod tests {
-    use super::parse_artifact_filenames;
+    use super::{is_cargo_json_message, parse_artifact_filenames};
+
+    #[test]
+    fn cargo_json_message_detection() {
+        assert!(is_cargo_json_message(
+            r#"{"reason":"compiler-artifact","package_id":"path+file:///project/hello","target":{"kind":["bin"],"name":"hello"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/hello"],"executable":"/project/target/debug/hello"}"#
+        ));
+        assert!(is_cargo_json_message(
+            r#"{"reason":"build-finished","success":true}"#
+        ));
+        assert!(is_cargo_json_message(
+            r#"{"reason":"compiler-message","message":{"level":"warning","message":"unused"}}"#
+        ));
+        assert!(!is_cargo_json_message("Hello, world!"));
+        assert!(!is_cargo_json_message(""));
+        assert!(!is_cargo_json_message("not json at all"));
+        assert!(!is_cargo_json_message(r#"{"without":"a reason key"}"#));
+        assert!(!is_cargo_json_message("   "));
+    }
 
     #[test]
     fn parse_workspace_artifacts() {

@@ -50,6 +50,7 @@ pub trait CommandExt {
     fn run_and_get_output_streamed(
         &mut self,
         msg_info: &mut MessageInfo,
+        should_forward: impl FnMut(&str) -> bool,
     ) -> Result<(ExitStatus, String)>;
     fn command_pretty(
         &self,
@@ -202,11 +203,15 @@ impl CommandExt for Command {
     /// streaming stderr as-is.
     ///
     /// Unlike [`CommandExt::run_and_get_output`], the captured output is also
-    /// forwarded to the user, so programs' output is not swallowed.
+    /// forwarded to the user, so programs' output is not swallowed. Lines for
+    /// which `should_forward` returns `false` are still collected but are not
+    /// forwarded, so machine-readable output (e.g. cargo's
+    /// `--message-format=json`) can be intercepted without leaking to the user.
     #[track_caller]
     fn run_and_get_output_streamed(
         &mut self,
         msg_info: &mut MessageInfo,
+        mut should_forward: impl FnMut(&str) -> bool,
     ) -> Result<(ExitStatus, String)> {
         use std::io::{BufRead, Write};
 
@@ -234,7 +239,9 @@ impl CommandExt for Command {
                         collected.push_str(&line);
                         // Forward to the user's stdout, like `tee`. Ignore
                         // write errors, e.g. a broken pipe from `cross run | head`.
-                        let _ = std::io::stdout().lock().write_all(line.as_bytes());
+                        if should_forward(&line) {
+                            let _ = std::io::stdout().lock().write_all(line.as_bytes());
+                        }
                     }
                     Err(_) => break,
                 }
