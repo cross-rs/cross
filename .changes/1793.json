@@ -1,0 +1,5 @@
+{
+    "type": "added",
+    "description": "add CROSS_REMOTE_COPY_FULL_TARGET_DIR to copy the full target directory back from remote builds when build-script artifacts are needed on the host",
+    "issues": [1793]
+}

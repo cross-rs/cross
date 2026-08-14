@@ -126,6 +126,10 @@ provided to the build command.
   Is needed to support  private SSH dependencies.
 - `CROSS_REMOTE_COPY_CACHE`: Copy all directories, even those containing
   `CACHETAG.DIR` (a cache directory [tag](https://bford.info/cachedir/)).
+- `CROSS_REMOTE_COPY_FULL_TARGET_DIR`: Copy the entire target directory
+  back to the host after the build, instead of only the compiler artifacts.
+  Useful when build scripts generate files, such as the `OUT_DIR` contents,
+  that must be available on the host.
 - `CROSS_REMOTE_SKIP_BUILD_ARTIFACTS`: Do not copy any generated build
   artifacts back to the host after finishing the build. If using persistent
   data volumes, the artifacts will remain in the volume.

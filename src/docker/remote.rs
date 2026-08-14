@@ -6,6 +6,7 @@ use std::{env, fs, time};
 
 use eyre::Context;
 use is_terminal::IsTerminal;
+use serde::Deserialize;
 
 use super::engine::Engine;
 use super::shared::*;
@@ -517,6 +518,102 @@ fn warn_symlinks(had_symlinks: bool, msg_info: &mut MessageInfo) -> Result<()> {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct CargoCompilerArtifact {
+    reason: String,
+    package_id: String,
+    filenames: Vec<String>,
+    executable: Option<String>,
+}
+
+/// Artifacts of workspace members have `path+file://` package ids,
+/// while registry and git dependencies have `registry+`/`git+` ids.
+/// Only the former should be copied back to the host.
+fn is_workspace_artifact(artifact: &CargoCompilerArtifact) -> bool {
+    artifact.package_id.starts_with("path+file://")
+}
+
+fn is_intermediate_artifact(path: &str) -> bool {
+    path.contains("/deps/") && (path.ends_with("rlib") || path.ends_with("rmeta"))
+        || path.ends_with("build-script-build")
+}
+
+/// Returns `true` when `line` is one of cargo's `--message-format=json`
+/// machine messages. Such lines are needed only for artifact discovery and
+/// must be captured silently instead of being printed to the user's stdout.
+fn is_cargo_json_message(line: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(line.trim())
+        .map(|value| value.get("reason").is_some())
+        .unwrap_or(false)
+}
+
+fn parse_artifact_filenames(json_output: &str) -> Vec<String> {
+    let mut filenames = Vec::new();
+    for line in json_output.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if let Ok(artifact) = serde_json::from_str::<CargoCompilerArtifact>(line) {
+            if artifact.reason == "compiler-artifact" && is_workspace_artifact(&artifact) {
+                for f in artifact.filenames {
+                    if is_intermediate_artifact(&f) {
+                        continue;
+                    }
+                    if !filenames.contains(&f) {
+                        filenames.push(f);
+                    }
+                }
+                // Executables are final products even when cargo places
+                // them under `deps/` (e.g. test binaries).
+                if let Some(exe) = artifact.executable {
+                    if !filenames.contains(&exe) {
+                        filenames.push(exe);
+                    }
+                }
+            }
+        }
+    }
+    filenames
+}
+
+fn copy_artifacts_from_container(
+    engine: &Engine,
+    container_id: &str,
+    artifact_files: &[String],
+    host_target_dir: &Path,
+    mount_target_dir: &str,
+    msg_info: &mut MessageInfo,
+) -> Result<()> {
+    for artifact_path in artifact_files {
+        let artifact_path = artifact_path.trim();
+        if artifact_path.is_empty() {
+            continue;
+        }
+
+        let relative = if let Some(pos) = artifact_path.find(mount_target_dir) {
+            &artifact_path[pos + mount_target_dir.len()..]
+        } else {
+            msg_info.warn(format_args!(
+                "artifact path {artifact_path} does not start with {mount_target_dir}, skipping"
+            ))?;
+            continue;
+        };
+
+        let host_path = host_target_dir.join(relative.trim_start_matches('/'));
+
+        if let Some(parent) = host_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        subcommand_or_exit(engine, "cp")?
+            .arg(format!("{container_id}:{artifact_path}"))
+            .arg(&host_path)
+            .run_and_get_status(msg_info, false)?;
+    }
+    Ok(())
+}
+
 #[derive(Debug)]
 struct Fingerprint {
     map: BTreeMap<String, time::SystemTime>,
@@ -868,16 +965,32 @@ pub(crate) fn run(
         }
     }
 
+    let skip_artifacts = env::var("CROSS_REMOTE_SKIP_BUILD_ARTIFACTS")
+        .map(|s| bool_from_envvar(&s))
+        .unwrap_or_default();
+    // Copy the full target directory back to the host instead of only the
+    // compiler artifacts, e.g. when build scripts emit files (OUT_DIR
+    // contents, generated code) that must be available on the host.
+    let copy_full_target_dir = env::var("CROSS_REMOTE_COPY_FULL_TARGET_DIR")
+        .map(|s| bool_from_envvar(&s))
+        .unwrap_or_default();
+
     let mut cmd = options.command_variant.safe_command();
 
     if msg_info.should_fail() {
         return Ok(None);
     }
 
+    let produces_artifacts = matches!(
+        subcommand,
+        Some(crate::Subcommand::Build)
+            | Some(crate::Subcommand::Run)
+            | Some(crate::Subcommand::Test)
+            | Some(crate::Subcommand::Bench)
+            | Some(crate::Subcommand::Rustc)
+    );
+
     if !options.command_variant.is_shell() {
-        // `clean` doesn't handle symlinks: it will just unlink the target
-        // directory, so we should just substitute it our target directory
-        // for it. we'll still have the same end behavior
         let mut final_args = vec![];
         let mut iter = args.iter().cloned();
         let mut has_target_dir = false;
@@ -902,9 +1015,16 @@ pub(crate) fn run(
             final_args.push(target_dir.clone());
         }
 
+        if produces_artifacts && !skip_artifacts && !copy_full_target_dir {
+            final_args.push("--message-format=json".to_owned());
+        }
+
         cmd.args(final_args);
     } else {
         cmd.args(args);
+        if produces_artifacts && !skip_artifacts && !copy_full_target_dir {
+            cmd.arg(&"--message-format=json".to_owned());
+        }
     }
 
     // 5. create symlinks for copied data
@@ -960,31 +1080,130 @@ symlink_recurse \"${{prefix}}\"
     }
 
     bail_container_exited!();
-    let status = docker.run_and_get_status(msg_info, false);
+
+    let (status, command_stdout) =
+        docker.run_and_get_output_streamed(msg_info, |line| !is_cargo_json_message(line))?;
+    // Per-artifact copies should land inside the host target directory
+    // itself, e.g. <project>/target/<triple>/debug/<bin>.
+    let host_target_dir = package_dirs.target().to_owned();
+    // `docker cp` of a directory into an existing directory creates
+    // <dest>/<source-basename>, so the full-directory fallback must use
+    // the project root to reproduce <project>/target.
+    let host_root_dir = package_dirs
+        .target()
+        .parent()
+        .expect("target directory should have a parent");
 
     // 7. copy data from our target dir back to host
-    // this might not exist if we ran `clean`.
-    let skip_artifacts = env::var("CROSS_REMOTE_SKIP_BUILD_ARTIFACTS")
-        .map(|s| bool_from_envvar(&s))
-        .unwrap_or_default();
     bail_container_exited!();
     let mount_target_dir = format!("{}/{}", package_dirs.mount_root(), target_dir);
+
     if !skip_artifacts
         && data_volume.container_path_exists(&mount_target_dir, mount_prefix, msg_info)?
     {
-        subcommand_or_exit(engine, "cp")?
-            .arg("-a")
-            .arg(format!("{container_id}:{mount_target_dir}",))
-            .arg(
-                package_dirs
-                    .target()
-                    .parent()
-                    .expect("target directory should have a parent"),
-            )
-            .run_and_get_status(msg_info, false)?;
+        if produces_artifacts && !copy_full_target_dir {
+            let artifact_files = parse_artifact_filenames(&command_stdout);
+
+            if !artifact_files.is_empty() {
+                copy_artifacts_from_container(
+                    engine,
+                    &container_id,
+                    &artifact_files,
+                    &host_target_dir,
+                    &mount_target_dir,
+                    msg_info,
+                )?;
+            } else {
+                subcommand_or_exit(engine, "cp")?
+                    .arg("-a")
+                    .arg(format!("{container_id}:{mount_target_dir}"))
+                    .arg(host_root_dir)
+                    .run_and_get_status(msg_info, false)?;
+            }
+        } else {
+            subcommand_or_exit(engine, "cp")?
+                .arg("-a")
+                .arg(format!("{container_id}:{mount_target_dir}"))
+                .arg(host_root_dir)
+                .run_and_get_status(msg_info, false)?;
+        }
     }
 
     ChildContainer::finish_static(is_tty, msg_info);
 
-    status.map(Some)
+    Ok(Some(status))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_cargo_json_message, parse_artifact_filenames};
+
+    #[test]
+    fn cargo_json_message_detection() {
+        assert!(is_cargo_json_message(
+            r#"{"reason":"compiler-artifact","package_id":"path+file:///project/hello","target":{"kind":["bin"],"name":"hello"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/hello"],"executable":"/project/target/debug/hello"}"#
+        ));
+        assert!(is_cargo_json_message(
+            r#"{"reason":"build-finished","success":true}"#
+        ));
+        assert!(is_cargo_json_message(
+            r#"{"reason":"compiler-message","message":{"level":"warning","message":"unused"}}"#
+        ));
+        assert!(!is_cargo_json_message("Hello, world!"));
+        assert!(!is_cargo_json_message(""));
+        assert!(!is_cargo_json_message("not json at all"));
+        assert!(!is_cargo_json_message(r#"{"without":"a reason key"}"#));
+        assert!(!is_cargo_json_message("   "));
+    }
+
+    #[test]
+    fn parse_workspace_artifacts() {
+        let json = r#"{"reason":"compiler-artifact","package_id":"path+file:///project/hello","target":{"kind":["bin"],"name":"hello"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/hello","/project/target/debug/hello.d"],"executable":"/project/target/debug/hello"}"#;
+        let out = parse_artifact_filenames(json);
+        assert_eq!(
+            out,
+            vec![
+                "/project/target/debug/hello",
+                "/project/target/debug/hello.d",
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_skips_deps_artifacts_keeps_executable() {
+        let json = concat!(
+            r#"{"reason":"compiler-artifact","package_id":"path+file:///project/lib","target":{"kind":["lib"],"name":"lib"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/deps/liblib-abc123.rlib","/project/target/debug/deps/liblib-abc123.rmeta","/project/target/debug/deps/liblib-abc123.d"],"executable":null}"#,
+            "\n",
+            r#"{"reason":"compiler-artifact","package_id":"path+file:///project/app","target":{"kind":["bin"],"name":"app"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/app","/project/target/debug/deps/app-def456"],"executable":"/project/target/debug/app"}"#,
+            "\n",
+            r#"{"reason":"compiler-artifact","package_id":"path+file:///project/itest","target":{"kind":["test"],"name":"itest"},"profile":{"test":true,"opt_level":"s"},"features":[],"filenames":["/project/target/debug/deps/itest-789abc"],"executable":"/project/target/debug/deps/itest-789abc"}"#,
+        );
+        let out = parse_artifact_filenames(json);
+        assert_eq!(
+            out,
+            vec![
+                "/project/target/debug/deps/liblib-abc123.d",
+                "/project/target/debug/app",
+                "/project/target/debug/deps/app-def456",
+                "/project/target/debug/deps/itest-789abc"
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_skips_program_output_and_non_workspace() {
+        let json = concat!(
+            "Hello, world!\n",
+            r#"{"reason":"compiler-artifact","package_id":"registry+https://github.com/rust-lang/crates.io-index#serde@1.0.0","target":{"kind":["lib"],"name":"serde"},"profile":{"opt_level":"s"},"features":[],"filenames":["/project/target/debug/deps/libserde.rlib"],"executable":null}"#,
+            "\n",
+            r#"{"reason":"build-finished","success":true}"#,
+        );
+        assert!(parse_artifact_filenames(json).is_empty());
+    }
+
+    #[test]
+    fn parse_skips_empty_input() {
+        assert!(parse_artifact_filenames("").is_empty());
+        assert!(parse_artifact_filenames("\n  \n").is_empty());
+    }
 }
