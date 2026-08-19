@@ -1894,7 +1894,7 @@ mod tests {
         }
 
         #[test]
-        fn test_parse_missing_user_moutns() {
+        fn test_parse_missing_user_mounts() {
             let actual = dockerinfo_parse_user_mounts(&json!([{
                 "Id": "test",
             }]));
