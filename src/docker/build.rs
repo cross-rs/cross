@@ -21,7 +21,7 @@ impl FromStr for Progress {
             "plain" => Progress::Plain,
             "auto" => Progress::Auto,
             "tty" => Progress::Tty,
-            s => eyre::bail!("unexpect progress type: expected plain, auto, or tty and got {s}"),
+            s => eyre::bail!("unexpected progress type: expected plain, auto, or tty and got {s}"),
         })
     }
 }

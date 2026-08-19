@@ -316,7 +316,7 @@ pub fn build_docker_image(
                 .buildkit_warning();
             if gha && targets.len() > 1 {
                 if let Err(e) = &result {
-                    // TODO: Determine what instruction errorred, and place warning on that line with appropriate warning
+                    // TODO: Determine what instruction errored, and place warning on that line with appropriate warning
                     gha_error(&format!("file=docker/{dockerfile},title=Build failed::{e}"));
                 }
             }

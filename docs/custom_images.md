@@ -23,7 +23,7 @@ use case out there.
 
 ## Adding Dependencies to Existing Images
 
-If you simply need to install a dependency availaible in ubuntus package
+If you simply need to install a dependency available in ubuntus package
 manager, see [`target.TARGET.pre-build`][config-target-pre-build]:
 
 ```toml
@@ -75,7 +75,7 @@ that instead:
 image = "my/image:tag"
 ```
 
-In thie case, `cross` will use a image named `my/image:tag` instead of the
+In this case, `cross` will use a image named `my/image:tag` instead of the
 default one. Normal Docker behavior applies, so:
 
 - Docker will first look for a local image named `my/image:tag`
