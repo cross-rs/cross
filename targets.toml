@@ -229,6 +229,16 @@ run = true
 runners = "qemu-user qemu-system"
 
 [[target]]
+target = "powerpc64le-unknown-linux-musl"
+os = "ubuntu-latest"
+cpp = true
+dylib = true
+std = true
+run = true
+runners = "qemu-user"
+build-std = true
+
+[[target]]
 target = "riscv64gc-unknown-linux-gnu"
 os = "ubuntu-latest"
 cpp = true
