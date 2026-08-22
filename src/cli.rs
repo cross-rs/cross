@@ -16,6 +16,7 @@ pub struct Args {
     pub channel: Option<String>,
     pub target: Option<Target>,
     pub features: Vec<String>,
+    pub unstable_features: Vec<String>,
     pub target_dir: Option<PathBuf>,
     pub manifest_path: Option<PathBuf>,
     pub version: bool,
@@ -170,6 +171,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
     let mut quiet = false;
     let mut verbose = 0;
     let mut color = None;
+    let mut unstable_features = Vec::new();
 
     {
         let mut args = env::args().skip(1);
@@ -264,6 +266,29 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
                         )?);
                     }
                 }
+            } else if let Some(kind) = is_value_arg(&arg, "-Z") {
+                match kind {
+                    ArgKind::Next => {
+                        let next = parse_next_arg(
+                            arg,
+                            &mut cargo_args,
+                            str_to_owned,
+                            identity,
+                            &mut args,
+                        )?;
+                        if let Some(feature) = next {
+                            unstable_features.push(feature);
+                        }
+                    }
+                    ArgKind::Equal => {
+                        unstable_features.push(parse_equal_arg(
+                            arg,
+                            &mut cargo_args,
+                            str_to_owned,
+                            identity,
+                        )?);
+                    }
+                }
             } else if let Some(kind) = is_value_arg(&arg, "--target-dir") {
                 match kind {
                     ArgKind::Next => {
@@ -299,6 +324,7 @@ pub fn parse(target_list: &TargetList) -> Result<Args> {
         rest_args,
         subcommand: sc,
         channel,
+        unstable_features,
         target,
         features,
         target_dir,
