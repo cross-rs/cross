@@ -1202,8 +1202,12 @@ pub(crate) fn group_id() -> String {
 #[derive(Debug, thiserror::Error)]
 pub enum GetImageError {
     #[error(
-        "`cross` does not provide a Docker image for target {0}, \
-    specify a custom image in `Cross.toml`."
+        "`cross` does not provide a Docker image for target {0}. \
+    If your target is the host (or close to it, e.g. macOS or Windows on \
+    macOS/Windows), you can typically just use `cargo` directly. \
+    Otherwise, specify a custom image in `Cross.toml`, or see \
+    https://github.com/cross-rs/cross-toolchains for community-built \
+    images covering targets like `*-apple-darwin` and `*-pc-windows-msvc`."
     )]
     NoCompatibleImages(String),
     #[error("platforms for provided image `{0}` are not specified, this is a bug in cross")]
