@@ -63,6 +63,7 @@ body:
         - mips-unknown-linux-gnu
         - mips-unknown-linux-musl
         - powerpc64le-unknown-linux-gnu
+        - powerpc64le-unknown-freebsd
         - powerpc64-unknown-linux-gnu
         - powerpc-unknown-linux-gnu
         - riscv64gc-unknown-linux-gnu

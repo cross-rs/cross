@@ -284,6 +284,7 @@ pub enum Architecture {
     MipsLe,
     #[serde(alias = "powerpc64")]
     Ppc64,
+    #[serde(alias = "powerpc64le")]
     Ppc64Le,
     #[serde(alias = "riscv64gc")]
     Riscv64,
@@ -487,6 +488,7 @@ pub mod tests {
         assert_eq!(arch!("armv7-unknown-linux-gnueabihf")?, Architecture::Arm);
         assert_eq!(arch!("aarch64-unknown-linux-gnu")?, Architecture::Arm64);
         assert_eq!(arch!("aarch64-unknown-freebsd")?, Architecture::Arm64);
+        assert_eq!(arch!("powerpc64le-unknown-freebsd")?, Architecture::Ppc64Le);
         assert_eq!(
             arch!("loongarch64-unknown-linux-gnu")?,
             Architecture::LoongArch64
@@ -510,6 +512,10 @@ pub mod tests {
         assert_eq!(Os::from_target(&t!("x86_64-unknown-freebsd"))?, Os::Freebsd);
         assert_eq!(
             Os::from_target(&t!("aarch64-unknown-freebsd"))?,
+            Os::Freebsd
+        );
+        assert_eq!(
+            Os::from_target(&t!("powerpc64le-unknown-freebsd"))?,
             Os::Freebsd
         );
         assert_eq!(
