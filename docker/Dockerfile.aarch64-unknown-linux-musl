@@ -10,11 +10,15 @@ RUN /cmake.sh
 
 FROM cross-base AS build
 
+ARG VERBOSE
+COPY crosstool-ng.sh /
+COPY crosstool-config/aarch64-unknown-linux-musl.config /
+RUN /crosstool-ng.sh aarch64-unknown-linux-musl.config 5
+
+ENV PATH=/x-tools/aarch64-unknown-linux-musl/bin/:$PATH
+
 COPY qemu.sh /
 RUN /qemu.sh aarch64
-
-COPY musl.sh /
-RUN /musl.sh TARGET=aarch64-linux-musl
 
 COPY tidyup.sh /
 RUN /tidyup.sh
@@ -22,18 +26,15 @@ RUN /tidyup.sh
 FROM scratch AS final
 COPY --from=build / /
 CMD ["/bin/bash"]
+ENV PATH=/x-tools/aarch64-unknown-linux-musl/bin/:$PATH
 
-ENV CROSS_TOOLCHAIN_PREFIX=aarch64-linux-musl-
-ENV CROSS_SYSROOT=/usr/local/aarch64-linux-musl
-COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_SYSROOT aarch64
-
-COPY musl-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
+ENV CROSS_TOOLCHAIN_PREFIX=aarch64-unknown-linux-musl-
+ENV CROSS_SYSROOT=/x-tools/aarch64-unknown-linux-musl/aarch64-unknown-linux-musl/sysroot/
 ENV CROSS_TARGET_RUNNER="/qemu-runner aarch64"
-ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_aarch64_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_aarch64_unknown_linux_musl="$CROSS_TOOLCHAIN_PREFIX"gcc \

@@ -15,10 +15,12 @@ RUN /qemu.sh mips64
 
 # this is a hard-float target for the mips64r2 architecture
 # https://github.com/rust-lang/rust/blob/75d3027fb5ce1af6712e4503c9574802212101bd/compiler/rustc_target/src/spec/mips64_unknown_linux_muslabi64.rs#L7
-COPY musl.sh /
-RUN /musl.sh \
-    TARGET=mips64-linux-musl \
-    "COMMON_CONFIG += -with-arch=mips64r2"
+ARG VERBOSE
+COPY crosstool-ng.sh /
+COPY crosstool-config/mips64-unknown-linux-muslabi64.config /
+RUN /crosstool-ng.sh mips64-unknown-linux-muslabi64.config 5
+
+ENV PATH=/x-tools/mips64-unknown-linux-musl/bin/:$PATH
 
 COPY tidyup.sh /
 RUN /tidyup.sh
@@ -26,22 +28,16 @@ RUN /tidyup.sh
 FROM scratch AS final
 COPY --from=build / /
 CMD ["/bin/bash"]
+ENV PATH=/x-tools/mips64-unknown-linux-musl/bin/:$PATH
 
-ENV CROSS_TOOLCHAIN_PREFIX=mips64-linux-musl-
-ENV CROSS_SYSROOT=/usr/local/mips64-linux-musl
-COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_SYSROOT mips64
-RUN mkdir -p $CROSS_SYSROOT/usr/lib64
-# needed for the C/C++ runners
-RUN ln -s $CROSS_SYSROOT/usr/lib/libc.so $CROSS_SYSROOT/usr/lib64/libc.so
-RUN ln -s $CROSS_SYSROOT/usr/lib/libc.so.1 $CROSS_SYSROOT/usr/lib64/libc.so.1
+ENV CROSS_TOOLCHAIN_PREFIX=mips64-unknown-linux-musl-
+ENV CROSS_SYSROOT=/x-tools/mips64-unknown-linux-musl/mips64-unknown-linux-musl/sysroot/
 
-COPY musl-gcc.sh /usr/bin/"$CROSS_TOOLCHAIN_PREFIX"gcc.sh
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TARGET_RUNNER="/qemu-runner mips64"
-ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc.sh \
+ENV CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
     CARGO_TARGET_MIPS64_UNKNOWN_LINUX_MUSLABI64_RUNNER="$CROSS_TARGET_RUNNER" \
     AR_mips64_unknown_linux_muslabi64="$CROSS_TOOLCHAIN_PREFIX"ar \
     CC_mips64_unknown_linux_muslabi64="$CROSS_TOOLCHAIN_PREFIX"gcc \
