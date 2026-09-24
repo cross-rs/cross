@@ -1,5 +1,6 @@
 mod build;
 pub(crate) mod custom;
+pub mod docker_ignore;
 mod engine;
 mod image;
 mod local;
@@ -8,6 +9,7 @@ pub mod remote;
 mod shared;
 
 pub use self::build::{BuildCommandExt, BuildResultExt, Progress};
+pub use self::docker_ignore::{DockerIgnore, DockerIgnoreRule};
 pub use self::engine::*;
 pub use self::provided_images::PROVIDED_IMAGES;
 pub use self::shared::*;
