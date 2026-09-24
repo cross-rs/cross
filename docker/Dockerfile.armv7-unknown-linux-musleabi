@@ -13,13 +13,12 @@ FROM cross-base AS build
 COPY qemu.sh /
 RUN /qemu.sh arm
 
-COPY musl.sh /
-RUN /musl.sh \
-    TARGET=arm-linux-musleabi \
-    "COMMON_CONFIG += --with-arch=armv7-a \
-                      --with-float=soft \
-                      --with-mode=thumb \
-                      --with-mode=arm"
+ARG VERBOSE
+COPY crosstool-ng.sh /
+COPY crosstool-config/armv7-unknown-linux-musleabi.config /
+RUN /crosstool-ng.sh armv7-unknown-linux-musleabi.config 5
+
+ENV PATH=/x-tools/arm-unknown-linux-musleabi/bin/:$PATH
 
 COPY tidyup.sh /
 RUN /tidyup.sh
@@ -27,11 +26,10 @@ RUN /tidyup.sh
 FROM scratch AS final
 COPY --from=build / /
 CMD ["/bin/bash"]
+ENV PATH=/x-tools/arm-unknown-linux-musleabi/bin/:$PATH
 
-ENV CROSS_TOOLCHAIN_PREFIX=arm-linux-musleabi-
-ENV CROSS_SYSROOT=/usr/local/arm-linux-musleabi
-COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_SYSROOT arm
+ENV CROSS_TOOLCHAIN_PREFIX=arm-unknown-linux-musleabi-
+ENV CROSS_SYSROOT=/x-tools/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/sysroot/
 
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake

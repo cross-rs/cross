@@ -10,8 +10,12 @@ RUN /cmake.sh
 
 FROM cross-base AS build
 
-COPY musl.sh /
-RUN /musl.sh TARGET=i686-linux-musl
+ARG VERBOSE
+COPY crosstool-ng.sh /
+COPY crosstool-config/i686-unknown-linux-musl.config /
+RUN /crosstool-ng.sh i686-unknown-linux-musl.config 5
+
+ENV PATH=/x-tools/i686-unknown-linux-musl/bin/:$PATH
 
 COPY qemu.sh /
 RUN /qemu.sh i386
@@ -22,11 +26,10 @@ RUN /tidyup.sh
 FROM scratch AS final
 COPY --from=build / /
 CMD ["/bin/bash"]
+ENV PATH=/x-tools/i686-unknown-linux-musl/bin/:$PATH
 
-ENV CROSS_TOOLCHAIN_PREFIX=i686-linux-musl-
-ENV CROSS_SYSROOT=/usr/local/i686-linux-musl
-COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_SYSROOT i386
+ENV CROSS_TOOLCHAIN_PREFIX=i686-unknown-linux-musl-
+ENV CROSS_SYSROOT=/x-tools/i686-unknown-linux-musl/i686-unknown-linux-musl/sysroot/
 
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake

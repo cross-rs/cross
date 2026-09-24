@@ -10,8 +10,12 @@ RUN /cmake.sh
 
 FROM cross-base AS build
 
-COPY musl.sh /
-RUN /musl.sh TARGET=x86_64-linux-musl
+ARG VERBOSE
+COPY crosstool-ng.sh /
+COPY crosstool-config/x86_64-unknown-linux-musl.config /
+RUN /crosstool-ng.sh x86_64-unknown-linux-musl.config 5
+
+ENV PATH=/x-tools/x86_64-unknown-linux-musl/bin/:$PATH
 
 COPY qemu.sh /
 RUN /qemu.sh x86_64
@@ -22,14 +26,17 @@ RUN /tidyup.sh
 FROM scratch AS final
 COPY --from=build / /
 CMD ["/bin/bash"]
-
-ENV CROSS_TOOLCHAIN_PREFIX=x86_64-linux-musl-
-ENV CROSS_SYSROOT=/usr/local/x86_64-linux-musl
-COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_SYSROOT x86_64
+ENV PATH=/x-tools/x86_64-unknown-linux-musl/bin/:$PATH
 
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
+
+ENV CROSS_TOOLCHAIN_PREFIX=x86_64-unknown-linux-musl-
+ENV CROSS_SYSROOT=/x-tools/x86_64-unknown-linux-musl/x86_64-unknown-linux-musl/sysroot/
+
+# Allow dynamically-linked musl binaries to run natively.
+RUN ln -sf "$CROSS_SYSROOT/lib/ld-musl-x86_64.so.1" /lib/ld-musl-x86_64.so.1 \
+    && echo "$CROSS_SYSROOT/lib" > /etc/ld-musl-x86_64.path
 
 ENV CROSS_TARGET_RUNNER="/qemu-runner x86_64"
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc \
