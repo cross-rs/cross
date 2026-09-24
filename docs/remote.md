@@ -61,7 +61,7 @@ supports persistent data volumes containing all data for the current toolchain.
 These can be created via:
 
 ```bash
-cross-util volumes crate
+cross-util volumes create
 ```
 
 `cross` will detect if a persistent data volume is present, and prefer it over
