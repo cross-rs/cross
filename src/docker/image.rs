@@ -180,6 +180,8 @@ impl ImagePlatform {
         ImagePlatform::from_const_target(TargetTriple::X86_64UnknownLinuxGnu);
     pub const AARCH64_UNKNOWN_LINUX_GNU: Self =
         ImagePlatform::from_const_target(TargetTriple::Aarch64UnknownLinuxGnu);
+    pub const X86_64_PC_WINDOWS_MSVC: Self =
+        ImagePlatform::from_const_target(TargetTriple::X86_64PcWindowsMsvc);
 
     /// Get a representative version of this platform specifier for usage in `--platform`
     ///
@@ -199,6 +201,7 @@ impl ImagePlatform {
             TargetTriple::Aarch64UnknownLinuxGnu => {
                 Some("ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU")
             }
+            TargetTriple::X86_64PcWindowsMsvc => Some("ImagePlatform::X86_64_PC_WINDOWS_MSVC"),
             _ => None,
         }
     }
@@ -237,6 +240,7 @@ impl std::str::FromStr for ImagePlatform {
         match s {
             "linux/amd64" => return Ok(Self::X86_64_UNKNOWN_LINUX_GNU),
             "linux/arm64" | "linux/arm64/v8" => return Ok(Self::AARCH64_UNKNOWN_LINUX_GNU),
+            "windows/amd64" => return Ok(Self::X86_64_PC_WINDOWS_MSVC),
             _ => {}
         };
 
@@ -540,6 +544,11 @@ pub mod tests {
         assert_eq!(
             "linux/arm64/v8".parse::<ImagePlatform>()?,
             ImagePlatform::AARCH64_UNKNOWN_LINUX_GNU
+        );
+
+        assert_eq!(
+            "windows/amd64".parse::<ImagePlatform>()?,
+            ImagePlatform::X86_64_PC_WINDOWS_MSVC
         );
 
         Ok(())
