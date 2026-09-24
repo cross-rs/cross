@@ -57,7 +57,7 @@ max_kernel_version() {
 main() {
     # arch in the rust target
     local arch="${1}" \
-        kversion=6.12.90+deb13.1
+        kversion=6.12.107+deb13
 
     local debsource="deb https://deb.debian.org/debian trixie main"
     debsource="${debsource}\ndeb https://security.debian.org trixie-security main"
