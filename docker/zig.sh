@@ -119,22 +119,20 @@ install_zig_source() {
 
 install_zigbuild() {
     local platform="${1}"
-    local version="0.17.5"
+    local version="0.23.4"
     local dst="/usr/local"
     local triple=
 
     # we don't know if `linux/arm/v7` is hard-float,
     # and we don't know the the zigbuild `apple-darwin`
     # target doesn't manually specify the architecture.
+    # prebuilt linux archives exist only for x86_64 (gnu, musl) and aarch64 (gnu).
     case "${platform}" in
-        'linux/386')
-            triple="i686-unknown-linux-musl"
-            ;;
         'linux/amd64')
             triple="x86_64-unknown-linux-musl"
             ;;
         'linux/arm64')
-            triple="aarch64-unknown-linux-musl"
+            triple="aarch64-unknown-linux-gnu"
             ;;
         *)
             ;;
@@ -151,8 +149,8 @@ install_zigbuild_tarball() {
     local triple="${1}"
     local version="${2}"
     local dst="${3}"
-    local repo="https://github.com/messense/cargo-zigbuild"
-    local filename="cargo-zigbuild-v${version}.${triple}.tar.gz"
+    local repo="https://github.com/rust-cross/cargo-zigbuild"
+    local filename="cargo-zigbuild-${triple}.tar.xz"
 
     local td
     td="$(mktemp -d)"
@@ -161,7 +159,7 @@ install_zigbuild_tarball() {
 
     curl --retry 3 -sSfL "${repo}/releases/download/v${version}/${filename}" -O
     mkdir -p "${dst}/bin"
-    tar -xzf "${filename}" --directory "${dst}/bin"
+    tar -xJf "${filename}" --strip-components=1 --directory "${dst}/bin" "cargo-zigbuild-${triple}/cargo-zigbuild"
 
     popd
 
