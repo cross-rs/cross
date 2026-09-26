@@ -1,0 +1,4 @@
+{
+    "description": "bump cargo-zigbuild to 0.23.4 so the zig image builds with Rust 1.98 and later (`--fix-cortex-a53-843419`).",
+    "type": "fixed"
+}
