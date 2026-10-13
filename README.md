@@ -203,6 +203,7 @@ terminate.
 | Target                                 |  libc  |  GCC   | C++ | QEMU  | `test` |
 |----------------------------------------|-------:|-------:|:---:|------:|:------:|
 | `aarch64-linux-android` [1]            | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
+| `aarch64-unknown-freebsd`              | 1.6    | 13.3.0 | ✓   | N/A   |        |
 | `aarch64-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
 | `aarch64-unknown-linux-gnu:centos` [7] | 2.17   | 4.8.5  |     | 4.2.1 |   ✓    |
 | `aarch64-unknown-linux-musl`           | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
@@ -225,6 +226,7 @@ terminate.
 | `i686-linux-android` [1]               | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
 | `i686-pc-windows-gnu`                  | N/A    | 9.4    | ✓   | N/A   |   ✓    |
 | `i686-unknown-linux-gnu`               | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
+| `i686-unknown-linux-musl`              | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
 | `loongarch64-unknown-linux-gnu`        | 2.36   | 14.2.0 | ✓   | 8.2.2 |   ✓    |
 | `loongarch64-unknown-linux-musl`       | 1.2.5  | 14.2.0 | ✓   | 8.2.2 |   ✓    |
 | `mips-unknown-linux-gnu`               | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
