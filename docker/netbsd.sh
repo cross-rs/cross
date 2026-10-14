@@ -54,13 +54,12 @@ main() {
     popd
 
     local mirrors=(
-        "ftp://ftp.netbsd.org"
-        "https://cdn.NetBSD.org"
+        "https://archive.netbsd.org"
     )
-    download_mirrors "pub/NetBSD/NetBSD-9.3/amd64/binary/sets" "base.tar.xz" "${mirrors[@]}"
+    download_mirrors "pub/NetBSD-archive/NetBSD-10.0/amd64/binary/sets" "base.tar.xz" "${mirrors[@]}"
     tar -C "${td}/netbsd" -xJf base.tar.xz ./usr/include ./usr/lib ./lib
 
-    download_mirrors "pub/NetBSD/NetBSD-9.3/amd64/binary/sets" "comp.tar.xz" "${mirrors[@]}"
+    download_mirrors "pub/NetBSD-archive/NetBSD-10.0/amd64/binary/sets" "comp.tar.xz" "${mirrors[@]}"
     tar -C "${td}/netbsd" -xJf comp.tar.xz ./usr/include ./usr/lib
 
     pushd binutils-build
@@ -73,8 +72,8 @@ main() {
     local destdir="/usr/local/${target}"
     cp -r "${td}/netbsd/usr/include" "${destdir}"/
     ls -all "${td}/netbsd/usr/lib"
-    cp "${td}/netbsd/lib/libc.so.12.213" "${destdir}/lib"
-    cp "${td}/netbsd/lib/libm.so.0.12" "${destdir}/lib"
+    cp "${td}/netbsd/lib/libc.so.12.220" "${destdir}/lib"
+    cp "${td}/netbsd/lib/libm.so.0.13" "${destdir}/lib"
     cp "${td}/netbsd/lib/libutil.so.7.24" "${destdir}/lib"
     cp "${td}/netbsd/lib/libpthread.so.1.4" "${destdir}/lib"
     cp "${td}/netbsd/usr/lib/librt.so.1.1" "${destdir}/lib"
@@ -82,10 +81,10 @@ main() {
     cp "${td}/netbsd/usr/lib"/libexecinfo.so "${destdir}/lib"
     cp "${td}/netbsd/usr/lib"/{crt0,crti,crtn,crtbeginS,crtendS,crtbegin,crtend,gcrt0}.o "${destdir}/lib"
 
-    ln -s libc.so.12.213 "${destdir}/lib/libc.so"
-    ln -s libc.so.12.213 "${destdir}/lib/libc.so.12"
-    ln -s libm.so.0.12 "${destdir}/lib/libm.so"
-    ln -s libm.so.0.12 "${destdir}/lib/libm.so.0"
+    ln -s libc.so.12.220 "${destdir}/lib/libc.so"
+    ln -s libc.so.12.220 "${destdir}/lib/libc.so.12"
+    ln -s libm.so.0.13 "${destdir}/lib/libm.so"
+    ln -s libm.so.0.13 "${destdir}/lib/libm.so.0"
     ln -s libpthread.so.1.4 "${destdir}/lib/libpthread.so"
     ln -s libpthread.so.1.4 "${destdir}/lib/libpthread.so.1"
     ln -s librt.so.1.1 "${destdir}/lib/librt.so"
