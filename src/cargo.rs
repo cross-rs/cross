@@ -153,6 +153,13 @@ pub fn cargo_metadata_with_args(
     if let Some(features) = args.map(|a| &a.features).filter(|v| !v.is_empty()) {
         command.args([String::from("--features"), features.join(",")]);
     }
+    if let Some(unstable_features) = args.map(|a| &a.unstable_features).filter(|v| !v.is_empty()) {
+        command.args(
+            unstable_features
+                .iter()
+                .flat_map(|f| [String::from("-Z"), f.to_owned()]),
+        );
+    }
     let output = command.run_and_get_output(msg_info)?;
     if !output.status.success() {
         msg_info.warn("unable to get metadata for package")?;
