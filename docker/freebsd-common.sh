@@ -17,6 +17,9 @@ case "${ARCH}" in
     i686)
         FREEBSD_ARCH=i386
         ;;
+    powerpc64le) # releases are under http://ftp.freebsd.org/pub/FreeBSD/releases/powerpc/powerpc64le/
+        FREEBSD_ARCH=powerpc/powerpc64le
+        ;;
 esac
 
 export FREEBSD_MAJOR=13
