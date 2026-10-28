@@ -1397,35 +1397,70 @@ fn docker_read_mount_paths(
 ) -> Result<Vec<MountDetail>> {
     let output = docker_inspect_self(engine, msg_info)?;
     let info = serde_json::from_str(&output).wrap_err("failed to parse docker inspect output")?;
-    dockerinfo_parse_mounts(&info)
+    dockerinfo_parse_mounts(&info, || docker_root_dir(engine, msg_info))
 }
 
-fn dockerinfo_parse_mounts(info: &serde_json::Value) -> Result<Vec<MountDetail>> {
+fn docker_root_dir(engine: &Engine, msg_info: &mut MessageInfo) -> Result<PathBuf> {
+    let root_dir = engine
+        .subcommand("info")
+        .args(["-f", "{{.DockerRootDir}}"])
+        .run_and_get_stdout(msg_info)?;
+    Ok(PathBuf::from(root_dir.trim()))
+}
+
+fn dockerinfo_parse_mounts(
+    info: &serde_json::Value,
+    docker_root_dir: impl FnOnce() -> Result<PathBuf>,
+) -> Result<Vec<MountDetail>> {
     let mut mounts = dockerinfo_parse_user_mounts(info);
-    let root_info = dockerinfo_parse_root_mount_path(info)?;
+    let root_info =
+        dockerinfo_parse_root_mount_path(info, docker_root_dir).with_suggestion(|| {
+            "use the `overlay2` storage driver, or `CROSS_REMOTE=1` instead of `CROSS_CONTAINER_IN_CONTAINER`"
+        })?;
     mounts.push(root_info);
     Ok(mounts)
 }
 
-fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDetail> {
-    let driver_name = info
-        .pointer("/0/GraphDriver/Name")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| eyre::eyre!("no driver name found"))?;
+fn dockerinfo_parse_root_mount_path(
+    info: &serde_json::Value,
+    docker_root_dir: impl FnOnce() -> Result<PathBuf>,
+) -> Result<MountDetail> {
+    let str_at = |pointer: &str| info.pointer(pointer).and_then(|v| v.as_str());
+    let driver_name = str_at("/0/GraphDriver/Name");
+    let snapshot_driver = str_at("/0/Storage/RootFS/Snapshot/Name");
+    let has_driver_data = info
+        .pointer("/0/GraphDriver/Data")
+        .is_some_and(|data| data.as_object().is_some_and(|data| !data.is_empty()));
 
-    if driver_name.to_lowercase().contains("overlay") {
-        let path = info
-            .pointer("/0/GraphDriver/Data/MergedDir")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| eyre::eyre!("No merge directory found"))?;
-
-        Ok(MountDetail {
-            source: PathBuf::from(&path),
-            destination: PathBuf::from("/"),
-        })
+    let source = if let Some(path) = str_at("/0/GraphDriver/Data/MergedDir") {
+        let driver_name = driver_name.ok_or_else(|| eyre::eyre!("no driver name found"))?;
+        if !driver_name.to_lowercase().contains("overlay") {
+            eyre::bail!("want driver overlay2, got {driver_name}")
+        }
+        PathBuf::from(path)
+    } else if snapshot_driver.is_some() || !has_driver_data {
+        let storage_driver = snapshot_driver
+            .or(driver_name)
+            .ok_or_else(|| eyre::eyre!("no storage driver name found"))?;
+        let id = str_at("/0/Id").ok_or_else(|| eyre::eyre!("no container id found"))?;
+        docker_root_dir()?
+            .join("rootfs")
+            .join(storage_driver)
+            .join(id)
     } else {
-        eyre::bail!("want driver overlay2, got {driver_name}")
-    }
+        match driver_name {
+            Some(name) if !name.to_lowercase().contains("overlay") => {
+                eyre::bail!("want driver overlay2, got {name}")
+            }
+            Some(_) => eyre::bail!("No merge directory found"),
+            None => eyre::bail!("no driver name found"),
+        }
+    };
+
+    Ok(MountDetail {
+        source,
+        destination: PathBuf::from("/"),
+    })
 }
 
 fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
@@ -1875,7 +1910,7 @@ mod tests {
                     },
                     "Name": "overlay2"
                 },
-            }])).unwrap();
+            }]), || unreachable!()).unwrap();
             let want = MountDetail {
                 source: PathBuf::from(
                     "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/merged",
@@ -1883,6 +1918,64 @@ mod tests {
                 destination: PathBuf::from("/"),
             };
             assert_eq!(want, actual);
+        }
+
+        fn containerd_root(info: &serde_json::Value) -> Result<MountDetail> {
+            dockerinfo_parse_root_mount_path(info, || Ok(PathBuf::from("/var/lib/docker")))
+        }
+
+        #[test]
+        fn test_parse_containerd_snapshot_root() {
+            let actual = containerd_root(&json!([{
+                "Id": "39fcf50a1775",
+                "Storage": {
+                    "RootFS": {
+                        "Snapshot": {
+                            "Name": "overlayfs"
+                        }
+                    }
+                },
+            }]))
+            .unwrap();
+            let want = MountDetail {
+                source: PathBuf::from("/var/lib/docker/rootfs/overlayfs/39fcf50a1775"),
+                destination: PathBuf::from("/"),
+            };
+            assert_eq!(want, actual);
+        }
+
+        #[test]
+        fn test_parse_containerd_driver_name_root() {
+            for data in [json!(null), json!({})] {
+                let actual = containerd_root(&json!([{
+                    "Id": "39fcf50a1775",
+                    "GraphDriver": {
+                        "Data": data,
+                        "Name": "overlayfs"
+                    },
+                }]))
+                .unwrap();
+                let want = MountDetail {
+                    source: PathBuf::from("/var/lib/docker/rootfs/overlayfs/39fcf50a1775"),
+                    destination: PathBuf::from("/"),
+                };
+                assert_eq!(want, actual);
+            }
+        }
+
+        #[test]
+        fn test_parse_unsupported_driver_root() {
+            let err = containerd_root(&json!([{
+                "Id": "39fcf50a1775",
+                "GraphDriver": {
+                    "Data": {
+                        "Mountpoint": "/var/lib/docker/btrfs/subvolumes/39fcf50a1775"
+                    },
+                    "Name": "btrfs"
+                },
+            }]))
+            .unwrap_err();
+            assert_eq!(err.to_string(), "want driver overlay2, got btrfs");
         }
 
         #[test]
