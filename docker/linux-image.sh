@@ -56,80 +56,72 @@ max_kernel_version() {
 
 main() {
     # arch in the rust target
-    local arch="${1}" \
-        kversion=6.12.107+deb13
+    local arch="${1}"
 
-    local debsource="deb https://deb.debian.org/debian trixie main"
-    debsource="${debsource}\ndeb https://security.debian.org trixie-security main"
+    # use current stable Debian trixie by default
+    local debsource='deb https://deb.debian.org/debian trixie main'
+    debsource+='\ndeb https://security.debian.org trixie-security main'
 
-    local kernel=
-    local kernel_pkg_split=0
+    # kernel package arch
+    local kernelarch="${1}"
 
-    # select debian arch and kernel version
+    # adjust debian arch, kernel package arch, and repo suite where needed
     case "${arch}" in
     aarch64)
         arch=arm64
-        kernel="${kversion}-arm64"
+        kernelarch=arm64
         ;;
     armv7)
         arch=armhf
-        kernel="${kversion}-armmp"
+        kernelarch=armmp
         ;;
     i686)
         arch=i386
-        kernel="${kversion}-686"
+        kernelarch=686
         ;;
     mipsel)
+        kernelarch='4kc-malta'
         # mipsel was discontinued in trixie, so we have to use bookworm.
-        kernel='6.*-4kc-malta'
-        debsource="deb https://deb.debian.org/debian bookworm main"
+        # https://packages.debian.org/linux-image-4kc-malta
+        debsource=${debsource//trixie/bookworm}
         ;;
     mips64el)
-        # mipsel was discontinued in trixie, so we have to use bookworm.
-        kernel='6.*-5kc-malta'
-        debsource="deb https://deb.debian.org/debian bookworm main"
+        kernelarch='5kc-malta'
+        # mips64el was discontinued in trixie, so we have to use bookworm.
+        # https://packages.debian.org/linux-image-5kc-malta
+        debsource=${debsource//trixie/bookworm}
         ;;
     powerpc)
         # there is no stable port
         # https://deb.debian.org/debian-ports/pool-powerpc/main/l/linux/
-        kernel='7.*-powerpc'
-        debsource="deb https://deb.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb https://deb.debian.org/debian-ports unreleased main"
-        # Debian Forky splits linux-image-* packages into linux-binary-* and linux-modules-* and linux-base-*
-        kernel_pkg_split=1
+        debsource='deb https://deb.debian.org/debian-ports unstable main'
+        debsource+='\ndeb https://deb.debian.org/debian-ports unreleased main'
         ;;
     powerpc64)
-        # there is no stable port
         arch=ppc64
-        # https://packages.debian.org/en/sid/linux-image-powerpc64
-        kernel='7.*-powerpc64'
-        debsource="deb https://deb.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb https://deb.debian.org/debian-ports unreleased main"
-        # Debian Forky splits linux-image-* packages into linux-binary-* and linux-modules-* and linux-base-*
-        kernel_pkg_split=1
+        # there is no stable port
+        # https://packages.debian.org/linux-image-powerpc64
+        debsource='deb https://deb.debian.org/debian-ports unstable main'
+        debsource+='\ndeb https://deb.debian.org/debian-ports unreleased main'
         ;;
     powerpc64le)
         arch=ppc64el
-        kernel="${kversion}-powerpc64le"
         ;;
     riscv64)
-        kernel="${kversion}-riscv64"
+        :
         ;;
     s390x)
-        kernel="${kversion}-s390x"
+        :
         ;;
     sparc64)
         # there is no stable port
-        # https://packages.debian.org/en/sid/linux-image-sparc64
-        kernel='7.*-sparc64'
-        debsource="deb https://deb.debian.org/debian-ports unstable main"
-        debsource="${debsource}\ndeb https://deb.debian.org/debian-ports unreleased main"
-        # Debian Forky splits linux-image-* packages into linux-binary-* and linux-modules-* and linux-base-*
-        kernel_pkg_split=1
+        # https://packages.debian.org/linux-image-sparc64
+        debsource='deb https://deb.debian.org/debian-ports unstable main'
+        debsource+='\ndeb https://deb.debian.org/debian-ports unreleased main'
         ;;
     x86_64)
         arch=amd64
-        kernel="${kversion}-amd64"
+        kernelarch=amd64
         ;;
     *)
         echo "Invalid arch: ${arch}"
@@ -154,7 +146,7 @@ main() {
         local libgcc_root=/qemu/libgcc
         mkdir -p "${libgcc_root}"
         pushd "${libgcc_root}"
-        apt-get -d --no-install-recommends download "${libgcc_packages[@]}"
+        apt-get download "${libgcc_packages[@]}"
         popd
     fi
 
@@ -181,33 +173,18 @@ main() {
 
     apt-get update
 
+    # work out required kernel packages
+    mapfile -t kernel_packages < <(
+        apt-cache depends --recurse "linux-image-${kernelarch}:${arch}" \
+            --no-{pre-depends,recommends,suggests,conflicts,breaks,replaces,enhances} |
+            awk -v kernelarch="${kernelarch}" '$1=="Depends:" && $2~"linux-.*-.*-"kernelarch {print $2}'
+    )
+
     mkdir -p "/qemu/${arch}"
     chmod 777 /qemu "/qemu/${arch}"
 
-    # Need to limit the kernel version and select the best version
-    # if we have a wildcard. This is because some matches, such as
-    # `linux-image-4.*-4kc-malta` can match more than 1 package,
-    # which will prevent further steps from working.
-    if [[ "$kernel" == *'*'* ]]; then
-        # Need an exact match for start and end, to avoid debug kernels.
-        # Afterwards, need to do a complex sort for the best kernel version,
-        # since the sort is non-trivial and must extract subcomponents.
-        packages=$(apt-cache search ^linux-image-"$kernel$" --names-only)
-        names=$(echo "$packages" | cut -d ' ' -f 1)
-        kversions="${names//linux-image-/}"
-        kernel=$(max_kernel_version "$kversions")
-    fi
-
-    # Debian Forky splits linux-image-* packages into linux-binary-* and linux-modules-* and linux-base-*
-    local kernel_packages=()
-    if (( kernel_pkg_split )); then
-        kernel_packages=("linux-binary-${kernel}:${arch}" "linux-modules-${kernel}:${arch}" "linux-base-${kernel}:${arch}")
-    else
-        kernel_packages=("linux-image-${kernel}:${arch}")
-    fi
-
     cd "/qemu/${arch}"
-    apt-get -d --no-install-recommends download \
+    apt-get download \
         "busybox:${arch}" \
         "dropbear-bin:${arch}" \
         "libtommath1:${arch}" \
@@ -219,7 +196,7 @@ main() {
         "zlib1g:${arch}"
 
     if [[ "${arch}" != "${dpkg_arch}" ]]; then
-        apt-get -d --no-install-recommends download "${libgcc_packages[@]}"
+        apt-get download "${libgcc_packages[@]}"
     else
         # host arch has conflicting versions of the packages installed
         # this prevents us from downloading them, so we need to
@@ -238,7 +215,7 @@ main() {
             version_info=$(apt-cache show "${package}")
             version_record=$(echo "${version_info}" | perl -n00e 'print if /^Maintainer: Debian/m')
             version=$(echo "${version_record}" | grep 'Version: ' | cut -d ' ' -f 2)
-            apt-get -d --no-install-recommends download "${package}=${version}"
+            apt-get download "${package}=${version}"
         done
 
         # now, if we don't remove the system installs, qemu-system won't
@@ -263,7 +240,13 @@ main() {
         dpkg -x "${deb}" "${root}"/
     done
 
-    cp "${root}/boot/vmlinu"* kernel
+    # kernel images are stored below /usr/lib/modules since Debian Froky
+    if ls "${root}"/usr/lib/modules/*/vmlinuz 2> /dev/null
+    then
+        cp "${root}"/usr/lib/modules/*/vmlinuz kernel
+    else
+        cp "${root}"/boot/vmlinu[xz]-* kernel
+    fi
 
     # initrd
     mkdir -p "${root}/modules"
@@ -400,11 +383,6 @@ EOF
     # can fail if arch is used (image arch, such as amd64 and/or i386)
     dpkg --remove-architecture "${arch}" || true
     apt-get update
-
-    # need to reinstall the removed libgcc packages, which are required for apt
-    if [[ "${arch}" == "${dpkg_arch}" ]]; then
-        apt-get install --no-install-recommends --assume-yes "${packages[@]}"
-    fi
 
     purge_packages
 
