@@ -1,0 +1,5 @@
+{
+    "type": "changed",
+    "description": "use the NetBSD 10.0 sysroot for x86_64-unknown-netbsd, so getentropy is available.",
+    "issues": [1806]
+}
