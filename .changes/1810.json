@@ -1,0 +1,5 @@
+{
+    "type": "changed",
+    "description": "build the Solaris images against the Solaris 11.4 sysroot rust-lang/rust uses.",
+    "issues": [1599, 1730]
+}

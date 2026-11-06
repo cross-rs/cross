@@ -17,12 +17,9 @@ main() {
     install_packages bzip2 \
         ca-certificates \
         curl \
-        dirmngr \
         g++ \
-        gpg-agent \
         make \
         patch \
-        software-properties-common \
         texinfo \
         wget \
         xz-utils
@@ -44,48 +41,29 @@ main() {
     ./contrib/download_prerequisites
     cd ..
 
-    local apt_arch=
+    local mach=
     local lib_arch=
+    local sysroot_sum=
     case "${arch}" in
         x86_64)
-            apt_arch=solaris-i386
+            mach=i386
             lib_arch=amd64
+            sysroot_sum=e82b78c14464cc2dc71f3cdab312df3dd63441d7c23eeeaf34d41d8b947688d3
             ;;
         sparcv9)
-            apt_arch=solaris-sparc
+            mach=sparc
             lib_arch=sparcv9
+            sysroot_sum=e249a7ef781b9b3297419bd014fa0574800703981d84e113d6af3a897a8b4ffc
             ;;
     esac
 
-    apt-key adv --batch --yes --keyserver keyserver.ubuntu.com --recv-keys 74DA7924C5513486
-    # https://apt.dilos.org/dilos is currently down
-    add-apt-repository -y 'deb https://mirrors.dotsrc.org/mirrors/pub/dilos/apt dilos2 main'
-    dpkg --add-architecture "${apt_arch}"
-    apt-get update
-    apt-get install -y --download-only \
-        "libc:${apt_arch}"            \
-        "liblgrp:${apt_arch}"         \
-        "libm-dev:${apt_arch}"        \
-        "libpthread:${apt_arch}"      \
-        "libresolv:${apt_arch}"       \
-        "librt:${apt_arch}"           \
-        "libsendfile:${apt_arch}"     \
-        "libsocket:${apt_arch}"       \
-        "system-crt:${apt_arch}"      \
-        "system-header:${apt_arch}"
-
-    for deb in /var/cache/apt/archives/*"${apt_arch}.deb"; do
-        dpkg -x "${deb}" "${td}/solaris"
-    done
-    apt-get clean
-
-    # The -dev packages are not available from the apt repository we're using.
-    # However, those packages are just symlinks from *.so to *.so.<version>.
-    # This makes all those symlinks.
-    while IFS= read -r -d '' lib; do
-        link_name=${lib%.so.*}.so
-        [ -e "$link_name" ] || ln -sf "${lib##*/}" "$link_name"
-    done < <(find . -name '*.so.*' -print0)
+    # The Solaris 11.4 sysroot that rust-lang/rust builds its Solaris targets
+    # against, so the libc symbols std links to are all there.
+    #   https://github.com/rust-lang/rust/blob/main/src/ci/docker/scripts/solaris-toolchain.sh
+    local sysroot_file="solaris-11.4.42.111.0-${mach}-sysroot-v2025-02-21.tar.bz2"
+    curl --retry 3 -sSfL "https://ci-mirrors.rust-lang.org/rustc/${sysroot_file}" -O
+    sha256sum --check <<<"${sysroot_sum}  ${sysroot_file}"
+    tar -C "${td}/solaris" -xjf "${sysroot_file}"
 
     cd binutils-build
     ../binutils/configure \
@@ -93,17 +71,6 @@ main() {
     make "-j$(nproc)"
     make install
     cd ..
-
-    # Remove Solaris 11 functions that are optionally used by libbacktrace.
-    # This is for Solaris 10 compatibility.
-    rm solaris/usr/include/link.h
-
-    patch -p0  << 'EOF'
---- solaris/usr/include/string.h
-+++ solaris/usr/include/string10.h
-@@ -93 +92,0 @@
--extern size_t strnlen(const char *, size_t);
-EOF
 
     local destdir="/usr/local/${target}"
     mkdir "${destdir}/usr"
