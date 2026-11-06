@@ -47,6 +47,16 @@ main() {
         "${api}" \
         --verbose
 
+    # the clang wrappers hardcode the API level. read it from
+    # `CROSS_ANDROID_SDK` instead, like the CMake toolchain file does, so
+    # binaries for older Android versions can be built with the same image.
+    local wrapper
+    for wrapper in /android-ndk/bin/{clang,clang++,*-linux-android{,eabi}-{gcc,g++,clang,clang++}}; do
+        if [[ -f "${wrapper}" ]] && [[ "$(head -c 2 "${wrapper}")" == "#!" ]]; then
+            sed -i "s/\(-target [a-z0-9_]*-linux-android\(eabi\)\?\)${ANDROID_SDK}\b/\1\${CROSS_ANDROID_SDK:-${ANDROID_SDK}}/" "${wrapper}"
+        fi
+    done
+
     # the android bash script installs the executables with 750, not 755
     # permissions, and the other files without read permissions.
     if [[ "${NDK_VERSION}" -le 11 ]]; then

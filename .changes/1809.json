@@ -1,0 +1,5 @@
+{
+    "type": "added",
+    "description": "the Android compiler wrappers read the API level from `CROSS_ANDROID_SDK`, so it can be lowered without rebuilding the image.",
+    "issues": [1195]
+}
