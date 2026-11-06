@@ -15,10 +15,12 @@ RUN /qemu.sh mipsel
 
 # this is a soft-float target for the mips32r2 architecture
 # https://github.com/rust-lang/rust/blob/75d3027fb5ce1af6712e4503c9574802212101bd/compiler/rustc_target/src/spec/mipsel_unknown_linux_musl.rs#L6
-COPY musl.sh /
-RUN /musl.sh \
-    TARGET=mipsel-linux-muslsf \
-    "COMMON_CONFIG += -with-arch=mips32r2"
+ARG VERBOSE
+COPY crosstool-ng.sh /
+COPY crosstool-config/mipsel-unknown-linux-musl.config /
+RUN /crosstool-ng.sh mipsel-unknown-linux-musl.config 5
+
+ENV PATH=/x-tools/mipsel-unknown-linux-musl/bin/:$PATH
 
 COPY tidyup.sh /
 RUN /tidyup.sh
@@ -26,11 +28,10 @@ RUN /tidyup.sh
 FROM scratch AS final
 COPY --from=build / /
 CMD ["/bin/bash"]
+ENV PATH=/x-tools/mipsel-unknown-linux-musl/bin/:$PATH
 
-ENV CROSS_TOOLCHAIN_PREFIX=mipsel-linux-muslsf-
-ENV CROSS_SYSROOT=/usr/local/mipsel-linux-muslsf
-COPY musl-symlink.sh /
-RUN /musl-symlink.sh $CROSS_SYSROOT mipsel-sf
+ENV CROSS_TOOLCHAIN_PREFIX=mipsel-unknown-linux-musl-
+ENV CROSS_SYSROOT=/x-tools/mipsel-unknown-linux-musl/mipsel-unknown-linux-musl/sysroot/
 
 COPY qemu-runner base-runner.sh /
 COPY toolchain.cmake /opt/toolchain.cmake
