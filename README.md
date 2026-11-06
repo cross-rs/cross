@@ -200,73 +200,81 @@ QEMU gets upset when you spawn multiple threads. This means that, if one of your
 unit tests spawns threads, then it's more likely to fail or, worst, never
 terminate.
 
-| Target                                 |  libc  |  GCC   | C++ | QEMU  | `test` |
-|----------------------------------------|-------:|-------:|:---:|------:|:------:|
-| `aarch64-linux-android` [1]            | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
-| `aarch64-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `aarch64-unknown-linux-gnu:centos` [7] | 2.17   | 4.8.5  |     | 4.2.1 |   ✓    |
-| `aarch64-unknown-linux-musl`           | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `aarch64_be-unknown-linux-gnu`         | 2.36   | 14.2.0 | ✓   | 6.1.0 |   ✓    |
-| `arm-linux-androideabi` [1]            | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabi`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-gnueabihf`          | 2.31   | 8.5.0  | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-musleabi`           | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `arm-unknown-linux-musleabihf`         | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `armv5te-unknown-linux-gnueabi`        | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `armv5te-unknown-linux-musleabi`       | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `armv7-linux-androideabi` [1]          | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-gnueabi`          | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-gnueabihf`        | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabi`         | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`       | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `i586-unknown-linux-gnu`               | 2.31   | 9.4.0  | ✓   | N/A   |   ✓    |
-| `i586-unknown-linux-musl`              | 1.2.3  | 9.2.0  | ✓   | N/A   |   ✓    |
-| `i686-unknown-freebsd`                 | 1.6    | 13.3.0 | ✓   | N/A   |        |
-| `i686-linux-android` [1]               | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
-| `i686-pc-windows-gnu`                  | N/A    | 9.4    | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-gnu`               | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `loongarch64-unknown-linux-gnu`        | 2.36   | 14.2.0 | ✓   | 8.2.2 |   ✓    |
-| `loongarch64-unknown-linux-musl`       | 1.2.5  | 14.2.0 | ✓   | 8.2.2 |   ✓    |
-| `mips-unknown-linux-gnu`               | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `mips-unknown-linux-musl`              | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `mips64-unknown-linux-gnuabi64`        | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `mips64-unknown-linux-muslabi64`       | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `mips64el-unknown-linux-gnuabi64`      | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `mips64el-unknown-linux-muslabi64`     | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `mipsel-unknown-linux-gnu`             | 2.30   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `mipsel-unknown-linux-musl`            | 1.2.3  | 9.2.0  | ✓   | 6.1.0 |   ✓    |
-| `powerpc-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `powerpc64-unknown-linux-gnu`          | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `powerpc64le-unknown-linux-gnu`        | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `riscv64gc-unknown-linux-gnu`          | 2.35   | 11.4.0 | ✓   | 8.2.2 |   ✓    |
-| `riscv64gc-unknown-linux-musl`         | 1.2.5  | 14.2.0 | ✓   | 8.2.2 |   ✓    |
-| `s390x-unknown-linux-gnu`              | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `sparc64-unknown-linux-gnu`            | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `sparcv9-sun-solaris`                  | 1.22.7 | 8.4.0  | ✓   | N/A   |        |
-| `thumbv6m-none-eabi` [4]               | 3.3.0  | 9.2.1  |     | N/A   |        |
-| `thumbv7em-none-eabi` [4]              | 3.3.0  | 9.2.1  |     | N/A   |        |
-| `thumbv7em-none-eabihf` [4]            | 3.3.0  | 9.2.1  |     | N/A   |        |
-| `thumbv7m-none-eabi` [4]               | 3.3.0  | 9.2.1  |     | N/A   |        |
-| `thumbv7neon-linux-androideabi` [1]    | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
-| `thumbv7neon-unknown-linux-gnueabihf`  | 2.31   | 9.4.0  | ✓   | N/A   |   ✓    |
-| `thumbv8m.base-none-eabi` [4]          | 3.3.0  | 9.2.1  |     | N/A   |        |
-| `thumbv8m.main-none-eabi` [4]          | 3.3.0  | 9.2.1  |     | N/A   |        |
-| `thumbv8m.main-none-eabihf` [4]        | 3.3.0  | 9.2.1  |     | N/A   |        |
-| `wasm32-unknown-emscripten` [6]        | 3.1.14 | 15.0.0 | ✓   | N/A   |   ✓    |
-| `x86_64-linux-android` [1]             | 9.0.8  | 9.0.8  | ✓   | 6.1.0 |   ✓    |
-| `x86_64-pc-windows-gnu`                | N/A    | 9.3    | ✓   | N/A   |   ✓    |
-| `x86_64-pc-solaris`                    | 1.22.7 | 8.4.0  | ✓   | N/A   |        |
-| `x86_64-unknown-freebsd`               | 1.6    | 13.3.0 | ✓   | N/A   |        |
-| `x86_64-unknown-dragonfly` [2] [3]     | 6.0.1  | 10.3.0 | ✓   | N/A   |        |
-| `x86_64-unknown-illumos`               | 1.20.4 | 8.4.0  | ✓   | N/A   |        |
-| `x86_64-unknown-linux-gnu`             | 2.31   | 9.4.0  | ✓   | 6.1.0 |   ✓    |
-| `x86_64-unknown-linux-gnu:centos` [5]  | 2.17   | 4.8.5  | ✓   | 4.2.1 |   ✓    |
-| `x86_64-unknown-linux-musl`            | 1.2.3  | 9.2.0  | ✓   | N/A   |   ✓    |
-| `x86_64-unknown-netbsd` [3]            | 9.2.0  | 9.4.0  | ✓   | N/A   |        |
-<!--| `asmjs-unknown-emscripten` [7]       | 3.1.14 | 15.0.0  | ✓   | N/A   |   ✓    |-->
+The versions below reflect the current Dockerfiles and toolchain configuration.
+Package-based entries use the versions supplied by Ubuntu 24.04 (Noble); those
+versions may change when the Ubuntu repositories are updated.
 
-[1] libc = bionic; Only works with native tests, that is, tests that do not
-    depends on the Android Runtime. For i686 some tests may fails with the
+| Target                                           | libc/API   | GCC/Clang | GFortran | C++ | QEMU  | `test` |
+|--------------------------------------------------|-----------:|----------:|---------:|:---:|------:|:------:|
+| `aarch64-linux-android` [1]                      | 9.0 / 28   | 14.0.7    | N/A      | ✓   | 10.1.0 |   ✓    |
+| `aarch64-unknown-freebsd`                        | 1.6        | 13.3.0    | 13.3.0   | ✓   | N/A    |        |
+| `aarch64-unknown-linux-gnu`                      | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `aarch64-unknown-linux-gnu:centos` [7]           | 2.17       | 4.8.5     | 4.8.5    | ✓   | 4.2.1  |   ✓    |
+| `aarch64-unknown-linux-musl`                     | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `aarch64_be-unknown-linux-gnu`                   | 2.36       | 14.2.0    | 14.2.0   | ✓   | 10.1.0 |   ✓    |
+| `arm-linux-androideabi` [1]                      | 9.0 / 28   | 14.0.7    | N/A      | ✓   | 10.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabi`                      | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `arm-unknown-linux-gnueabihf`                    | 2.17       | 8.3.0     | 8.3.0    | ✓   | 10.1.0 |   ✓    |
+| `arm-unknown-linux-musleabi`                     | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `arm-unknown-linux-musleabihf`                   | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `armv5te-unknown-linux-gnueabi`                  | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `armv5te-unknown-linux-musleabi`                 | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `armv7-linux-androideabi` [1]                    | 9.0 / 28   | 14.0.7    | N/A      | ✓   | 10.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabi`                    | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `armv7-unknown-linux-gnueabihf`                  | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabi`                   | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `armv7-unknown-linux-musleabihf`                 | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `i586-unknown-linux-gnu`                         | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `i586-unknown-linux-musl`                        | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `i686-linux-android` [1]                         | 9.0 / 28   | 14.0.7    | N/A      | ✓   | 10.1.0 |   ✓    |
+| `i686-pc-windows-gnu`                            | N/A        | 13.2.0    | 13.2.0   | ✓   | N/A    |   ✓    |
+| `i686-unknown-freebsd`                           | 1.6        | 13.3.0    | 13.3.0   | ✓   | N/A    |        |
+| `i686-unknown-linux-gnu`                         | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `i686-unknown-linux-musl`                        | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `loongarch64-unknown-linux-gnu`                  | 2.36       | 14.2.0    | 14.2.0   | ✓   | 10.1.0 |   ✓    |
+| `loongarch64-unknown-linux-musl`                 | 1.2.5      | 14.2.0    | 14.2.0   | ✓   | 10.1.0 |   ✓    |
+| `mips-unknown-linux-gnu`                         | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `mips-unknown-linux-musl`                        | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `mips64-unknown-linux-gnuabi64`                  | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `mips64-unknown-linux-muslabi64`                 | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `mips64el-unknown-linux-gnuabi64`                | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `mips64el-unknown-linux-muslabi64`               | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `mipsel-unknown-linux-gnu`                       | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `mipsel-unknown-linux-musl`                      | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | 10.1.0 |   ✓    |
+| `powerpc-unknown-linux-gnu`                      | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `powerpc64-unknown-linux-gnu`                    | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `powerpc64le-unknown-linux-gnu`                  | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `riscv64gc-unknown-linux-gnu`                    | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `riscv64gc-unknown-linux-musl`                   | 1.2.5      | 14.2.0    | 14.2.0   | ✓   | 10.1.0 |   ✓    |
+| `s390x-unknown-linux-gnu`                        | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `sparc64-unknown-linux-gnu`                      | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `sparcv9-sun-solaris`                            | 1.22.7     | 8.4.0     | 8.4.0    | ✓   | N/A    |        |
+| `thumbv6m-none-eabi` [4]                         | 4.4.0      | 13.2.1    | N/A      | ✓   | 10.1.0 |        |
+| `thumbv7em-none-eabi` [4]                        | 4.4.0      | 13.2.1    | N/A      | ✓   | 10.1.0 |        |
+| `thumbv7em-none-eabihf` [4]                      | 4.4.0      | 13.2.1    | N/A      | ✓   | 10.1.0 |        |
+| `thumbv7m-none-eabi` [4]                         | 4.4.0      | 13.2.1    | N/A      | ✓   | 10.1.0 |        |
+| `thumbv7neon-linux-androideabi` [1]              | 9.0 / 28   | 14.0.7    | N/A      | ✓   | 10.1.0 |   ✓    |
+| `thumbv7neon-unknown-linux-gnueabihf`            | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `thumbv8m.base-none-eabi` [4]                    | 4.4.0      | 13.2.1    | N/A      | ✓   | 10.1.0 |        |
+| `thumbv8m.main-none-eabi` [4]                    | 4.4.0      | 13.2.1    | N/A      | ✓   | 10.1.0 |        |
+| `thumbv8m.main-none-eabihf` [4]                  | 4.4.0      | 13.2.1    | N/A      | ✓   | 10.1.0 |        |
+| `wasm32-unknown-emscripten` [6]                  | 3.1.74     | 20.0.0git | N/A      | ✓   | N/A    |   ✓    |
+| `x86_64-linux-android` [1]                       | 9.0 / 28   | 14.0.7    | N/A      | ✓   | 10.1.0 |   ✓    |
+| `x86_64-pc-solaris`                              | 1.22.7     | 8.4.0     | 8.4.0    | ✓   | N/A    |        |
+| `x86_64-pc-windows-gnu`                          | N/A        | 13.2.0    | 13.2.0   | ✓   | N/A    |   ✓    |
+| `x86_64-unknown-dragonfly` [2] [3]               | 6.0.1      | 10.3.0    | 10.3.0   | ✓   | N/A    |        |
+| `x86_64-unknown-freebsd`                         | 1.6        | 13.3.0    | 13.3.0   | ✓   | N/A    |        |
+| `x86_64-unknown-illumos`                         | 1.20.4     | 8.4.0     | 8.4.0    | ✓   | N/A    |        |
+| `x86_64-unknown-linux-gnu`                       | 2.39       | 13.3.0    | 13.3.0   | ✓   | 10.1.0 |   ✓    |
+| `x86_64-unknown-linux-gnu:centos` [5]            | 2.17       | 4.8.5     | 4.8.5    | ✓   | 4.2.1  |   ✓    |
+| `x86_64-unknown-linux-musl`                      | 1.2.5      | 14.4.0    | 14.4.0   | ✓   | N/A    |   ✓    |
+| `x86_64-unknown-netbsd` [3]                      | 9.3        | 9.4.0     | 9.4.0    | ✓   | N/A    |        |
+
+[1] libc = bionic; the libc/API column shows the default Android system release
+    and API level, and the GCC/Clang column shows the NDK Clang version.
+    GFortran is not included in the Android NDK. Only works with native tests,
+    that is, tests that do not depend on the Android Runtime. For i686 some
+    tests may fail with the
     error `assertion failed: signal(libc::SIGPIPE, libc::SIG_IGN) !=
     libc::SIG_ERR`, see [issue
     #140](https://github.com/cross-rs/cross/issues/140) for more information.
@@ -283,7 +291,8 @@ terminate.
     `Cross.toml` for `[target.x86_64-unknown-linux-gnu]` to use the
     CentOS7-compatible target.
 
-[6] libc = emscripten and GCC = clang
+[6] libc = emscripten and the GCC/Clang column shows the bundled Clang version.
+    GFortran is not included.
 
 [7] Must change
     `image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"` in
