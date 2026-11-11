@@ -40,7 +40,6 @@ See our [Getting Started](./docs/getting-started.md) guide for detailed
 installation instructions.
 
 - [rustup](https://rustup.rs/)
-- A Linux kernel with [binfmt_misc] support is required for cross testing.
 
 One of these container engines is required. If both are installed, `cross` will
 default to `docker`.
@@ -368,6 +367,5 @@ to intervene to uphold that code of conduct.
 [Podman]: https://podman.io
 [Matrix room]: https://matrix.to/#/#cross-rs:matrix.org
 [docker_install]: https://github.com/cross-rs/cross/wiki/Getting-Started#installing-a-container-engine
-[binfmt_misc]: https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
 [config_file]: ./docs/config_file.md
 [docs_env_vars]: ./docs/environment_variables.md

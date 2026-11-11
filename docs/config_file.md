@@ -203,6 +203,16 @@ pre-build = [
 ]
 ```
 
+> *NOTE*: The QEMU in the images provided by `cross` is only used to run and
+> test the binaries built for the target, through the runner of the image. It
+> is not registered as an interpreter with the host kernel, so `pre-build`
+> commands cannot execute binaries of the target architecture on their own.
+> Some packages need this, e.g. to run target binaries in their
+> post-installation scripts. In that case, register an interpreter with
+> `binfmt_misc` on the host before running `cross`: in GitHub Actions with
+> [`docker/setup-qemu-action`][setup_qemu_action], elsewhere with
+> `docker run --privileged --rm tonistiigi/binfmt --install all`.
+
 
 # `target.TARGET.image`
 
@@ -321,3 +331,4 @@ image = "myimage"             # a custom image containing zig to use
 [example-cross-toml]: https://github.com/cross-rs/wiki_assets/blob/main/Configuration/Cross.toml
 [example-cargo-toml]: https://github.com/cross-rs/wiki_assets/blob/main/Configuration/Cargo.toml
 [custom_images_automatic_arch]: ./custom_images.md#automatic-target-architecture-on-debian
+[setup_qemu_action]: https://github.com/docker/setup-qemu-action

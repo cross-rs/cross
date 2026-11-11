@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use rustc_version::{Version, VersionMeta};
+use rustc_version::VersionMeta;
 use serde::Deserialize;
 
 use crate::TargetTriple;
@@ -24,17 +24,12 @@ impl TargetList {
 
 pub trait VersionMetaExt {
     fn host(&self) -> TargetTriple;
-    fn needs_interpreter(&self) -> bool;
     fn commit_hash(&self) -> String;
 }
 
 impl VersionMetaExt for VersionMeta {
     fn host(&self) -> TargetTriple {
         TargetTriple::from(&*self.host)
-    }
-
-    fn needs_interpreter(&self) -> bool {
-        self.semver < Version::new(1, 19, 0)
     }
 
     fn commit_hash(&self) -> String {
