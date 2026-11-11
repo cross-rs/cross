@@ -40,11 +40,6 @@ impl Subcommand {
     }
 
     #[must_use]
-    pub fn needs_interpreter(self) -> bool {
-        matches!(self, Subcommand::Run | Subcommand::Test | Subcommand::Bench)
-    }
-
-    #[must_use]
     pub fn needs_target_in_command(self) -> bool {
         !matches!(self, Subcommand::Metadata)
     }

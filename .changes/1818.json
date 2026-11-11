@@ -1,0 +1,12 @@
+[
+    {
+        "description": "removed the registration of `binfmt_misc` interpreters, which was only done for toolchains older than 1.19.0.",
+        "issues": [1784],
+        "type": "removed"
+    },
+    {
+        "description": "documented how to execute binaries of the target architecture in `pre-build` commands.",
+        "issues": [1784],
+        "type": "internal"
+    }
+]

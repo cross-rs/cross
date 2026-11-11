@@ -39,7 +39,6 @@ pub mod errors;
 mod extensions;
 pub mod file;
 mod id;
-mod interpreter;
 pub mod rustc;
 pub mod rustup;
 pub mod shell;
@@ -364,14 +363,6 @@ impl Target {
             || self.is_apple()
     }
 
-    fn needs_interpreter(&self) -> bool {
-        let native = self.triple().starts_with("x86_64")
-            || self.triple().starts_with("i586")
-            || self.triple().starts_with("i686");
-
-        !native && (self.is_linux() || self.is_windows() || self.is_bare_metal())
-    }
-
     fn needs_docker_seccomp(&self) -> bool {
         let arch_32bit = self.triple().starts_with("arm")
             || self.triple().starts_with("thumb")
@@ -611,13 +602,6 @@ pub fn run(
                     return Ok(None);
                 }
 
-                install_interpreter_if_needed(
-                    &args,
-                    host_version_meta,
-                    &target,
-                    &options,
-                    msg_info,
-                )?;
                 let status = if let Some(status) = docker::run(
                     options,
                     paths,
@@ -643,29 +627,6 @@ pub fn run(
         }
     }
     Ok(None)
-}
-
-/// Check if an interpreter is needed and then install it.
-pub fn install_interpreter_if_needed(
-    args: &Args,
-    host_version_meta: rustc_version::VersionMeta,
-    target: &Target,
-    options: &docker::DockerOptions,
-    msg_info: &mut MessageInfo,
-) -> Result<(), color_eyre::Report> {
-    let needs_interpreter = args
-        .subcommand
-        .clone()
-        .is_some_and(|sc| sc.needs_interpreter());
-
-    if host_version_meta.needs_interpreter()
-        && needs_interpreter
-        && target.needs_interpreter()
-        && !interpreter::is_registered(target)?
-    {
-        options.engine.register_binfmt(target, msg_info)?;
-    }
-    Ok(())
 }
 
 /// Get filtered args to pass to cargo

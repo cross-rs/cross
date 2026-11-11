@@ -848,31 +848,6 @@ impl Engine {
         shell_words::split(value)
             .wrap_err_with(|| format!("could not parse docker opts of {}", value))
     }
-
-    /// Register binfmt interpreters
-    pub(crate) fn register_binfmt(
-        &self,
-        target: &Target,
-        msg_info: &mut MessageInfo,
-    ) -> Result<()> {
-        let cmd = if target.is_windows() {
-            // https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html
-            "mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
-                echo ':wine:M::MZ::/usr/bin/run-detectors:' > /proc/sys/fs/binfmt_misc/register"
-        } else {
-            "apt-get update && apt-get install --no-install-recommends --assume-yes \
-                binfmt-support qemu-user-static"
-        };
-
-        let mut docker = self.subcommand("run");
-        docker.add_userns();
-        docker.arg("--privileged");
-        docker.arg("--rm");
-        docker.arg(UBUNTU_BASE);
-        docker.args(["sh", "-c", cmd]);
-
-        docker.run(msg_info, false)
-    }
 }
 
 fn validate_env_var<'a>(
